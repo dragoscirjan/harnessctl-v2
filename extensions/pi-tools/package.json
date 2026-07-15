@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@harnessctl/pi-tools",
+  "version": "0.1.0",
+  "description": "Pi tools for harnessctl.",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run --config ../../vitest.config.ts --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.7"
+  },
+  "dependencies": {
+    "@harnessctl/generic-tools": "0.1.0",
+    "typebox": "^1.1.38"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.80.7"
+  }
+}

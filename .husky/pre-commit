@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+staged_files=$(mktemp)
+stash_before=$(git rev-parse -q --verify refs/stash || true)
+git diff --cached --name-only -z > "$staged_files"
+
+git stash push --keep-index --include-untracked -m 'harnessctl pre-commit' >/dev/null
+stash_after=$(git rev-parse -q --verify refs/stash || true)
+stash_created=$([[ "$stash_after" != "$stash_before" ]] && echo true || echo false)
+
+cleanup() {
+  status=$?
+  if [[ "$stash_created" == true ]]; then
+    git stash pop --quiet || status=1
+  fi
+  rm -f "$staged_files"
+  exit "$status"
+}
+trap cleanup EXIT
+
+for cmd in format:fix lint:fix; do
+  npm run "$cmd"
+done
+
+git add --pathspec-from-file="$staged_files" --pathspec-file-nul
