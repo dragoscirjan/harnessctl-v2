@@ -1,6 +1,15 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { accessSync, constants, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  accessSync,
+  constants,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
@@ -19,16 +28,16 @@ describe('OpenCode SDK integration', () => {
 
     try {
       createConfig(cwd);
-      writeFileSync(resolve(cwd, '.harnessctl/config.yaml'), 'issues:\n  pattern: TSK-*\n', 'utf8');
+      writeFileSync(resolve(cwd, '.harnessctl/config.yaml'), 'issues:\n  prefix: TSK-\n', 'utf8');
       writeOpenCodeProjectConfig(cwd);
 
       const result = await promptOpenCode(
         cwd,
-        'Using the issue_id tool, detect the issue ID in this message: TSK-12345 123512 ABC-12545. Return only the detected issue ID.',
+        'Using the issue_id tool, detect every issue ID in this message: TSK-12345 and TSK-67890. Return the JSON array from the tool.',
       );
 
       expect(result.toolNames).toContain('issue_id');
-      expect(extractIssueIds(result.text)).toEqual(['TSK-12345']);
+      expect(extractIssueIds(result.text)).toEqual(['TSK-12345', 'TSK-67890']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -73,6 +82,126 @@ describe('OpenCode SDK integration', () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   }, 120_000);
+
+  it('uses the issue_create tool to create a local issue', async () => {
+    const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-issue-create-'));
+
+    try {
+      createConfig(cwd);
+      writeOpenCodeProjectConfig(cwd);
+      const result = await promptOpenCode(
+        cwd,
+        'Use the issue_create tool to create a task titled "Document integration coverage". After it succeeds, reply with only the created issue ID.',
+      );
+
+      expect(normalizeToolNames(result.toolNames)).toContain('issue_create');
+      expect(existsSync(resolve(cwd, '.issues/00001/issue.md'))).toBe(true);
+      expect(extractIssueNumbers(result.text)).toEqual(['00001']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('uses the issue_list tool to list local issues', async () => {
+    const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-issue-list-'));
+
+    try {
+      mkdirSync(resolve(cwd, '.issues'), { recursive: true });
+      mkdirSync(resolve(cwd, '.issues/00001'), { recursive: true });
+      writeFileSync(
+        resolve(cwd, '.issues/00001/issue.md'),
+        '---\nid: "00001"\ntype: task\ntitle: "First task"\nstatus: open\n---\n',
+        'utf8',
+      );
+      mkdirSync(resolve(cwd, '.issues/00002'), { recursive: true });
+      writeFileSync(
+        resolve(cwd, '.issues/00002/issue.md'),
+        '---\nid: "00002"\ntype: bug\ntitle: "Second bug"\nstatus: closed\n---\n',
+        'utf8',
+      );
+      writeOpenCodeProjectConfig(cwd);
+      const result = await promptOpenCode(
+        cwd,
+        'Use the issue_list tool with the status filter "closed". Return only the matching issue ID.',
+      );
+
+      expect(normalizeToolNames(result.toolNames)).toContain('issue_list');
+      expect(extractIssueNumbers(result.text)).toEqual(['00002']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  describe.concurrent('issue lifecycle tools', () => {
+    it('reads, updates, transitions, comments, and validates an issue', async () => {
+      const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-lifecycle-'));
+
+      try {
+        createConfig(cwd);
+        writeIssueFixture(cwd, '00001', 'Lifecycle task', 'open');
+        writeOpenCodeProjectConfig(cwd);
+        const result = await promptOpenCode(
+          cwd,
+          'Use these tools exactly once in order for issue 00001: issue_get, issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, issue_transition to done, issue_comment with body "Reviewed" and author "integration", then issue_validate. After all tools succeed, reply with only done.',
+        );
+
+        expect(normalizeToolNames(result.toolNames)).toEqual(
+          expect.arrayContaining(['issue_get', 'issue_update', 'issue_transition', 'issue_comment', 'issue_validate']),
+        );
+        const issue = readIssueFixture(cwd, '00001');
+        expect(issue).toContain('title: Updated lifecycle task');
+        expect(issue).toContain('status: done');
+        expect(issue).toContain('## Summary');
+        expect(existsSync(resolve(cwd, '.issues/00001/comments/0001.md'))).toBe(true);
+      } finally {
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    }, 120_000);
+
+    it('relates, unrelates, and archives an issue', async () => {
+      const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-relationships-'));
+
+      try {
+        createConfig(cwd);
+        writeIssueFixture(cwd, '00001', 'Archive source', 'open');
+        writeIssueFixture(cwd, '00002', 'Related target', 'open');
+        writeOpenCodeProjectConfig(cwd);
+        const result = await promptOpenCode(
+          cwd,
+          'Use these tools exactly once in order: issue_relate with id 00001, relationship blocks, targetId 00002; issue_unrelate with the same arguments; issue_archive with id 00001. After all tools succeed, reply with only archived.',
+        );
+
+        expect(normalizeToolNames(result.toolNames)).toEqual(
+          expect.arrayContaining(['issue_relate', 'issue_unrelate', 'issue_archive']),
+        );
+        expect(existsSync(resolve(cwd, '.issues/archived/00001/issue.md'))).toBe(true);
+        expect(existsSync(resolve(cwd, '.issues/00002/issue.md'))).toBe(true);
+      } finally {
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    }, 120_000);
+
+    it('links an allowed task document to an issue', async () => {
+      const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-document-link-'));
+
+      try {
+        createConfig(cwd);
+        writeIssueFixture(cwd, '00001', 'Documented task', 'open');
+        mkdirSync(resolve(cwd, '.harnessctl/tasks/00001'), { recursive: true });
+        writeFileSync(resolve(cwd, '.harnessctl/tasks/00001/plan.md'), '# Plan\n', 'utf8');
+        writeOpenCodeProjectConfig(cwd);
+        const result = await promptOpenCode(
+          cwd,
+          'Use issue_link_document exactly once with id 00001, path .harnessctl/tasks/00001/plan.md, and kind task. After it succeeds, reply with only linked.',
+        );
+
+        expect(normalizeToolNames(result.toolNames)).toContain('issue_link_document');
+        expect(readIssueFixture(cwd, '00001')).toContain('.harnessctl/tasks/00001/plan.md');
+      } finally {
+        rmSync(cwd, { recursive: true, force: true });
+      }
+    }, 120_000);
+  });
 });
 
 function writeOpenCodeProjectConfig(cwd: string): void {
@@ -86,6 +215,19 @@ function writeOpenCodeProjectConfig(cwd: string): void {
       2,
     ),
   );
+}
+
+function writeIssueFixture(cwd: string, id: string, title: string, status: string): void {
+  mkdirSync(resolve(cwd, `.issues/${id}`), { recursive: true });
+  writeFileSync(
+    resolve(cwd, `.issues/${id}/issue.md`),
+    `---\nid: "${id}"\ntype: task\ntitle: "${title}"\nstatus: ${status}\ncreated_at: "2026-01-01T00:00:00.000Z"\nupdated_at: "2026-01-01T00:00:00.000Z"\ncreated_by: "integration"\n---\n\n# ${title}\n`,
+    'utf8',
+  );
+}
+
+function readIssueFixture(cwd: string, id: string): string {
+  return readFileSync(resolve(cwd, `.issues/${id}/issue.md`), 'utf8');
 }
 
 async function promptOpenCode(cwd: string, prompt: string): Promise<{ text: string; toolNames: string[] }> {
@@ -119,6 +261,14 @@ async function promptOpenCode(cwd: string, prompt: string): Promise<{ text: stri
 
 function extractIssueIds(output: string): string[] {
   return [...output.matchAll(/\b(?:TSK|ABC)-\d+\b|\b\d{6}\b/g)].map(([match]) => match);
+}
+
+function extractIssueNumbers(output: string): string[] {
+  return [...output.matchAll(/\b\d{5}\b/g)].map(([match]) => match);
+}
+
+function normalizeToolNames(toolNames: string[]): string[] {
+  return toolNames.map((name) => name.replaceAll('-', '_'));
 }
 
 function extractResponseText(parts: unknown): string {
