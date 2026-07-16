@@ -142,12 +142,16 @@ describe('OpenCode SDK integration', () => {
         writeOpenCodeProjectConfig(cwd);
         const result = await promptOpenCode(
           cwd,
-          'Use these tools exactly once in order for issue 00001: issue_get, issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, issue_transition to done, issue_comment with body "Reviewed" and author "integration", then issue_validate. After all tools succeed, reply with only done.',
+          'Use these tools exactly once in order for issue 00001: issue_get, then use its returned revision as expectedRevision for issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, then use the updated revision for issue_transition to done, issue_comment with body "Reviewed" and author "integration", and issue_validate. After all tools succeed, reply with only done.',
         );
 
-        expect(normalizeToolNames(result.toolNames)).toEqual(
-          expect.arrayContaining(['issue_get', 'issue_update', 'issue_transition', 'issue_comment', 'issue_validate']),
-        );
+        expect(normalizeToolNames(result.toolNames)).toEqual([
+          'issue_get',
+          'issue_update',
+          'issue_transition',
+          'issue_comment',
+          'issue_validate',
+        ]);
         const issue = readIssueFixture(cwd, '00001');
         expect(issue).toContain('title: Updated lifecycle task');
         expect(issue).toContain('status: done');
@@ -171,9 +175,7 @@ describe('OpenCode SDK integration', () => {
           'Use these tools exactly once in order: issue_relate with id 00001, relationship blocks, targetId 00002; issue_unrelate with the same arguments; issue_archive with id 00001. After all tools succeed, reply with only archived.',
         );
 
-        expect(normalizeToolNames(result.toolNames)).toEqual(
-          expect.arrayContaining(['issue_relate', 'issue_unrelate', 'issue_archive']),
-        );
+        expect(normalizeToolNames(result.toolNames)).toEqual(['issue_relate', 'issue_unrelate', 'issue_archive']);
         expect(existsSync(resolve(cwd, '.issues/archived/00001/issue.md'))).toBe(true);
         expect(existsSync(resolve(cwd, '.issues/00002/issue.md'))).toBe(true);
       } finally {
@@ -195,7 +197,7 @@ describe('OpenCode SDK integration', () => {
           'Use issue_link_document exactly once with id 00001, path .harnessctl/tasks/00001/plan.md, and kind task. After it succeeds, reply with only linked.',
         );
 
-        expect(normalizeToolNames(result.toolNames)).toContain('issue_link_document');
+        expect(normalizeToolNames(result.toolNames)).toEqual(['issue_link_document']);
         expect(readIssueFixture(cwd, '00001')).toContain('.harnessctl/tasks/00001/plan.md');
       } finally {
         rmSync(cwd, { recursive: true, force: true });
@@ -347,29 +349,37 @@ async function startOpenCodeServer(cwd: string): Promise<{
   client: ReturnType<typeof createOpencodeClient>;
   close: () => Promise<void>;
 }> {
-  const port = await findFreePort();
-  const child = spawn(opencodeCommand, [...opencodeCommandPrefix, 'serve', '--hostname=127.0.0.1', `--port=${port}`], {
-    cwd,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const exit = waitForExit(child);
-  let url: string;
-  try {
-    url = await waitForServerUrl(child);
-  } catch (error) {
-    child.kill('SIGTERM');
-    await exit;
-    throw error;
-  }
-
-  return {
-    client: createOpencodeClient({ baseUrl: url, directory: cwd }),
-    close: async () => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const port = await findFreePort();
+    const child = spawn(
+      opencodeCommand,
+      [...opencodeCommandPrefix, 'serve', '--hostname=127.0.0.1', `--port=${port}`],
+      {
+        cwd,
+        env: process.env,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    const exit = waitForExit(child);
+    try {
+      const url = await waitForServerUrl(child);
+      return {
+        client: createOpencodeClient({ baseUrl: url, directory: cwd }),
+        close: async () => {
+          child.kill('SIGTERM');
+          await exit;
+        },
+      };
+    } catch (error) {
       child.kill('SIGTERM');
       await exit;
-    },
-  };
+      if (attempt === 2 || !String(error).includes('EADDRINUSE')) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('OpenCode server failed to start after retrying port allocation.');
 }
 
 async function waitForServerUrl(process: ChildProcess): Promise<string> {

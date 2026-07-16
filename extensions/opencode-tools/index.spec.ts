@@ -52,7 +52,11 @@ describe('OpenCode adapter', () => {
       const issue = await tools['issue_create']?.execute({ type: 'task', title: 'Example task' }, context);
       const issues = await tools['issue_list']?.execute({}, context);
       const fetched = await tools['issue_get']?.execute({ id: '00001' }, context);
-      const transitioned = await tools['issue_transition']?.execute({ id: '00001', status: 'done' }, context);
+      const fetchedIssue = JSON.parse(String(fetched)) as { revision: string };
+      const transitioned = await tools['issue_transition']?.execute(
+        { id: '00001', status: 'done', expectedRevision: fetchedIssue.revision },
+        context,
+      );
       const comment = await tools['issue_comment']?.execute(
         { id: '00001', body: 'Review this', author: 'tester' },
         context,

@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
 import { ConfigError, getConfigValue } from './config.js';
@@ -30,6 +39,7 @@ export interface Issue {
   path: string;
   metadata: Record<string, unknown>;
   body: string;
+  revision: string;
 }
 
 export interface IssueSummary {
@@ -49,7 +59,7 @@ export interface IssueUpdateChanges {
   parent?: string | null;
   body?: string;
   sections?: Record<string, string>;
-  expectedRevision?: string;
+  expectedRevision: string;
 }
 
 export interface IssueComment {
@@ -86,11 +96,30 @@ const ALLOWED_PARENT_TYPES: Record<IssueType, readonly IssueType[]> = {
   bug: ['story', 'task', 'epic'],
 };
 const RELATIONSHIPS: readonly Relationship[] = ['depends_on', 'blocks', 'relates_to', 'duplicates', 'supersedes'];
+const RESERVED_METADATA_KEYS = new Set([
+  'id',
+  'type',
+  'title',
+  'status',
+  'created_at',
+  'updated_at',
+  'created_by',
+  'assigned_to',
+  'parent',
+  'children',
+  'depends_on',
+  'blocks',
+  'blocked_by',
+  'relates_to',
+  'duplicates',
+  'supersedes',
+  'documents',
+]);
 
 export function parseIssueIds(prompt: string, cwd: string = process.cwd()): string[] {
   const prefix = readIssuePrefix(cwd);
   if (prefix === undefined) return [];
-  const expression = new RegExp(`(?<![A-Za-z0-9])${escapeRegex(prefix)}\\d+(?![A-Za-z0-9])`, 'g');
+  const expression = new RegExp(`(?<![A-Za-z0-9_-])${escapeRegex(prefix)}\\d+(?![A-Za-z0-9_-])`, 'g');
   return [...new Set([...prompt.matchAll(expression)].map((match) => match[0]))];
 }
 
@@ -98,13 +127,8 @@ export function parseIssueId(prompt: string, cwd: string = process.cwd()): strin
   return parseIssueIds(prompt, cwd)[0] ?? '';
 }
 
-export function createIssue(cwd: string, options: CreateIssueOptions): string {
-  const issue = createIssueRecord(cwd, options);
-  return [
-    `Created: ${issue.path}`,
-    `ID: ${issue.id}`,
-    `Edit the file body between "# ${issue.metadata.title}" and "## Comments".`,
-  ].join('\n');
+export function createIssue(cwd: string, options: CreateIssueOptions): Issue {
+  return createIssueRecord(cwd, options);
 }
 
 export function createIssueRecord(cwd: string, options: CreateIssueOptions): Issue {
@@ -113,14 +137,20 @@ export function createIssueRecord(cwd: string, options: CreateIssueOptions): Iss
   if (!title) throw new Error('title is required');
   const status = normalizeChoice(options.status ?? 'open', ISSUE_STATUSES, 'status');
   const prefix = getIssuePrefix(cwd);
+  for (const key of Object.keys(options.metadata ?? {})) {
+    if (RESERVED_METADATA_KEYS.has(key)) throw new Error(`metadata field is managed by the issue tool: ${key}`);
+  }
   const parent = normalizeIssueId(options.parent, prefix, 'parent');
   const depends = parseReferences(options.depends, prefix, 'depends');
   const issuesDir = join(cwd, '.issues');
   mkdirSync(issuesDir, { recursive: true });
+  let parentRevision: string | undefined;
   if (parent) {
     const parentIssue = readIssue(cwd, parent);
     validateParentType(parentIssue, type);
+    parentRevision = revision(parentIssue);
   }
+  for (const dependency of depends) readIssue(cwd, dependency);
 
   const timestamp = new Date().toISOString();
   const metadata: Record<string, unknown> = {
@@ -140,7 +170,7 @@ export function createIssueRecord(cwd: string, options: CreateIssueOptions): Iss
   const issue = writeNewIssue(issuesDir, prefix, metadata, defaultBody(title));
   if (parent) {
     try {
-      updateReference(cwd, parent, 'children', issue.id, true);
+      updateReference(cwd, parent, 'children', issue.id, true, parentRevision);
     } catch (error: unknown) {
       rmSync(join(issuesDir, issue.id), { recursive: true, force: true });
       throw error;
@@ -169,18 +199,18 @@ export function listIssueSummaries(cwd: string, options: ListIssueOptions = {}):
     }));
 }
 
-/** Compatibility formatter retained for existing host integrations. */
-export function listIssues(cwd: string, options: ListIssueOptions = {}): string {
-  if (!existsSync(join(cwd, '.issues'))) return 'No .issues/ directory found.';
-  const summaries = listIssueSummaries(cwd, options);
-  if (summaries.length === 0)
-    return options.status || options.type ? 'No issues match the filters.' : 'No issues found.';
-  return summaries
-    .map((issue) => `ID: ${issue.id} | Type: ${issue.type} | Status: ${issue.status} | File: ${issue.path}`)
-    .join('\n');
+export function listIssues(cwd: string, options: ListIssueOptions = {}): IssueSummary[] {
+  return listIssueSummaries(cwd, options);
 }
 
 export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges): Issue {
+  const prefix = getIssuePrefix(cwd);
+  assertIssueId(id, prefix, 'issue');
+  if (!changes.expectedRevision) throw new Error('expected revision is required');
+  return withIssueLock(cwd, id, () => updateIssueUnlocked(cwd, id, changes));
+}
+
+function updateIssueUnlocked(cwd: string, id: string, changes: IssueUpdateChanges): Issue {
   const issue = readIssue(cwd, id);
   if (changes.expectedRevision && changes.expectedRevision !== revision(issue)) {
     throw new Error(`issue ${id} changed since the expected revision was calculated`);
@@ -196,8 +226,15 @@ export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges
   if (changes.assignee !== undefined) metadata.assigned_to = changes.assignee.trim();
   const currentParent = stringValue(metadata.parent);
   const nextParent = changes.parent === undefined ? currentParent : cleanOptional(changes.parent ?? undefined);
+  const prefix = getIssuePrefix(cwd);
+  const parentRevisions = new Map<string, string>();
+  for (const parentId of new Set([currentParent, nextParent])) {
+    if (parentId && parentId !== id) {
+      assertIssueId(parentId, prefix, 'parent');
+      parentRevisions.set(parentId, revision(readIssue(cwd, parentId)));
+    }
+  }
   if (nextParent) {
-    const prefix = getIssuePrefix(cwd);
     assertIssueId(nextParent, prefix, 'parent');
     const parent = readIssue(cwd, nextParent);
     validateParentType(parent, stringValue(metadata.type) as IssueType);
@@ -206,25 +243,44 @@ export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges
   } else {
     delete metadata.parent;
   }
+  if (changes.type !== undefined && metadata.type !== issue.metadata.type) {
+    for (const child of referenceList(issue.metadata.children)) {
+      const childIssue = readIssue(cwd, child);
+      const childType = stringValue(childIssue.metadata.type);
+      if (!childType || !ISSUE_TYPES.includes(childType as IssueType))
+        throw new Error(`child issue "${child}" has an invalid type`);
+      validateParentType({ ...issue, metadata: { ...metadata } }, childType as IssueType);
+    }
+  }
   metadata.updated_at = new Date().toISOString();
   const body = changes.sections ? updateSections(issue.body, changes.sections) : (changes.body ?? issue.body);
   writeIssue(join(cwd, issue.path), metadata, body);
   if (nextParent !== currentParent) {
     let oldParentRemoved = false;
     let newParentAdded = false;
+    let oldParentRevision: string | undefined;
+    let newParentRevision: string | undefined;
     try {
       if (currentParent) {
-        updateReference(cwd, currentParent, 'children', id, false);
+        oldParentRevision = updateReference(
+          cwd,
+          currentParent,
+          'children',
+          id,
+          false,
+          parentRevisions.get(currentParent),
+        );
         oldParentRemoved = true;
       }
       if (nextParent) {
-        updateReference(cwd, nextParent, 'children', id, true);
+        newParentRevision = updateReference(cwd, nextParent, 'children', id, true, parentRevisions.get(nextParent));
         newParentAdded = true;
       }
     } catch (error: unknown) {
       try {
-        if (newParentAdded && nextParent) updateReference(cwd, nextParent, 'children', id, false);
-        if (oldParentRemoved && currentParent) updateReference(cwd, currentParent, 'children', id, true);
+        if (newParentAdded && nextParent) updateReference(cwd, nextParent, 'children', id, false, newParentRevision);
+        if (oldParentRemoved && currentParent)
+          updateReference(cwd, currentParent, 'children', id, true, oldParentRevision);
       } catch (rollbackError: unknown) {
         throw new Error(
           `parent update failed and rollback was incomplete: ${errorMessage(error)}; ${errorMessage(rollbackError)}`,
@@ -237,53 +293,75 @@ export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges
   return readIssue(cwd, id);
 }
 
-export function transitionIssue(cwd: string, id: string, status: string, expectedRevision?: string): Issue {
+export function transitionIssue(cwd: string, id: string, status: string, expectedRevision: string): Issue {
   return updateIssue(cwd, id, { status, expectedRevision });
 }
 
 export function commentIssue(cwd: string, id: string, body: string, author: string): IssueComment {
-  readIssue(cwd, id);
+  const issue = readIssue(cwd, id);
   if (!body.trim()) throw new Error('comment body is required');
   if (!author.trim()) throw new Error('comment author is required');
   const commentsDir = join(cwd, '.issues', id, 'comments');
   mkdirSync(commentsDir, { recursive: true });
-  const next = nextCommentNumber(commentsDir);
-  const commentId = `${id}-C${String(next).padStart(4, '0')}`;
-  const timestamp = new Date().toISOString();
-  const commentPath = join(commentsDir, `${String(next).padStart(4, '0')}.md`);
-  writeFileSync(
-    commentPath,
-    `---\nid: ${JSON.stringify(commentId)}\nissue: ${JSON.stringify(id)}\ncreated_at: ${JSON.stringify(timestamp)}\ncreated_by: ${JSON.stringify(author.trim())}\n---\n\n${body.trim()}\n`,
-    { encoding: 'utf8', flag: 'wx' },
-  );
-  updateIssue(cwd, id, {});
-  return {
-    id: commentId,
-    issue: id,
-    path: relativePath(cwd, commentPath),
-    created_at: timestamp,
-    created_by: author.trim(),
-    body: body.trim(),
-  };
+  let next = nextCommentNumber(commentsDir);
+  while (true) {
+    const commentId = `${id}-C${String(next).padStart(4, '0')}`;
+    const timestamp = new Date().toISOString();
+    const commentPath = join(commentsDir, `${String(next).padStart(4, '0')}.md`);
+    try {
+      writeFileSync(
+        commentPath,
+        `---\nid: ${JSON.stringify(commentId)}\nissue: ${JSON.stringify(id)}\ncreated_at: ${JSON.stringify(timestamp)}\ncreated_by: ${JSON.stringify(author.trim())}\n---\n\n${body.trim()}\n`,
+        { encoding: 'utf8', flag: 'wx' },
+      );
+      try {
+        updateIssue(cwd, id, { expectedRevision: revision(issue) });
+      } catch (error: unknown) {
+        rmSync(commentPath, { force: true });
+        throw error;
+      }
+      return {
+        id: commentId,
+        issue: id,
+        path: relativePath(cwd, commentPath),
+        created_at: timestamp,
+        created_by: author.trim(),
+        body: body.trim(),
+      };
+    } catch (error: unknown) {
+      if (isAlreadyExistsError(error)) {
+        next += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 export function relateIssue(cwd: string, id: string, relationship: string, targetId: string): Issue {
   assertRelationship(relationship);
-  readIssue(cwd, id);
-  readIssue(cwd, targetId);
+  const sourceIssue = readIssue(cwd, id);
+  const targetIssue = readIssue(cwd, targetId);
   if (id === targetId) throw new Error('an issue cannot reference itself');
   const prefix = getIssuePrefix(cwd);
   assertIssueId(targetId, prefix, 'target');
   if (relationship === 'depends_on' && hasDependencyPath(cwd, targetId, id))
     throw new Error('dependency cycle detected');
-  updateReference(cwd, id, relationship, targetId, true);
+  const sourceHadReference = referenceList(sourceIssue.metadata[relationship]).includes(targetId);
+  const inverseField = inverseRelationship(relationship);
+  const targetHadReference = inverseField ? referenceList(targetIssue.metadata[inverseField]).includes(id) : false;
+  const sourceRevision = updateReference(cwd, id, relationship, targetId, true, revision(sourceIssue));
+  let targetRevision: string | undefined;
   try {
-    if (relationship === 'blocks') updateReference(cwd, targetId, 'blocked_by', id, true);
-    if (relationship === 'duplicates' || relationship === 'supersedes')
-      updateReference(cwd, targetId, relationship, id, true);
+    if (relationship === 'blocks')
+      targetRevision = updateReference(cwd, targetId, 'blocked_by', id, true, revision(targetIssue));
+    if (relationship === 'duplicates')
+      targetRevision = updateReference(cwd, targetId, relationship, id, true, revision(targetIssue));
   } catch (error: unknown) {
     try {
-      updateReference(cwd, id, relationship, targetId, false);
+      if (targetRevision)
+        updateReference(cwd, targetId, inverseField ?? relationship, id, targetHadReference, targetRevision);
+      updateReference(cwd, id, relationship, targetId, sourceHadReference, sourceRevision);
     } catch (rollbackError: unknown) {
       throw new Error(
         `relationship update failed and rollback was incomplete: ${errorMessage(error)}; ${errorMessage(rollbackError)}`,
@@ -296,16 +374,23 @@ export function relateIssue(cwd: string, id: string, relationship: string, targe
 
 export function unrelateIssue(cwd: string, id: string, relationship: string, targetId: string): Issue {
   assertRelationship(relationship);
-  readIssue(cwd, id);
-  readIssue(cwd, targetId);
-  updateReference(cwd, id, relationship, targetId, false);
+  const sourceIssue = readIssue(cwd, id);
+  const targetIssue = readIssue(cwd, targetId);
+  const sourceHadReference = referenceList(sourceIssue.metadata[relationship]).includes(targetId);
+  const inverseField = inverseRelationship(relationship);
+  const targetHadReference = inverseField ? referenceList(targetIssue.metadata[inverseField]).includes(id) : false;
+  const sourceRevision = updateReference(cwd, id, relationship, targetId, false, revision(sourceIssue));
+  let targetRevision: string | undefined;
   try {
-    if (relationship === 'blocks') updateReference(cwd, targetId, 'blocked_by', id, false);
-    if (relationship === 'duplicates' || relationship === 'supersedes')
-      updateReference(cwd, targetId, relationship, id, false);
+    if (relationship === 'blocks')
+      targetRevision = updateReference(cwd, targetId, 'blocked_by', id, false, revision(targetIssue));
+    if (relationship === 'duplicates')
+      targetRevision = updateReference(cwd, targetId, relationship, id, false, revision(targetIssue));
   } catch (error: unknown) {
     try {
-      updateReference(cwd, id, relationship, targetId, true);
+      if (targetRevision)
+        updateReference(cwd, targetId, inverseField ?? relationship, id, targetHadReference, targetRevision);
+      updateReference(cwd, id, relationship, targetId, sourceHadReference, sourceRevision);
     } catch (rollbackError: unknown) {
       throw new Error(
         `relationship update failed and rollback was incomplete: ${errorMessage(error)}; ${errorMessage(rollbackError)}`,
@@ -318,14 +403,15 @@ export function unrelateIssue(cwd: string, id: string, relationship: string, tar
 
 export function linkDocument(cwd: string, id: string, documentPath: string, kind?: string): Issue {
   const issue = readIssue(cwd, id);
-  validateDocumentPath(cwd, documentPath);
+  const normalizedPath = validateDocumentPath(cwd, documentPath);
   if (kind && !['task', 'design'].includes(kind)) throw new Error(`invalid document kind: ${kind}`);
-  if (kind === 'task' && !documentPath.startsWith('.harnessctl/tasks/'))
-    throw new Error('task documents must be under .harnessctl/tasks/');
-  if (kind === 'design' && !documentPath.startsWith('.specs/'))
+  const taskRoot = configuredTaskRoot(cwd);
+  if (kind === 'task' && !isUnderRoot(normalizedPath, taskRoot))
+    throw new Error(`task documents must be under ${taskRoot}/`);
+  if (kind === 'design' && !normalizedPath.startsWith('.specs/'))
     throw new Error('design documents must be under .specs/');
-  if (!existsSync(join(cwd, documentPath))) throw new Error(`linked document does not exist: ${documentPath}`);
-  updateReference(cwd, id, 'documents', documentPath, true);
+  if (!existsSync(join(cwd, normalizedPath))) throw new Error(`linked document does not exist: ${normalizedPath}`);
+  updateReference(cwd, id, 'documents', normalizedPath, true, revision(issue));
   return readIssue(cwd, issue.id);
 }
 
@@ -416,9 +502,8 @@ export function validateIssues(cwd: string, id?: string): ValidationReport {
   return { valid: findings.every((finding) => finding.severity !== 'error'), findings };
 }
 
-export function archiveIssue(cwd: string, id: string): string {
-  const report = archiveIssueReport(cwd, id);
-  return [`Archived: ${report.archived.join(', ')}`, `Location: ${report.location}`].join('\n');
+export function archiveIssue(cwd: string, id: string): ArchiveReport {
+  return archiveIssueReport(cwd, id);
 }
 
 export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
@@ -431,23 +516,46 @@ export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
     if (existsSync(join(archiveDir, id))) return { archived: [], skipped: [id], location: '.issues/archived/' };
     throw new Error(`issue ${id} does not exist in .issues/`);
   }
-  const candidates = collectIssueTree(issuesDir, id);
+  const candidates = collectIssueTree(issuesDir, id, prefix);
   mkdirSync(archiveDir, { recursive: true });
   const archived: string[] = [];
   const skipped: string[] = [];
+  const detached: Array<{ parent: string; children: string[]; revision: string }> = [];
+  const conflicts: string[] = [];
+  for (const issueId of candidates) {
+    const source = join(issuesDir, issueId);
+    const destination = join(archiveDir, issueId);
+    if (existsSync(source) && existsSync(destination)) conflicts.push(issueId);
+    else if (!existsSync(source) && existsSync(destination)) skipped.push(issueId);
+  }
+  if (conflicts.length > 0)
+    throw new Error(`cannot archive issue tree because destinations already exist: ${conflicts.join(', ')}`);
   try {
+    const childrenByParent = new Map<string, string[]>();
+    for (const issueId of candidates) {
+      const issuePath = join(issuesDir, issueId, 'issue.md');
+      if (!existsSync(issuePath)) continue;
+      const parent = stringValue(readFrontmatter(readFileSync(issuePath, 'utf8')).parent);
+      if (parent) assertIssueId(parent, prefix, 'parent');
+      if (parent && !candidates.includes(parent) && existsSync(join(issuesDir, parent, 'issue.md'))) {
+        childrenByParent.set(parent, [...(childrenByParent.get(parent) ?? []), issueId]);
+      }
+    }
+    for (const [parent, children] of childrenByParent) {
+      const parentIssue = readIssue(cwd, parent);
+      const parentRevision = updateReferences(cwd, parent, 'children', children, false, revision(parentIssue));
+      detached.push({ parent, children, revision: parentRevision });
+    }
     for (const issueId of candidates) {
       const source = join(issuesDir, issueId);
       const destination = join(archiveDir, issueId);
-      if (existsSync(destination)) {
-        skipped.push(issueId);
-      } else if (existsSync(source)) {
+      if (existsSync(source)) {
         renameSync(source, destination);
         archived.push(issueId);
       }
     }
   } catch (error: unknown) {
-    rollbackArchive(issuesDir, archiveDir, archived, error);
+    rollbackArchive(issuesDir, archiveDir, archived, detached, error);
     throw error;
   }
   return { archived, skipped, location: '.issues/archived/' };
@@ -459,6 +567,23 @@ function readIssue(cwd: string, id: string): Issue {
   const path = join(cwd, '.issues', id, 'issue.md');
   if (!existsSync(path)) throw new Error(`issue ${id} does not exist`);
   return parseIssueFile(cwd, path);
+}
+
+function withIssueLock<T>(cwd: string, id: string, operation: () => T): T {
+  const locksDir = join(cwd, '.issues', '.locks');
+  const lockPath = join(locksDir, `${id}.lock`);
+  mkdirSync(locksDir, { recursive: true });
+  try {
+    mkdirSync(lockPath);
+  } catch (error: unknown) {
+    if (isAlreadyExistsError(error)) throw new Error(`issue ${id} is currently locked`);
+    throw error;
+  }
+  try {
+    return operation();
+  } finally {
+    rmSync(lockPath, { recursive: true, force: true });
+  }
 }
 
 function parseIssueFile(cwd: string, path: string): Issue {
@@ -474,7 +599,8 @@ function parseIssueFile(cwd: string, path: string): Issue {
   const metadata = value as Record<string, unknown>;
   const id = stringValue(metadata.id);
   if (!id) throw new Error(`issue file has no id: ${relativePath(cwd, path)}`);
-  return { id, path: relativePath(cwd, path), metadata, body: content.slice(boundary + 4).replace(/^\n/, '') };
+  const issue = { id, path: relativePath(cwd, path), metadata, body: content.slice(boundary + 4).replace(/^\n/, '') };
+  return { ...issue, revision: revision(issue) };
 }
 
 function writeIssue(path: string, metadata: Record<string, unknown>, body: string): void {
@@ -495,12 +621,13 @@ function writeNewIssue(issuesDir: string, prefix: string, metadata: Record<strin
       metadata.id = id;
       const path = join(directory, 'issue.md');
       writeIssue(path, metadata, body);
-      return {
+      const issue = {
         id,
         path: relativePath(issuesDir.slice(0, issuesDir.length - '.issues'.length), path),
         metadata: { ...metadata },
         body,
       };
+      return { ...issue, revision: revision(issue) };
     } catch (error: unknown) {
       if (!isAlreadyExistsError(error)) throw error;
       sequence += 1;
@@ -508,35 +635,66 @@ function writeNewIssue(issuesDir: string, prefix: string, metadata: Record<strin
   }
 }
 
-function updateReference(cwd: string, id: string, field: string, value: string, add: boolean): void {
+function updateReference(
+  cwd: string,
+  id: string,
+  field: string,
+  value: string,
+  add: boolean,
+  expectedRevision?: string,
+): string {
+  return updateReferences(cwd, id, field, [value], add, expectedRevision);
+}
+
+function updateReferences(
+  cwd: string,
+  id: string,
+  field: string,
+  values: string[],
+  add: boolean,
+  expectedRevision?: string,
+): string {
   const issue = readIssue(cwd, id);
+  if (expectedRevision && expectedRevision !== revision(issue))
+    throw new Error(`issue ${id} changed before reference update`);
   const references = referenceList(issue.metadata[field]);
-  const next = add ? [...new Set([...references, value])] : references.filter((item) => item !== value);
+  const next = add ? [...new Set([...references, ...values])] : references.filter((item) => !values.includes(item));
   const metadata = { ...issue.metadata };
   if (next.length > 0) metadata[field] = next;
   else delete metadata[field];
   metadata.updated_at = new Date().toISOString();
   writeIssue(join(cwd, issue.path), metadata, issue.body);
+  return revision(readIssue(cwd, id));
 }
 
-function collectIssueTree(issuesDir: string, rootId: string): string[] {
+function collectIssueTree(issuesDir: string, rootId: string, prefix: string): string[] {
   const result: string[] = [];
   const visited = new Set<string>();
   const visit = (id: string): void => {
     if (visited.has(id)) return;
     visited.add(id);
     result.push(id);
-    const path = join(issuesDir, id, 'issue.md');
+    const activePath = join(issuesDir, id, 'issue.md');
+    const archivedPath = join(issuesDir, 'archived', id, 'issue.md');
+    const path = existsSync(activePath) ? activePath : archivedPath;
     if (!existsSync(path)) return;
     for (const child of referenceList(readFrontmatter(readFileSync(path, 'utf8')).children)) {
-      if (existsSync(join(issuesDir, child))) visit(child);
+      assertIssueId(child, prefix, 'child');
+      if (existsSync(join(issuesDir, child, 'issue.md')) || existsSync(join(issuesDir, 'archived', child, 'issue.md')))
+        visit(child);
     }
   };
   visit(rootId);
   return result;
 }
 
-function rollbackArchive(issuesDir: string, archiveDir: string, moved: string[], original: unknown): void {
+function rollbackArchive(
+  issuesDir: string,
+  archiveDir: string,
+  moved: string[],
+  detached: Array<{ parent: string; children: string[]; revision: string }>,
+  original: unknown,
+): void {
   const failures: string[] = [];
   for (const id of [...moved].reverse()) {
     try {
@@ -544,6 +702,20 @@ function rollbackArchive(issuesDir: string, archiveDir: string, moved: string[],
         renameSync(join(archiveDir, id), join(issuesDir, id));
     } catch (error: unknown) {
       failures.push(`${id}: ${errorMessage(error)}`);
+    }
+  }
+  for (const { parent, children, revision: detachedRevision } of detached.reverse()) {
+    try {
+      updateReferences(
+        issuesDir.slice(0, issuesDir.length - '.issues'.length),
+        parent,
+        'children',
+        children,
+        true,
+        detachedRevision,
+      );
+    } catch (error: unknown) {
+      failures.push(`${parent}/${children.join(',')}: ${errorMessage(error)}`);
     }
   }
   if (failures.length > 0)
@@ -619,18 +791,56 @@ function updateSections(body: string, sections: Record<string, string>): string 
   return result;
 }
 
-function validateDocumentPath(cwd: string, path: string): void {
+function validateDocumentPath(cwd: string, path: string): string {
   const normalized = path.replaceAll('\\', '/');
-  if (!normalized || normalized.startsWith('/') || normalized.includes('..') || normalized.includes(','))
+  if (
+    !normalized ||
+    normalized.startsWith('/') ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.includes(',') ||
+    normalized.split('/').includes('..')
+  )
     throw new Error(`invalid repository-relative document path: ${path}`);
-  if (!normalized.startsWith('.harnessctl/tasks/') && !normalized.startsWith('.specs/'))
+  const taskRoot = configuredTaskRoot(cwd);
+  if (!isUnderRoot(normalized, taskRoot) && !isUnderRoot(normalized, '.specs'))
     throw new Error(`document path must be under .harnessctl/tasks/ or .specs/: ${path}`);
   if (relative(cwd, join(cwd, normalized)).startsWith(`..${sep}`))
     throw new Error(`document path escapes repository: ${path}`);
+  let target = cwd;
+  for (const component of normalized.split('/')) {
+    target = join(target, component);
+    if (existsSync(target) && lstatSync(target).isSymbolicLink())
+      throw new Error(`symlink document paths are not allowed: ${path}`);
+  }
+  return normalized;
+}
+
+function configuredTaskRoot(cwd: string): string {
+  const value = getConfigValue(cwd, 'paths.tasks');
+  if (value instanceof ConfigError || typeof value !== 'string' || !value.trim()) return '.harnessctl/tasks';
+  const normalized = value.trim().replaceAll('\\', '/').replace(/\/$/, '');
+  if (
+    !normalized ||
+    normalized.startsWith('/') ||
+    /^[A-Za-z]:\//.test(normalized) ||
+    normalized.split('/').includes('..')
+  )
+    return '.harnessctl/tasks';
+  return normalized;
+}
+
+function isUnderRoot(path: string, root: string): boolean {
+  return path === root || path.startsWith(`${root}/`);
 }
 
 function assertRelationship(value: string): asserts value is Relationship {
   if (!RELATIONSHIPS.includes(value as Relationship)) throw new Error(`invalid relationship "${value}"`);
+}
+
+function inverseRelationship(value: string): string | undefined {
+  if (value === 'blocks') return 'blocked_by';
+  if (value === 'duplicates') return value;
+  return undefined;
 }
 
 function readFrontmatter(content: string): Record<string, unknown> {
@@ -681,7 +891,7 @@ function getIssuePrefix(cwd: string): string {
 
 function readIssuePrefix(cwd: string): string | undefined {
   const value = getConfigValue(cwd, 'issues.prefix');
-  return !value || typeof value !== 'string' || !/^[A-Za-z0-9._-]*$/.test(value)
+  return !value || typeof value !== 'string' || !/^[A-Za-z0-9_-]*$/.test(value)
     ? value === ''
       ? ''
       : undefined
@@ -720,7 +930,7 @@ function nextCommentNumber(directory: string): number {
   );
 }
 
-function revision(issue: Issue): string {
+function revision(issue: Pick<Issue, 'metadata' | 'body'>): string {
   return `${issue.metadata.updated_at ?? ''}:${issue.body}`;
 }
 

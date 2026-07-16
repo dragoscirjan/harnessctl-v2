@@ -85,7 +85,7 @@ The canonical issue record is `.issues/<id>/issue.md`.
 
 ```markdown
 ---
-id: 00001
+id: "00001"
 type: task
 title: Add filesystem issue management
 status: open
@@ -93,11 +93,11 @@ created_at: 2026-07-16T20:00:00Z
 updated_at: 2026-07-16T20:00:00Z
 created_by: user
 assigned_to: lead-engineer
-parent: 00003
-children: 00002, 00004
-depends_on: 00000
-blocks: 00005
-relates_to: 00002
+parent: "00003"
+children: "00002, 00004"
+depends_on: "00000"
+blocks: "00005"
+relates_to: "00002"
 documents: .harnessctl/tasks/00001/intake.md, .specs/lld--filesystem-issue-management-v2.md
 priority: normal
 labels: harnessctl, issue-management
@@ -143,10 +143,10 @@ updates so that future versions do not destroy human or tool-added metadata.
 The following properties are intentionally simple comma-separated references:
 
 ```yaml
-children: 00002, 00004
-depends_on: 00000, 00003
-blocks: 00005
-relates_to: 00002
+children: "00002, 00004"
+depends_on: "00000, 00003"
+blocks: "00005"
+relates_to: "00002"
 documents: .harnessctl/tasks/00001/intake.md, .specs/00002-design.md
 ```
 
@@ -194,13 +194,13 @@ initiative
 The child stores:
 
 ```yaml
-parent: 00003
+parent: "00003"
 ```
 
 The parent stores:
 
 ```yaml
-children: 00001, 00002
+children: "00001, 00002"
 ```
 
 The issue manager updates both sides in one logical operation. If one side is
@@ -277,8 +277,8 @@ Example:
 
 ```markdown
 ---
-id: 00001-C0001
-issue: 00001
+id: "00001-C0001"
+issue: "00001"
 created_at: 2026-07-16T20:20:00Z
 created_by: orchestrator
 ---
@@ -286,8 +286,10 @@ created_by: orchestrator
 The issue ID is immutable and remains independent of the issue type or title.
 ```
 
-`issue_comment` allocates the comment ID and filename. The LLM supplies only the
-issue ID, author, and comment text.
+`issue_comment` allocates the comment ID and filename using an exclusive `wx` file
+creation and retries with the next number on `EEXIST`. The LLM supplies only the
+issue ID, author, and comment text. If updating the issue timestamp fails, the new
+comment file is removed.
 
 Comments should not be edited or deleted by normal tools. Corrections are new
 comments. This preserves a simple audit trail in Git history.
@@ -317,9 +319,10 @@ issue_validate
 5. Update `updated_at`.
 6. Write the result atomically.
 
-For concurrent writers, the tool should accept an optional expected revision or
-content hash. If the issue changed since it was read, the operation returns a
-conflict instead of silently overwriting another change.
+Every mutating operation must use concurrency protection. Issue updates use an
+expected revision/content hash and return a conflict if the issue changed since it
+was read. Multi-file mutations use the same compare-before-write discipline and
+rollback on failure; they must never silently overwrite a newer revision.
 
 ## 10. Documents
 
@@ -352,8 +355,10 @@ Design documents remain under `.specs/` and are never copied into the issue dire
 documents: .specs/lld--filesystem-issue-management-v2.md
 ```
 
-`issue_link_document` validates that the path is repository-relative and records the
-link. It does not create or modify the target design document.
+`issue_link_document` normalizes backslashes to `/`, rejects absolute paths, `..`
+segments, commas, and paths outside the repository, and stores the normalized path.
+Symlink targets are rejected to prevent links escaping the repository. It records the
+link only and does not create or modify the target design document.
 
 ## 11. Tool contracts
 
@@ -363,7 +368,8 @@ The initial generic API should remain small:
 issue_create(type, title, metadata) -> Issue
 issue_get(id) -> Issue
 issue_list(filters) -> IssueSummary[]
-issue_update(id, changes, expected_revision?) -> Issue
+issue_update(id, changes, expected_revision) -> Issue
+issue_transition(id, status, expected_revision) -> Issue
 issue_comment(id, body, author) -> Comment
 issue_relate(id, relationship, target_id) -> Issue
 issue_unrelate(id, relationship, target_id) -> Issue
@@ -376,11 +382,13 @@ issue_id(prompt) -> string[]
 The generic package should return structured values. OpenCode and Pi adapters may
 format those values as text for their tool protocols.
 
-`issue_id` reads `issues.prefix`, matches every `<prefix><number>` occurrence in the
-provided prompt, removes duplicates while retaining first-appearance order, and
-returns an empty list when configuration is unavailable or invalid. With an empty
-prefix, numeric IDs are matched. It is a prompt-identification helper, not an issue
-existence check.
+`issue_id` reads `issues.prefix`, treats it literally, and matches whole-token
+occurrences of every `<prefix><number>` in the provided prompt. It escapes the
+prefix before constructing the matcher, rejects adjacent identifier characters,
+removes duplicates while retaining first-appearance order, and returns an empty list
+when configuration is unavailable or invalid. An empty prefix matches numeric IDs;
+the prefix must contain only ASCII letters, digits, `_`, or `-` (and may be empty).
+It is a prompt-identification helper, not an issue existence check.
 
 `issue_transition` may initially be implemented as a constrained `issue_update`, but
 it should remain a separate public operation so status rules can be added without

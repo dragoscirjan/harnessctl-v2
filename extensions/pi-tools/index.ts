@@ -116,7 +116,11 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       type: Type.Optional(Type.String({ description: 'Filter by issue type' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return textResult(JSON.stringify(listIssueSummaries(context.cwd, params)));
+      try {
+        return textResult(JSON.stringify(listIssueSummaries(context.cwd, params)));
+      } catch (error: unknown) {
+        return issueError(error);
+      }
     },
   });
 
@@ -164,7 +168,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       parent: Type.Optional(Type.String()),
       body: Type.Optional(Type.String()),
       sections: Type.Optional(Type.String({ description: 'Optional JSON object mapping section names to content' })),
-      expectedRevision: Type.Optional(Type.String()),
+      expectedRevision: Type.String({ description: 'Expected revision token from issue_get' }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
@@ -190,7 +194,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     parameters: Type.Object({
       id: Type.String({ description: 'Issue ID' }),
       status: Type.String({ description: 'New issue status' }),
-      expectedRevision: Type.Optional(Type.String()),
+      expectedRevision: Type.String({ description: 'Expected revision token from issue_get' }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
@@ -302,6 +306,6 @@ function issueError(error: unknown): {
 function parseJsonObject(value: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(value);
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
-    throw new Error('metadata must be a JSON object');
+    throw new Error('value must be a JSON object');
   return parsed as Record<string, unknown>;
 }

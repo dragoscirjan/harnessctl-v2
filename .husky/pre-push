@@ -5,3 +5,13 @@ set -euo pipefail
 for cmd in dupcheck test; do
   npm run "$cmd"
 done
+
+if [ -f .env ]; then
+  set -a
+  . ./.env
+  set +a
+fi
+
+if [ -n "${RUN_INTEGRATION_TESTS_AT_PRE_PUSH:-}" ]; then
+  npm run test:integration
+fi

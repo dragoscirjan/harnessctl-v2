@@ -82,7 +82,11 @@ export const CustomToolsPlugin: Plugin = async () => ({
         type: tool.schema.string().describe('Filter by issue type').optional(),
       },
       async execute(args, context) {
-        return JSON.stringify(listIssueSummaries(context.directory, args));
+        try {
+          return JSON.stringify(listIssueSummaries(context.directory, args));
+        } catch (error: unknown) {
+          return formatIssueError(error);
+        }
       },
     }),
     issue_get: tool({
@@ -108,7 +112,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
         parent: tool.schema.string().describe('Parent issue ID; empty removes the parent').optional(),
         body: tool.schema.string().describe('Complete issue body').optional(),
         sections: tool.schema.string().describe('Optional JSON object mapping section names to content').optional(),
-        expectedRevision: tool.schema.string().describe('Expected revision token').optional(),
+        expectedRevision: tool.schema.string().describe('Expected revision token from issue_get'),
       },
       async execute(args, context) {
         try {
@@ -129,7 +133,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       args: {
         id: tool.schema.string().describe('Issue ID'),
         status: tool.schema.string().describe('New issue status'),
-        expectedRevision: tool.schema.string().describe('Expected revision token').optional(),
+        expectedRevision: tool.schema.string().describe('Expected revision token from issue_get'),
       },
       async execute(args, context) {
         try {
@@ -203,7 +207,11 @@ export const CustomToolsPlugin: Plugin = async () => ({
       description: 'Validate one issue or all active local issues without mutating them.',
       args: { id: tool.schema.string().describe('Optional issue ID').optional() },
       async execute(args, context) {
-        return JSON.stringify(validateIssues(context.directory, args.id));
+        try {
+          return JSON.stringify(validateIssues(context.directory, args.id));
+        } catch (error: unknown) {
+          return formatIssueError(error);
+        }
       },
     }),
     issue_archive: tool({
@@ -233,6 +241,6 @@ function formatIssueError(error: unknown): string {
 function parseJsonObject(value: string): Record<string, unknown> {
   const parsed: unknown = JSON.parse(value);
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed))
-    throw new Error('metadata must be a JSON object');
+    throw new Error('value must be a JSON object');
   return parsed as Record<string, unknown>;
 }

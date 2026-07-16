@@ -65,9 +65,14 @@ describe('Pi adapter', () => {
       });
       const issues = await tools[4]?.execute('call-4', {}, undefined, undefined, { cwd });
       const fetched = await tools[6]?.execute('call-7', { id: '00001' }, undefined, undefined, { cwd });
-      const transitioned = await tools[8]?.execute('call-8', { id: '00001', status: 'done' }, undefined, undefined, {
-        cwd,
-      });
+      const fetchedIssue = JSON.parse(fetched?.content[0]?.text ?? '') as { revision: string };
+      const transitioned = await tools[8]?.execute(
+        'call-8',
+        { id: '00001', status: 'done', expectedRevision: fetchedIssue.revision },
+        undefined,
+        undefined,
+        { cwd },
+      );
       const comment = await tools[9]?.execute(
         'call-9',
         { id: '00001', body: 'Review this', author: 'tester' },
