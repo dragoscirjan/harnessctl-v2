@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+stash_before=$(git rev-parse -q --verify refs/stash || true)
+
+git stash push --keep-index --include-untracked -m 'harnessctl pre-commit' >/dev/null
+stash_after=$(git rev-parse -q --verify refs/stash || true)
+stash_created=$([[ "$stash_after" != "$stash_before" ]] && echo true || echo false)
+
+cleanup() {
+  status=$?
+  if [[ "$stash_created" == true ]]; then
+    git stash pop --quiet || status=1
+  fi
+  exit "$status"
+}
+trap cleanup EXIT
+
+for cmd in format:fix lint:fix; do
+  npm run "$cmd"
+done
+
+# The index is protected by --keep-index, so update only files already tracked
+# by the staged snapshot. The update mode also handles staged deletions.
+git add --update

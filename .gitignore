@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Node.js workspaces
+node_modules/
+coverage/
+tmp/
+.env.ai
+.memory.jsonl
+.web_stash.db

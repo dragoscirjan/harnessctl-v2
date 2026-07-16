@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@harnessctl/opencode-tools",
+  "version": "0.1.0",
+  "description": "OpenCode tools for harnessctl.",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run --config ../../vitest.config.ts --exclude integration.test.ts --passWithNoTests",
+    "test:integration": "vitest run --config ../../vitest.config.ts integration.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.18.2"
+  },
+  "dependencies": {
+    "@harnessctl/generic-tools": "0.1.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.18.2",
+    "@opencode-ai/sdk": "^1.18.2",
+    "opencode-ai": "^1.18.2"
+  }
+}
