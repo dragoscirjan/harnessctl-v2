@@ -1,0 +1,8 @@
+# Google Bash Style Guide configuration.
+# Keep this aligned with templ-project/generic.
+disable=SC1091,SC2015,SC2155,SC2250,SC2310,SC2311,SC2312
+enable=add-default-case,check-empty-case,check-extra-masked-returns,check-set-e-suppressed,check-unassigned-uppercase,deprecate-which,quote-safe-variables,require-variable-braces
+external-sources=true
+format=tty
+severity=info
+shell=bash

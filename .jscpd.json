@@ -1,6 +1,6 @@
 {
-  "path": ["extensions"],
-  "pattern": "**/*.{ts,js}",
+  "path": ["extensions", "src", "tests"],
+  "pattern": "**/*.{ts,js,py}",
   "ignore": [
     "**/node_modules/**",
     "**/dist/**",

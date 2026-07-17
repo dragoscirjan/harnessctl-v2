@@ -17,9 +17,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for cmd in format:fix lint:fix; do
-  npm run "$cmd"
-done
+mise run format-fix
+mise run lint-fix
 
 # The index is protected by --keep-index, so update only files already tracked
 # by the staged snapshot. The update mode also handles staged deletions.
