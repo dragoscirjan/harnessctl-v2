@@ -1,66 +1,257 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createConfig } from './config.js';
-import { parseIssueId } from './issues.js';
+import {
+  archiveIssue,
+  commentIssue,
+  createIssue,
+  getIssue,
+  linkDocument,
+  listIssues,
+  parseIssueId,
+  parseIssueIds,
+  relateIssue,
+  transitionIssue,
+  type IssueUpdateChanges,
+  unrelateIssue,
+  updateIssue,
+  validateIssues,
+} from './issues.js';
 
 function temporaryDirectory(): string {
   return mkdtempSync(join(tmpdir(), 'harnessctl-issues-'));
 }
 
-describe('parseIssueId', () => {
-  it('extracts an incremental numeric issue ID from the default pattern', () => {
+describe('issue ID parsing', () => {
+  it('returns all unique IDs in first-appearance order', () => {
     const cwd = temporaryDirectory();
     try {
       createConfig(cwd);
-
-      expect(parseIssueId('Please fix issue 00042', cwd)).toBe('00042');
+      expect(parseIssueIds('See 00042, then 00007, then 00042 again.', cwd)).toEqual(['00042', '00007']);
+      expect(parseIssueId('See 00042 and 00007.', cwd)).toBe('00042');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('uses a configured pattern prefix', () => {
+  it('uses the configured prefix and permits an empty prefix', () => {
     const cwd = temporaryDirectory();
     try {
       mkdirSync(join(cwd, '.harnessctl'), { recursive: true });
-      writeFileSync(join(cwd, '.harnessctl', 'config.yaml'), 'issues:\n  pattern: TASK-*\n', 'utf8');
-
-      expect(parseIssueId('Review TASK-123 before merging', cwd)).toBe('TASK-123');
+      writeFileSync(join(cwd, '.harnessctl', 'config.yaml'), 'issues:\n  prefix: TASK-\n', 'utf8');
+      expect(parseIssueIds('TASK-123 and 456 and TASK-123 again.', cwd)).toEqual(['TASK-123']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
 
-  it('returns an empty string when no issue ID matches', () => {
-    const cwd = temporaryDirectory();
+  it('returns no IDs when configuration is unavailable or invalid', () => {
+    const missing = temporaryDirectory();
+    const invalid = temporaryDirectory();
     try {
-      createConfig(cwd);
-
-      expect(parseIssueId('There is no issue identifier here', cwd)).toBe('');
+      expect(parseIssueIds('Issue 123', missing)).toEqual([]);
+      mkdirSync(join(invalid, '.harnessctl'), { recursive: true });
+      writeFileSync(join(invalid, '.harnessctl', 'config.yaml'), 'issues:\n  prefix: "bad/prefix"\n', 'utf8');
+      expect(parseIssueIds('Issue bad/prefix123', invalid)).toEqual([]);
     } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
-  it('returns an empty string when configuration is unavailable or invalid', () => {
-    const missingConfigDirectory = temporaryDirectory();
-    const invalidConfigDirectory = temporaryDirectory();
-    try {
-      expect(parseIssueId('Issue 123', missingConfigDirectory)).toBe('');
-
-      mkdirSync(join(invalidConfigDirectory, '.harnessctl'), { recursive: true });
-      writeFileSync(
-        join(invalidConfigDirectory, '.harnessctl', 'config.yaml'),
-        "issues:\n  pattern: '[invalid'\n",
-        'utf8',
-      );
-
-      expect(parseIssueId('Issue 123', invalidConfigDirectory)).toBe('');
-    } finally {
-      rmSync(missingConfigDirectory, { recursive: true, force: true });
-      rmSync(invalidConfigDirectory, { recursive: true, force: true });
+      rmSync(missing, { recursive: true, force: true });
+      rmSync(invalid, { recursive: true, force: true });
     }
   });
 });
+
+describe('createIssue', () => {
+  it('creates an issue directory whose name contains only prefix and number', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      const result = createIssue(cwd, { type: 'task', title: 'Add issue list tool' });
+      expect(result).toMatchObject({ id: '00001', path: '.issues/00001/issue.md' });
+      expect(readFileSync(join(cwd, '.issues', '00001', 'issue.md'), 'utf8')).toContain('id: "00001"');
+      expect(listIssues(cwd)).toEqual([expect.objectContaining({ id: '00001', path: '.issues/00001/issue.md' })]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('uses issues.prefix and validates references against it', () => {
+    const cwd = temporaryDirectory();
+    try {
+      mkdirSync(join(cwd, '.harnessctl'), { recursive: true });
+      writeFileSync(join(cwd, '.harnessctl', 'config.yaml'), 'issues:\n  prefix: TASK-\n', 'utf8');
+      createIssue(cwd, { type: 'epic', title: 'Parent' });
+      const result = createIssue(cwd, { type: 'bug', title: 'Prefixed bug', parent: 'TASK-00001' });
+      expect(result).toMatchObject({ id: 'TASK-00002', path: '.issues/TASK-00002/issue.md' });
+      expect(getIssue(cwd, 'TASK-00002').metadata.parent).toBe('TASK-00001');
+      expect(getIssue(cwd, 'TASK-00001').metadata.children).toEqual(['TASK-00002']);
+      expect(() => createIssue(cwd, { type: 'task', title: 'Invalid', parent: '00001' })).toThrow(/invalid parent/);
+      expect(() => createIssue(cwd, { type: 'initiative', title: 'Invalid hierarchy', parent: 'TASK-00001' })).toThrow(
+        /invalid parent type/,
+      );
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('issue amendments', () => {
+  it('gets, updates, transitions, and preserves unknown issue metadata', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'task', title: 'Original' });
+      const issuePath = join(cwd, '.issues', '00001', 'issue.md');
+      writeFileSync(
+        issuePath,
+        `${readFileSync(issuePath, 'utf8').replace('status: open', 'status: open\ncustom: keep')}\n`,
+        'utf8',
+      );
+
+      const original = getIssue(cwd, '00001');
+      const updated = updateIssue(cwd, '00001', {
+        title: 'Updated',
+        body: '# Updated\n\n## Summary\nDetails',
+        expectedRevision: original.revision,
+      });
+      expect(updated.metadata.title).toBe('Updated');
+      expect(updated.metadata.custom).toBe('keep');
+      expect(updated.body).toContain('Details');
+      expect(transitionIssue(cwd, '00001', 'done', updated.revision).metadata.status).toBe('done');
+      expect(() => updateIssue(cwd, '00001', { title: 'Missing revision' } as IssueUpdateChanges)).toThrow(
+        /expected revision is required/,
+      );
+      expect(() => transitionIssue(cwd, '00001', 'open', '')).toThrow(/expected revision is required/);
+      expect(() => updateIssue(cwd, '00001', { expectedRevision: 'stale' })).toThrow(/changed since/);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('appends comments and maintains relationships', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'task', title: 'First' });
+      createIssue(cwd, { type: 'task', title: 'Second' });
+      const comment = commentIssue(cwd, '00001', 'Needs review', 'tester');
+      expect(comment.id).toBe('00001-C0001');
+      expect(readFileSync(join(cwd, '.issues', '00001', 'comments', '0001.md'), 'utf8')).toContain('Needs review');
+
+      relateIssue(cwd, '00001', 'blocks', '00002');
+      expect(getIssue(cwd, '00001').metadata.blocks).toEqual(['00002']);
+      expect(getIssue(cwd, '00002').metadata.blocked_by).toEqual(['00001']);
+      unrelateIssue(cwd, '00001', 'blocks', '00002');
+      expect(getIssue(cwd, '00001').metadata.blocks).toBeUndefined();
+      expect(getIssue(cwd, '00002').metadata.blocked_by).toBeUndefined();
+
+      relateIssue(cwd, '00001', 'supersedes', '00002');
+      expect(getIssue(cwd, '00001').metadata.supersedes).toEqual(['00002']);
+      expect(getIssue(cwd, '00002').metadata.supersedes).toBeUndefined();
+      unrelateIssue(cwd, '00001', 'supersedes', '00002');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('links allowed documents and validates without mutating malformed relationships', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'task', title: 'Documented' });
+      mkdirSync(join(cwd, '.harnessctl', 'tasks', '00001'), { recursive: true });
+      writeFileSync(join(cwd, '.harnessctl', 'tasks', '00001', 'plan.md'), '# Plan\n', 'utf8');
+      const linked = linkDocument(cwd, '00001', '.harnessctl/tasks/00001/plan.md');
+      expect(linked.metadata.documents).toEqual(['.harnessctl/tasks/00001/plan.md']);
+      expect(() => linkDocument(cwd, '00001', 'README.md')).toThrow(/must be under/);
+      expect(validateIssues(cwd)).toEqual({ valid: true, findings: [] });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('archiveIssue', () => {
+  it('moves an issue and all active descendants while leaving unrelated issues active', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'epic', title: 'Parent' });
+      createIssue(cwd, { type: 'task', title: 'Child' });
+      createIssue(cwd, { type: 'bug', title: 'Grandchild' });
+      createIssue(cwd, { type: 'task', title: 'Unrelated' });
+      writeFileSync(join(cwd, '.issues', '00001', 'issue.md'), frontmatter('00001', ['00002']), 'utf8');
+      writeFileSync(join(cwd, '.issues', '00002', 'issue.md'), frontmatter('00002', ['00003']), 'utf8');
+
+      const result = archiveIssue(cwd, '00001');
+      expect(result).toMatchObject({
+        archived: ['00001', '00002', '00003'],
+        skipped: [],
+        location: '.issues/archived/',
+      });
+      expect(readFileSync(join(cwd, '.issues', 'archived', '00003', 'issue.md'), 'utf8')).toContain('id: "00003"');
+      expect(listIssues(cwd).map((issue) => issue.id)).toEqual(['00004']);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('does not create archive state when the requested issue is missing', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      expect(() => archiveIssue(cwd, '00001')).toThrow(/does not exist/);
+      expect(existsSync(join(cwd, '.issues'))).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('reports already archived descendants as skipped', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'epic', title: 'Parent' });
+      createIssue(cwd, { type: 'task', title: 'Archived child' });
+      createIssue(cwd, { type: 'bug', title: 'Active grandchild' });
+      writeFileSync(join(cwd, '.issues', '00001', 'issue.md'), frontmatter('00001', ['00002']), 'utf8');
+      rmSync(join(cwd, '.issues', '00002'), { recursive: true, force: true });
+      mkdirSync(join(cwd, '.issues', 'archived', '00002'), { recursive: true });
+      writeFileSync(join(cwd, '.issues', 'archived', '00002', 'issue.md'), frontmatter('00002', ['00003']), 'utf8');
+
+      expect(archiveIssue(cwd, '00001')).toEqual({
+        archived: ['00001', '00003'],
+        skipped: ['00002'],
+        location: '.issues/archived/',
+      });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('listIssues', () => {
+  it('applies status and type filters', () => {
+    const cwd = temporaryDirectory();
+    try {
+      createConfig(cwd);
+      createIssue(cwd, { type: 'task', title: 'Open task' });
+      createIssue(cwd, { type: 'bug', title: 'Closed bug', status: 'closed' });
+      expect(listIssues(cwd)).toEqual([
+        expect.objectContaining({ id: '00001', type: 'task', status: 'open' }),
+        expect.objectContaining({ id: '00002', type: 'bug', status: 'closed' }),
+      ]);
+      expect(listIssues(cwd, { status: 'CLOSED' })).toEqual([
+        expect.objectContaining({ id: '00002', type: 'bug', status: 'closed' }),
+      ]);
+      expect(listIssues(cwd, { type: 'story' })).toEqual([]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+function frontmatter(id: string, children: string[]): string {
+  return `---\nid: "${id}"\ntype: task\ntitle: Issue ${id}\nstatus: open\nchildren: [${children.map((child) => `"${child}"`).join(', ')}]\n---\n`;
+}

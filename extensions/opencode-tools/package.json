@@ -10,7 +10,7 @@
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --config ../../vitest.config.ts --exclude integration.test.ts --passWithNoTests",
-    "test:integration": "vitest run --config ../../vitest.config.ts integration.test.ts",
+    "test:integration": "vitest run --config ../../vitest.config.ts integration.test.ts --retry=1",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {

@@ -18,7 +18,7 @@ describe('configuration tools', () => {
       expect(readConfig(cwd)).toEqual({
         version: 1,
         issues: {
-          pattern: '*',
+          prefix: '',
           type: 'filesystem',
           tools: 'issue-create,issue-read,issue-delete,issue-comment',
         },

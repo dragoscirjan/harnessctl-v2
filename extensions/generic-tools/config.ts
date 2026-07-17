@@ -15,7 +15,7 @@ const CONFIG_PATH = join('.harnessctl', 'config.yaml');
 const DEFAULT_CONFIG: ConfigDocument = {
   version: 1,
   issues: {
-    pattern: '*', // * means an incremental number.
+    prefix: '',
     type: 'filesystem',
     tools: 'issue-create,issue-read,issue-delete,issue-comment',
   },
