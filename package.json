@@ -23,9 +23,9 @@
     "fallow:health": "npx fallow health",
     "typecheck:strict": "npm run typecheck --workspaces --if-present",
     "typecheck": "npm run typecheck:strict || true",
-    "quality": "npm run lint && npm run format && npm run dupcheck && npm run fallow:summary && npm run test && npm run typecheck",
-    "validate": "npm run quality",
-    "quality:fix": "npm run lint:fix && npm run format:fix"
+    "quality": "mise run quality",
+    "validate": "mise run quality",
+    "quality:fix": "mise run format-fix && mise run lint-fix"
   },
   "devDependencies": {
     "@jscpd/html-reporter": "^4.2.5",

@@ -1,0 +1,39 @@
+[project]
+name = "harnessctl"
+version = "0.1.0"
+description = "Harness-neutral SDLC prompt distribution tools."
+requires-python = ">=3.11"
+dependencies = ["jinja2>=3.1.6,<4"]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "ruff>=0.11,<1",
+  "vulture>=2.16,<3",
+]
+
+[tool.uv]
+package = true
+
+[tool.uv.build-backend]
+module-name = "harnessctl"
+module-root = "src"
+
+[build-system]
+requires = ["uv_build>=0.7.19,<0.8"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["tmp", ".opencode/node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.vulture]
+paths = ["src", "tests"]
+min_confidence = 80

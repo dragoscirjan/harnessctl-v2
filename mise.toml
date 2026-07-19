@@ -1,0 +1,113 @@
+[settings]
+experimental = true
+lockfile = true
+
+[tools]
+
+# Node is used by the existing workspace, ESLint, Prettier, Vitest, and jscpd.
+[tools.node]
+version = "latest"
+
+# Python and uv are mandatory for the installer and Python quality workflow.
+[tools.python]
+version = "3.11"
+
+[tools.uv]
+version = "latest"
+
+# ShellCheck is used by the repository quality tasks and Husky validation.
+[tools."github:koalaman/shellcheck"]
+version = "0.11.0"
+
+[tools."github:koalaman/shellcheck".platforms]
+linux-x64 = { asset_pattern = "shellcheck-*.linux.x86_64.tar.xz" }
+macos-arm64 = { asset_pattern = "shellcheck-*.darwin.aarch64.tar.xz" }
+windows-x64 = { asset_pattern = "shellcheck-*.zip" }
+
+[tasks.setup]
+description = "Install Node and uv dependencies"
+run = ["npm install", "uv sync"]
+
+[tasks.node-format]
+description = "Check Node workspace formatting"
+run = "npm run format"
+
+[tasks.node-format-fix]
+description = "Format Node workspace sources"
+run = "npm run format:fix"
+
+[tasks.python-format]
+description = "Format Python sources"
+run = "uv run ruff format src tests"
+
+[tasks.python-format-check]
+description = "Check Python formatting"
+run = "uv run ruff format --check src tests"
+
+[tasks.node-lint]
+description = "Lint Node workspace sources"
+run = "npm run lint"
+
+[tasks.node-lint-fix]
+description = "Fix Node workspace lint findings"
+run = "npm run lint:fix"
+
+[tasks.python-lint]
+description = "Lint Python sources"
+run = "uv run ruff check src tests"
+
+[tasks.python-lint-fix]
+description = "Fix Python lint findings"
+run = "uv run ruff check src tests --fix"
+
+[tasks.shell-lint]
+description = "Lint repository shell scripts"
+run = "shellcheck compare-tests.sh .husky/pre-commit .husky/pre-push"
+
+[tasks.node-test]
+description = "Run Node workspace tests"
+run = "npm test"
+
+[tasks.python-test]
+description = "Run Python tests"
+run = "uv run pytest"
+
+[tasks.node-dupcheck]
+description = "Check Node and Python duplication"
+run = "npm run dupcheck"
+
+[tasks.python-deadcode]
+description = "Find unused Python code"
+run = "uv run vulture src tests --min-confidence 80"
+
+[tasks.format]
+description = "Check all source formatting"
+depends = ["node-format", "python-format-check"]
+
+[tasks.format-fix]
+description = "Format all source files"
+depends = ["node-format-fix", "python-format"]
+
+[tasks.lint]
+description = "Lint all source files"
+depends = ["node-lint", "python-lint", "shell-lint"]
+
+[tasks.lint-fix]
+description = "Fix all automatic lint findings"
+depends = ["node-lint-fix", "python-lint-fix"]
+
+[tasks.test]
+description = "Run all unit tests"
+depends = ["node-test", "python-test"]
+
+[tasks.quality]
+description = "Run the complete local quality gate"
+depends = ["format", "lint", "test", "node-dupcheck", "python-deadcode"]
+
+[tasks.integration]
+description = "Run harness integration tests using configured model environments"
+run = "npm run test:integration"
+
+[tasks.install-prompts]
+description = "Install compiled SDLC prompts into the current project"
+run = "uv run python -m harnessctl.install --cwd . --harness all"

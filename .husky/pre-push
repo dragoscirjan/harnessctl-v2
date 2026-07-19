@@ -2,9 +2,8 @@
 
 set -euo pipefail
 
-for cmd in dupcheck test; do
-  npm run "$cmd"
-done
+mise run node-dupcheck
+mise run test
 
 if [ -f .env ]; then
   set -a
