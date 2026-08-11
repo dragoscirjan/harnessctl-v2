@@ -9,11 +9,13 @@ import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 
+from .templates import TEMPLATES, render_prompt
+
 TARGETS = {
     "opencode": Path(".opencode/commands"),
     "pi": Path(".pi/commands"),
 }
-COMMANDS = ("work-new", "work-explore", "work-plan")
+COMMANDS = tuple(TEMPLATES.keys())
 
 
 def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
@@ -82,7 +84,6 @@ def render_command(harness: str, command: str) -> str:
     """Render one supported command for a harness."""
     if command not in COMMANDS:
         raise ValueError(f"unsupported command: {command}")
-    from .templates import render_prompt
 
     return render_prompt(command, harness)
 

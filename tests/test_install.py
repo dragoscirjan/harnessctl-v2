@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from harnessctl.install import install
-from harnessctl.templates import render_prompt, render_work_new
+from harnessctl.templates import TEMPLATES, render_prompt, render_work_new
 
 
 def test_rendered_prompts_share_the_canonical_body() -> None:
@@ -20,13 +20,10 @@ def test_rendered_prompts_share_the_canonical_body() -> None:
 def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     installed = install(tmp_path, "all")
 
-    assert len(installed) == 6
-    assert (tmp_path / ".opencode/commands/work-new.md").exists()
-    assert (tmp_path / ".opencode/commands/work-explore.md").exists()
-    assert (tmp_path / ".opencode/commands/work-plan.md").exists()
-    assert (tmp_path / ".pi/commands/work-new.md").exists()
-    assert (tmp_path / ".pi/commands/work-explore.md").exists()
-    assert (tmp_path / ".pi/commands/work-plan.md").exists()
+    assert len(installed) == len(TEMPLATES) * 2
+    for command in TEMPLATES:
+        assert (tmp_path / f".opencode/commands/{command}.md").exists()
+        assert (tmp_path / f".pi/commands/{command}.md").exists()
     assert not (tmp_path / ".harnessctl").exists()
 
 

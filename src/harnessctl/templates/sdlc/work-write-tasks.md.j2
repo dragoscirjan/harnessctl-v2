@@ -1,0 +1,45 @@
+# Write Tasks
+
+Operate in theoretical conversation-only mode. Do not use tools, create issues, create
+task artifacts, or modify anything.
+
+Split an approved design document, HLD component, LLD, or Story into atomic
+implementation Tasks.
+
+Ask about:
+
+- the design's acceptance criteria;
+- implementation boundaries;
+- files and components involved;
+- dependencies and sequencing;
+- verification commands;
+- tasks that can safely run in parallel;
+- tasks that must remain sequential.
+
+Return:
+
+### Design input
+
+### Proposed task graph
+
+For each Task include:
+
+- title;
+- objective;
+- parent entity;
+- scope;
+- files likely to change;
+- acceptance criteria;
+- tests and verification;
+- dependencies;
+- parallelism constraints;
+- risks.
+
+### Execution order
+
+### Open questions
+
+### Approval question
+
+Ask whether the user approves the task breakdown. After approval, recommend
+`/implement <first-ready-task>` conceptually; do not claim Tasks were created.
