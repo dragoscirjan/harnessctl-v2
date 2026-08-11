@@ -29,3 +29,17 @@ Then implementation either adds verified output or clearly reports memory suppor
 
 
 ## Comments
+
+**Status Update:**
+Strict workspace typecheck currently fails in Pi integration tests because installed `@earendil-works/pi-coding-agent` types no longer export `AuthStorage`, `ModelRegistry.inMemory`, or the previously used session options. Unit tests still pass. This failure is unrelated to the contract-copy removal but confirms Pi compatibility needs verification.
+
+**Artifacts:**
+- [`extensions/pi-tools/integration.test.ts`](../extensions/pi-tools/integration.test.ts)
+
+**Next Steps / Blockers:**
+- Verify the installed Pi API against authoritative documentation before changing integration code.
+- Pi support remains blocked until the test harness is migrated to supported APIs.
+
+---
+
+opencode-agent: lead-engineer

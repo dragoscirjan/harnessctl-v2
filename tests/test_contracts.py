@@ -1,19 +1,18 @@
-from hashlib import sha256
-from importlib.resources import files
+import json
 from pathlib import Path
 
 import pytest
 
-CONTRACT_NAMES = ("config-v2.schema.json", "memory-record-v1.schema.json")
+CONTRACT_IDS = {
+    "config-v2.schema.json": "https://harnessctl.dev/contracts/config-v2.schema.json",
+    "memory-record-v1.schema.json": "https://harnessctl.dev/contracts/memory-record-v1.schema.json",
+}
 
 
-@pytest.mark.parametrize("name", CONTRACT_NAMES)
-def test_contract_copies_match_canonical_bytes(name: str) -> None:
+@pytest.mark.parametrize(("name", "expected_id"), CONTRACT_IDS.items())
+def test_canonical_contract_is_valid_json(name: str, expected_id: str) -> None:
     root = Path(__file__).parents[1]
-    canonical = (root / "contracts" / name).read_bytes()
-    npm_copy = (root / "extensions" / "contracts" / name).read_bytes()
-    wheel_copy = files("harnessctl.contracts").joinpath(name).read_bytes()
+    contract = json.loads((root / "contracts" / name).read_text(encoding="utf-8"))
 
-    expected = sha256(canonical).hexdigest()
-    assert sha256(npm_copy).hexdigest() == expected
-    assert sha256(wheel_copy).hexdigest() == expected
+    assert contract["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert contract["$id"] == expected_id
