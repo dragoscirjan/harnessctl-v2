@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join, normalize, relative } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
 
 export type ConfigDocument = Record<string, unknown>;
@@ -12,8 +12,8 @@ export class ConfigError extends Error {
 }
 
 const CONFIG_PATH = join('.harnessctl', 'config.yaml');
-const DEFAULT_CONFIG: ConfigDocument = {
-  version: 1,
+export const DEFAULT_CONFIG: ConfigDocument = {
+  version: 2,
   issues: {
     prefix: '',
     type: 'filesystem',
@@ -26,6 +26,23 @@ const DEFAULT_CONFIG: ConfigDocument = {
   },
   workflow: {
     default_task_type: 'bug',
+  },
+  communication: {
+    caveman: { enabled: true, mode: 'strict' },
+  },
+  memory: {
+    enabled: false,
+    backend: 'repository',
+    namespace: {
+      organization_id: 'local',
+      project_id: 'project',
+      default_topic: 'general',
+    },
+    retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
+    repository: {
+      root: '.harnessctl/memory',
+      cache: '.harnessctl/cache/memory.db',
+    },
   },
 };
 
@@ -47,7 +64,83 @@ export function parseConfig(content: string): ConfigDocument {
     throw new ConfigError(`Malformed YAML: ${document.errors[0]?.message}`);
   }
 
-  return assertConfigDocument(document.toJS());
+  return validateAndMigrateConfig(assertConfigDocument(document.toJS()));
+}
+
+export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument {
+  const version = value.version;
+  if (version !== undefined && version !== 1 && version !== 2)
+    throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
+
+  const config = version === 2 ? value : deepMerge(DEFAULT_CONFIG, value);
+  config.version = 2;
+  const caveman = requireMapping(requireMapping(config, 'communication'), 'caveman');
+  if (typeof caveman.enabled !== 'boolean') throw new ConfigError('communication.caveman.enabled must be boolean.');
+  if (caveman.mode !== 'strict' && caveman.mode !== 'balanced')
+    throw new ConfigError('communication.caveman.mode must be strict or balanced.');
+
+  const memory = requireMapping(config, 'memory');
+  if (typeof memory.enabled !== 'boolean') throw new ConfigError('memory.enabled must be boolean.');
+  if (memory.backend !== 'repository') throw new ConfigError('memory.backend must be repository in config v2.');
+  const namespace = requireMapping(memory, 'namespace');
+  for (const key of ['organization_id', 'project_id', 'default_topic'])
+    requireNonemptyString(namespace, key, `memory.namespace.${key}`);
+  const retrieval = requireMapping(memory, 'retrieval');
+  requireInteger(retrieval, 'limit', 1, 100);
+  requireInteger(retrieval, 'max_chars', 256, 100_000);
+  if (typeof retrieval.include_superseded !== 'boolean')
+    throw new ConfigError('memory.retrieval.include_superseded must be boolean.');
+  const repository = requireMapping(memory, 'repository');
+  const root = requireSafeRelativePath(repository, 'root');
+  const cache = requireSafeRelativePath(repository, 'cache');
+  if (cache === root || cache.startsWith(`${root}/`))
+    throw new ConfigError('memory.repository.cache must be outside memory.repository.root.');
+  return config;
+}
+
+function deepMerge(base: ConfigDocument, override: ConfigDocument): ConfigDocument {
+  const result: ConfigDocument = structuredClone(base);
+  for (const [key, value] of Object.entries(override)) {
+    const current = result[key];
+    result[key] = isMapping(current) && isMapping(value) ? deepMerge(current, value) : structuredClone(value);
+  }
+  return result;
+}
+
+function isMapping(value: unknown): value is ConfigDocument {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function requireMapping(parent: ConfigDocument, key: string): ConfigDocument {
+  const value = parent[key];
+  if (!isMapping(value)) throw new ConfigError(`${key} must be a mapping.`);
+  return value;
+}
+
+function requireNonemptyString(parent: ConfigDocument, key: string, path: string): string {
+  const value = parent[key];
+  if (typeof value !== 'string' || value.trim() === '') throw new ConfigError(`${path} must be a non-empty string.`);
+  return value;
+}
+
+function requireInteger(parent: ConfigDocument, key: string, minimum: number, maximum: number): number {
+  const value = parent[key];
+  if (!Number.isInteger(value) || (value as number) < minimum || (value as number) > maximum)
+    throw new ConfigError(`memory.retrieval.${key} must be an integer from ${minimum} to ${maximum}.`);
+  return value as number;
+}
+
+function requireSafeRelativePath(parent: ConfigDocument, key: string): string {
+  const value = requireNonemptyString(parent, key, `memory.repository.${key}`);
+  const normalized = normalize(value).replaceAll('\\', '/');
+  if (
+    isAbsolute(value) ||
+    normalized === '..' ||
+    normalized.startsWith('../') ||
+    relative('.', normalized).startsWith('..')
+  )
+    throw new ConfigError(`memory.repository.${key} must stay inside project root.`);
+  return normalized.replace(/^\.\//, '');
 }
 
 export function createConfig(cwd: string): string {

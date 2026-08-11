@@ -1,4 +1,11 @@
-import { createConfig, getConfigValue, readConfig, ConfigError, type ConfigDocument } from './config.js';
+import {
+  createConfig,
+  getConfigValue,
+  readConfig,
+  validateAndMigrateConfig,
+  ConfigError,
+  type ConfigDocument,
+} from './config.js';
 export {
   archiveIssue,
   archiveIssueReport,
@@ -32,5 +39,30 @@ export type {
   ValidationReport,
 } from './issues.js';
 
-export { ConfigError, createConfig, getConfigValue, readConfig };
+export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };
+export {
+  MemoryConflictError,
+  MemoryError,
+  deleteMemory,
+  exportMemory,
+  getMemory,
+  importMemory,
+  listMemory,
+  searchMemory,
+  storeMemory,
+  supersedeMemory,
+  validateMemory,
+} from './memory.js';
+export type {
+  Confidence,
+  MemoryRecord,
+  MemorySource,
+  MemoryTombstone,
+  MemoryType,
+  MemoryValidationReport,
+  RecordType,
+  SearchMemoryInput,
+  SourceKind,
+  StoreMemoryInput,
+} from './memory.js';

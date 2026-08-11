@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessctl.dev/contracts/config-v2.schema.json",
+  "title": "harnessctl project configuration v2",
+  "type": "object",
+  "required": ["version", "communication", "memory"],
+  "properties": {
+    "version": { "const": 2 },
+    "communication": {
+      "type": "object",
+      "required": ["caveman"],
+      "properties": {
+        "caveman": {
+          "type": "object",
+          "required": ["enabled", "mode"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "mode": { "enum": ["strict", "balanced"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "memory": {
+      "type": "object",
+      "required": ["enabled", "backend", "namespace", "retrieval", "repository"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "backend": { "const": "repository" },
+        "namespace": {
+          "type": "object",
+          "required": ["organization_id", "project_id", "default_topic"],
+          "properties": {
+            "organization_id": { "type": "string", "minLength": 1 },
+            "project_id": { "type": "string", "minLength": 1 },
+            "default_topic": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "retrieval": {
+          "type": "object",
+          "required": ["limit", "max_chars", "include_superseded"],
+          "properties": {
+            "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "max_chars": { "type": "integer", "minimum": 256, "maximum": 100000 },
+            "include_superseded": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "repository": {
+          "type": "object",
+          "required": ["root", "cache"],
+          "properties": {
+            "root": { "type": "string", "minLength": 1 },
+            "cache": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

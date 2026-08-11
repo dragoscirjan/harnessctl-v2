@@ -1,0 +1,19 @@
+version: 2
+communication:
+  caveman:
+    enabled: true
+    mode: strict
+memory:
+  enabled: true
+  backend: repository
+  namespace:
+    organization_id: acme
+    project_id: widget
+    default_topic: general
+  retrieval:
+    limit: 8
+    max_chars: 12000
+    include_superseded: false
+  repository:
+    root: ../memory
+    cache: .harnessctl/cache/memory.db

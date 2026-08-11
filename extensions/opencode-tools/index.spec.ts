@@ -11,6 +11,15 @@ describe('OpenCode adapter', () => {
     expect(Object.keys(hooks.tool ?? {})).toEqual([
       'config_create',
       'config_get',
+      'memory_search',
+      'memory_list',
+      'memory_get',
+      'memory_store',
+      'memory_supersede',
+      'memory_delete',
+      'memory_validate',
+      'memory_export',
+      'memory_import',
       'issue_id',
       'issue_create',
       'issue_list',
@@ -25,6 +34,8 @@ describe('OpenCode adapter', () => {
       'issue_archive',
     ]);
     expect(hooks.tool?.config_get?.args.path).toBeDefined();
+    expect(hooks.tool?.['memory_store']?.args.summary).toBeDefined();
+    expect(hooks.tool?.['memory_search']?.args.query).toBeDefined();
     expect(hooks.tool?.['issue_id']?.args.prompt).toBeDefined();
     expect(hooks.tool?.['issue_create']?.args.type).toBeDefined();
     expect(hooks.tool?.['issue_create']?.args.title).toBeDefined();
@@ -45,6 +56,19 @@ describe('OpenCode adapter', () => {
 
       await tools.config_create?.execute({}, context);
       const result = await tools.config_get?.execute({ path: 'version' }, context);
+      const stored = await tools['memory_store']?.execute(
+        {
+          memory_type: 'semantic',
+          record_type: 'fact',
+          summary: 'OpenCode memory adapter delegates to repository storage.',
+          source_kind: 'tool-observation',
+          created_by: 'test',
+          confidence: 'verified',
+        },
+        context,
+      );
+      const searched = await tools['memory_search']?.execute({ query: 'repository storage' }, context);
+      const memoryValidation = await tools['memory_validate']?.execute({}, context);
       const issueId = await tools['issue_id']?.execute(
         { prompt: 'Please investigate issues 00042 and 00007' },
         context,
@@ -64,7 +88,14 @@ describe('OpenCode adapter', () => {
       const validation = await tools['issue_validate']?.execute({}, context);
       const archive = await tools['issue_archive']?.execute({ id: '00001' }, context);
 
-      expect(result).toBe('1');
+      expect(result).toBe('2');
+      expect(JSON.parse(String(stored)).summary).toContain('repository storage');
+      expect(JSON.parse(String(searched))).toEqual([
+        expect.objectContaining({ record_type: 'fact', confidence: 'verified' }),
+      ]);
+      expect(JSON.parse(String(memoryValidation))).toEqual(
+        expect.objectContaining({ valid: true, records: 1, tombstones: 0 }),
+      );
       expect(issueId).toBe('["00042","00007"]');
       expect(JSON.parse(String(issue)).id).toBe('00001');
       expect(JSON.parse(String(issues))).toEqual([
