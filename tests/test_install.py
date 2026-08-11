@@ -121,6 +121,22 @@ memory:
     assert "/.harnessctl/cache/" in (tmp_path / ".gitignore").read_text()
 
 
+@pytest.mark.parametrize("harness", ["pi", "all"])
+def test_install_rejects_unverified_pi_memory_distribution(tmp_path: Path, harness: str) -> None:
+    config = tmp_path / ".harnessctl/config.yaml"
+    config.parent.mkdir(parents=True)
+    config.write_text("memory:\n  enabled: true\n", encoding="utf-8")
+
+    with pytest.raises(
+        RuntimeError,
+        match="automatic Pi extension and skill installation is not yet verified",
+    ):
+        install(tmp_path, harness)
+
+    assert not (tmp_path / ".pi").exists()
+    assert not (tmp_path / ".opencode").exists()
+
+
 def test_install_preserves_unrelated_opencode_package_fields(tmp_path: Path) -> None:
     package = tmp_path / ".opencode/package.json"
     package.parent.mkdir(parents=True)

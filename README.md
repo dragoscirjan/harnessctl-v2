@@ -354,7 +354,14 @@ Implemented in `extensions/generic-tools/`:
 ### Harness adapters
 
 OpenCode and Pi adapters currently register the generic issue/configuration tools and
-have adapter-level tests.
+the normalized repository-memory tools. Adapter tests cover Pi memory registration,
+store, search, and validation delegation.
+
+Automatic memory installation currently targets OpenCode only. Pi 0.81's extension
+API is supported by `@harnessctl/pi-tools`, but harnessctl does not yet invent an
+unverified Pi skill path or extension-distribution mechanism. When repository memory
+is enabled, `--harness pi` and `--harness all` fail before writing; register the Pi
+package manually until distribution and skill discovery are verified.
 
 Both adapters also have model-backed integration coverage for eight workflows:
 

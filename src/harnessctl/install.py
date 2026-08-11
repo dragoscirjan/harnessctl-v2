@@ -36,6 +36,12 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
 
     root = cwd.resolve()
     config = load_config(root)
+    if config["memory"]["enabled"] and harness in ("pi", "all"):
+        raise RuntimeError(
+            "Pi memory tools are implemented, but automatic Pi extension and skill "
+            "installation is not yet verified; install with --harness opencode or "
+            "register @harnessctl/pi-tools manually."
+        )
     rendered_targets: list[tuple[Path, str]] = []
     conflicts: list[Path] = []
     for selected_harness in harnesses:

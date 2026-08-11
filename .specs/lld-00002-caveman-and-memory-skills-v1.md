@@ -354,7 +354,7 @@ Installer fails before writing when:
 - Future selected remote backend lacks required environment-variable **reference names**.
 - Selected backend is unsupported for target harness.
 - Existing generated files differ and `--force` was not given.
-- Pi skill discovery/path contract has not been verified for installed Pi version.
+- Pi automatic extension/skill distribution has not been verified for installed Pi version.
 
 Installer warns—but does not persist credential values—when required runtime environment variables are unset. This supports installation in CI images where secrets arrive later.
 
@@ -391,7 +391,7 @@ Repository backend supplies full contract. Direct `mcp-memory-libsql` supplies s
 | `extensions/generic-tools/memory.ts` | Repository record schema, validation, secret screening, FTS cache, normalized operations. |
 | `extensions/opencode-tools/index.ts` | Expose normalized repository memory tools. |
 | `extensions/opencode-tools/package.json` | Add build output, exports, files, and publishable exact-version metadata. |
-| `extensions/pi-tools/index.ts` | Expose tools only after Pi compatibility is verified. |
+| `extensions/pi-tools/index.ts` and `memory-tools.ts` | Expose normalized tools through Pi's verified extension API. |
 | `.gitignore` template/update | Ignore `.harnessctl/cache/`, never canonical records. |
 | Python and TypeScript tests | Rendering, install conflicts, records, cache, security, adapters. |
 | `README.md` and `FLOWS.md` | Document skills, configuration, authority, and supported backend status. |
@@ -399,7 +399,7 @@ Repository backend supplies full contract. Direct `mcp-memory-libsql` supplies s
 Generated destinations:
 
 - OpenCode: `.opencode/skills/caveman/SKILL.md`, `.opencode/skills/memory/SKILL.md`.
-- Pi: destination must be verified against Pi's current skill discovery contract before implementation; do not invent `.pi/skills` behavior.
+- Pi: normalized memory tools are implemented in `@harnessctl/pi-tools`; automatic extension distribution and skill destination remain unverified. Do not invent `.pi/skills` behavior.
 
 ### OpenCode tool distribution
 
@@ -414,7 +414,7 @@ Current Python installer installs Markdown commands only; workspace TypeScript p
 
 Published npm package distribution is the first-slice decision. Offline adapter installation is deferred; a future verified tarball option may add it without changing skill contract.
 
-First production slice targets OpenCode only. Pi memory generation remains disabled until skill discovery and extension distribution are verified. `caveman`, needing no custom tools, may ship to any host with a verified skill path independently.
+Automatic installation targets OpenCode only. Pi's current extension registration API is verified and `@harnessctl/pi-tools` exposes the full normalized repository-memory contract, but Pi memory generation remains disabled until extension distribution and skill discovery are verified. Pi/all installation fails before writes when memory is enabled rather than silently producing partial integration. `caveman`, needing no custom tools, may ship to any host with a verified skill path independently.
 
 ## Install Order
 
@@ -519,7 +519,7 @@ First production slice targets OpenCode only. Pi memory generation remains disab
 7. Implement locked generated SQLite FTS cache and bounded search.
 8. Expose/package normalized OpenCode tools and tests.
 9. Implement canonical import/export and manual-file CI/pre-commit validation.
-10. Verify Pi skill/tool discovery; then add Pi output or document unsupported status.
+10. Verify Pi's tool API and implement the normalized adapter; keep automatic Pi distribution disabled until skill discovery and extension loading are verified.
 11. Update docs and quality gate.
 12. Run separate remote-libSQL, Mem0 OSS, and Graphiti capability/security spikes before adding their config enums.
 
@@ -547,7 +547,7 @@ First production slice targets OpenCode only. Pi memory generation remains disab
 
 ## Risks and Open Questions
 
-- Confirm Pi's current skill discovery path and metadata contract before promising Pi generation.
+- Confirm Pi's current skill discovery path, metadata contract, and extension distribution before enabling Pi generation; normalized Pi tools already use the verified 0.81 extension API.
 - Validate documented OpenCode local-plugin auto-discovery and `.opencode/package.json` dependency installation against supported integration-test version.
 - Decide whether repository-memory commits are manual or optionally grouped by workflow commands.
 - Choose YAML parser/schema validation library already compatible with generic-tools dependencies.

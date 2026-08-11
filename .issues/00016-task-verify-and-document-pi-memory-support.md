@@ -2,7 +2,7 @@
 id: "00016"
 type: task
 title: "Verify and document Pi memory support"
-status: open
+status: done
 parent: "00006"
 depends: ["00015"]
 opencode-agent: lead-engineer
@@ -23,9 +23,9 @@ Then implementation either adds verified output or clearly reports memory suppor
 
 ## Acceptance Criteria
 
-- [ ] Evidence and supported/unsupported decision are documented.
-- [ ] Any implemented Pi output has automated tests.
-- [ ] Installer fails clearly for unverified memory integration.
+- [x] Evidence and supported/unsupported decision are documented.
+- [x] Any implemented Pi output has automated tests.
+- [x] Installer fails clearly for unverified memory integration.
 
 
 ## Comments
@@ -37,8 +37,19 @@ Strict workspace typecheck currently fails in Pi integration tests because insta
 - [`extensions/pi-tools/integration.test.ts`](../extensions/pi-tools/integration.test.ts)
 
 **Next Steps / Blockers:**
-- Verify the installed Pi API against authoritative documentation before changing integration code.
-- Pi support remains blocked until the test harness is migrated to supported APIs.
+- Verify automatic Pi extension distribution and skill discovery before enabling installer output.
+- Run full project quality checks and review the new adapter.
+
+**Implementation Update:**
+- Migrated the Pi SDK integration harness to `ModelRuntime` from the removed `AuthStorage`/`ModelRegistry.inMemory` APIs.
+- Added all nine normalized repository-memory tools to `@harnessctl/pi-tools` using Pi 0.81's verified `registerTool` contract.
+- Added unit coverage for registration plus memory store, search, and validation delegation.
+- Kept automatic Pi extension/skill installation disabled; memory-enabled Pi/all installation now fails before writes with a clear manual-registration boundary.
+
+**Verification Note:**
+- The generic `run-quality-checks` helper could not map its `format:fix` target to this repository's `format-fix` mise task. No formatter ran through that helper; repository-native `mise run quality` is used instead.
+- `mise run quality` passed: 14 Python tests, 24 generic TypeScript tests, 2 OpenCode tests, and 3 Pi tests.
+- Strict TypeScript typechecking passed for all workspaces. Model-backed Pi tests remain environment-gated and were not executed locally.
 
 ---
 
