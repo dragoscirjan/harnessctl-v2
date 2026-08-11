@@ -17,6 +17,7 @@ import {
   validateIssues,
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
+import { registerMemoryTools } from './memory-tools.js';
 
 export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
@@ -58,6 +59,8 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
           };
     },
   });
+
+  registerMemoryTools(pi);
 
   pi.registerTool({
     name: 'issue_id',

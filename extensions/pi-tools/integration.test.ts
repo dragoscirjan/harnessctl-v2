@@ -3,10 +3,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  AuthStorage,
   createAgentSession,
   DefaultResourceLoader,
-  ModelRegistry,
+  ModelRuntime,
   resolveCliModel,
   SessionManager,
 } from '@earendil-works/pi-coding-agent';
@@ -57,7 +56,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         expect(result.toolNames).toEqual(['config_create']);
         expect(existsSync(join(cwd, '.harnessctl/config.yaml'))).toBe(true);
         expect(readConfig(cwd)).toMatchObject({
-          version: 1,
+          version: 2,
           paths: { tasks: '.harnessctl/tasks' },
         });
         expect(result.text.toLowerCase()).toContain('created');
@@ -241,10 +240,13 @@ async function promptPi(cwd: string, prompt: string): Promise<{ text: string; to
   let session: Awaited<ReturnType<typeof createAgentSession>>['session'] | undefined;
 
   try {
-    const authStorage = AuthStorage.inMemory();
-    const modelRegistry = ModelRegistry.inMemory(authStorage);
-    registerTestProvider(modelRegistry);
-    const resolved = resolveCliModel({ cliModel: piModel, modelRegistry });
+    const modelRuntime = await ModelRuntime.create({
+      authPath: join(agentDir, 'auth.json'),
+      modelsPath: null,
+      allowModelNetwork: false,
+    });
+    registerTestProvider(modelRuntime);
+    const resolved = resolveCliModel({ cliModel: piModel, modelRuntime });
     if (!resolved.model || resolved.error) {
       throw new Error(resolved.error ?? `Unable to resolve Pi model: ${piModel}`);
     }
@@ -259,8 +261,7 @@ async function promptPi(cwd: string, prompt: string): Promise<{ text: string; to
     const created = await createAgentSession({
       cwd,
       agentDir,
-      authStorage,
-      modelRegistry,
+      modelRuntime,
       model: resolved.model,
       resourceLoader,
       sessionManager: SessionManager.inMemory(),
@@ -284,7 +285,7 @@ async function promptPi(cwd: string, prompt: string): Promise<{ text: string; to
   }
 }
 
-function registerTestProvider(modelRegistry: ModelRegistry): void {
+function registerTestProvider(modelRuntime: ModelRuntime): void {
   if (!piModel) return;
   if (!piTestBaseUrl) {
     throw new Error('PI_TEST_BASE_URL is required when running Pi integration tests.');
@@ -297,7 +298,7 @@ function registerTestProvider(modelRegistry: ModelRegistry): void {
 
   const provider = piModel.slice(0, separator);
   const modelId = piModel.slice(separator + 1);
-  modelRegistry.registerProvider(provider, {
+  modelRuntime.registerProvider(provider, {
     name: provider,
     baseUrl: piTestBaseUrl,
     apiKey: piTestApiKey ?? 'local-test-key',
