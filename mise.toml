@@ -77,6 +77,7 @@ run = "shellcheck compare-tests.sh .husky/pre-commit .husky/pre-push"
 
 [tasks.node-test]
 description = "Run Node workspace tests"
+depends = ["node-typecheck"]
 run = "npm test"
 
 [tasks.node-typecheck]
