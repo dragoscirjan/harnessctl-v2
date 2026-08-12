@@ -22,11 +22,12 @@ Then backward-compatible v2 communication and memory settings are validated cons
 
 ## Acceptance Criteria
 
-- [ ] Python and TypeScript agree on valid and invalid fixtures.
-- [ ] Existing v1 config remains usable with documented defaults.
-- [ ] Config tests pass.
+- [x] Python and TypeScript agree on valid and invalid fixtures.
+- [x] Existing v1 config remains usable with documented defaults.
+- [x] Config tests pass.
 
 
 ## Comments
 
 - 2026-08-11: Added config v2 defaults/schema, v1 migration, validation, fixtures, and passing focused tests/typecheck.
+- 2026-08-12: Verified all acceptance criteria through Python and TypeScript config tests.

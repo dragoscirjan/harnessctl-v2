@@ -68,6 +68,10 @@ run = "shellcheck compare-tests.sh .husky/pre-commit .husky/pre-push"
 description = "Run Node workspace tests"
 run = "npm test"
 
+[tasks.node-typecheck]
+description = "Type-check generic tools and contract generator"
+run = "npm run typecheck --workspace @harnessctl/generic-tools"
+
 [tasks.python-test]
 description = "Run Python tests"
 run = "uv run pytest"
@@ -102,7 +106,7 @@ depends = ["node-test", "python-test"]
 
 [tasks.quality]
 description = "Run the complete local quality gate"
-depends = ["format", "lint", "test", "node-dupcheck", "python-deadcode"]
+depends = ["format", "lint", "test", "node-typecheck", "node-dupcheck", "python-deadcode"]
 
 [tasks.integration]
 description = "Run harness integration tests using configured model environments"

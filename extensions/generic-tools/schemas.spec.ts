@@ -1,8 +1,44 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Ajv2020 } from 'ajv/dist/2020.js';
+import type { FormatsPlugin } from 'ajv-formats';
+import addFormatsModule from 'ajv-formats';
 import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
 import { configV2Schema, formatSchemaError, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';
+
+const validConfig = {
+  version: 2,
+  communication: { caveman: { enabled: true, mode: 'strict' } },
+  memory: {
+    enabled: true,
+    backend: 'repository',
+    namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
+    retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
+    repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory.db' },
+  },
+};
+
+const addFormats = addFormatsModule as unknown as FormatsPlugin;
+
+const validRecord = {
+  schema_version: 1,
+  id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+  memory_type: 'semantic',
+  record_type: 'fact',
+  organization_id: 'local',
+  project_id: 'project',
+  topic: 'general',
+  summary: 'Validated memory',
+  details: null,
+  source: { kind: 'artifact', ref: 'README.md', revision: null },
+  created_at: '2026-08-12T00:00:00Z',
+  created_by: 'lead-engineer',
+  confidence: 'verified',
+  status: 'active',
+  supersedes: [],
+  tags: ['config'],
+};
 
 describe('canonical Zod schemas', () => {
   it('produces readable configuration errors with field paths', () => {
@@ -85,5 +121,40 @@ describe('canonical Zod schemas', () => {
     if (result.success) return;
     expect(formatSchemaError(result.error)).toContain('id');
     expect(formatSchemaError(result.error)).toContain('memory_type');
+  });
+
+  it('rejects unsafe and canonically nested repository paths', () => {
+    for (const repository of [
+      { root: '.harnessctl/memory', cache: 'C:outside.db' },
+      { root: '.harnessctl/memory', cache: '..\\outside.db' },
+      { root: '.harnessctl/memory/', cache: '.harnessctl/./memory/cache.db' },
+    ]) {
+      expect(configV2Schema.safeParse({ ...validConfig, memory: { ...validConfig.memory, repository } }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it('makes generated contracts reject expressible invalid values', () => {
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const configContract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+    ) as object;
+    const memoryContract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'memory-record-v1.schema.json'), 'utf8'),
+    ) as object;
+    const validateConfig = ajv.compile(configContract);
+    const validateMemory = ajv.compile(memoryContract);
+
+    expect(
+      validateConfig({
+        ...validConfig,
+        memory: { ...validConfig.memory, repository: { root: '.harnessctl/memory', cache: 'C:outside.db' } },
+      }),
+    ).toBe(false);
+    expect(validateMemory({ ...validRecord, memory_type: 'episodic' })).toBe(false);
+    expect(validateMemory({ ...validRecord, source: { ...validRecord.source, kind: 'discussion' } })).toBe(false);
+    expect(validateMemory({ ...validRecord, tags: ['duplicate', 'duplicate'] })).toBe(false);
   });
 });

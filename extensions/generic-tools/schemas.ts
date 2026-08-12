@@ -1,16 +1,15 @@
+import { posix } from 'node:path';
 import * as z from 'zod';
 
-const nonemptyString = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim().length > 0, { error: 'must not be blank' });
-const safeProjectPath = nonemptyString.refine(
-  (value) => {
-    const normalized = value.replaceAll('\\', '/');
-    return !normalized.startsWith('/') && !/^[A-Za-z]:\//.test(normalized) && !normalized.split('/').includes('..');
-  },
-  { error: 'must stay inside project root' },
+const nonemptyString = z.string().min(1).regex(/\S/, 'must not be blank');
+const safeProjectPath = nonemptyString.regex(
+  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.\.(?:\/|$)).+$/,
+  'must stay inside project root',
 );
+
+function canonicalProjectPath(value: string): string {
+  return posix.normalize(value).replace(/^\.\//, '').replace(/\/$/, '');
+}
 
 export const configV2Schema = z
   .object({
@@ -44,15 +43,20 @@ export const configV2Schema = z
   })
   .passthrough()
   .superRefine((config, context) => {
-    const root = config.memory.repository.root.replaceAll('\\', '/').replace(/^\.\//, '');
-    const cache = config.memory.repository.cache.replaceAll('\\', '/').replace(/^\.\//, '');
-    if (cache === root || cache.startsWith(`${root}/`)) {
+    const root = canonicalProjectPath(config.memory.repository.root);
+    const cache = canonicalProjectPath(config.memory.repository.cache);
+    const relativeCache = posix.relative(root, cache);
+    if (relativeCache === '' || (!relativeCache.startsWith('../') && relativeCache !== '..')) {
       context.addIssue({
         code: 'custom',
         path: ['memory', 'repository', 'cache'],
         message: 'must be outside memory.repository.root',
       });
     }
+  })
+  .meta({
+    description:
+      'Repository paths are project-relative. Cache containment is also checked at runtime after canonical path normalization because standard JSON Schema cannot compare sibling path values.',
   });
 
 export type ConfigV2 = z.infer<typeof configV2Schema>;
@@ -87,8 +91,8 @@ export const memoryRecordSchema = z
     created_by: nonemptyString,
     confidence: confidenceSchema,
     status: z.literal('active'),
-    supersedes: z.array(ulidSchema),
-    tags: z.array(nonemptyString),
+    supersedes: z.array(ulidSchema).meta({ uniqueItems: true }),
+    tags: z.array(nonemptyString).meta({ uniqueItems: true }),
   })
   .strict()
   .superRefine((record, context) => {
@@ -112,6 +116,36 @@ export const memoryRecordSchema = z
       context.addIssue({ code: 'custom', path: ['supersedes'], message: 'must not contain record id' });
     addDuplicateIssue(record.supersedes, ['supersedes'], context);
     addDuplicateIssue(record.tags, ['tags'], context);
+  })
+  .meta({
+    description:
+      'Classification and verified-source combinations are constrained below. Self-supersession remains runtime-only because standard JSON Schema cannot compare an array item with a sibling property.',
+    allOf: [
+      {
+        if: { properties: { memory_type: { const: 'semantic' } }, required: ['memory_type'] },
+        then: { properties: { record_type: { const: 'fact' } } },
+      },
+      {
+        if: { properties: { memory_type: { const: 'episodic' } }, required: ['memory_type'] },
+        then: { properties: { record_type: { enum: ['decision', 'event'] } } },
+      },
+      {
+        if: { properties: { memory_type: { const: 'procedural' } }, required: ['memory_type'] },
+        then: { properties: { record_type: { const: 'lesson' } } },
+      },
+      {
+        if: { properties: { confidence: { const: 'verified' } }, required: ['confidence'] },
+        then: {
+          properties: {
+            source: {
+              type: 'object',
+              properties: { kind: { enum: ['artifact', 'tool-observation'] } },
+              required: ['kind'],
+            },
+          },
+        },
+      },
+    ],
   });
 
 export const memoryTombstoneSchema = z

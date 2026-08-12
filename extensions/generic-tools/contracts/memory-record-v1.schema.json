@@ -4,6 +4,83 @@
   "title": "harnessctl portable memory record v1",
   "anyOf": [
     {
+      "description": "Classification and verified-source combinations are constrained below. Self-supersession remains runtime-only because standard JSON Schema cannot compare an array item with a sibling property.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "semantic"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "const": "fact"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "episodic"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "enum": ["decision", "event"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "procedural"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "const": "lesson"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "confidence": {
+                "const": "verified"
+              }
+            },
+            "required": ["confidence"]
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": ["artifact", "tool-observation"]
+                  }
+                },
+                "required": ["kind"]
+              }
+            }
+          }
+        }
+      ],
       "type": "object",
       "properties": {
         "schema_version": {
@@ -24,15 +101,18 @@
         },
         "organization_id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "project_id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "topic": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "summary": {
           "type": "string",
@@ -88,7 +168,8 @@
         },
         "created_by": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "confidence": {
           "type": "string",
@@ -99,6 +180,7 @@
           "const": "active"
         },
         "supersedes": {
+          "uniqueItems": true,
           "type": "array",
           "items": {
             "type": "string",
@@ -106,10 +188,12 @@
           }
         },
         "tags": {
+          "uniqueItems": true,
           "type": "array",
           "items": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "pattern": "\\S"
           }
         }
       },
@@ -146,11 +230,13 @@
         },
         "organization_id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "project_id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         },
         "target_id": {
           "type": "string",
@@ -199,7 +285,8 @@
         },
         "created_by": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "\\S"
         }
       },
       "required": [

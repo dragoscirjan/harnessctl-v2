@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://harnessctl.dev/contracts/config-v2.schema.json",
   "title": "harnessctl project configuration v2",
+  "description": "Repository paths are project-relative. Cache containment is also checked at runtime after canonical path normalization because standard JSON Schema cannot compare sibling path values.",
   "type": "object",
   "properties": {
     "version": {
@@ -44,15 +45,18 @@
           "properties": {
             "organization_id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "\\S"
             },
             "project_id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "\\S"
             },
             "default_topic": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "\\S"
             }
           },
           "required": ["organization_id", "project_id", "default_topic"],
@@ -83,11 +87,27 @@
           "properties": {
             "root": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|\\/)\\.\\.(?:\\/|$)).+$"
+                }
+              ]
             },
             "cache": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|\\/)\\.\\.(?:\\/|$)).+$"
+                }
+              ]
             }
           },
           "required": ["root", "cache"],

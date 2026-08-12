@@ -107,6 +107,8 @@ def _safe_path(parent: dict[str, Any], key: str) -> PurePosixPath:
     value = parent.get(key)
     if not isinstance(value, str) or not value.strip():
         raise ConfigError(f"memory.repository.{key} must be a non-empty string")
+    if "\\" in value or (len(value) >= 2 and value[0].isalpha() and value[1] == ":"):
+        raise ConfigError(f"memory.repository.{key} must stay inside project root")
     path = PurePosixPath(value)
     if path.is_absolute() or ".." in path.parts:
         raise ConfigError(f"memory.repository.{key} must stay inside project root")
