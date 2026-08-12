@@ -674,6 +674,9 @@ function fsyncFile(path: string): void {
 }
 
 function fsyncDirectory(path: string): void {
+  // Windows does not support flushing directory handles. File contents are
+  // already flushed before each rename; directory fsync adds POSIX durability.
+  if (process.platform === 'win32') return;
   const descriptor = openSync(path, 'r');
   try {
     fsyncSync(descriptor);
