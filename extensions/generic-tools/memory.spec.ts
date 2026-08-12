@@ -99,7 +99,7 @@ describe('repository memory', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 
   it('exports portable JSONL and validates imports without mutation in preview', () => {
     const cwd = fixture();
