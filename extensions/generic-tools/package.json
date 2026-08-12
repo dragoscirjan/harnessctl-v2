@@ -14,7 +14,7 @@
   },
   "files": ["dist", "contracts/*.json"],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "contracts:generate": "tsx generate-contracts.ts && prettier --write contracts/*.json",
     "prepack": "npm run contracts:generate && npm run build",
     "format": "prettier --check .",
