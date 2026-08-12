@@ -45,6 +45,10 @@ DESCRIPTIONS = {
     "work-cvs": "Propose version-control delivery",
     "work-finish": "Propose final delivery or deployment",
 }
+SKILL_TEMPLATES = {
+    "caveman": "skills/caveman/SKILL.md.j2",
+    "memory": "skills/memory/SKILL.md.j2",
+}
 
 
 def render_work_new(harness: str) -> str:
@@ -69,3 +73,19 @@ def render_prompt(command: str, harness: str) -> str:
     if harness == "pi":
         return body
     raise ValueError(f"unsupported harness: {harness}")
+
+
+def render_skill(skill: str, **context: object) -> str:
+    """Render one installable skill with compile-time specialization."""
+    template_name = SKILL_TEMPLATES.get(skill)
+    if template_name is None:
+        raise ValueError(f"unsupported skill: {skill}")
+    environment = Environment(
+        loader=FileSystemLoader(TEMPLATE_ROOT),
+        undefined=StrictUndefined,
+        autoescape=False,
+        keep_trailing_newline=True,
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    return environment.get_template(template_name).render(**context)
