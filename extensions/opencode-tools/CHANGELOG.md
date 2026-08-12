@@ -1,5 +1,12 @@
 # @harnessctl/opencode-tools
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`11b54cb`](https://github.com/dragoscirjan/harnessctl-v2/commit/11b54cbc5a68cd9dcdf27d48caa00498afef72df)]:
+  - @harnessctl/generic-tools@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
