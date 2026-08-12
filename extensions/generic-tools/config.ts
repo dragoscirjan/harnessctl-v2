@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
+import { configV2Schema, formatSchemaError } from './schemas.js';
 
 export type ConfigDocument = Record<string, unknown>;
 
@@ -12,8 +13,8 @@ export class ConfigError extends Error {
 }
 
 const CONFIG_PATH = join('.harnessctl', 'config.yaml');
-const DEFAULT_CONFIG: ConfigDocument = {
-  version: 1,
+export const DEFAULT_CONFIG: ConfigDocument = {
+  version: 2,
   issues: {
     prefix: '',
     type: 'filesystem',
@@ -26,6 +27,23 @@ const DEFAULT_CONFIG: ConfigDocument = {
   },
   workflow: {
     default_task_type: 'bug',
+  },
+  communication: {
+    caveman: { enabled: true, mode: 'strict' },
+  },
+  memory: {
+    enabled: false,
+    backend: 'repository',
+    namespace: {
+      organization_id: 'local',
+      project_id: 'project',
+      default_topic: 'general',
+    },
+    retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
+    repository: {
+      root: '.harnessctl/memory',
+      cache: '.harnessctl/cache/memory.db',
+    },
   },
 };
 
@@ -47,7 +65,32 @@ export function parseConfig(content: string): ConfigDocument {
     throw new ConfigError(`Malformed YAML: ${document.errors[0]?.message}`);
   }
 
-  return assertConfigDocument(document.toJS());
+  return validateAndMigrateConfig(assertConfigDocument(document.toJS()));
+}
+
+export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument {
+  const version = value.version;
+  if (version !== undefined && version !== 1 && version !== 2)
+    throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
+
+  const config = version === 2 ? structuredClone(value) : deepMerge(DEFAULT_CONFIG, value);
+  config.version = 2;
+  const result = configV2Schema.safeParse(config);
+  if (!result.success) throw new ConfigError(`Invalid configuration:\n${formatSchemaError(result.error)}`);
+  return result.data;
+}
+
+function deepMerge(base: ConfigDocument, override: ConfigDocument): ConfigDocument {
+  const result: ConfigDocument = structuredClone(base);
+  for (const [key, value] of Object.entries(override)) {
+    const current = result[key];
+    result[key] = isMapping(current) && isMapping(value) ? deepMerge(current, value) : structuredClone(value);
+  }
+  return result;
+}
+
+function isMapping(value: unknown): value is ConfigDocument {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export function createConfig(cwd: string): string {

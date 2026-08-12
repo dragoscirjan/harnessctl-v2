@@ -8,4 +8,9 @@ export default defineConfig({
   fileParallelism: true,
   maxWorkers: Number(process.env.VITEST_MAX_WORKERS ?? 4),
   maxConcurrency: Number(process.env.VITEST_MAX_CONCURRENCY ?? 2),
+  coverage: {
+    enabled: true,
+    provider: 'v8',
+    reporter: ['text', 'html', 'lcov'],
+  },
 });

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from harnessctl.config import ConfigError, load_config
 from harnessctl.install import install
 from harnessctl.templates import TEMPLATES, render_prompt, render_work_new
 
@@ -65,3 +66,23 @@ def test_explore_and_plan_prompts_define_their_boundaries() -> None:
 def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unsupported harness"):
         install(tmp_path, "unknown")
+
+
+@pytest.mark.parametrize("unsafe_path", [r"C:outside.db", r"C:\outside.db", r"..\outside.db"])
+def test_config_rejects_windows_native_escape_paths(tmp_path: Path, unsafe_path: str) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "\n".join(
+            [
+                "version: 1",
+                "memory:",
+                "  repository:",
+                f"    cache: '{unsafe_path}'",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="must stay inside project root"):
+        load_config(tmp_path)

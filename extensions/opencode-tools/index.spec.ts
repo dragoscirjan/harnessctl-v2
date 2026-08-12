@@ -64,7 +64,7 @@ describe('OpenCode adapter', () => {
       const validation = await tools['issue_validate']?.execute({}, context);
       const archive = await tools['issue_archive']?.execute({ id: '00001' }, context);
 
-      expect(result).toBe('1');
+      expect(result).toBe('2');
       expect(issueId).toBe('["00042","00007"]');
       expect(JSON.parse(String(issue)).id).toBe('00001');
       expect(JSON.parse(String(issues))).toEqual([

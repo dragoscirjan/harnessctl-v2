@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessctl.dev/contracts/memory-record-v1.schema.json",
+  "title": "harnessctl portable memory record v1",
+  "anyOf": [
+    {
+      "description": "Classification and verified-source combinations are constrained below. Self-supersession remains runtime-only because standard JSON Schema cannot compare an array item with a sibling property.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "semantic"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "const": "fact"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "episodic"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "enum": ["decision", "event"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "memory_type": {
+                "const": "procedural"
+              }
+            },
+            "required": ["memory_type"]
+          },
+          "then": {
+            "properties": {
+              "record_type": {
+                "const": "lesson"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "confidence": {
+                "const": "verified"
+              }
+            },
+            "required": ["confidence"]
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": ["artifact", "tool-observation"]
+                  }
+                },
+                "required": ["kind"]
+              }
+            }
+          }
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "memory_type": {
+          "type": "string",
+          "enum": ["semantic", "episodic", "procedural"]
+        },
+        "record_type": {
+          "type": "string",
+          "enum": ["fact", "decision", "event", "lesson"]
+        },
+        "organization_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "details": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 12000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["artifact", "user-confirmed", "discussion", "tool-observation"]
+            },
+            "ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["kind", "ref", "revision"],
+          "additionalProperties": false
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+        },
+        "created_by": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["confirmed", "verified"]
+        },
+        "status": {
+          "type": "string",
+          "const": "active"
+        },
+        "supersedes": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+          }
+        },
+        "tags": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "memory_type",
+        "record_type",
+        "organization_id",
+        "project_id",
+        "topic",
+        "summary",
+        "details",
+        "source",
+        "created_at",
+        "created_by",
+        "confidence",
+        "status",
+        "supersedes",
+        "tags"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "organization_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "target_id": {
+          "type": "string",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["artifact", "user-confirmed", "discussion", "tool-observation"]
+            },
+            "ref": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "revision": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["kind", "ref", "revision"],
+          "additionalProperties": false
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+        },
+        "created_by": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [
+        "schema_version",
+        "id",
+        "organization_id",
+        "project_id",
+        "target_id",
+        "reason",
+        "source",
+        "created_at",
+        "created_by"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
