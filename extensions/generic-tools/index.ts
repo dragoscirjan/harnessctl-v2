@@ -42,3 +42,28 @@ export type {
 export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };
 export { configV2Schema, memoryDocumentSchema, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';
+export {
+  MemoryConflictError,
+  MemoryError,
+  deleteMemory,
+  exportMemory,
+  getMemory,
+  importMemory,
+  listMemory,
+  searchMemory,
+  storeMemory,
+  supersedeMemory,
+  validateMemory,
+} from './memory.js';
+export type {
+  Confidence,
+  MemoryRecord,
+  MemorySource,
+  MemoryTombstone,
+  MemoryType,
+  MemoryValidationReport,
+  RecordType,
+  SearchMemoryInput,
+  SourceKind,
+  StoreMemoryInput,
+} from './memory.js';
