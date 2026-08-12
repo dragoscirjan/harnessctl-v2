@@ -4,10 +4,19 @@
   "version": "0.1.0",
   "description": "Harness-neutral configuration tools for harnessctl.",
   "type": "module",
-  "files": ["*.js", "*.d.ts", "contracts/*.json"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "contracts/*.json"],
   "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "contracts:generate": "tsx generate-contracts.ts && prettier --write contracts/*.json",
-    "prepack": "npm run contracts:generate",
+    "prepack": "npm run contracts:generate && npm run build",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "eslint . --max-warnings 0",
