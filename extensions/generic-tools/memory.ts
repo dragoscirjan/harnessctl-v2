@@ -12,7 +12,6 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { parseDocument, stringify } from 'yaml';
 import { ConfigError, readConfig, type ConfigDocument } from './config.js';
 import {
@@ -103,6 +102,18 @@ interface MemoryState {
   records: MemoryRecord[];
   tombstones: MemoryTombstone[];
   activeIds: Set<string>;
+}
+
+interface MemoryCacheRecord {
+  id: string;
+  active: boolean;
+  searchable: string;
+}
+
+interface MemoryCache {
+  version: 1;
+  manifest: string;
+  records: MemoryCacheRecord[];
 }
 
 interface ImportManifestItem {
@@ -199,38 +210,28 @@ export function searchMemory(cwd: string, input: SearchMemoryInput = {}): Memory
   return withMutationLock(cwd, settings, () => {
     const state = loadState(cwd, settings);
     ensureCache(cwd, settings, state);
-    const database = new DatabaseSync(resolve(cwd, settings.cache), { readOnly: true });
-    try {
-      const clauses = ['1 = 1'];
-      const values: Array<string | number> = [];
-      if (input.query?.trim()) {
-        clauses.push('id IN (SELECT id FROM memory_fts WHERE memory_fts MATCH ?)');
-        values.push(ftsQuery(input.query));
-      }
-      if (input.topic) {
-        clauses.push('topic = ?');
-        values.push(input.topic);
-      }
-      if (input.memory_type) {
-        clauses.push('memory_type = ?');
-        values.push(input.memory_type);
-      }
-      if (!(input.include_superseded ?? settings.includeSuperseded)) clauses.push('active = 1');
-      values.push(limit);
-      const rows = database
-        .prepare(`SELECT payload FROM memory WHERE ${clauses.join(' AND ')} ORDER BY created_at DESC LIMIT ?`)
-        .all(...values) as Array<{ payload: string }>;
-      const results: MemoryRecord[] = [];
-      let used = 0;
-      for (const row of rows) {
-        if (used + row.payload.length > maxChars) break;
-        results.push(JSON.parse(row.payload) as MemoryRecord);
-        used += row.payload.length;
-      }
-      return results;
-    } finally {
-      database.close();
+    const cache = readCache(resolve(cwd, settings.cache));
+    const recordsById = new Map(state.records.map((record) => [record.id, record]));
+    const terms = searchTerms(input.query);
+    const includeSuperseded = input.include_superseded ?? settings.includeSuperseded;
+    const matches = cache.records
+      .filter((record) => includeSuperseded || record.active)
+      .filter((record) => terms.every((term) => record.searchable.includes(term)))
+      .map((record) => recordsById.get(record.id))
+      .filter((record): record is MemoryRecord => record !== undefined)
+      .filter((record) => !input.topic || record.topic === input.topic)
+      .filter((record) => !input.memory_type || record.memory_type === input.memory_type)
+      .sort((left, right) => right.created_at.localeCompare(left.created_at));
+    const results: MemoryRecord[] = [];
+    let used = 0;
+    for (const match of matches) {
+      if (results.length >= limit) break;
+      const size = JSON.stringify(match).length;
+      if (used + size > maxChars) break;
+      results.push(match);
+      used += size;
     }
+    return results;
   });
 }
 
@@ -592,34 +593,16 @@ function ensureCache(cwd: string, settings: MemorySettings, state: MemoryState):
     mkdirSync(dirname(cachePath), { recursive: true });
     const temporary = `${cachePath}.${process.pid}.${randomBytes(4).toString('hex')}.tmp`;
     try {
-      const database = new DatabaseSync(temporary);
-      try {
-        database.exec(
-          'CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);' +
-            'CREATE TABLE memory (id TEXT PRIMARY KEY, topic TEXT, memory_type TEXT, summary TEXT, details TEXT, created_at TEXT, active INTEGER, payload TEXT);' +
-            'CREATE VIRTUAL TABLE memory_fts USING fts5(id UNINDEXED, summary, details, topic);',
-        );
-        const insert = database.prepare(
-          'INSERT INTO memory (id, topic, memory_type, summary, details, created_at, active, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        );
-        const insertFts = database.prepare('INSERT INTO memory_fts (id, summary, details, topic) VALUES (?, ?, ?, ?)');
-        for (const record of state.records) {
-          insert.run(
-            record.id,
-            record.topic,
-            record.memory_type,
-            record.summary,
-            record.details ?? '',
-            record.created_at,
-            state.activeIds.has(record.id) ? 1 : 0,
-            JSON.stringify(record),
-          );
-          insertFts.run(record.id, record.summary, record.details ?? '', record.topic);
-        }
-        database.prepare('INSERT INTO metadata (key, value) VALUES (?, ?)').run('manifest', manifest);
-      } finally {
-        database.close();
-      }
+      const cache: MemoryCache = {
+        version: 1,
+        manifest,
+        records: state.records.map((record) => ({
+          id: record.id,
+          active: state.activeIds.has(record.id),
+          searchable: searchableText(record),
+        })),
+      };
+      writeFileSync(temporary, `${JSON.stringify(cache)}\n`, { encoding: 'utf8', mode: 0o600 });
       fsyncFile(temporary);
       renameSync(temporary, cachePath);
       fsyncDirectory(dirname(cachePath));
@@ -632,16 +615,45 @@ function ensureCache(cwd: string, settings: MemorySettings, state: MemoryState):
 
 function cacheMatches(cachePath: string, manifest: string): boolean {
   if (!existsSync(cachePath)) return false;
-  const database = new DatabaseSync(cachePath);
   try {
-    const row = database.prepare('SELECT value FROM metadata WHERE key = ?').get('manifest') as
-      { value: string } | undefined;
-    return row?.value === manifest;
+    return readCache(cachePath).manifest === manifest;
   } catch {
     return false;
-  } finally {
-    database.close();
   }
+}
+
+function readCache(path: string): MemoryCache {
+  const value = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+  if (!isMemoryCache(value)) throw new MemoryError(`Invalid memory cache: ${path}`);
+  return value;
+}
+
+function isMemoryCache(value: unknown): value is MemoryCache {
+  if (!isMapping(value) || value.version !== 1 || typeof value.manifest !== 'string' || !Array.isArray(value.records))
+    return false;
+  return value.records.every(
+    (record) =>
+      isMapping(record) &&
+      typeof record.id === 'string' &&
+      ULID_PATTERN.test(record.id) &&
+      typeof record.active === 'boolean' &&
+      typeof record.searchable === 'string',
+  );
+}
+
+function searchableText(record: MemoryRecord): string {
+  return [record.summary, record.details ?? '', record.topic].join('\n').toLocaleLowerCase();
+}
+
+function searchTerms(value: string | undefined): string[] {
+  if (!value) return [];
+  const terms = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((term) => term.toLocaleLowerCase());
+  if (terms.length === 0) throw new MemoryError('query must contain searchable text.');
+  return terms;
 }
 
 function withDirectoryLock<T>(lock: string, kind: string, operation: () => T): T {
@@ -688,7 +700,7 @@ function fsyncDirectory(path: string): void {
 
 function createManifest(cwd: string, settings: MemorySettings): string {
   const root = resolve(cwd, settings.root);
-  const hash = createHash('sha256').update('record-schema=1\nindex-schema=1\n');
+  const hash = createHash('sha256').update('record-schema=1\nindex-schema=2\n');
   const paths = Object.keys(FOLDERS)
     .map((type) => FOLDERS[type as RecordType])
     .concat('tombstones')
@@ -696,16 +708,6 @@ function createManifest(cwd: string, settings: MemorySettings): string {
     .sort();
   for (const path of paths) hash.update(relative(root, path)).update('\0').update(readFileSync(path)).update('\0');
   return hash.digest('hex');
-}
-
-function ftsQuery(value: string): string {
-  const terms = value
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((term) => `"${term.replaceAll('"', '""')}"`);
-  if (terms.length === 0) throw new MemoryError('query must contain searchable text.');
-  return terms.join(' AND ');
 }
 
 function requireActiveTarget(state: MemoryState, targetId: string): void {

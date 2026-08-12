@@ -88,7 +88,8 @@ The workflow never writes the token to repository files or logs. It uses
 Each publishable package must provide:
 
 - `license`, `repository`, `homepage`, and `bugs` metadata.
-- Node engine compatible with `node:sqlite` used by generic-tools.
+- Node engine compatible with generic-tools; runtime packages avoid host-specific built-ins such as `node:sqlite` and
+  `bun:sqlite`.
 - `main`, `types`, and `exports` pointing only to packaged build output.
 - `files` allowlist containing runtime output and required generated contracts.
 - `publishConfig.access = "public"` and npm registry URL.

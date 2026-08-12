@@ -31,5 +31,10 @@ for (const [name, directory] of packages) {
   }
   const unexpected = paths.filter((path) => /(^|\/)(coverage|node_modules|.*\.(spec|test)\.[cm]?[jt]s)$/.test(path));
   if (unexpected.length) throw new Error(`${name}: unexpected packed files: ${unexpected.join(', ')}`);
+  for (const path of paths.filter((path) => path.endsWith('.js'))) {
+    const source = readFileSync(resolve(directory, path), 'utf8');
+    const hostSpecific = source.match(/(?:node|bun):sqlite/g);
+    if (hostSpecific) throw new Error(`${name}: packed runtime imports host-specific ${hostSpecific[0]}`);
+  }
   console.log(`${name}@${manifest.version}: ${paths.length} files verified`);
 }

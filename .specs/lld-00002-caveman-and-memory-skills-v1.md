@@ -203,7 +203,7 @@ Canonical data:
 Generated cache:
 
 ```text
-.harnessctl/cache/memory.db
+.harnessctl/cache/memory-index.json
 ```
 
 Memory records are Git-tracked. Cache is gitignored, disposable, rebuilt after pull/checkout when manifest hash differs. One immutable file per record minimizes merge conflicts. Writes use exclusive creation (`O_CREAT | O_EXCL`) so an existing ID can never be replaced. Validation rejects malformed schema, duplicate ULIDs, broken or cyclic supersession/tombstone links, wrong project scope, and known secrets.
@@ -319,7 +319,7 @@ memory:
     include_superseded: false
   repository:
     root: .harnessctl/memory
-    cache: .harnessctl/cache/memory.db
+    cache: .harnessctl/cache/memory-index.json
 ```
 
 Future schema versions add one backend at a time after its adapter passes contract tests. Planned remote profile fields use environment-variable references only:
