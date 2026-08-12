@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "description": "Harness-neutral configuration tools for harnessctl.",
   "type": "module",
+  "files": ["*.js", "*.d.ts", "contracts/*.json"],
   "scripts": {
+    "contracts:generate": "tsx generate-contracts.ts && prettier --write contracts/*.json",
+    "prepack": "npm run contracts:generate",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "eslint . --max-warnings 0",
@@ -13,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "zod": "^4.1.8"
   }
 }

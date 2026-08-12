@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessctl.dev/contracts/config-v2.schema.json",
+  "title": "harnessctl project configuration v2",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 2
+    },
+    "communication": {
+      "type": "object",
+      "properties": {
+        "caveman": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["strict", "balanced"]
+            }
+          },
+          "required": ["enabled", "mode"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["caveman"],
+      "additionalProperties": false
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "backend": {
+          "type": "string",
+          "const": "repository"
+        },
+        "namespace": {
+          "type": "object",
+          "properties": {
+            "organization_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "default_topic": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["organization_id", "project_id", "default_topic"],
+          "additionalProperties": false
+        },
+        "retrieval": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "max_chars": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 100000
+            },
+            "include_superseded": {
+              "type": "boolean"
+            }
+          },
+          "required": ["limit", "max_chars", "include_superseded"],
+          "additionalProperties": false
+        },
+        "repository": {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1
+            },
+            "cache": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["root", "cache"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["enabled", "backend", "namespace", "retrieval", "repository"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["version", "communication", "memory"],
+  "additionalProperties": {}
+}

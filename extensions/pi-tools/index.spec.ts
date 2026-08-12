@@ -83,7 +83,7 @@ describe('Pi adapter', () => {
       const validation = await tools[13]?.execute('call-10', {}, undefined, undefined, { cwd });
       const archive = await tools[5]?.execute('call-6', { id: '00001' }, undefined, undefined, { cwd });
 
-      expect(result?.content[0]?.text).toBe('1');
+      expect(result?.content[0]?.text).toBe('2');
       expect(issueId?.content[0]?.text).toBe('["00042","00007"]');
       expect(JSON.parse(issue?.content[0]?.text ?? '').id).toBe('00001');
       expect(JSON.parse(issues?.content[0]?.text ?? '')).toEqual([

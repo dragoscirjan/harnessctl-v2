@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "prepare": "husky",
+    "contracts:generate": "npm run contracts:generate --workspace @harnessctl/generic-tools",
     "lint": "npx eslint \"extensions/**/*.{ts,js,mjs,cjs}\"",
     "lint:fix": "npm run lint -- --fix",
     "format": "npx prettier --check README.md \"extensions/**/*.{ts,js,json,md,yml,yaml}\"",
@@ -33,11 +34,12 @@
     "@templ-project/prettier": "^1.1.0",
     "@templ-project/vitest": "^0.3.2",
     "@types/node": "^22.13.10",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
     "fallow": "^3.3.0",
     "husky": "^9.1.7",
     "jscpd": "^5.0.12",
-    "typescript": "^5.8.2",
-    "@typescript-eslint/eslint-plugin": "^8.26.0"
+    "tsx": "^4.23.12",
+    "typescript": "^5.8.2"
   },
   "prettier": "@templ-project/prettier"
 }

@@ -1,4 +1,11 @@
-import { createConfig, getConfigValue, readConfig, ConfigError, type ConfigDocument } from './config.js';
+import {
+  createConfig,
+  getConfigValue,
+  readConfig,
+  validateAndMigrateConfig,
+  ConfigError,
+  type ConfigDocument,
+} from './config.js';
 export {
   archiveIssue,
   archiveIssueReport,
@@ -32,5 +39,6 @@ export type {
   ValidationReport,
 } from './issues.js';
 
-export { ConfigError, createConfig, getConfigValue, readConfig };
+export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };
+export { configV2Schema, memoryDocumentSchema, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';

@@ -16,7 +16,7 @@ describe('configuration tools', () => {
 
       expect(path).toBe(join(cwd, '.harnessctl', 'config.yaml'));
       expect(readConfig(cwd)).toEqual({
-        version: 1,
+        version: 2,
         issues: {
           prefix: '',
           type: 'filesystem',
@@ -28,6 +28,14 @@ describe('configuration tools', () => {
           reports: '.harnessctl/reports',
         },
         workflow: { default_task_type: 'bug' },
+        communication: { caveman: { enabled: true, mode: 'strict' } },
+        memory: {
+          enabled: false,
+          backend: 'repository',
+          namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
+          retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
+          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory.db' },
+        },
       });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -57,7 +65,11 @@ describe('configuration tools', () => {
       writeFileSync(path, 'version: 1\npaths:\n  tasks: .tasks\nempty: null\n', 'utf8');
 
       expect(getConfigValue(cwd, 'paths.tasks')).toBe('.tasks');
-      expect(getConfigValue(cwd, 'paths')).toEqual({ tasks: '.tasks' });
+      expect(getConfigValue(cwd, 'paths')).toEqual({
+        root: '.harnessctl',
+        tasks: '.tasks',
+        reports: '.harnessctl/reports',
+      });
       expect(getConfigValue(cwd, 'empty')).toBeNull();
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -80,4 +92,32 @@ describe('configuration tools', () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
+
+  it('rejects unsupported memory backends and unsafe repository paths', () => {
+    const base = readConfigFromText('version: 1\n');
+    const memory = base.memory as Record<string, unknown>;
+    memory.backend = 'graphiti';
+    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
+    memory.backend = 'repository';
+    (memory.repository as Record<string, unknown>).root = '../memory';
+    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
+  });
 });
+
+function readConfigFromText(content: string): Record<string, unknown> {
+  const cwd = temporaryDirectory();
+  try {
+    const path = join(cwd, '.harnessctl', 'config.yaml');
+    createConfig(cwd);
+    writeFileSync(path, content, 'utf8');
+    const result = readConfig(cwd);
+    if (result instanceof ConfigError) throw result;
+    return result;
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+}
+
+function stringifyConfig(value: Record<string, unknown>): string {
+  return JSON.stringify(value);
+}
