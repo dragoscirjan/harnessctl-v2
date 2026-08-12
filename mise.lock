@@ -7,6 +7,59 @@ backend = "github:koalaman/shellcheck"
 [tools."github:koalaman/shellcheck".options]
 asset_pattern = "shellcheck-*.linux.x86_64.tar.xz"
 
+[tools."github:koalaman/shellcheck"."platforms.linux-x64"]
+checksum = "sha256:8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056942"
+
+[tools."github:koalaman/shellcheck"."platforms.linux-x64-musl"]
+checksum = "sha256:8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056942"
+
+[[tools."github:koalaman/shellcheck"]]
+version = "0.11.0"
+backend = "github:koalaman/shellcheck"
+
+[tools."github:koalaman/shellcheck".options]
+asset_pattern = "shellcheck-*.darwin.aarch64.tar.xz"
+
+[tools."github:koalaman/shellcheck"."platforms.macos-arm64"]
+checksum = "sha256:56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.aarch64.tar.xz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056932"
+
+[[tools."github:koalaman/shellcheck"]]
+version = "0.11.0"
+backend = "github:koalaman/shellcheck"
+
+[tools."github:koalaman/shellcheck".options]
+asset_pattern = "shellcheck-*.zip"
+
+[tools."github:koalaman/shellcheck"."platforms.linux-arm64"]
+checksum = "sha256:68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.aarch64.tar.gz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/336391401"
+
+[tools."github:koalaman/shellcheck"."platforms.macos-x64"]
+checksum = "sha256:c2c15e08df0e8fbc374c335b230a7ee958c313fa5714817a59aa59f1aa594f51"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.x86_64.tar.gz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/336391375"
+
+[tools."github:koalaman/shellcheck"."platforms.windows-x64"]
+checksum = "sha256:8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e740e"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056944"
+
+[[tools."github:koalaman/shellcheck"]]
+version = "0.11.0"
+backend = "github:koalaman/shellcheck"
+
+[tools."github:koalaman/shellcheck"."platforms.linux-arm64-musl"]
+checksum = "sha256:68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.aarch64.tar.gz"
+url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/336391401"
+
 [[tools."github:rhysd/actionlint"]]
 version = "1.7.12"
 backend = "github:rhysd/actionlint"
