@@ -665,7 +665,8 @@ function withDirectoryLock<T>(lock: string, kind: string, operation: () => T): T
 }
 
 function fsyncFile(path: string): void {
-  const descriptor = openSync(path, 'r');
+  // Windows requires a writable handle for FlushFileBuffers, which backs fsync.
+  const descriptor = openSync(path, 'r+');
   try {
     fsyncSync(descriptor);
   } finally {
@@ -674,6 +675,9 @@ function fsyncFile(path: string): void {
 }
 
 function fsyncDirectory(path: string): void {
+  // Windows does not support flushing directory handles. File contents are
+  // already flushed before each rename; directory fsync adds POSIX durability.
+  if (process.platform === 'win32') return;
   const descriptor = openSync(path, 'r');
   try {
     fsyncSync(descriptor);

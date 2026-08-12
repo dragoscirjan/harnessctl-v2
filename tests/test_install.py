@@ -45,11 +45,13 @@ def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
 def test_install_all_reports_all_conflicts(tmp_path: Path) -> None:
     install(tmp_path, "all")
 
-    with pytest.raises(FileExistsError, match=r"\.opencode/commands/work-new\.md") as error:
+    with pytest.raises(FileExistsError) as error:
         install(tmp_path, "all")
 
-    assert ".pi/commands/work-new.md" in str(error.value)
-    assert ".opencode/commands/work-plan.md" in str(error.value)
+    normalized_error = str(error.value).replace("\\", "/")
+    assert ".opencode/commands/work-new.md" in normalized_error
+    assert ".pi/commands/work-new.md" in normalized_error
+    assert ".opencode/commands/work-plan.md" in normalized_error
 
 
 def test_explore_and_plan_prompts_define_their_boundaries() -> None:
