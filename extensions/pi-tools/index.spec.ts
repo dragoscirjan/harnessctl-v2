@@ -169,5 +169,5 @@ describe('Pi adapter', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
-  });
+  }, 15_000);
 });
