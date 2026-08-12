@@ -1,0 +1,25 @@
+name: Setup project
+description: Install pinned mise tools and locked project dependencies
+
+runs:
+  using: composite
+  steps:
+    - name: Install pinned tools
+      uses: jdx/mise-action@7e36c90d9ab29c415a2384db3006f3ec8a8cc654 # v4.2.4
+      with:
+        cache: true
+        install: true
+
+    - name: Restore npm download cache
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 24.15.0
+        cache: npm
+
+    - name: Install Node dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Install Python dependencies
+      shell: bash
+      run: uv sync --locked

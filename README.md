@@ -489,6 +489,7 @@ mise run lint
 mise run lint-fix
 mise run test
 mise run quality
+mise run node-build
 mise run integration
 ```
 
@@ -503,6 +504,51 @@ npm run test:integration --workspace @harnessctl/pi-tools
 `mise run integration` runs both OpenCode and Pi integration suites. Use it only
 when both the OpenCode model configuration and the Pi provider environment are
 available.
+
+## Node package releases
+
+Published packages:
+
+- `@harnessctl/generic-tools`
+- `@harnessctl/opencode-tools`
+- `@harnessctl/pi-tools`
+
+Packages version independently through Changesets. Any pull request that changes a
+published package must add a changeset:
+
+```bash
+npm run changeset
+```
+
+Select affected packages and the smallest correct semantic-version bump. Tests,
+documentation, and repository-only automation do not need a changeset.
+
+After changes reach `main`, the release workflow creates or updates a version pull
+request. Merging that pull request triggers publication of changed packages, npm tags,
+and GitHub releases. Do not edit package versions manually.
+
+Repository maintainers must configure:
+
+1. A GitHub environment named `npm`, preferably with required reviewers.
+2. An environment secret named `NPM_TOKEN` containing an npm automation/granular token
+   allowed to publish the `@harnessctl` scope.
+3. Branch protection requiring the cross-platform `CI` checks before merge.
+
+The npm token is exposed only to the protected publish job. Regular CI, version pull
+requests, forks, and local development do not receive it. Model-backed integration
+tests remain manual and are not part of package publication.
+
+Useful local checks:
+
+```bash
+npm run packages:check
+npx changeset status --since=main
+mise run quality
+```
+
+If publication fails, do not republish by manually changing versions. Correct the
+token, package metadata, or registry state; then rerun the failed workflow. Changesets
+skips package versions already present in npm.
 
 ## Returning after a break
 
