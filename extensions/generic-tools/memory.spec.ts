@@ -96,6 +96,32 @@ describe('repository memory', () => {
       expect(searchMemory(cwd, { query: 'Alpha', topic: 'architecture' })).toHaveLength(1);
       expect(searchMemory(cwd, { query: 'missing' })).toHaveLength(0);
       expect(searchMemory(cwd, { limit: 1 })).toHaveLength(1);
+
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'memory-index.json');
+      const cache = JSON.parse(readFileSync(cachePath, 'utf8')) as {
+        version: number;
+        manifest: string;
+        records: Array<Record<string, unknown>>;
+      };
+      expect(cache).toMatchObject({ version: 1 });
+      expect(cache.manifest).toMatch(/^[a-f0-9]{64}$/);
+      expect(cache.records).toHaveLength(2);
+      expect(cache.records.every((record) => !('payload' in record))).toBe(true);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  it('rebuilds legacy or malformed cache bytes without losing canonical records', () => {
+    const cwd = fixture();
+    try {
+      const stored = storeMemory(cwd, fact('Portable cache migration fact'));
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'memory-index.json');
+      mkdirSync(join(cwd, '.harnessctl', 'cache'), { recursive: true });
+      writeFileSync(cachePath, Buffer.from('SQLite format 3\0legacy cache bytes'));
+
+      expect(searchMemory(cwd, { query: 'portable migration' })).toEqual([stored]);
+      expect(JSON.parse(readFileSync(cachePath, 'utf8'))).toMatchObject({ version: 1 });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

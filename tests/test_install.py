@@ -108,7 +108,7 @@ def test_repository_memory_skill_is_specialized_and_bounded() -> None:
         retrieval_limit=8,
         max_chars=12_000,
         repository_root=".harnessctl/memory",
-        cache_path=".harnessctl/cache/memory.db",
+        cache_path=".harnessctl/cache/memory-index.json",
     )
 
     assert "`memory_search`" in rendered
@@ -130,7 +130,7 @@ memory:
   backend: repository
   namespace: {organization_id: acme, project_id: widget, default_topic: general}
   retrieval: {limit: 5, max_chars: 4000, include_superseded: false}
-  repository: {root: .harnessctl/memory, cache: .harnessctl/cache/memory.db}
+  repository: {root: .harnessctl/memory, cache: .harnessctl/cache/memory-index.json}
 """,
         encoding="utf-8",
     )

@@ -22,7 +22,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "retrieval": {"limit": 8, "max_chars": 12_000, "include_superseded": False},
         "repository": {
             "root": ".harnessctl/memory",
-            "cache": ".harnessctl/cache/memory.db",
+            "cache": ".harnessctl/cache/memory-index.json",
         },
     },
 }

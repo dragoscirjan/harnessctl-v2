@@ -34,7 +34,7 @@ describe('configuration tools', () => {
           backend: 'repository',
           namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
           retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
-          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory.db' },
+          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory-index.json' },
         },
       });
     } finally {
