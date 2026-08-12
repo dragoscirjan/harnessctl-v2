@@ -3,6 +3,17 @@
   "name": "@harnessctl/generic-tools",
   "version": "0.1.0",
   "description": "Harness-neutral configuration tools for harnessctl.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dragoscirjan/harnessctl-v2.git",
+    "directory": "extensions/generic-tools"
+  },
+  "homepage": "https://github.com/dragoscirjan/harnessctl-v2#readme",
+  "bugs": "https://github.com/dragoscirjan/harnessctl-v2/issues",
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,8 +24,12 @@
     }
   },
   "files": ["dist", "contracts/*.json"],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "contracts:generate": "tsx generate-contracts.ts && prettier --write contracts/*.json",
     "prepack": "npm run contracts:generate && npm run build",
     "format": "prettier --check .",
