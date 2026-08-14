@@ -18,7 +18,8 @@ describe('configuration tools', () => {
       expect(readConfig(cwd)).toEqual({
         version: 2,
         issues: {
-          prefix: '',
+          root: '.harnessctl/issues',
+          prefix: 'hrn-',
           type: 'filesystem',
           tools:
             'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
@@ -35,7 +36,7 @@ describe('configuration tools', () => {
           backend: 'repository',
           namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
           retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
-          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory-index.json' },
+          repository: { root: '.harnessctl/memory' },
         },
       });
     } finally {
@@ -81,6 +82,8 @@ describe('configuration tools', () => {
     const cwd = temporaryDirectory();
     try {
       expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
+      expect(getConfigValue(cwd, 'issues.root')).toBe('.harnessctl/issues');
+      expect(getConfigValue(cwd, 'issues.prefix')).toBe('hrn-');
       const first = readConfig(cwd);
       if (first instanceof ConfigError) throw first;
       (first.paths as Record<string, unknown>).tasks = 'mutated';
@@ -103,13 +106,14 @@ describe('configuration tools', () => {
 
       expect(readConfig(cwd)).toMatchObject({
         version: 2,
+        issues: { root: '.harnessctl/issues', prefix: 'hrn-' },
         paths: { tasks: '.harnessctl/tasks' },
         communication: { caveman: { enabled: true, mode: 'strict' } },
         memory: {
           enabled: true,
           backend: 'repository',
           retrieval: { limit: 3, max_chars: 12_000, include_superseded: false },
-          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory-index.json' },
+          repository: { root: '.harnessctl/memory' },
         },
       });
     } finally {
@@ -138,6 +142,25 @@ describe('configuration tools', () => {
     expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
     memory.backend = 'repository';
     (memory.repository as Record<string, unknown>).root = '../memory';
+    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
+  });
+
+  it('tolerates but does not operationally require the retired memory cache key', () => {
+    const config = readConfigFromText(
+      'version: 2\nmemory:\n  repository:\n    root: .harnessctl/memory\n    cache: legacy/cache.json\n',
+    );
+    expect(config).toMatchObject({ memory: { repository: { root: '.harnessctl/memory' } } });
+  });
+
+  it('rejects unsafe issue roots and prefixes', () => {
+    const base = readConfigFromText('version: 2\n');
+    const issues = base.issues as Record<string, unknown>;
+    for (const root of ['../issues', '.', 'nested//issues', '.harnessctl/issues/']) {
+      issues.root = root;
+      expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
+    }
+    issues.root = '.harnessctl/issues';
+    issues.prefix = 'hrn/';
     expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
   });
 });

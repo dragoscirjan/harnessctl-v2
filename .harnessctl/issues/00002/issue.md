@@ -21,8 +21,8 @@ So that issue state is cohesive, reviewable, and efficient to index.
 ## Requested Epic Scope
 
 - Define a versioned YAML issue contract containing managed metadata, body content, embedded comments, relationships, hierarchy, document links, and custom metadata.
-- Store active issues directly under `.issues/` as `<id>-<title-slug>.yml`.
-- Store archived issues under `.issues/archived/` using the same filename convention and schema.
+- Store active issues directly under configured `issues.root` as `<id>-<title-slug>.yml`.
+- Store archived issues under `<issues.root>/archived/` using the same filename convention and schema.
 - Remove the issue directory and separate comments-directory model.
 - Make comment append operations update the issue YAML atomically while preserving comment immutability.
 - Rename the file atomically when the title changes; keep the issue ID as stable identity.
@@ -64,7 +64,7 @@ And references continue using the unchanged issue ID.
 
 Given an issue is archived
 When archival succeeds
-Then the same YAML document moves to `.issues/archived/`
+Then the same YAML document moves to `<issues.root>/archived/`
 And its schema and filename convention remain unchanged.
 
 ### Scenario: Migration boundary

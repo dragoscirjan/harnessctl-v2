@@ -1,13 +1,14 @@
-import { createHash } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { existsSync, lstatSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { ConfigError, getConfigValue } from './config.js';
+import { ConfigError, getConfigValue, readConfig } from './config.js';
 import {
   ISSUE_CONTRACT_VERSION,
   ISSUE_STATUSES,
   ISSUE_TYPES,
   IssueError,
   canonicalIssueFilename,
+  computeIssueRevision,
   decodeIssueDocument,
   encodeCanonicalIssue,
   normalizeIssueMetadata,
@@ -22,21 +23,17 @@ import {
   type IssueMetadataText,
 } from './issues-contract.js';
 import {
+  applyIssueFileBatch,
   discoverIssueStorage,
-  projectIssueCandidate,
   resolveIssueCandidate,
-  type IssueProjectionRecord,
+  validateIssueRoot,
+  withIssueBarrier,
+  type BarrierLease,
+  type FileReplacement,
   type IssueStorageCandidate,
   type IssueStorageCatalog,
 } from './issues-storage.js';
-import {
-  inspectIssueTransactionEvidence,
-  recoverIssueTransactions,
-  withIssueMutationLock,
-  type IssueMutationContext,
-  type IssueTransactionActionPlan,
-  type IssueTransactionOptions,
-} from './issues-transactions.js';
+import { ensureLocalCache, loadLocalSnapshot, synchronizeLocalCache } from './local-persistence.js';
 
 export { ISSUE_STATUSES, ISSUE_TYPES };
 export type IssueType = CanonicalIssueType;
@@ -52,6 +49,7 @@ export interface CreateIssueOptions {
   author?: string;
   assignee?: string;
   metadata?: Record<string, unknown>;
+  /** Compatibility boundary for adapters that accept metadata as JSON text. */
   metadataText?: IssueMetadataText;
 }
 
@@ -126,8 +124,10 @@ export interface ArchiveReport {
   transactionId?: string;
 }
 
-export interface FilesystemIssueProviderOptions extends IssueTransactionOptions {
+export interface FilesystemIssueProviderOptions {
   clock?: () => Date;
+  lockWaitMs?: number;
+  transactionId?: () => string;
 }
 
 export interface FilesystemIssueProvider {
@@ -144,11 +144,23 @@ export interface FilesystemIssueProvider {
   linkDocument(id: string, documentPath: string, kind?: string): Issue;
   validate(id?: string): ValidationReport;
   archiveTree(id: string): ArchiveReport;
-  recover(): readonly string[];
   discover(): IssueStorageCatalog;
-  project(id: string): IssueProjectionRecord;
-  projectAll(): readonly IssueProjectionRecord[];
   decode(source: string | Uint8Array, options?: Omit<DecodeIssueOptions, 'issuePrefix'>): DecodedIssueDocument;
+}
+
+interface Entity {
+  issue: CanonicalIssueDocument;
+  path: string;
+  revision: string;
+  location: IssueLocation;
+}
+
+interface DerivedReferences {
+  children: string[];
+  blocks: string[];
+  blocked_by: string[];
+  relates_to: string[];
+  duplicates: string[];
 }
 
 const ALLOWED_PARENT_TYPES: Record<IssueType, readonly IssueType[]> = {
@@ -159,66 +171,81 @@ const ALLOWED_PARENT_TYPES: Record<IssueType, readonly IssueType[]> = {
   bug: ['story', 'task', 'epic'],
 };
 const RELATIONSHIPS: readonly Relationship[] = ['depends_on', 'blocks', 'relates_to', 'duplicates', 'supersedes'];
-type ReferenceField =
-  'children' | 'depends_on' | 'blocks' | 'blocked_by' | 'relates_to' | 'duplicates' | 'supersedes' | 'documents';
+const MAX_FINDINGS = 100;
 
 export function createFilesystemIssueProvider(
   cwd: string,
   options: FilesystemIssueProviderOptions = {},
 ): FilesystemIssueProvider {
-  const prefix = getIssuePrefix(cwd);
-  const transactionOptions: IssueTransactionOptions = {
-    ...options,
-    issuePrefix: prefix,
-    now: options.clock ?? options.now,
-  };
-  const clock = options.clock ?? options.now ?? (() => new Date());
-  const locked = <T>(operation: (context: IssueMutationContext) => T): T =>
-    withIssueMutationLock(cwd, operation, transactionOptions);
-
+  const { prefix, issueRoot } = getIssueStorageConfig(cwd);
+  const clock = options.clock ?? (() => new Date());
+  const locked = <T>(operation: (lease: BarrierLease) => T, mutation = false): T =>
+    withIssueBarrier(
+      cwd,
+      (lease) => {
+        assertValidForMutation(cwd, prefix, issueRoot);
+        const snapshot = loadLocalSnapshot(lease);
+        ensureLocalCache(lease, snapshot);
+        const result = operation(lease);
+        if (mutation) synchronizeLocalCache(lease, loadLocalSnapshot(lease), () => loadLocalSnapshot(lease));
+        return result;
+      },
+      options.lockWaitMs,
+    );
+  const token = options.transactionId ?? (() => randomBytes(16).toString('hex'));
   return {
     parseIds: (prompt) => parseIdsWithPrefix(prompt, prefix),
     parseId: (prompt) => parseIdsWithPrefix(prompt, prefix)[0] ?? '',
-    create: (createOptions) => locked((context) => createUnlocked(cwd, prefix, clock, context, createOptions)),
-    get: (id) => locked(() => issueFromCandidate(resolveActiveOrArchived(cwd, prefix, id))),
-    list: (listOptions = {}) => locked(() => listUnlocked(cwd, prefix, listOptions)),
-    update: (id, changes) => locked((context) => updateUnlocked(cwd, prefix, clock, context, id, changes)),
+    create: (input) => locked((lease) => createUnlocked(cwd, prefix, issueRoot, clock, lease, input), true),
+    get: (id) => locked(() => getUnlocked(cwd, prefix, issueRoot, id)),
+    list: (input = {}) => locked(() => listUnlocked(cwd, prefix, issueRoot, input)),
+    update: (id, changes) => locked((lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, changes), true),
     transition: (id, status, expectedRevision) =>
-      locked((context) => updateUnlocked(cwd, prefix, clock, context, id, { status, expectedRevision })),
+      locked((lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, { status, expectedRevision }), true),
     appendComment: (id, body, author) =>
-      locked((context) => commentUnlocked(cwd, prefix, clock, context, id, body, author)),
+      locked((lease) => commentUnlocked(cwd, prefix, issueRoot, clock, lease, id, body, author), true),
     relate: (id, relationship, targetId) =>
-      locked((context) => relationshipUnlocked(cwd, prefix, clock, context, id, relationship, targetId, true)),
-    unrelate: (id, relationship, targetId) =>
-      locked((context) => relationshipUnlocked(cwd, prefix, clock, context, id, relationship, targetId, false)),
-    linkDocument: (id, documentPath, kind) =>
-      locked((context) => linkUnlocked(cwd, prefix, clock, context, id, documentPath, kind)),
-    validate: (id) => locked(() => validateUnlocked(cwd, prefix, id)),
-    archiveTree: (id) => locked((context) => archiveUnlocked(cwd, prefix, clock, context, id)),
-    recover: () => recoverIssueTransactions(cwd, transactionOptions),
-    discover: () => locked(() => discoverCanonical(cwd, prefix)),
-    project: (id) => locked(() => projectIssueCandidate(resolveActiveOrArchived(cwd, prefix, id))),
-    projectAll: () =>
-      locked(() =>
-        [...discoverCanonical(cwd, prefix).candidates]
-          .sort((left, right) => compareCandidatesById(left, right) || compareCodePoints(left.location, right.location))
-          .map(projectIssueCandidate),
+      locked(
+        (lease) => relationshipUnlocked(cwd, prefix, issueRoot, clock, lease, id, relationship, targetId, true),
+        true,
       ),
+    unrelate: (id, relationship, targetId) =>
+      locked(
+        (lease) => relationshipUnlocked(cwd, prefix, issueRoot, clock, lease, id, relationship, targetId, false),
+        true,
+      ),
+    linkDocument: (id, path, kind) =>
+      locked((lease) => linkUnlocked(cwd, prefix, issueRoot, clock, lease, id, path, kind), true),
+    validate: (id) =>
+      withIssueBarrier(
+        cwd,
+        (lease) => {
+          const report = validateUnlocked(cwd, prefix, issueRoot, id);
+          if (!report.valid) return report;
+          let snapshot;
+          try {
+            snapshot = loadLocalSnapshot(lease);
+          } catch {
+            return report;
+          }
+          ensureLocalCache(lease, snapshot);
+          return report;
+        },
+        options.lockWaitMs,
+      ),
+    archiveTree: (id) => locked((lease) => archiveUnlocked(cwd, prefix, issueRoot, lease, id, token()), true),
+    discover: () => locked(() => discoverCanonical(cwd, prefix, issueRoot)),
     decode: (source, decodeOptions = {}) => decodeIssueDocument(source, { ...decodeOptions, issuePrefix: prefix }),
   };
 }
 
-export function parseIssueIds(prompt: string, cwd: string = process.cwd()): string[] {
+export function parseIssueIds(prompt: string, cwd = process.cwd()): string[] {
   const prefix = readIssuePrefix(cwd);
   return prefix === undefined ? [] : parseIdsWithPrefix(prompt, prefix);
 }
 
-export function parseIssueId(prompt: string, cwd: string = process.cwd()): string {
+export function parseIssueId(prompt: string, cwd = process.cwd()): string {
   return parseIssueIds(prompt, cwd)[0] ?? '';
-}
-
-export function createIssue(cwd: string, options: CreateIssueOptions): Issue {
-  return createIssueRecord(cwd, options);
 }
 
 export function createIssueRecord(cwd: string, options: CreateIssueOptions): Issue {
@@ -231,10 +258,6 @@ export function getIssue(cwd: string, id: string): Issue {
 
 export function listIssueSummaries(cwd: string, options: ListIssueOptions = {}): IssueSummary[] {
   return createFilesystemIssueProvider(cwd).list(options);
-}
-
-export function listIssues(cwd: string, options: ListIssueOptions = {}): IssueSummary[] {
-  return listIssueSummaries(cwd, options);
 }
 
 export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges): Issue {
@@ -269,8 +292,23 @@ export function validateIssues(cwd: string, id?: string): ValidationReport {
   }
 }
 
-export function archiveIssue(cwd: string, id: string): ArchiveReport {
-  return archiveIssueReport(cwd, id);
+/** Internal cross-domain validation used before a shared local-cache projection. */
+export function validateCanonicalIssueGraph(cwd: string): ValidationReport {
+  try {
+    const config = readConfig(cwd);
+    if (config instanceof ConfigError) throw config;
+    if (
+      config.issues === null ||
+      typeof config.issues !== 'object' ||
+      Array.isArray(config.issues) ||
+      (config.issues as Record<string, unknown>).type !== 'filesystem'
+    )
+      return { valid: true, findings: [] };
+    const { prefix, issueRoot } = getIssueStorageConfig(cwd);
+    return validateUnlocked(cwd, prefix, issueRoot);
+  } catch (error: unknown) {
+    return { valid: false, findings: [findingFromError(error)] };
+  }
 }
 
 export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
@@ -280,197 +318,169 @@ export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
 function createUnlocked(
   cwd: string,
   prefix: string,
+  issueRoot: string,
   clock: () => Date,
-  context: IssueMutationContext,
+  lease: BarrierLease,
   options: CreateIssueOptions,
 ): Issue {
-  const storage = discoverCanonical(cwd, prefix, true);
-  assertGloballyValidForMutation(cwd, prefix);
+  const storage = discoverCanonical(cwd, prefix, issueRoot, true);
+  assertValidForMutation(cwd, prefix, issueRoot);
   const type = normalizeChoice(options.type, ISSUE_TYPES, 'type');
   const title = requireTrimmed(options.title, 'title');
   const status = normalizeChoice(options.status ?? 'open', ISSUE_STATUSES, 'status');
-  if (options.metadata !== undefined && options.metadataText !== undefined) {
+  if (options.metadata !== undefined && options.metadataText !== undefined)
     throw new IssueError('schema', 'metadata and metadataText cannot both be supplied');
-  }
-  const metadata = options.metadataText
-    ? parseIssueMetadataText(options.metadataText)
-    : options.metadata
-      ? normalizeIssueMetadata(options.metadata)
-      : undefined;
+  const metadata =
+    options.metadataText !== undefined
+      ? parseIssueMetadataText(options.metadataText)
+      : options.metadata !== undefined
+        ? normalizeIssueMetadata(options.metadata)
+        : undefined;
   const parent = normalizeIssueId(options.parent, prefix, 'parent');
   const dependencies = parseReferences(options.depends, prefix, 'depends');
   const entities = activeEntityMap(storage);
   for (const dependency of dependencies) requireActiveEntity(entities, dependency);
   if (parent) validateParentType(requireActiveEntity(entities, parent), type);
-
-  let currentStorage = storage;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const id = allocateIssueId(currentStorage, prefix);
-    const timestamp = canonicalTimestamp(clock());
-    const issue: CanonicalIssueDocument = {
-      version: ISSUE_CONTRACT_VERSION,
-      id,
-      type,
-      title,
-      status,
-      created_at: timestamp,
-      updated_at: timestamp,
-      ...(cleanOptional(options.author) ? { created_by: cleanOptional(options.author) } : {}),
-      ...(cleanOptional(options.assignee) ? { assigned_to: cleanOptional(options.assignee) } : {}),
-      ...(parent ? { parent } : {}),
-      ...(dependencies.length > 0 ? { depends_on: sortedUnique(dependencies) } : {}),
-      ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
-      body: defaultBody(title),
-      comments: [],
-    };
-    const destination = activePath(issue);
-    const actions: IssueTransactionActionPlan[] = [createAction(issue, destination)];
-    if (parent) {
-      const parentEntity = requireActiveEntity(entities, parent);
-      const nextParent = setReference(parentEntity.issue, 'children', id, true, timestamp);
-      actions.push(rewriteAction(parentEntity, nextParent));
-    }
-    try {
-      context.commit({ operation: 'create', actions });
-      return issueFromCandidate(resolveActive(cwd, prefix, id));
-    } catch (error: unknown) {
-      if (!isCreateDestinationRace(error, destination) || attempt === 4) throw error;
-      currentStorage = discoverCanonical(cwd, prefix, true);
-      assertGloballyValidForMutation(cwd, prefix);
-    }
-  }
-  throw new IssueError('filesystem_durability', 'issue ID allocation retry limit exceeded', { retryable: true });
+  const id = allocateIssueId(storage, prefix);
+  const timestamp = canonicalTimestamp(clock());
+  const issue: CanonicalIssueDocument = {
+    version: ISSUE_CONTRACT_VERSION,
+    id,
+    type,
+    title,
+    status,
+    created_at: timestamp,
+    updated_at: timestamp,
+    ...(cleanOptional(options.author) ? { created_by: cleanOptional(options.author) } : {}),
+    ...(cleanOptional(options.assignee) ? { assigned_to: cleanOptional(options.assignee) } : {}),
+    ...(parent ? { parent } : {}),
+    ...(dependencies.length ? { depends_on: dependencies } : {}),
+    ...(metadata && Object.keys(metadata).length ? { metadata } : {}),
+    body: defaultBody(title),
+    comments: [],
+  };
+  const path = activePath(issueRoot, issue);
+  applyIssueFileBatch(lease, [{ path, bytes: encodeCanonicalIssue(issue), expectedRevision: null }]);
+  return getUnlocked(cwd, prefix, issueRoot, id);
 }
 
-function listUnlocked(cwd: string, prefix: string, options: ListIssueOptions): IssueSummary[] {
+function getUnlocked(cwd: string, prefix: string, issueRoot: string, id: string): Issue {
+  assertIssueId(id, prefix, 'issue');
+  const entities = globalEntityMap(discoverCanonical(cwd, prefix, issueRoot));
+  const entity = entities.get(id);
+  if (!entity) throw new IssueError('schema', `canonical issue was not found: ${id}`, { issueIds: [id] });
+  return issueFromEntity(entity, entities);
+}
+
+function listUnlocked(cwd: string, prefix: string, issueRoot: string, options: ListIssueOptions): IssueSummary[] {
   const status = cleanOptional(options.status)?.toLowerCase();
   const type = cleanOptional(options.type)?.toLowerCase();
-  const storage = discoverCanonical(cwd, prefix);
-  return storage.active
-    .map(requireDecoded)
-    .filter((candidate) => !status || candidate.decoded?.issue.status === status)
-    .filter((candidate) => !type || candidate.decoded?.issue.type === type)
-    .sort(compareCandidatesById)
-    .map((candidate) => {
-      const decoded = requireDecoded(candidate).decoded;
-      if (!decoded) throw new IssueError('schema', 'canonical issue was not decoded');
-      return {
-        id: decoded.issue.id,
-        type: decoded.issue.type,
-        title: decoded.issue.title,
-        status: decoded.issue.status,
-        path: candidate.path,
-        revision: decoded.revision,
-      };
-    });
+  return discoverCanonical(cwd, prefix, issueRoot)
+    .active.map(entityFromCandidate)
+    .filter((entity) => !status || entity.issue.status === status)
+    .filter((entity) => !type || entity.issue.type === type)
+    .sort(compareEntities)
+    .map((entity) => ({
+      id: entity.issue.id,
+      type: entity.issue.type,
+      title: entity.issue.title,
+      status: entity.issue.status,
+      path: entity.path,
+      revision: entity.revision,
+    }));
 }
 
 function updateUnlocked(
   cwd: string,
   prefix: string,
+  issueRoot: string,
   clock: () => Date,
-  context: IssueMutationContext,
+  lease: BarrierLease,
   id: string,
   changes: IssueUpdateChanges,
 ): Issue {
   assertIssueId(id, prefix, 'issue');
   if (!changes.expectedRevision)
     throw new IssueError('stale_revision', 'expected revision is required', { issueIds: [id] });
-  assertGloballyValidForMutation(cwd, prefix);
-  const storage = discoverCanonical(cwd, prefix);
-  const entities = activeEntityMap(storage);
+  assertValidForMutation(cwd, prefix, issueRoot);
+  const entities = activeEntityMap(discoverCanonical(cwd, prefix, issueRoot));
   const current = requireActiveEntity(entities, id);
-  if (current.revision !== changes.expectedRevision) {
+  if (current.revision !== changes.expectedRevision)
     throw new IssueError('stale_revision', `issue ${id} changed since the expected revision was calculated`, {
       issueIds: [id],
     });
-  }
-  const timestamp = canonicalTimestamp(clock());
-  const next: CanonicalIssueDocument = { ...current.issue, comments: [...current.issue.comments] };
+  const next: CanonicalIssueDocument = {
+    ...current.issue,
+    comments: current.issue.comments.map((comment) => ({ ...comment })),
+  };
   if (changes.type !== undefined) next.type = normalizeChoice(changes.type, ISSUE_TYPES, 'type');
   if (changes.title !== undefined) next.title = requireTrimmed(changes.title, 'title');
   if (changes.status !== undefined) next.status = normalizeChoice(changes.status, ISSUE_STATUSES, 'status');
   setOptional(next, 'created_by', changes.author);
   setOptional(next, 'assigned_to', changes.assignee);
-  if (changes.body !== undefined && changes.sections !== undefined) {
+  if (changes.body !== undefined && changes.sections !== undefined)
     throw new IssueError('schema', 'body and sections cannot both be supplied');
-  }
   if (changes.body !== undefined) next.body = changes.body;
   if (changes.sections !== undefined) next.body = updateSections(next.body, changes.sections);
-
-  const currentParent = current.issue.parent;
-  const nextParent = changes.parent === undefined ? currentParent : cleanOptional(changes.parent ?? undefined);
+  const nextParent = changes.parent === undefined ? current.issue.parent : cleanOptional(changes.parent ?? undefined);
   if (nextParent) {
     assertIssueId(nextParent, prefix, 'parent');
     if (nextParent === id) throw invariant('an issue cannot be its own parent');
     validateParentType(requireActiveEntity(entities, nextParent), next.type);
-    if (hasHierarchyPath(entities, id, nextParent)) throw invariant('hierarchy cycle detected');
+    if (hasHierarchyCycle(entities, id, nextParent)) throw invariant('hierarchy cycle detected');
     next.parent = nextParent;
   } else delete next.parent;
-  for (const childId of next.children ?? [])
-    validateParentType(
-      { ...requireActiveEntity(entities, childId), issue: next },
-      requireActiveEntity(entities, childId).issue.type,
-    );
-  next.updated_at = timestamp;
-
-  const actions: IssueTransactionActionPlan[] = [];
-  const destination = activePath(next);
-  actions.push(destination === current.path ? rewriteAction(current, next) : moveAction(current, next, destination));
-  if (currentParent !== nextParent) {
-    if (currentParent) {
-      const oldParent = requireActiveEntity(entities, currentParent);
-      actions.push(rewriteAction(oldParent, setReference(oldParent.issue, 'children', id, false, timestamp)));
-    }
-    if (nextParent) {
-      const newParent = requireActiveEntity(entities, nextParent);
-      actions.push(rewriteAction(newParent, setReference(newParent.issue, 'children', id, true, timestamp)));
-    }
-  }
-  context.commit({ operation: 'update', actions });
-  return issueFromCandidate(resolveActive(cwd, prefix, id));
+  for (const child of derivedReferences(current, entities).children)
+    validateParentType({ ...current, issue: next }, requireActiveEntity(entities, child).issue.type);
+  next.updated_at = canonicalTimestamp(clock());
+  const destination = activePath(issueRoot, next);
+  const replacements: FileReplacement[] = [
+    {
+      path: destination,
+      bytes: encodeCanonicalIssue(next),
+      expectedRevision: destination === current.path ? current.revision : null,
+    },
+  ];
+  if (destination !== current.path) replacements.push({ path: current.path, expectedRevision: current.revision });
+  applyIssueFileBatch(lease, replacements);
+  return getUnlocked(cwd, prefix, issueRoot, id);
 }
 
 function commentUnlocked(
   cwd: string,
   prefix: string,
+  issueRoot: string,
   clock: () => Date,
-  context: IssueMutationContext,
+  lease: BarrierLease,
   id: string,
   body: string,
   author: string,
 ): IssueComment {
-  const trimmedBody = requireTrimmed(body, 'comment body');
-  const trimmedAuthor = requireTrimmed(author, 'comment author');
-  assertGloballyValidForMutation(cwd, prefix);
-  const entity = requireActiveEntity(activeEntityMap(discoverCanonical(cwd, prefix)), id);
-  const maximum = entity.issue.comments.reduce((value, comment) => {
-    const sequence = /-C(\d+)$/u.exec(comment.id)?.[1];
-    return sequence ? (BigInt(sequence) > value ? BigInt(sequence) : value) : value;
-  }, 0n);
-  const sequence = maximum + 1n;
-  const timestamp = canonicalTimestamp(clock());
+  assertValidForMutation(cwd, prefix, issueRoot);
+  const entity = requireActiveEntity(activeEntityMap(discoverCanonical(cwd, prefix, issueRoot)), id);
+  const sequence =
+    entity.issue.comments.reduce((maximum, comment) => {
+      const value = /-C(\d+)$/u.exec(comment.id)?.[1];
+      return value && BigInt(value) > maximum ? BigInt(value) : maximum;
+    }, 0n) + 1n;
   const comment: CanonicalIssueComment = {
     id: `${id}-C${sequence.toString().padStart(4, '0')}`,
-    created_at: timestamp,
-    created_by: trimmedAuthor,
-    body: trimmedBody,
+    created_at: canonicalTimestamp(clock()),
+    created_by: requireTrimmed(author, 'comment author'),
+    body: requireTrimmed(body, 'comment body'),
   };
-  const next: CanonicalIssueDocument = {
-    ...entity.issue,
-    updated_at: timestamp,
-    comments: [...entity.issue.comments, comment],
-  };
-  context.commit({ operation: 'comment', actions: [rewriteAction(entity, next)] });
-  const result = issueFromCandidate(resolveActive(cwd, prefix, id));
-  return { ...comment, issue: id, path: result.path, revision: result.revision };
+  const next = { ...entity.issue, updated_at: comment.created_at, comments: [...entity.issue.comments, comment] };
+  rewriteEntity(lease, entity, next);
+  const issue = getUnlocked(cwd, prefix, issueRoot, id);
+  return { ...comment, issue: id, path: issue.path, revision: issue.revision };
 }
 
 function relationshipUnlocked(
   cwd: string,
   prefix: string,
+  issueRoot: string,
   clock: () => Date,
-  context: IssueMutationContext,
+  lease: BarrierLease,
   id: string,
   relationship: string,
   targetId: string,
@@ -478,47 +488,105 @@ function relationshipUnlocked(
 ): Issue {
   assertRelationship(relationship);
   if (id === targetId) throw invariant('an issue cannot reference itself');
-  assertGloballyValidForMutation(cwd, prefix);
-  const entities = activeEntityMap(discoverCanonical(cwd, prefix));
+  assertValidForMutation(cwd, prefix, issueRoot);
+  const entities = activeEntityMap(discoverCanonical(cwd, prefix, issueRoot));
   const source = requireActiveEntity(entities, id);
-  const target = requireActiveEntity(entities, targetId);
-  const alreadyPresent = (source.issue[relationship] ?? []).includes(targetId);
-  const inverse = relationship === 'blocks' ? 'blocked_by' : relationship === 'duplicates' ? 'duplicates' : undefined;
-  const inversePresent = inverse ? (target.issue[inverse] ?? []).includes(id) : true;
-  if ((add && alreadyPresent && inversePresent) || (!add && !alreadyPresent && (inverse ? !inversePresent : true))) {
-    return issueFromEntity(source);
-  }
-  if (add && relationship === 'depends_on' && hasDependencyPath(entities, targetId, id)) {
-    throw invariant('dependency cycle detected');
-  }
+  requireActiveEntity(entities, targetId);
   const timestamp = canonicalTimestamp(clock());
-  const actions = [rewriteAction(source, setReference(source.issue, relationship, targetId, add, timestamp))];
-  if (inverse) actions.push(rewriteAction(target, setReference(target.issue, inverse, id, add, timestamp)));
-  context.commit({ operation: add ? 'relate' : 'unrelate', actions });
-  return issueFromCandidate(resolveActive(cwd, prefix, id));
+  if (relationship === 'blocks') {
+    const target = requireActiveEntity(entities, targetId);
+    const present = (target.issue.depends_on ?? []).includes(id);
+    if (present === add) return issueFromEntity(source, entities);
+    rewriteEntity(lease, target, setReference(target.issue, 'depends_on', id, add, timestamp));
+  } else if (relationship === 'relates_to' || relationship === 'duplicates') {
+    const [ownerId, otherId] = [id, targetId].sort(compareCodePoints) as [string, string];
+    const owner = requireActiveEntity(entities, ownerId);
+    const present = (owner.issue[relationship] ?? []).includes(otherId);
+    if (present === add) return issueFromEntity(source, entities);
+    rewriteEntity(lease, owner, setReference(owner.issue, relationship, otherId, add, timestamp));
+  } else {
+    const present = (source.issue[relationship] ?? []).includes(targetId);
+    if (present === add) return issueFromEntity(source, entities);
+    if (add && relationship === 'depends_on' && hasDependencyPath(entities, targetId, id))
+      throw invariant('dependency cycle detected');
+    rewriteEntity(lease, source, setReference(source.issue, relationship, targetId, add, timestamp));
+  }
+  return getUnlocked(cwd, prefix, issueRoot, id);
 }
 
 function linkUnlocked(
   cwd: string,
   prefix: string,
+  issueRoot: string,
   clock: () => Date,
-  context: IssueMutationContext,
+  lease: BarrierLease,
   id: string,
   documentPath: string,
   kind?: string,
 ): Issue {
-  assertGloballyValidForMutation(cwd, prefix);
-  const entity = requireActiveEntity(activeEntityMap(discoverCanonical(cwd, prefix)), id);
-  const normalized = validateDocumentPath(cwd, documentPath, kind);
-  if ((entity.issue.documents ?? []).includes(normalized)) return issueFromEntity(entity);
-  const next = setReference(entity.issue, 'documents', normalized, true, canonicalTimestamp(clock()));
-  context.commit({ operation: 'link', actions: [rewriteAction(entity, next)] });
-  return issueFromCandidate(resolveActive(cwd, prefix, id));
+  assertValidForMutation(cwd, prefix, issueRoot);
+  const entity = requireActiveEntity(activeEntityMap(discoverCanonical(cwd, prefix, issueRoot)), id);
+  const path = validateDocumentPath(cwd, documentPath, kind);
+  if ((entity.issue.documents ?? []).includes(path)) return issueFromEntity(entity, new Map([[id, entity]]));
+  rewriteEntity(lease, entity, setReference(entity.issue, 'documents', path, true, canonicalTimestamp(clock())));
+  return getUnlocked(cwd, prefix, issueRoot, id);
 }
 
-function validateUnlocked(cwd: string, prefix: string, id?: string): ValidationReport {
+function archiveUnlocked(
+  cwd: string,
+  prefix: string,
+  issueRoot: string,
+  lease: BarrierLease,
+  id: string,
+  transactionId: string,
+): ArchiveReport {
+  assertIssueId(id, prefix, 'issue');
+  const storage = discoverCanonical(cwd, prefix, issueRoot);
+  const root = resolveIssueCandidate(storage, id);
+  if (root.location === 'archived')
+    return {
+      archived: [],
+      skipped: [id],
+      location: `${issueRoot}/archived/`,
+      revisions: { [id]: root.decoded?.revision ?? '' },
+    };
+  assertValidForMutation(cwd, prefix, issueRoot);
+  const entities = globalEntityMap(storage);
+  const archived: string[] = [];
+  const visit = (issueId: string): void => {
+    const entity = entities.get(issueId);
+    if (!entity) throw invariant(`archive descendant does not resolve: ${issueId}`);
+    if (entity.location === 'active') archived.push(issueId);
+    for (const child of derivedReferences(entity, entities).children) visit(child);
+  };
+  visit(id);
+  const unique = sortedUnique(archived);
+  const set = new Set(unique);
+  const replacements: FileReplacement[] = [];
+  const revisions: Record<string, string> = {};
+  for (const issueId of unique) {
+    const entity = entities.get(issueId);
+    if (!entity) throw invariant(`archive issue does not resolve: ${issueId}`);
+    const next = { ...entity.issue, comments: [...entity.issue.comments] };
+    if (next.parent && !set.has(next.parent)) delete next.parent;
+    const bytes = encodeCanonicalIssue(next);
+    const destination = archivedPath(issueRoot, next);
+    replacements.push({ path: destination, bytes, expectedRevision: null });
+    replacements.push({ path: entity.path, expectedRevision: entity.revision });
+    revisions[issueId] = revisionForBytes(bytes);
+  }
+  applyIssueFileBatch(lease, replacements);
+  return { archived: unique, skipped: [], location: `${issueRoot}/archived/`, revisions, transactionId };
+}
+
+function validateUnlocked(cwd: string, prefix: string, issueRoot: string, id?: string): ValidationReport {
   if (id !== undefined) assertIssueId(id, prefix, 'issue');
-  const storage = discoverIssueStorage(cwd, { issuePrefix: prefix });
+  let storage: IssueStorageCatalog;
+  try {
+    storage = discoverIssueStorage(cwd, { issuePrefix: prefix, issueRoot });
+  } catch (error: unknown) {
+    return { valid: false, findings: [findingFromError(error, id)] };
+  }
   const findings: ValidationFinding[] = storage.findings.map((finding) => ({
     ...(finding.issueId ? { issue: finding.issueId } : {}),
     severity: 'error',
@@ -527,10 +595,7 @@ function validateUnlocked(cwd: string, prefix: string, id?: string): ValidationR
     message: finding.message,
     remedy: storageRemedy(finding.category),
   }));
-  for (const evidence of inspectIssueTransactionEvidence(cwd)) {
-    findings.push(findingFromError(evidence));
-  }
-  if (id !== undefined && !storage.byId.has(id)) {
+  if (id !== undefined && !storage.byId.has(id))
     findings.push({
       issue: id,
       severity: 'error',
@@ -538,8 +603,6 @@ function validateUnlocked(cwd: string, prefix: string, id?: string): ValidationR
       message: `canonical issue was not found: ${id}`,
       remedy: 'create the issue or correct the reference',
     });
-  }
-
   const entities = globalEntityMap(storage);
   const add = (
     owner: Entity,
@@ -547,68 +610,30 @@ function validateUnlocked(cwd: string, prefix: string, id?: string): ValidationR
     message: string,
     category: IssueError['category'] = 'domain_invariant',
   ): void => {
-    findings.push({
-      issue: owner.issue.id,
-      severity: 'error',
-      category,
-      path: owner.path,
-      field,
-      message,
-      remedy: 'correct the reference and restore canonical reciprocal graph state',
-    });
-  };
-  const resolveReference = (owner: Entity, field: string, targetId: string): Entity | undefined => {
-    if (targetId === owner.issue.id) {
-      add(owner, field, `self-reference in ${field}`);
-      return undefined;
-    }
-    const candidates = storage.byId.get(targetId) ?? [];
-    if (candidates.length !== 1 || !entities.has(targetId)) {
-      add(
-        owner,
+    if (findings.length <= MAX_FINDINGS)
+      findings.push({
+        issue: owner.issue.id,
+        severity: 'error',
+        category,
+        path: owner.path,
         field,
-        candidates.length > 1
-          ? `reference ${targetId} in ${field} is ambiguous`
-          : `reference ${targetId} in ${field} does not resolve`,
-        candidates.length > 1 ? 'identity_ambiguity' : 'schema',
-      );
-      return undefined;
-    }
-    return entities.get(targetId);
+        message,
+        remedy: 'correct the canonical issue reference',
+      });
   };
-
   for (const owner of orderedEntities(entities)) {
-    const parentId = owner.issue.parent;
-    if (parentId) {
-      const parent = resolveReference(owner, 'parent', parentId);
-      if (parent) {
-        if (!(parent.issue.children ?? []).includes(owner.issue.id)) {
-          add(owner, 'parent', `parent ${parentId} does not list ${owner.issue.id} as a child`);
-        }
-        if (!ALLOWED_PARENT_TYPES[owner.issue.type].includes(parent.issue.type)) {
-          add(owner, 'parent', `invalid parent type "${parent.issue.type}" for ${owner.issue.type}`);
-        }
-      }
+    if (owner.issue.parent) {
+      const parent = entities.get(owner.issue.parent);
+      if (!parent) add(owner, 'parent', `reference ${owner.issue.parent} in parent does not resolve`, 'schema');
+      else if (!ALLOWED_PARENT_TYPES[owner.issue.type].includes(parent.issue.type))
+        add(owner, 'parent', `invalid parent type "${parent.issue.type}" for ${owner.issue.type}`);
     }
-    for (const childId of owner.issue.children ?? []) {
-      const child = resolveReference(owner, 'children', childId);
-      if (child && child.issue.parent !== owner.issue.id) {
-        add(owner, 'children', `child ${childId} does not reference ${owner.issue.id} as parent`);
-      }
-    }
-    for (const field of ['depends_on', 'blocks', 'blocked_by', 'relates_to', 'duplicates', 'supersedes'] as const) {
-      for (const targetId of owner.issue[field] ?? []) {
-        const target = resolveReference(owner, field, targetId);
-        if (!target) continue;
-        if (field === 'blocks' && !(target.issue.blocked_by ?? []).includes(owner.issue.id)) {
-          add(owner, field, `blocks reference to ${targetId} has no reciprocal blocked_by reference`);
-        }
-        if (field === 'blocked_by' && !(target.issue.blocks ?? []).includes(owner.issue.id)) {
-          add(owner, field, `blocked_by reference to ${targetId} has no reciprocal blocks reference`);
-        }
-        if (field === 'duplicates' && !(target.issue.duplicates ?? []).includes(owner.issue.id)) {
-          add(owner, field, `duplicate reference to ${targetId} is not symmetric`);
-        }
+    for (const field of ['depends_on', 'relates_to', 'duplicates', 'supersedes'] as const) {
+      for (const target of owner.issue[field] ?? []) {
+        if (target === owner.issue.id) add(owner, field, `self-reference in ${field}`);
+        else if (!entities.has(target)) add(owner, field, `reference ${target} in ${field} does not resolve`, 'schema');
+        if ((field === 'relates_to' || field === 'duplicates') && compareCodePoints(owner.issue.id, target) >= 0)
+          add(owner, field, `${field} edge is not stored by its deterministic owner`);
       }
     }
     for (const document of owner.issue.documents ?? []) {
@@ -619,109 +644,79 @@ function validateUnlocked(cwd: string, prefix: string, id?: string): ValidationR
       }
     }
   }
-
-  addCycleFindings(entities, 'children', (entity) => entity.issue.children ?? [], findings);
+  addCycleFindings(entities, 'parent', (entity) => (entity.issue.parent ? [entity.issue.parent] : []), findings);
   addCycleFindings(entities, 'depends_on', (entity) => entity.issue.depends_on ?? [], findings);
-  const selected =
+  let selected =
     id === undefined ? findings : findings.filter((finding) => finding.issue === undefined || finding.issue === id);
   selected.sort(compareValidationFindings);
+  if (selected.length > MAX_FINDINGS)
+    selected = [
+      ...selected.slice(0, MAX_FINDINGS),
+      {
+        severity: 'error',
+        category: 'resource_limit',
+        message: 'validation finding limit exceeded',
+        remedy: 'correct reported findings and validate again',
+      },
+    ];
   return { valid: selected.length === 0, findings: selected };
 }
 
-function archiveUnlocked(
-  cwd: string,
-  prefix: string,
-  clock: () => Date,
-  context: IssueMutationContext,
-  id: string,
-): ArchiveReport {
-  assertIssueId(id, prefix, 'issue');
-  const storage = discoverCanonical(cwd, prefix);
-  const root = resolveIssueCandidate(storage, id);
-  if (root.location === 'archived') {
-    return {
-      archived: [],
-      skipped: [id],
-      location: '.issues/archived/',
-      revisions: { [id]: requireDecoded(root).decoded?.revision ?? '' },
-    };
+function derivedReferences(entity: Entity, entities: ReadonlyMap<string, Entity>): DerivedReferences {
+  const children: string[] = [];
+  const blocks: string[] = [];
+  const relates = new Set(entity.issue.relates_to ?? []);
+  const duplicates = new Set(entity.issue.duplicates ?? []);
+  for (const candidate of entities.values()) {
+    if (candidate.issue.parent === entity.issue.id) children.push(candidate.issue.id);
+    if ((candidate.issue.depends_on ?? []).includes(entity.issue.id)) blocks.push(candidate.issue.id);
+    if ((candidate.issue.relates_to ?? []).includes(entity.issue.id)) relates.add(candidate.issue.id);
+    if ((candidate.issue.duplicates ?? []).includes(entity.issue.id)) duplicates.add(candidate.issue.id);
   }
-  assertGloballyValidForMutation(cwd, prefix);
-  const entities = globalEntityMap(storage);
-  const archived: string[] = [];
-  const skipped: string[] = [];
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const visit = (issueId: string): void => {
-    if (visiting.has(issueId)) throw invariant('hierarchy cycle detected while planning recursive archive');
-    if (visited.has(issueId)) return;
-    const entity = entities.get(issueId);
-    if (!entity) throw invariant(`archive descendant does not resolve: ${issueId}`);
-    visiting.add(issueId);
-    if (entity.location === 'active') archived.push(issueId);
-    else skipped.push(issueId);
-    for (const childId of [...(entity.issue.children ?? [])].sort(compareCodePoints)) visit(childId);
-    visiting.delete(issueId);
-    visited.add(issueId);
-    if (visited.size > 10_000) {
-      throw new IssueError('resource_limit', 'recursive archive issue limit exceeded', { limit: 'archiveIssues' });
-    }
-  };
-  visit(id);
-  archived.sort(compareCodePoints);
-  skipped.sort(compareCodePoints);
-
-  const archiveSet = new Set(archived);
-  const timestamp = canonicalTimestamp(clock());
-  const actions: IssueTransactionActionPlan[] = archived.map((issueId) => {
-    const entity = entities.get(issueId);
-    if (!entity) throw invariant(`archive issue does not resolve: ${issueId}`);
-    const parentId = entity.issue.parent;
-    const parent = parentId ? entities.get(parentId) : undefined;
-    if (!parent || parent.location !== 'active' || archiveSet.has(parentId as string)) {
-      return moveAction(entity, entity.issue, archivedPath(entity.issue));
-    }
-    const detached: CanonicalIssueDocument = { ...entity.issue, updated_at: timestamp };
-    delete detached.parent;
-    return moveAction(entity, detached, archivedPath(detached));
-  });
-  const detachedByParent = new Map<string, string[]>();
-  for (const issueId of archived) {
-    const parentId = entities.get(issueId)?.issue.parent;
-    const parent = parentId ? entities.get(parentId) : undefined;
-    if (parent && parent.location === 'active' && !archiveSet.has(parentId as string)) {
-      const children = detachedByParent.get(parent.issue.id) ?? [];
-      children.push(issueId);
-      detachedByParent.set(parent.issue.id, children);
-    }
-  }
-  const revisions: Record<string, string> = {};
-  for (const action of actions) {
-    if (action.resultingRevision) revisions[action.issueId] = action.resultingRevision;
-  }
-  for (const [parentId, children] of [...detachedByParent].sort(([left], [right]) => compareCodePoints(left, right))) {
-    const parent = entities.get(parentId);
-    if (!parent) throw invariant(`archive parent does not resolve: ${parentId}`);
-    const next = removeReferences(parent.issue, 'children', children, timestamp);
-    const action = rewriteAction(parent, next);
-    actions.push(action);
-    if (action.resultingRevision) revisions[parentId] = action.resultingRevision;
-  }
-  const result = context.commit({ operation: 'archive', actions });
   return {
-    archived,
-    skipped,
-    location: '.issues/archived/',
-    revisions,
-    transactionId: result.transactionId,
+    children: sortedUnique(children),
+    blocks: sortedUnique(blocks),
+    blocked_by: sortedUnique(entity.issue.depends_on ?? []),
+    relates_to: sortedUnique([...relates]),
+    duplicates: sortedUnique([...duplicates]),
   };
 }
 
-interface Entity {
-  issue: CanonicalIssueDocument;
-  path: string;
-  revision: string;
-  location: IssueLocation;
+function issueFromEntity(entity: Entity, entities: ReadonlyMap<string, Entity>): Issue {
+  const { version, body, comments, metadata: customMetadata, ...stored } = entity.issue;
+  const derived = derivedReferences(entity, entities);
+  const metadata: Record<string, unknown> = { ...stored };
+  for (const [field, values] of Object.entries(derived)) if (values.length) metadata[field] = values;
+  if (customMetadata) metadata.metadata = customMetadata;
+  return {
+    id: entity.issue.id,
+    path: entity.path,
+    metadata,
+    body,
+    revision: entity.revision,
+    version,
+    comments: comments.map((comment) => ({ ...comment })),
+    location: entity.location,
+  };
+}
+
+function rewriteEntity(lease: BarrierLease, entity: Entity, issue: CanonicalIssueDocument): void {
+  applyIssueFileBatch(lease, [
+    { path: entity.path, bytes: encodeCanonicalIssue(issue), expectedRevision: entity.revision },
+  ]);
+}
+
+function discoverCanonical(cwd: string, prefix: string, issueRoot: string, mutable = false): IssueStorageCatalog {
+  const storage = discoverIssueStorage(cwd, { issuePrefix: prefix, issueRoot });
+  if (
+    storage.status === 'canonical' ||
+    (mutable && storage.status === 'empty') ||
+    (!mutable && storage.status === 'empty')
+  )
+    return storage;
+  throw new IssueError('storage_classification', `issue storage is ${storage.status}`, {
+    paths: storage.findings.flatMap((finding) => (finding.path ? [finding.path] : [])),
+  });
 }
 
 function activeEntityMap(storage: IssueStorageCatalog): Map<string, Entity> {
@@ -734,195 +729,65 @@ function activeEntityMap(storage: IssueStorageCatalog): Map<string, Entity> {
 }
 
 function globalEntityMap(storage: IssueStorageCatalog): Map<string, Entity> {
-  const entities = new Map<string, Entity>();
-  for (const [id, candidates] of storage.byId) {
-    const candidate = candidates.length === 1 ? candidates[0] : undefined;
-    if (candidate?.decoded && !candidate.error) entities.set(id, entityFromCandidate(candidate));
-  }
-  return entities;
-}
-
-function orderedEntities(entities: Map<string, Entity>): Entity[] {
-  return [...entities.values()].sort((left, right) => compareCodePoints(left.issue.id, right.issue.id));
-}
-
-function addCycleFindings(
-  entities: Map<string, Entity>,
-  field: 'children' | 'depends_on',
-  edges: (entity: Entity) => readonly string[],
-  findings: ValidationFinding[],
-): void {
-  const states = new Map<string, 'visiting' | 'visited'>();
-  const stack: string[] = [];
-  const reported = new Set<string>();
-  const visit = (id: string): void => {
-    if (states.get(id) === 'visited') return;
-    if (states.get(id) === 'visiting') {
-      const start = stack.indexOf(id);
-      const cycle = stack.slice(start).sort(compareCodePoints);
-      const key = cycle.join('\0');
-      const owner = entities.get(cycle[0] ?? '');
-      if (owner && !reported.has(key)) {
-        reported.add(key);
-        findings.push({
-          issue: owner.issue.id,
-          severity: 'error',
-          category: 'domain_invariant',
-          path: owner.path,
-          field,
-          message: `${field === 'children' ? 'hierarchy' : 'dependency'} cycle detected: ${cycle.join(', ')}`,
-          remedy: `remove an edge from the ${field === 'children' ? 'hierarchy' : 'dependency'} cycle`,
-        });
-      }
-      return;
-    }
-    states.set(id, 'visiting');
-    stack.push(id);
-    const entity = entities.get(id);
-    for (const target of entity ? [...edges(entity)].sort(compareCodePoints) : []) {
-      if (entities.has(target)) visit(target);
-    }
-    stack.pop();
-    states.set(id, 'visited');
-  };
-  for (const entity of orderedEntities(entities)) visit(entity.issue.id);
+  const result = new Map<string, Entity>();
+  for (const [id, candidates] of storage.byId)
+    if (candidates.length === 1 && candidates[0]?.decoded && !candidates[0].error)
+      result.set(id, entityFromCandidate(candidates[0]));
+  return result;
 }
 
 function entityFromCandidate(candidate: IssueStorageCandidate): Entity {
-  const decoded = requireDecoded(candidate).decoded;
-  if (!decoded) throw new IssueError('schema', 'canonical issue was not decoded');
-  return { issue: decoded.issue, path: candidate.path, revision: decoded.revision, location: candidate.location };
+  if (candidate.error) throw candidate.error;
+  if (!candidate.decoded)
+    throw new IssueError('schema', 'canonical issue candidate was not decoded', { paths: [candidate.path] });
+  return {
+    issue: candidate.decoded.issue,
+    path: candidate.path,
+    revision: candidate.decoded.revision,
+    location: candidate.location,
+  };
 }
 
-function requireActiveEntity(entities: Map<string, Entity>, id: string): Entity {
+function requireActiveEntity(entities: ReadonlyMap<string, Entity>, id: string): Entity {
   const entity = entities.get(id);
   if (!entity) throw new IssueError('schema', `active canonical issue was not found: ${id}`, { issueIds: [id] });
   return entity;
 }
 
-function resolveActive(cwd: string, prefix: string, id: string): IssueStorageCandidate {
-  assertIssueId(id, prefix, 'issue');
-  return resolveIssueCandidate(discoverCanonical(cwd, prefix), id, 'active');
-}
-
-function resolveActiveOrArchived(cwd: string, prefix: string, id: string): IssueStorageCandidate {
-  assertIssueId(id, prefix, 'issue');
-  return resolveIssueCandidate(discoverCanonical(cwd, prefix), id);
-}
-
-function issueFromCandidate(candidate: IssueStorageCandidate): Issue {
-  return issueFromEntity(entityFromCandidate(candidate));
-}
-
-function issueFromEntity(entity: Entity): Issue {
-  const { version, body, comments, metadata: customMetadata, ...managed } = entity.issue;
-  return {
-    id: entity.issue.id,
-    path: entity.path,
-    metadata: { ...managed, ...(customMetadata ? { metadata: customMetadata } : {}) },
-    body,
-    revision: entity.revision,
-    version,
-    comments: comments.map((comment) => ({ ...comment })),
-    location: entity.location,
-  };
-}
-
-function discoverCanonical(cwd: string, prefix: string, mutable = false): IssueStorageCatalog {
-  const storage = discoverIssueStorage(cwd, { issuePrefix: prefix });
-  if (storage.status === 'empty' && mutable) return storage;
-  if (storage.status === 'empty' || storage.status === 'canonical') return storage;
-  throw new IssueError('storage_classification', `issue storage is ${storage.status}`, {
-    paths: storage.findings.flatMap((finding) => (finding.path ? [finding.path] : [])),
-  });
-}
-
-function createAction(issue: CanonicalIssueDocument, destination: string): IssueTransactionActionPlan {
-  const bytes = encodeCanonicalIssue(issue);
-  return {
-    issueId: issue.id,
-    kind: 'create',
-    destination,
-    afterBytes: bytes,
-    resultingRevision: revisionForBytes(bytes),
-  };
-}
-
-function rewriteAction(entity: Entity, issue: CanonicalIssueDocument): IssueTransactionActionPlan {
-  const bytes = encodeCanonicalIssue(issue);
-  return {
-    issueId: issue.id,
-    kind: 'rewrite',
-    source: entity.path,
-    destination: entity.path,
-    afterBytes: bytes,
-    expectedBeforeDigest: digestFromRevision(entity.revision),
-    resultingRevision: revisionForBytes(bytes),
-  };
-}
-
-function moveAction(entity: Entity, issue: CanonicalIssueDocument, destination: string): IssueTransactionActionPlan {
-  const bytes = encodeCanonicalIssue(issue);
-  return {
-    issueId: issue.id,
-    kind: 'move',
-    source: entity.path,
-    destination,
-    afterBytes: bytes,
-    expectedBeforeDigest: digestFromRevision(entity.revision),
-    resultingRevision: revisionForBytes(bytes),
-  };
-}
-
-function activePath(issue: CanonicalIssueDocument): string {
-  return `.issues/${canonicalIssueFilename(issue.id, issue.title)}`;
-}
-
-function archivedPath(issue: CanonicalIssueDocument): string {
-  return `.issues/archived/${canonicalIssueFilename(issue.id, issue.title)}`;
-}
-
 function setReference(
   issue: CanonicalIssueDocument,
-  field: ReferenceField | Relationship,
+  field: 'depends_on' | 'relates_to' | 'duplicates' | 'supersedes' | 'documents',
   value: string,
   add: boolean,
   timestamp: string,
 ): CanonicalIssueDocument {
-  const current = [...((issue[field as keyof CanonicalIssueDocument] as string[] | undefined) ?? [])];
+  const current = issue[field] ?? [];
   const next = add ? sortedUnique([...current, value]) : current.filter((entry) => entry !== value);
-  const result: CanonicalIssueDocument = { ...issue, comments: [...issue.comments], updated_at: timestamp };
-  if (next.length > 0) (result as unknown as Record<string, unknown>)[field] = next;
-  else delete (result as unknown as Record<string, unknown>)[field];
+  const result = { ...issue, comments: [...issue.comments], updated_at: timestamp };
+  if (next.length) result[field] = next;
+  else delete result[field];
   return result;
 }
 
-function removeReferences(
-  issue: CanonicalIssueDocument,
-  field: ReferenceField,
-  values: readonly string[],
-  timestamp: string,
-): CanonicalIssueDocument {
-  const removed = new Set(values);
-  const next = ((issue[field] as string[] | undefined) ?? []).filter((entry) => !removed.has(entry));
-  const result: CanonicalIssueDocument = { ...issue, comments: [...issue.comments], updated_at: timestamp };
-  if (next.length > 0) (result as unknown as Record<string, unknown>)[field] = next;
-  else delete (result as unknown as Record<string, unknown>)[field];
-  return result;
+function assertValidForMutation(cwd: string, prefix: string, issueRoot: string): void {
+  const report = validateUnlocked(cwd, prefix, issueRoot);
+  if (!report.valid)
+    throw new IssueError('domain_invariant', 'cannot mutate an invalid canonical issue graph', {
+      issueIds: sortedUnique(report.findings.flatMap((finding) => (finding.issue ? [finding.issue] : []))),
+      paths: sortedUnique(report.findings.flatMap((finding) => (finding.path ? [finding.path] : []))),
+    });
 }
 
 function validateParentType(parent: Entity, childType: IssueType): void {
-  if (!ALLOWED_PARENT_TYPES[childType].includes(parent.issue.type)) {
+  if (!ALLOWED_PARENT_TYPES[childType].includes(parent.issue.type))
     throw invariant(`invalid parent type "${parent.issue.type}" for ${childType}`);
-  }
 }
 
-function hasHierarchyPath(entities: Map<string, Entity>, from: string, target: string): boolean {
-  let current: string | undefined = target;
+function hasHierarchyCycle(entities: ReadonlyMap<string, Entity>, child: string, parent: string): boolean {
+  let current: string | undefined = parent;
   const seen = new Set<string>();
   while (current) {
-    if (current === from) return true;
-    if (seen.has(current)) return true;
+    if (current === child || seen.has(current)) return true;
     seen.add(current);
     current = entities.get(current)?.issue.parent;
   }
@@ -930,7 +795,7 @@ function hasHierarchyPath(entities: Map<string, Entity>, from: string, target: s
 }
 
 function hasDependencyPath(
-  entities: Map<string, Entity>,
+  entities: ReadonlyMap<string, Entity>,
   from: string,
   target: string,
   seen = new Set<string>(),
@@ -943,6 +808,44 @@ function hasDependencyPath(
   );
 }
 
+function addCycleFindings(
+  entities: Map<string, Entity>,
+  field: 'parent' | 'depends_on',
+  edges: (entity: Entity) => readonly string[],
+  findings: ValidationFinding[],
+): void {
+  const states = new Map<string, 'visiting' | 'visited'>();
+  const visit = (id: string): void => {
+    if (states.get(id) === 'visited') return;
+    if (states.get(id) === 'visiting') {
+      const owner = entities.get(id);
+      if (owner && findings.length <= MAX_FINDINGS)
+        findings.push({
+          issue: id,
+          severity: 'error',
+          category: 'domain_invariant',
+          path: owner.path,
+          field,
+          message: `${field === 'parent' ? 'hierarchy' : 'dependency'} cycle detected`,
+          remedy: 'remove an edge from the cycle',
+        });
+      return;
+    }
+    states.set(id, 'visiting');
+    const entity = entities.get(id);
+    for (const target of entity ? edges(entity) : []) if (entities.has(target)) visit(target);
+    states.set(id, 'visited');
+  };
+  for (const entity of orderedEntities(entities)) visit(entity.issue.id);
+}
+
+function activePath(root: string, issue: CanonicalIssueDocument): string {
+  return `${root}/${canonicalIssueFilename(issue.id, issue.title)}`;
+}
+function archivedPath(root: string, issue: CanonicalIssueDocument): string {
+  return `${root}/archived/${canonicalIssueFilename(issue.id, issue.title)}`;
+}
+
 function allocateIssueId(storage: IssueStorageCatalog, prefix: string): string {
   const expression = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, 'u');
   let maximum = 0n;
@@ -950,40 +853,7 @@ function allocateIssueId(storage: IssueStorageCatalog, prefix: string): string {
     const digits = expression.exec(id)?.[1];
     if (digits && BigInt(digits) > maximum) maximum = BigInt(digits);
   }
-  const sequence = maximum + 1n;
-  return `${prefix}${sequence.toString().padStart(5, '0')}`;
-}
-
-function assertGloballyValidForMutation(cwd: string, prefix: string): void {
-  const validation = validateUnlocked(cwd, prefix);
-  if (validation.valid) return;
-  throw new IssueError('domain_invariant', 'cannot mutate an invalid canonical issue graph', {
-    issueIds: sortedUnique(validation.findings.flatMap((finding) => (finding.issue ? [finding.issue] : []))),
-    paths: sortedUnique(validation.findings.flatMap((finding) => (finding.path ? [finding.path] : []))),
-  });
-}
-
-function isCreateDestinationRace(error: unknown, destination: string): boolean {
-  return (
-    error instanceof IssueError && error.category === 'stale_revision' && error.paths?.includes(destination) === true
-  );
-}
-
-function compareCandidatesById(left: IssueStorageCandidate, right: IssueStorageCandidate): number {
-  const leftSequence = /([0-9]+)$/u.exec(left.id)?.[1];
-  const rightSequence = /([0-9]+)$/u.exec(right.id)?.[1];
-  if (leftSequence && rightSequence) {
-    const difference = BigInt(leftSequence) - BigInt(rightSequence);
-    if (difference !== 0n) return difference < 0n ? -1 : 1;
-  }
-  return compareCodePoints(left.id, right.id);
-}
-
-function requireDecoded(candidate: IssueStorageCandidate): IssueStorageCandidate {
-  if (candidate.error) throw candidate.error;
-  if (!candidate.decoded)
-    throw new IssueError('schema', 'canonical issue candidate was not decoded', { paths: [candidate.path] });
-  return candidate;
+  return `${prefix}${(maximum + 1n).toString().padStart(5, '0')}`;
 }
 
 function validateDocumentPath(cwd: string, value: string, kind?: string): string {
@@ -995,9 +865,8 @@ function validateDocumentPath(cwd: string, value: string, kind?: string): string
     normalized.startsWith('/') ||
     /^[A-Za-z]:\//u.test(normalized) ||
     normalized.split('/').some((part) => !part || part === '.' || part === '..')
-  ) {
+  )
     throw new IssueError('path_safety', 'invalid repository-relative document path');
-  }
   const taskRoot = configuredTaskRoot(cwd);
   const inTaskRoot = isUnderRoot(normalized, taskRoot);
   const inDesignRoot = isUnderRoot(normalized, '.specs');
@@ -1052,61 +921,18 @@ function setOptional(
   else delete issue[field];
 }
 
-function parseIdsWithPrefix(prompt: string, prefix: string): string[] {
-  const expression = new RegExp(`(?<![A-Za-z0-9_-])${escapeRegex(prefix)}\\d+(?![A-Za-z0-9_-])`, 'gu');
-  return [...new Set([...prompt.matchAll(expression)].map((match) => match[0]))];
-}
-
-function parseReferences(value: string | undefined, prefix: string, field: string): string[] {
-  const values =
-    value
-      ?.split(',')
-      .map((entry) => entry.trim())
-      .filter(Boolean) ?? [];
-  for (const entry of values) assertIssueId(entry, prefix, field);
-  return sortedUnique(values);
-}
-
-function normalizeIssueId(value: string | undefined, prefix: string, field: string): string | undefined {
-  const normalized = cleanOptional(value);
-  if (normalized) assertIssueId(normalized, prefix, field);
-  return normalized;
-}
-
-function assertIssueId(id: string, prefix: string, field: string): void {
-  if (!new RegExp(`^${escapeRegex(prefix)}\\d+$`, 'u').test(id)) {
-    throw new IssueError('schema', `invalid ${field} "${id}". It must match the configured issue prefix and a number.`);
-  }
-}
-
-function assertRelationship(value: string): asserts value is Relationship {
-  if (!RELATIONSHIPS.includes(value as Relationship)) throw new IssueError('schema', `invalid relationship "${value}"`);
-}
-
-function normalizeChoice<T extends readonly string[]>(value: string, choices: T, field: string): T[number] {
-  const normalized = value.trim().toLowerCase();
-  if (!choices.includes(normalized))
-    throw new IssueError('schema', `invalid ${field} "${value}". Must be one of: ${choices.join(', ')}`);
-  return normalized as T[number];
-}
-
-function requireTrimmed(value: string, field: string): string {
-  const normalized = value.trim();
-  if (!normalized) throw new IssueError('schema', `${field} is required`);
-  return normalized;
-}
-
-function cleanOptional(value: string | undefined): string | undefined {
-  return value?.trim() || undefined;
-}
-
-function getIssuePrefix(cwd: string): string {
-  const prefix = readIssuePrefix(cwd);
-  if (prefix !== undefined) return prefix;
-  const value = getConfigValue(cwd, 'issues.prefix');
-  if (value instanceof ConfigError)
-    throw new IssueError('configuration', `unable to read issue prefix: ${value.message}`);
-  throw new IssueError('configuration', 'issue prefix must be a safe string');
+function getIssueStorageConfig(cwd: string): { prefix: string; issueRoot: string } {
+  const config = readConfig(cwd);
+  if (config instanceof ConfigError)
+    throw new IssueError('configuration', `unable to read issue configuration: ${config.message}`);
+  const issues = config.issues;
+  if (issues === null || typeof issues !== 'object' || Array.isArray(issues))
+    throw new IssueError('configuration', 'issue configuration must be a mapping');
+  const { prefix, root } = issues as Record<string, unknown>;
+  if (typeof prefix !== 'string' || !/^[A-Za-z0-9_-]*$/u.test(prefix))
+    throw new IssueError('configuration', 'issue prefix must be a safe string');
+  if (typeof root !== 'string') throw new IssueError('configuration', 'issue root must be a safe string');
+  return { prefix, issueRoot: validateIssueRoot(root) };
 }
 
 function readIssuePrefix(cwd: string): string | undefined {
@@ -1114,44 +940,106 @@ function readIssuePrefix(cwd: string): string | undefined {
   return typeof value === 'string' && /^[A-Za-z0-9_-]*$/u.test(value) ? value : undefined;
 }
 
+function parseIdsWithPrefix(prompt: string, prefix: string): string[] {
+  return [
+    ...new Set(
+      [...prompt.matchAll(new RegExp(`(?<![A-Za-z0-9_-])${escapeRegex(prefix)}\\d+(?![A-Za-z0-9_-])`, 'gu'))].map(
+        (match) => match[0],
+      ),
+    ),
+  ];
+}
+function parseReferences(value: string | undefined, prefix: string, field: string): string[] {
+  const result =
+    value
+      ?.split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean) ?? [];
+  for (const id of result) assertIssueId(id, prefix, field);
+  return sortedUnique(result);
+}
+function normalizeIssueId(value: string | undefined, prefix: string, field: string): string | undefined {
+  const result = cleanOptional(value);
+  if (result) assertIssueId(result, prefix, field);
+  return result;
+}
+function assertIssueId(id: string, prefix: string, field: string): void {
+  if (!new RegExp(`^${escapeRegex(prefix)}\\d+$`, 'u').test(id))
+    throw new IssueError('schema', `invalid ${field} "${id}". It must match the configured issue prefix and a number.`);
+}
+function assertRelationship(value: string): asserts value is Relationship {
+  if (!RELATIONSHIPS.includes(value as Relationship)) throw new IssueError('schema', `invalid relationship "${value}"`);
+}
+function normalizeChoice<T extends readonly string[]>(value: string, choices: T, field: string): T[number] {
+  const normalized = value.trim().toLowerCase();
+  if (!choices.includes(normalized))
+    throw new IssueError('schema', `invalid ${field} "${value}". Must be one of: ${choices.join(', ')}`);
+  return normalized as T[number];
+}
+function requireTrimmed(value: string, field: string): string {
+  const result = value.trim();
+  if (!result) throw new IssueError('schema', `${field} is required`);
+  return result;
+}
+function cleanOptional(value: string | undefined): string | undefined {
+  return value?.trim() || undefined;
+}
 function canonicalTimestamp(value: Date): string {
   if (!Number.isFinite(value.getTime())) throw new IssueError('configuration', 'issue clock is invalid');
   return value.toISOString();
 }
-
-function digestFromRevision(revision: string): string {
-  if (!/^v1:[a-f0-9]{64}$/u.test(revision)) throw new IssueError('schema', 'canonical issue revision is malformed');
-  return revision.slice(3);
-}
-
-function revisionForBytes(bytes: Uint8Array): string {
-  return `v1:${createHash('sha256').update(bytes).digest('hex')}`;
-}
-
 function defaultBody(title: string): string {
   return `\n# ${title}\n\n## Summary\n\n\n## Comments\n`;
 }
-
+function revisionForBytes(bytes: Uint8Array): string {
+  return computeIssueRevision(bytes);
+}
 function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareCodePoints);
 }
-
-function compareCodePoints(left: string, right: string): number {
-  const leftPoints = Array.from(left, (character) => character.codePointAt(0) ?? 0);
-  const rightPoints = Array.from(right, (character) => character.codePointAt(0) ?? 0);
-  for (let index = 0; index < Math.min(leftPoints.length, rightPoints.length); index += 1) {
-    const difference = (leftPoints[index] ?? 0) - (rightPoints[index] ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return leftPoints.length - rightPoints.length;
+function orderedEntities(entities: ReadonlyMap<string, Entity>): Entity[] {
+  return [...entities.values()].sort(compareEntities);
 }
-
+function compareEntities(left: Entity, right: Entity): number {
+  return compareIssueIds(left.issue.id, right.issue.id);
+}
+function compareIssueIds(left: string, right: string): number {
+  const leftDigits = /(\d+)$/u.exec(left)?.[1];
+  const rightDigits = /(\d+)$/u.exec(right)?.[1];
+  if (leftDigits && rightDigits) {
+    const difference = BigInt(leftDigits) - BigInt(rightDigits);
+    if (difference) return difference < 0 ? -1 : 1;
+  }
+  return compareCodePoints(left, right);
+}
+function compareCodePoints(left: string, right: string): number {
+  const a = Array.from(left, (character) => character.codePointAt(0) ?? 0);
+  const b = Array.from(right, (character) => character.codePointAt(0) ?? 0);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    const difference = (a[index] ?? 0) - (b[index] ?? 0);
+    if (difference) return difference;
+  }
+  return a.length - b.length;
+}
+function compareValidationFindings(left: ValidationFinding, right: ValidationFinding): number {
+  return (
+    compareCodePoints(left.issue ?? '', right.issue ?? '') ||
+    compareCodePoints(left.path ?? '', right.path ?? '') ||
+    compareCodePoints(left.field ?? '', right.field ?? '') ||
+    compareCodePoints(left.message, right.message)
+  );
+}
 function isUnderRoot(path: string, root: string): boolean {
   return path === root || path.startsWith(`${root}/`);
 }
-
 function invariant(message: string): IssueError {
   return new IssueError('domain_invariant', message);
+}
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function findingFromError(error: unknown, issue?: string): ValidationFinding {
@@ -1163,12 +1051,7 @@ function findingFromError(error: unknown, issue?: string): ValidationFinding {
           category: error.category,
           ...(error.paths?.[0] ? { path: error.paths[0] } : {}),
           ...(error.transactionId ? { transactionId: error.transactionId } : {}),
-          remedy:
-            error.category === 'projection_sync'
-              ? 'rebuild the projection successfully, then retry validation'
-              : error.category === 'transaction_recovery'
-                ? 'retain the transaction evidence, resolve reported conflicts, and retry recovery'
-                : storageRemedy(error.category),
+          remedy: storageRemedy(error.category),
         }
       : {}),
     message: errorMessage(error),
@@ -1176,26 +1059,8 @@ function findingFromError(error: unknown, issue?: string): ValidationFinding {
 }
 
 function storageRemedy(category: IssueError['category']): string {
-  if (category === 'canonical_form') return 'rewrite the document using the canonical YAML encoder';
   if (category === 'identity_ambiguity') return 'remove duplicate or portable-colliding issue representations';
   if (category === 'path_safety') return 'replace the unsafe entry with a regular canonical file or directory';
-  if (category === 'storage_classification') return 'migrate legacy storage before using canonical issue operations';
+  if (category === 'storage_classification') return 'replace unsupported legacy storage with canonical issue YAML';
   return 'correct the canonical issue document and run validation again';
-}
-
-function compareValidationFindings(left: ValidationFinding, right: ValidationFinding): number {
-  return (
-    compareCodePoints(left.issue ?? '', right.issue ?? '') ||
-    compareCodePoints(left.path ?? '', right.path ?? '') ||
-    compareCodePoints(left.field ?? '', right.field ?? '') ||
-    compareCodePoints(left.message, right.message)
-  );
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

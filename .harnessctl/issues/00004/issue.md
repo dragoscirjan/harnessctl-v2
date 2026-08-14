@@ -39,8 +39,8 @@ Each issue becomes one versioned, canonical YAML document whose readable filenam
 
 ## In Scope
 
-- Active issue path: `.issues/<id>-<title-slug>.yml`.
-- Archived issue path: `.issues/archived/<id>-<title-slug>.yml`.
+- Active issue path: `<issues.root>/<id>-<title-slug>.yml`.
+- Archived issue path: `<issues.root>/archived/<id>-<title-slug>.yml`.
 - One YAML contract for identity, type, title, status, timestamps, attribution, assignment, hierarchy, relationships, document links, custom metadata, body content, and embedded append-only comments.
 - Deterministic, filesystem-safe slug generation.
 - Atomic rename when title changes; issue ID remains stable.
@@ -87,7 +87,7 @@ Each issue becomes one versioned, canonical YAML document whose readable filenam
 
 Given filesystem issue storage is configured
 When a user creates an issue
-Then exactly one `.issues/<id>-<title-slug>.yml` canonical issue file is created
+Then exactly one `<issues.root>/<id>-<title-slug>.yml` canonical issue file is created
 And the complete initial issue state validates against the versioned issue contract
 And no issue-specific directory is created.
 
@@ -125,7 +125,7 @@ And canonical issue state remains unchanged.
 
 Given an issue and active descendants are eligible for archival
 When recursive archive succeeds
-Then each canonical YAML file moves to `.issues/archived/` with its filename convention preserved
+Then each canonical YAML file moves to `<issues.root>/archived/` with its filename convention preserved
 And unrelated active issues remain untouched
 And partial failure does not leave an unreported mixed result.
 

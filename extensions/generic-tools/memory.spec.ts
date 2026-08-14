@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -8,6 +8,7 @@ import {
   MemoryConflictError,
   MemoryError,
   createConfig,
+  createIssueRecord,
   deleteMemory,
   exportMemory,
   getMemory,
@@ -19,6 +20,36 @@ import {
   validateMemory,
   type StoreMemoryInput,
 } from './index.js';
+import { decodeIssueDocument, encodeCanonicalIssue } from './issues-contract.js';
+
+const require = createRequire(import.meta.url);
+
+function cacheRow(cwd: string, sql: string): Record<string, unknown> | undefined {
+  const { DatabaseSync } = require('node:sqlite') as {
+    DatabaseSync: new (path: string) => {
+      prepare(statement: string): { get(): Record<string, unknown> | undefined };
+      close(): void;
+    };
+  };
+  const database = new DatabaseSync(join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite'));
+  try {
+    return database.prepare(sql).get();
+  } finally {
+    database.close();
+  }
+}
+
+function cacheExec(cwd: string, sql: string): void {
+  const { DatabaseSync } = require('node:sqlite') as {
+    DatabaseSync: new (path: string) => { exec(statement: string): void; close(): void };
+  };
+  const database = new DatabaseSync(join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite'));
+  try {
+    database.exec(sql);
+  } finally {
+    database.close();
+  }
+}
 
 function fixture(): string {
   const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-memory-'));
@@ -88,7 +119,7 @@ describe('repository memory', () => {
     }
   });
 
-  it('builds a disposable cache and returns bounded scoped search results', () => {
+  it('writes the shared SQLite cache while returning canonical bounded search results', () => {
     const cwd = fixture();
     try {
       storeMemory(cwd, { ...fact('Alpha architecture decision'), topic: 'architecture' });
@@ -97,31 +128,23 @@ describe('repository memory', () => {
       expect(searchMemory(cwd, { query: 'missing' })).toHaveLength(0);
       expect(searchMemory(cwd, { limit: 1 })).toHaveLength(1);
 
-      const cachePath = join(cwd, '.harnessctl', 'cache', 'memory-index.json');
-      const cache = JSON.parse(readFileSync(cachePath, 'utf8')) as {
-        version: number;
-        manifest: string;
-        records: Array<Record<string, unknown>>;
-      };
-      expect(cache).toMatchObject({ version: 1 });
-      expect(cache.manifest).toMatch(/^[a-f0-9]{64}$/);
-      expect(cache.records).toHaveLength(2);
-      expect(cache.records.every((record) => !('payload' in record))).toBe(true);
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM memory_records')).toEqual({ count: 2 });
+      expect(existsSync(join(cwd, '.harnessctl', 'cache', 'memory-index.json'))).toBe(false);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
   }, 15_000);
 
-  it('rebuilds legacy or malformed cache bytes without losing canonical records', () => {
+  it('rebuilds missing or malformed SQLite bytes without losing canonical records', () => {
     const cwd = fixture();
     try {
       const stored = storeMemory(cwd, fact('Portable cache migration fact'));
-      const cachePath = join(cwd, '.harnessctl', 'cache', 'memory-index.json');
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite');
       mkdirSync(join(cwd, '.harnessctl', 'cache'), { recursive: true });
       writeFileSync(cachePath, Buffer.from('SQLite format 3\0legacy cache bytes'));
 
       expect(searchMemory(cwd, { query: 'portable migration' })).toEqual([stored]);
-      expect(JSON.parse(readFileSync(cachePath, 'utf8'))).toMatchObject({ version: 1 });
+      expect(cacheRow(cwd, 'PRAGMA user_version')).toEqual({ user_version: 2 });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -145,7 +168,7 @@ describe('repository memory', () => {
     }
   });
 
-  it('idempotently rolls forward a prepared import after a partial write', () => {
+  it('ignores retired import journals and reads only canonical YAML', () => {
     const source = fixture();
     const destination = fixture();
     try {
@@ -158,23 +181,10 @@ describe('repository memory', () => {
       mkdirSync(join(destination, '.harnessctl', 'memory', 'facts'), { recursive: true });
       writeFileSync(staged, content);
       writeFileSync(target, content);
-      writeFileSync(
-        join(transaction, 'manifest.json'),
-        JSON.stringify({
-          version: 1,
-          state: 'prepared',
-          items: [
-            {
-              staged: 'staged/000000.yaml',
-              target: `.harnessctl/memory/facts/${record.id}.yaml`,
-              sha256: createHash('sha256').update(content).digest('hex'),
-            },
-          ],
-        }),
-      );
+      writeFileSync(join(transaction, 'manifest.json'), '{"retired":true}\n');
 
       expect(listMemory(destination)).toEqual([record]);
-      expect(existsSync(transaction)).toBe(false);
+      expect(existsSync(transaction)).toBe(true);
     } finally {
       rmSync(source, { recursive: true, force: true });
       rmSync(destination, { recursive: true, force: true });
@@ -188,6 +198,123 @@ describe('repository memory', () => {
       const path = join(cwd, '.harnessctl', 'memory', 'facts', `${record.id}.yaml`);
       writeFileSync(path, `${stringify(record)}summary: duplicate\n`, 'utf8');
       expect(validateMemory(cwd)).toMatchObject({ valid: false });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('repairs a failed write-through transaction before returning success', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('First canonical fact'));
+      process.env.HARNESSCTL_TEST_CACHE_FAILURE = 'synchronize';
+      storeMemory(cwd, fact('Second canonical fact'));
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM memory_records')).toEqual({ count: 2 });
+    } finally {
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a sync error when repair fails and retries from canonical YAML next time', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('First canonical fact'));
+      process.env.HARNESSCTL_TEST_CACHE_FAILURE = 'all';
+      expect(() => storeMemory(cwd, fact('Committed despite cache fault'))).toThrow(
+        /canonical data may already be committed/i,
+      );
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      expect(listMemory(cwd, { include_superseded: true })).toHaveLength(2);
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM memory_records')).toEqual({ count: 2 });
+    } finally {
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('never lets contradictory cache rows determine memory search results', () => {
+    const cwd = fixture();
+    try {
+      const stored = storeMemory(cwd, fact('Canonical alpha fact'));
+      cacheExec(cwd, "UPDATE memory_records SET searchable = 'contradictory beta'");
+      expect(searchMemory(cwd, { query: 'alpha' })).toEqual([stored]);
+      expect(searchMemory(cwd, { query: 'beta' })).toEqual([]);
+      expect(cacheRow(cwd, 'SELECT searchable FROM memory_records')?.searchable).toMatch(/^canonical alpha fact\b/u);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('does not repair a corrupt cache while canonical validation is invalid', () => {
+    const cwd = fixture();
+    try {
+      const stored = storeMemory(cwd, fact('Initially valid'));
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite');
+      const memoryPath = join(cwd, '.harnessctl', 'memory', 'facts', `${stored.id}.yaml`);
+      writeFileSync(cachePath, 'corrupt-cache');
+      writeFileSync(memoryPath, 'summary: [\n');
+      expect(validateMemory(cwd)).toMatchObject({ valid: false, records: 0, tombstones: 0 });
+      expect(readFileSync(cachePath, 'utf8')).toBe('corrupt-cache');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('rebuilds when required cache tables, provider rows, or projected child rows are missing', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, { ...fact('Tagged canonical fact'), tags: ['required-row'] });
+
+      cacheExec(cwd, 'DROP TABLE issue_comments');
+      expect(listMemory(cwd)).toHaveLength(1);
+      expect(cacheRow(cwd, "SELECT count(*) AS count FROM sqlite_master WHERE name = 'issue_comments'")).toEqual({
+        count: 1,
+      });
+
+      cacheExec(cwd, "DELETE FROM provider_generations WHERE provider = 'issues'");
+      expect(listMemory(cwd)).toHaveLength(1);
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM provider_generations')).toEqual({ count: 2 });
+
+      cacheExec(cwd, 'DELETE FROM memory_tags');
+      expect(listMemory(cwd)).toHaveLength(1);
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM memory_tags')).toEqual({ count: 1 });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  it.each(['before-activate', 'activate'])('cleans failed cache publication at %s and retries safely', (fault) => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('Publication fault fact'));
+      const cacheDirectory = join(cwd, '.harnessctl', 'cache');
+      rmSync(join(cacheDirectory, 'harnessctl.sqlite'));
+      process.env.HARNESSCTL_TEST_CACHE_FAILURE = fault;
+      expect(() => listMemory(cwd)).toThrow(/unable to rebuild local cache/i);
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      expect(readdirSync(cacheDirectory).filter((name) => name.endsWith('.tmp'))).toEqual([]);
+      expect(listMemory(cwd)).toHaveLength(1);
+    } finally {
+      delete process.env.HARNESSCTL_TEST_CACHE_FAILURE;
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects memory cache loading when the canonical issue graph is invalid', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('Canonical memory remains authoritative'));
+      const created = createIssueRecord(cwd, { type: 'task', title: 'Invalid dependency' });
+      const issuePath = join(cwd, created.path);
+      const decoded = decodeIssueDocument(readFileSync(issuePath));
+      writeFileSync(issuePath, encodeCanonicalIssue({ ...decoded.issue, depends_on: ['99999'] }));
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite');
+      const before = readFileSync(cachePath);
+
+      expect(() => listMemory(cwd)).toThrow(/invalid canonical issue graph/i);
+      expect(readFileSync(cachePath)).toEqual(before);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

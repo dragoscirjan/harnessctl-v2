@@ -11,7 +11,8 @@ import yaml
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
     "issues": {
-        "prefix": "",
+        "root": ".harnessctl/issues",
+        "prefix": "hrn-",
         "type": "filesystem",
         "tools": (
             "issue_id,issue_create,issue_list,issue_get,issue_update,"
@@ -37,7 +38,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "retrieval": {"limit": 8, "max_chars": 12_000, "include_superseded": False},
         "repository": {
             "root": ".harnessctl/memory",
-            "cache": ".harnessctl/cache/memory-index.json",
         },
     },
 }
@@ -89,6 +89,20 @@ def _mapping(parent: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def _validate(config: dict[str, Any]) -> None:
+    issues = _mapping(config, "issues")
+    _safe_path(issues, "root", "issues")
+    prefix = issues.get("prefix")
+    if not isinstance(prefix, str) or not all(
+        character.isascii() and (character.isalnum() or character in "_-") for character in prefix
+    ):
+        raise ConfigError(
+            "issues.prefix must contain only ASCII letters, digits, underscores, or hyphens"
+        )
+    if issues.get("type") != "filesystem":
+        raise ConfigError("issues.type must be filesystem in config v2")
+    if not isinstance(issues.get("tools"), str) or not issues["tools"].strip():
+        raise ConfigError("issues.tools must be a non-empty string")
+
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):
         raise ConfigError("communication.caveman.enabled must be boolean")
@@ -110,10 +124,7 @@ def _validate(config: dict[str, Any]) -> None:
     if not isinstance(retrieval.get("include_superseded"), bool):
         raise ConfigError("memory.retrieval.include_superseded must be boolean")
     repository = _mapping(memory, "repository")
-    root = _safe_path(repository, "root")
-    cache = _safe_path(repository, "cache")
-    if cache == root or root in cache.parents:
-        raise ConfigError("memory.repository.cache must be outside memory.repository.root")
+    _safe_path(repository, "root", "memory.repository")
 
 
 def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> None:
@@ -122,13 +133,19 @@ def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> N
         raise ConfigError(f"memory.retrieval.{key} must be an integer from {low} to {high}")
 
 
-def _safe_path(parent: dict[str, Any], key: str) -> PurePosixPath:
+def _safe_path(parent: dict[str, Any], key: str, namespace: str) -> PurePosixPath:
     value = parent.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"memory.repository.{key} must be a non-empty string")
-    if "\\" in value or (len(value) >= 2 and value[0].isalpha() and value[1] == ":"):
-        raise ConfigError(f"memory.repository.{key} must stay inside project root")
+        raise ConfigError(f"{namespace}.{key} must be a non-empty string")
+    if (
+        value == "."
+        or "//" in value
+        or value.endswith("/")
+        or "\\" in value
+        or (len(value) >= 2 and value[0].isalpha() and value[1] == ":")
+    ):
+        raise ConfigError(f"{namespace}.{key} must stay inside project root")
     path = PurePosixPath(value)
-    if path.is_absolute() or ".." in path.parts:
-        raise ConfigError(f"memory.repository.{key} must stay inside project root")
+    if path.is_absolute() or "." in path.parts or ".." in path.parts:
+        raise ConfigError(f"{namespace}.{key} must stay inside project root")
     return path

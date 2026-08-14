@@ -23,6 +23,7 @@ OPENCODE_SKILLS = Path(".opencode/skills")
 OPENCODE_PACKAGE = Path(".opencode/package.json")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
+LOCAL_CACHE = Path(".harnessctl/cache/harnessctl.sqlite")
 
 
 def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
@@ -74,7 +75,6 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
                             retrieval_limit=retrieval["limit"],
                             max_chars=retrieval["max_chars"],
                             repository_root=repository["root"],
-                            cache_path=repository["cache"],
                         ),
                     ),
                     (_target(root, OPENCODE_PLUGIN), PLUGIN_CONTENT),
@@ -187,12 +187,11 @@ def _initialize_memory_paths(root: Path, repository: dict[str, object]) -> None:
     memory_root = _target(root, Path(str(repository["root"])))
     for folder in ("facts", "decisions", "events", "lessons", "tombstones"):
         (memory_root / folder).mkdir(parents=True, exist_ok=True)
-    cache = _target(root, Path(str(repository["cache"])))
-    cache.parent.mkdir(parents=True, exist_ok=True)
 
 
 def _memory_ignore(root: Path, repository: dict[str, object]) -> str:
-    cache = _target(root, Path(str(repository["cache"])))
+    del repository
+    cache = _target(root, LOCAL_CACHE)
     ignore = root / ".gitignore"
     entry = f"/{cache.parent.relative_to(root).as_posix()}/"
     existing = ignore.read_text(encoding="utf-8") if ignore.exists() else ""

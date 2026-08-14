@@ -9,6 +9,13 @@ opencode-agent: lead-engineer
 
 # GitHub CI and independent npm package releases
 
+This document remains the historical release design. The package and Changesets flow
+is unchanged by simplified persistence. Its earlier prohibition on runtime-specific
+SQLite built-ins is superseded only for `@harnessctl/generic-tools`: local persistence
+now lazily loads the selected runtime's built-in SQLite module after backend routing.
+The modules are not statically imported, bundled, or loaded during configuration-only
+use, and no additional npm database dependency is published.
+
 ## 1. Goal
 
 Add GitHub Actions CI and npm CD for this npm-workspace monorepo. Adapt useful
@@ -88,8 +95,9 @@ The workflow never writes the token to repository files or logs. It uses
 Each publishable package must provide:
 
 - `license`, `repository`, `homepage`, and `bugs` metadata.
-- Node engine compatible with generic-tools; runtime packages avoid host-specific built-ins such as `node:sqlite` and
-  `bun:sqlite`.
+- Node engine compatible with generic-tools. Generic-tools may lazily load
+  `node:sqlite` or `bun:sqlite` only for participating local persistence; adapters do
+  not statically import either runtime-specific module.
 - `main`, `types`, and `exports` pointing only to packaged build output.
 - `files` allowlist containing runtime output and required generated contracts.
 - `publishConfig.access = "public"` and npm registry URL.

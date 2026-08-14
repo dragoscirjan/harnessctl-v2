@@ -26,7 +26,6 @@ export type IssueErrorCategory =
   | 'domain_invariant'
   | 'stale_revision'
   | 'lock_contention'
-  | 'transaction_recovery'
   | 'filesystem_durability'
   | 'projection_sync';
 
@@ -72,21 +71,8 @@ export interface IssueContractLimits {
   filenameBytes: number;
 }
 
-export class ExactDecimalValue {
-  public readonly canonical: string;
-
-  public constructor(value: string) {
-    this.canonical = canonicalDecimal(value);
-    Object.freeze(this);
-  }
-
-  public toString(): string {
-    return this.canonical;
-  }
-}
-
 export type IssueMetadataValue =
-  string | boolean | null | number | ExactDecimalValue | IssueMetadataValue[] | { [key: string]: IssueMetadataValue };
+  string | boolean | null | number | IssueMetadataValue[] | { [key: string]: IssueMetadataValue };
 export type IssueMetadata = Record<string, IssueMetadataValue>;
 export type IssueMetadataText = string & { readonly __issueMetadataText: unique symbol };
 
@@ -114,10 +100,7 @@ export interface CanonicalIssueDocument {
   created_by?: string;
   assigned_to?: string;
   parent?: string;
-  children?: string[];
   depends_on?: string[];
-  blocks?: string[];
-  blocked_by?: string[];
   relates_to?: string[];
   duplicates?: string[];
   supersedes?: string[];
@@ -152,10 +135,7 @@ const TOP_LEVEL_FIELDS = [
   'created_by',
   'assigned_to',
   'parent',
-  'children',
   'depends_on',
-  'blocks',
-  'blocked_by',
   'relates_to',
   'duplicates',
   'supersedes',
@@ -165,18 +145,8 @@ const TOP_LEVEL_FIELDS = [
   'comments',
 ] as const;
 const TOP_LEVEL_FIELD_SET = new Set<string>(TOP_LEVEL_FIELDS);
-const OPTIONAL_LIST_FIELDS = [
-  'children',
-  'depends_on',
-  'blocks',
-  'blocked_by',
-  'relates_to',
-  'duplicates',
-  'supersedes',
-  'documents',
-] as const;
+const OPTIONAL_LIST_FIELDS = ['depends_on', 'relates_to', 'duplicates', 'supersedes', 'documents'] as const;
 const UTF8 = new TextEncoder();
-const DECIMAL_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 const CANONICAL_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
 export function issueMetadataText(value: string): IssueMetadataText {
@@ -188,11 +158,15 @@ export function parseIssueMetadataText(
   limitOverrides: Partial<IssueContractLimits> = {},
 ): IssueMetadata {
   const limits = resolveLimits(limitOverrides);
-  const parser = new JsonMetadataParser(text, limits);
-  const value = parser.parse();
+  if (UTF8.encode(text).byteLength > limits.fileBytes) throw limitError('fileBytes');
+  let value: unknown;
+  try {
+    value = JSON.parse(text) as unknown;
+  } catch {
+    throw schemaError('metadata text is not valid JSON');
+  }
   if (!isMetadataObject(value)) throw schemaError('metadata JSON root must be an object');
-  assertMetadataRootKeys(value);
-  return value;
+  return normalizeIssueMetadata(value, limits);
 }
 
 export function normalizeIssueMetadata(
@@ -210,15 +184,9 @@ export function normalizeIssueMetadata(
       if (typeof input === 'string') assertScalar(input, limits);
       return input;
     }
-    if (input instanceof ExactDecimalValue) {
-      assertScalar(input.canonical, limits);
-      return input;
-    }
     if (typeof input === 'number') {
-      if (!Number.isSafeInteger(input) || Object.is(input, -0)) {
-        throw schemaError('metadata numbers must be finite safe integers; use exact metadata text for other decimals');
-      }
-      return input;
+      if (!Number.isFinite(input)) throw schemaError('metadata numbers must be finite');
+      return Object.is(input, -0) ? 0 : input;
     }
     if (typeof input !== 'object' || input === undefined) throw schemaError('metadata contains an unsupported value');
     if (ancestors.has(input)) throw schemaError('metadata must not contain cycles');
@@ -304,10 +272,10 @@ export function decodeIssueDocument(
   const issue = issueFromMapping(root, options, limits);
   const bytes = encodeCanonicalIssue(issue, limits);
   const canonical = bytesEqual(sourceBytes, bytes);
-  if (!canonical && options.requireCanonical !== false) {
+  if (!canonical && options.requireCanonical === true) {
     throw new IssueError('canonical_form', 'issue YAML is valid but is not in canonical form');
   }
-  return { issue, bytes, revision: computeIssueRevision(bytes), canonical };
+  return { issue, bytes: sourceBytes, revision: computeIssueRevision(sourceBytes), canonical };
 }
 
 export const decodeCanonicalIssue = decodeIssueDocument;
@@ -371,7 +339,7 @@ export function canonicalIssueFilename(
 
 export const createCanonicalIssueFilename = canonicalIssueFilename;
 
-type SafeValue = string | boolean | null | number | ExactDecimalValue | SafeValue[] | { [key: string]: SafeValue };
+type SafeValue = string | boolean | null | number | SafeValue[] | { [key: string]: SafeValue };
 interface WalkState {
   nodes: number;
   metadataKeys: number;
@@ -410,16 +378,10 @@ function decodeSourceBytes(source: string | Uint8Array, limits: IssueContractLim
 }
 
 function assertYamlPreamble(text: string): void {
-  const trimmed = text.trimStart();
-  if (trimmed.startsWith('%') || /^---(?:\s|$)/u.test(trimmed) || /(?:^|\n)\.\.\.(?:\s|$)/u.test(text)) {
-    throw new IssueError('parse_safety', 'YAML directives and explicit document markers are not permitted');
-  }
+  if (text.trimStart().startsWith('%')) throw new IssueError('parse_safety', 'YAML directives are not permitted');
 }
 
-function assertNoDocumentPresentation(document: Document.Parsed): void {
-  if (document.comment || document.commentBefore)
-    throw new IssueError('parse_safety', 'YAML source comments are not permitted');
-}
+function assertNoDocumentPresentation(_document: Document.Parsed): void {}
 
 function yamlNodeToValue(node: Node | null, depth: number, state: WalkState, metadata: boolean): SafeValue {
   if (!node) throw schemaError('YAML node is missing');
@@ -448,9 +410,6 @@ function yamlNodeToValue(node: Node | null, depth: number, state: WalkState, met
 }
 
 function assertNodeSafety(node: Node): void {
-  if (node.comment || node.commentBefore) {
-    throw new IssueError('parse_safety', 'YAML source comments are not permitted');
-  }
   if ('anchor' in node && node.anchor) throw new IssueError('parse_safety', 'YAML anchors are not permitted');
   if (node.tag) throw new IssueError('parse_safety', 'explicit YAML tags are not permitted');
 }
@@ -458,10 +417,14 @@ function assertNodeSafety(node: Node): void {
 function scalarNodeValue(node: Scalar, limits: IssueContractLimits): SafeValue {
   const source = node.source ?? String(node.value);
   assertScalar(source, limits);
-  if (typeof node.value === 'number' || typeof node.value === 'bigint') {
-    if (!DECIMAL_PATTERN.test(source))
-      throw new IssueError('parse_safety', 'only finite base-10 numbers are permitted');
-    return decimalRuntimeValue(new ExactDecimalValue(source));
+  if (typeof node.value === 'number') {
+    if (!Number.isFinite(node.value)) throw new IssueError('parse_safety', 'only finite numbers are permitted');
+    return Object.is(node.value, -0) ? 0 : node.value;
+  }
+  if (typeof node.value === 'bigint') {
+    const value = Number(node.value);
+    if (!Number.isFinite(value)) throw new IssueError('parse_safety', 'only finite numbers are permitted');
+    return value;
   }
   if (typeof node.value === 'string' || typeof node.value === 'boolean' || node.value === null) {
     if (typeof node.value === 'string') assertUnicodeScalarString(node.value, 'YAML scalar');
@@ -479,7 +442,7 @@ function issueFromMapping(
     if (!TOP_LEVEL_FIELD_SET.has(key)) throw schemaError(`unknown top-level field: ${key}`);
   if (!('version' in source)) throw schemaError('required field is missing: version');
   if (source.version !== 1) {
-    if (source.version instanceof ExactDecimalValue || typeof source.version === 'number') {
+    if (typeof source.version === 'number') {
       throw schemaError(`unsupported issue contract version: ${String(source.version)}`);
     }
     throw schemaError('version must be the integer 1');
@@ -525,16 +488,12 @@ function validateSemanticIssue(
     const value = source[field];
     if (value === undefined) continue;
     if (!Array.isArray(value) || value.length === 0) throw schemaError(`${field} must be omitted when empty`);
-    let previous: string | undefined;
     const seen = new Set<string>();
     for (const entry of value) {
       requireString(entry, field, limits);
       if (field !== 'documents') validateIssueId(entry, options.issuePrefix);
       if (seen.has(entry)) throw schemaError(`${field} must contain unique values`);
-      if (previous !== undefined && compareCodePoints(previous, entry) >= 0)
-        throw schemaError(`${field} must be lexically sorted`);
       seen.add(entry);
-      previous = entry;
     }
   }
   const body = requireString(source.body, 'body', limits);
@@ -549,8 +508,15 @@ function validateSemanticIssue(
     }
     metadata = normalizeIssueMetadata(source.metadata, limits);
   }
+  const normalizedLists = Object.fromEntries(
+    OPTIONAL_LIST_FIELDS.flatMap((field) => {
+      const values = source[field];
+      return values === undefined ? [] : [[field, [...values].sort(compareCodePoints)]];
+    }),
+  );
   return {
     ...source,
+    ...normalizedLists,
     id,
     title,
     created_at: createdAt,
@@ -675,7 +641,7 @@ function emitNested(lines: string[], value: SafeValue[] | { [key: string]: SafeV
     }
     return;
   }
-  if (typeof value === 'object' && value !== null && !(value instanceof ExactDecimalValue)) {
+  if (typeof value === 'object' && value !== null) {
     for (const [key, child] of sortedEntries(value)) emitProperty(lines, key, child, indent);
   }
 }
@@ -686,20 +652,16 @@ function sortedEntries(value: { [key: string]: SafeValue }): [string, SafeValue]
 
 function isInlineValue(value: SafeValue): boolean {
   if (Array.isArray(value)) return value.length === 0;
-  return (
-    value === null || typeof value !== 'object' || value instanceof ExactDecimalValue || Object.keys(value).length === 0
-  );
+  return value === null || typeof value !== 'object' || Object.keys(value).length === 0;
 }
 
 function emitInline(value: SafeValue): string {
   if (typeof value === 'string') return quoteYamlString(value);
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (value === null) return 'null';
-  if (value instanceof ExactDecimalValue) return value.canonical;
   if (typeof value === 'number') {
-    if (!Number.isSafeInteger(value) || Object.is(value, -0))
-      throw schemaError('runtime numbers must be safe integers');
-    return String(value);
+    if (!Number.isFinite(value)) throw schemaError('runtime numbers must be finite');
+    return JSON.stringify(Object.is(value, -0) ? 0 : value);
   }
   if (Array.isArray(value)) return '[]';
   return '{}';
@@ -721,44 +683,6 @@ function quoteYamlString(value: string): string {
     } else result += character;
   }
   return `${result}"`;
-}
-
-function canonicalDecimal(source: string): string {
-  if (!DECIMAL_PATTERN.test(source)) throw schemaError('number is not a finite base-10 decimal');
-  const negative = source.startsWith('-');
-  const unsigned = source.replace(/^[+-]/u, '');
-  const [mantissa = '', exponentText] = unsigned.split(/[eE]/u);
-  const [integer = '', fraction = ''] = mantissa.split('.');
-  const exponent = exponentText === undefined ? 0 : parseBoundedExponent(exponentText);
-  let digits = `${integer || '0'}${fraction}`.replace(/^0+/u, '');
-  if (!digits) return '0';
-  let scale = fraction.length - exponent;
-  while (scale > 0 && digits.endsWith('0')) {
-    digits = digits.slice(0, -1);
-    scale -= 1;
-  }
-  let canonical: string;
-  if (scale <= 0) canonical = `${digits}${'0'.repeat(-scale)}`;
-  else if (digits.length > scale) canonical = `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
-  else canonical = `0.${'0'.repeat(scale - digits.length)}${digits}`;
-  if (canonical.length > ISSUE_CONTRACT_LIMITS.scalarBytes) throw limitError('scalarBytes');
-  return negative ? `-${canonical}` : canonical;
-}
-
-function parseBoundedExponent(value: string): number {
-  const exponent = Number(value);
-  if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > ISSUE_CONTRACT_LIMITS.scalarBytes) {
-    throw limitError('scalarBytes');
-  }
-  return exponent;
-}
-
-function decimalRuntimeValue(value: ExactDecimalValue): number | ExactDecimalValue {
-  if (/^-?(?:0|[1-9]\d*)$/u.test(value.canonical)) {
-    const number = Number(value.canonical);
-    if (Number.isSafeInteger(number) && !Object.is(number, -0)) return number;
-  }
-  return value;
 }
 
 function assertMetadataRootKeys(metadata: IssueMetadata): void {
@@ -799,8 +723,8 @@ function compareCodePoints(left: string, right: string): number {
   return leftPoints.length - rightPoints.length;
 }
 
-function isMetadataObject(value: IssueMetadataValue): value is IssueMetadata {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof ExactDecimalValue);
+function isMetadataObject(value: unknown): value is IssueMetadata {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
@@ -822,7 +746,6 @@ function escapeRegex(value: string): string {
 function encodeToolJson(value: unknown, ancestors: Set<object>): string {
   if (value === null) return 'null';
   if (typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
-  if (value instanceof ExactDecimalValue) return value.canonical;
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw schemaError('tool result contains a non-finite number');
     return JSON.stringify(value);
@@ -842,135 +765,5 @@ function encodeToolJson(value: unknown, ancestors: Set<object>): string {
     return `{${fields.join(',')}}`;
   } finally {
     ancestors.delete(value);
-  }
-}
-
-class JsonMetadataParser {
-  private index = 0;
-  private nodes = 0;
-  private keys = 0;
-
-  public constructor(
-    private readonly source: string,
-    private readonly limits: IssueContractLimits,
-  ) {
-    if (UTF8.encode(source).byteLength > limits.fileBytes) throw limitError('fileBytes');
-  }
-
-  public parse(): IssueMetadataValue {
-    this.skipWhitespace();
-    const value = this.readValue(1);
-    this.skipWhitespace();
-    if (this.index !== this.source.length) throw schemaError('metadata JSON contains trailing content');
-    return value;
-  }
-
-  private readValue(depth: number): IssueMetadataValue {
-    if (depth > this.limits.depth) throw limitError('depth');
-    if (++this.nodes > this.limits.nodes) throw limitError('nodes');
-    const character = this.source[this.index];
-    if (character === '"') return this.readString();
-    if (character === '{') return this.readObject(depth);
-    if (character === '[') return this.readArray(depth);
-    if (this.source.startsWith('true', this.index)) return this.consumeLiteral('true', true);
-    if (this.source.startsWith('false', this.index)) return this.consumeLiteral('false', false);
-    if (this.source.startsWith('null', this.index)) return this.consumeLiteral('null', null);
-    const match = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/u.exec(this.source.slice(this.index));
-    if (!match?.[0]) throw schemaError('metadata text is not strict JSON');
-    this.index += match[0].length;
-    return decimalRuntimeValue(new ExactDecimalValue(match[0]));
-  }
-
-  private readObject(depth: number): IssueMetadata {
-    this.index += 1;
-    this.skipWhitespace();
-    const result: IssueMetadata = Object.create(null) as IssueMetadata;
-    const exact = new Set<string>();
-    const compared = new Set<string>();
-    if (this.source[this.index] === '}') {
-      this.index += 1;
-      return result;
-    }
-    while (true) {
-      if (this.source[this.index] !== '"') throw schemaError('metadata JSON object keys must be strings');
-      const key = this.readString();
-      if (exact.has(key)) throw schemaError('metadata JSON contains a duplicate key');
-      exact.add(key);
-      assertComparisonKey(key, compared);
-      if (++this.keys > this.limits.metadataKeys) throw limitError('metadataKeys');
-      this.skipWhitespace();
-      if (this.source[this.index] !== ':') throw schemaError('metadata JSON object is missing a colon');
-      this.index += 1;
-      this.skipWhitespace();
-      result[key] = this.readValue(depth + 1);
-      this.skipWhitespace();
-      const next = this.source[this.index];
-      if (next === '}') {
-        this.index += 1;
-        return result;
-      }
-      if (next !== ',') throw schemaError('metadata JSON object is malformed');
-      this.index += 1;
-      this.skipWhitespace();
-    }
-  }
-
-  private readArray(depth: number): IssueMetadataValue[] {
-    this.index += 1;
-    this.skipWhitespace();
-    const result: IssueMetadataValue[] = [];
-    if (this.source[this.index] === ']') {
-      this.index += 1;
-      return result;
-    }
-    while (true) {
-      result.push(this.readValue(depth + 1));
-      this.skipWhitespace();
-      const next = this.source[this.index];
-      if (next === ']') {
-        this.index += 1;
-        return result;
-      }
-      if (next !== ',') throw schemaError('metadata JSON array is malformed');
-      this.index += 1;
-      this.skipWhitespace();
-    }
-  }
-
-  private readString(): string {
-    const start = this.index;
-    this.index += 1;
-    let escaped = false;
-    while (this.index < this.source.length) {
-      const code = this.source.charCodeAt(this.index);
-      if (!escaped && code === 0x22) {
-        this.index += 1;
-        const lexeme = this.source.slice(start, this.index);
-        let value: string;
-        try {
-          value = JSON.parse(lexeme) as string;
-        } catch {
-          throw schemaError('metadata JSON string is malformed');
-        }
-        assertScalar(value, this.limits);
-        return value;
-      }
-      if (!escaped && code < 0x20) throw schemaError('metadata JSON string contains a control character');
-      if (!escaped && code === 0x5c) escaped = true;
-      else escaped = false;
-      this.index += 1;
-    }
-    throw schemaError('metadata JSON string is unterminated');
-  }
-
-  private consumeLiteral<T extends boolean | null>(literal: string, value: T): T {
-    this.index += literal.length;
-    return value;
-  }
-
-  private skipWhitespace(): void {
-    while (['\t', '\n', '\r', ' '].includes(this.source[this.index] ?? '') && this.index < this.source.length) {
-      this.index += 1;
-    }
   }
 }

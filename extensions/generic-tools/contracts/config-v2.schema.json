@@ -2,12 +2,44 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://harnessctl.dev/contracts/config-v2.schema.json",
   "title": "harnessctl project configuration v2",
-  "description": "Repository paths are project-relative. Cache containment is also checked at runtime after canonical path normalization because standard JSON Schema cannot compare sibling path values.",
+  "description": "Repository paths are project-relative. The local SQLite cache uses the fixed .harnessctl/cache/harnessctl.sqlite path.",
   "type": "object",
   "properties": {
     "version": {
       "type": "number",
       "const": 2
+    },
+    "issues": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+            }
+          ]
+        },
+        "prefix": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]*$"
+        },
+        "type": {
+          "type": "string",
+          "const": "filesystem"
+        },
+        "tools": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": ["root", "prefix", "type", "tools"],
+      "additionalProperties": false
     },
     "communication": {
       "type": "object",
@@ -93,31 +125,19 @@
                   "pattern": "\\S"
                 },
                 {
-                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|\\/)\\.\\.(?:\\/|$)).+$"
-                }
-              ]
-            },
-            "cache": {
-              "type": "string",
-              "minLength": 1,
-              "allOf": [
-                {
-                  "pattern": "\\S"
-                },
-                {
-                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|\\/)\\.\\.(?:\\/|$)).+$"
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
                 }
               ]
             }
           },
-          "required": ["root", "cache"],
-          "additionalProperties": false
+          "required": ["root"],
+          "additionalProperties": {}
         }
       },
       "required": ["enabled", "backend", "namespace", "retrieval", "repository"],
       "additionalProperties": false
     }
   },
-  "required": ["version", "communication", "memory"],
+  "required": ["version", "issues", "communication", "memory"],
   "additionalProperties": {}
 }

@@ -7,16 +7,13 @@ import {
   type ConfigDocument,
 } from './config.js';
 export {
-  archiveIssue,
   archiveIssueReport,
   commentIssue,
-  createIssue,
   createIssueRecord,
   createFilesystemIssueProvider,
   getIssue,
   linkDocument,
   listIssueSummaries,
-  listIssues,
   parseIssueId,
   parseIssueIds,
   relateIssue,
@@ -42,7 +39,6 @@ export type {
   FilesystemIssueProviderOptions,
 } from './issues.js';
 export {
-  ExactDecimalValue,
   IssueError,
   IssueToolResultEncoder,
   decodeCanonicalIssue,
@@ -59,16 +55,7 @@ export type {
   IssueMetadataText,
   IssueMetadataValue,
 } from './issues-contract.js';
-export { projectIssueCandidate, projectIssueDocument } from './issues-storage.js';
-export type {
-  IssueProjectionChange,
-  IssueProjectionChangeSet,
-  IssueProjectionRecord,
-  IssueProjectionSink,
-  IssueStorageCatalog,
-  IssueStorageCandidate,
-  IssueStorageStatus,
-} from './issues-storage.js';
+export type { IssueStorageCatalog, IssueStorageCandidate, IssueStorageStatus } from './issues-storage.js';
 
 export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };

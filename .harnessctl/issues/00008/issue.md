@@ -21,7 +21,7 @@ Then files are resolved by stable ID without traversal, symlink, collision, or m
 ## Deliverables
 
 - `issues-storage.ts` discovery, path validation, classification, atomic create/rewrite/rename primitives.
-- Active `.issues/<id>-<slug>.yml` and archived `.issues/archived/<id>-<slug>.yml` support.
+- Active `<issues.root>/<id>-<slug>.yml` and archived `<issues.root>/archived/<id>-<slug>.yml` support.
 - Mixed legacy/YAML rejection and migration guidance.
 
 ## Acceptance

@@ -16,7 +16,8 @@ const CONFIG_PATH = join('.harnessctl', 'config.yaml');
 export const DEFAULT_CONFIG: ConfigDocument = {
   version: 2,
   issues: {
-    prefix: '',
+    root: '.harnessctl/issues',
+    prefix: 'hrn-',
     type: 'filesystem',
     tools:
       'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
@@ -43,7 +44,6 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
     repository: {
       root: '.harnessctl/memory',
-      cache: '.harnessctl/cache/memory-index.json',
     },
   },
 };

@@ -10,26 +10,44 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import {
   IssueError,
   canonicalIssueFilename,
+  computeIssueRevision,
   decodeIssueDocument,
-  encodeCanonicalIssue,
-  type CanonicalIssueDocument,
-  type CanonicalIssueComment,
   type DecodedIssueDocument,
   type IssueLocation,
-  type IssueMetadata,
 } from './issues-contract.js';
+import {
+  LocalPersistenceError,
+  assertLocalBarrierLease,
+  withLocalBarrier,
+  type BarrierLease,
+} from './local-persistence.js';
+
+export const DEFAULT_ISSUE_ROOT = '.harnessctl/issues';
+export const MAX_ISSUE_FILES = 9_999;
+const ARCHIVE_DIRECTORY = 'archived';
+const DEFAULT_LOCK_WAIT_MS = 5_000;
+const MAX_BATCH_PATHS = 10_000;
+const MAX_BEFORE_IMAGE_BYTES = 256 * 1024 * 1024;
+const MAX_ISSUE_FILE_BYTES = 16 * 1024 * 1024;
 
 export type IssueStorageStatus = 'empty' | 'canonical' | 'legacy' | 'mixed' | 'invalid';
 
 export interface IssueStorageFinding {
   category:
-    'storage_classification' | 'path_safety' | 'parse_safety' | 'schema' | 'canonical_form' | 'identity_ambiguity';
+    | 'storage_classification'
+    | 'path_safety'
+    | 'parse_safety'
+    | 'schema'
+    | 'canonical_form'
+    | 'resource_limit'
+    | 'identity_ambiguity';
   message: string;
   path?: string;
   issueId?: string;
@@ -46,6 +64,7 @@ export interface IssueStorageCandidate {
 
 export interface IssueStorageCatalog {
   repositoryRoot: string;
+  issueRoot: string;
   status: IssueStorageStatus;
   candidates: readonly IssueStorageCandidate[];
   active: readonly IssueStorageCandidate[];
@@ -57,251 +76,170 @@ export interface IssueStorageCatalog {
 
 export interface DiscoverIssueStorageOptions {
   issuePrefix?: string;
+  issueRoot?: string;
   candidateLimit?: number;
 }
 
-export interface IssueProjectionRecord {
-  id: string;
-  location: IssueLocation;
+export type { BarrierLease };
+
+export interface FileReplacement {
   path: string;
-  version: 1;
-  type: CanonicalIssueDocument['type'];
-  title: string;
-  status: CanonicalIssueDocument['status'];
-  created_at: string;
-  updated_at: string;
-  created_by?: string;
-  assigned_to?: string;
-  parent?: string;
-  children: readonly string[];
-  depends_on: readonly string[];
-  blocks: readonly string[];
-  blocked_by: readonly string[];
-  relates_to: readonly string[];
-  duplicates: readonly string[];
-  supersedes: readonly string[];
-  documents: readonly string[];
-  metadata: IssueMetadata;
-  body: string;
-  comments: readonly CanonicalIssueComment[];
-  revision: string;
+  bytes?: Uint8Array;
+  expectedRevision?: string | null;
 }
 
-export type IssueProjectionChange =
-  | { kind: 'upsert'; id: string; record: IssueProjectionRecord; revision: string }
-  | { kind: 'removal'; id: string }
-  | {
-      kind: 'location';
-      id: string;
-      from: IssueLocation;
-      to: IssueLocation;
-      record: IssueProjectionRecord;
-      revision: string;
-    };
-
-export interface IssueProjectionChangeSet {
-  version: 1;
-  transactionId: string;
-  committedAt: string;
-  changes: readonly IssueProjectionChange[];
+export function withIssueBarrier<T>(
+  repositoryRoot: string,
+  operation: (lease: BarrierLease) => T,
+  waitMs = DEFAULT_LOCK_WAIT_MS,
+): T {
+  try {
+    return withLocalBarrier(repositoryRoot, operation, waitMs);
+  } catch (error: unknown) {
+    throw asIssuePersistenceError(error);
+  }
 }
 
-export interface IssueProjectionSink {
-  apply(changeSet: IssueProjectionChangeSet): void;
-}
+export function applyIssueFileBatch(lease: BarrierLease, replacements: readonly FileReplacement[]): void {
+  assertLease(lease);
+  if (replacements.length === 0 || replacements.length > MAX_BATCH_PATHS) {
+    throw new IssueError('resource_limit', 'issue batch path limit exceeded', { limit: 'batchPaths' });
+  }
+  const ordered = [...replacements].sort((left, right) => compareCodePoints(left.path, right.path));
+  const seen = new Set<string>();
+  const before = new Map<string, Uint8Array | undefined>();
+  let retainedBytes = 0;
+  for (const replacement of ordered) {
+    const key = portableKey(replacement.path);
+    if (seen.has(key)) throw new IssueError('path_safety', 'issue batch contains duplicate paths');
+    seen.add(key);
+    const absolute = validateManagedIssuePath(lease.repositoryRoot, replacement.path);
+    const bytes = readOptionalRegularFile(lease.repositoryRoot, absolute, replacement.path);
+    if (replacement.expectedRevision === null && bytes !== undefined) {
+      throw new IssueError('stale_revision', 'issue destination already exists', { paths: [replacement.path] });
+    }
+    if (
+      typeof replacement.expectedRevision === 'string' &&
+      (bytes === undefined || computeIssueRevision(bytes) !== replacement.expectedRevision)
+    ) {
+      throw new IssueError('stale_revision', 'issue changed since the expected revision was calculated', {
+        paths: [replacement.path],
+      });
+    }
+    retainedBytes += bytes?.byteLength ?? 0;
+    if (retainedBytes > MAX_BEFORE_IMAGE_BYTES) {
+      throw new IssueError('resource_limit', 'issue batch before-image limit exceeded', { limit: 'beforeImageBytes' });
+    }
+    before.set(replacement.path, bytes);
+  }
 
-export function projectIssueCandidate(candidate: IssueStorageCandidate): IssueProjectionRecord {
-  if (candidate.error) throw candidate.error;
-  const decoded = candidate.decoded;
-  if (!decoded)
-    throw new IssueError('schema', 'canonical issue candidate was not decoded', { paths: [candidate.path] });
-  return projectIssueDocument(decoded.issue, candidate.location, candidate.path, decoded.revision);
+  const applied: FileReplacement[] = [];
+  try {
+    for (const replacement of ordered) {
+      applied.push(replacement);
+      publishReplacement(lease.repositoryRoot, replacement.path, replacement.bytes);
+    }
+  } catch (error: unknown) {
+    let rollbackFailure: unknown;
+    for (const replacement of applied.reverse()) {
+      try {
+        publishReplacement(lease.repositoryRoot, replacement.path, before.get(replacement.path));
+      } catch (rollbackError: unknown) {
+        rollbackFailure ??= rollbackError;
+      }
+    }
+    if (rollbackFailure) {
+      throw new IssueError(
+        'filesystem_durability',
+        'issue batch failed and rollback failed; canonical state may be inconsistent',
+      );
+    }
+    if (error instanceof IssueError) throw error;
+    throw new IssueError('filesystem_durability', 'issue batch failed; before-images were restored');
+  }
 }
-
-export function projectIssueDocument(
-  issue: CanonicalIssueDocument,
-  location: IssueLocation,
-  path: string,
-  revision: string,
-): IssueProjectionRecord {
-  return {
-    id: issue.id,
-    location,
-    path,
-    version: issue.version,
-    type: issue.type,
-    title: issue.title,
-    status: issue.status,
-    created_at: issue.created_at,
-    updated_at: issue.updated_at,
-    ...(issue.created_by ? { created_by: issue.created_by } : {}),
-    ...(issue.assigned_to ? { assigned_to: issue.assigned_to } : {}),
-    ...(issue.parent ? { parent: issue.parent } : {}),
-    children: [...(issue.children ?? [])],
-    depends_on: [...(issue.depends_on ?? [])],
-    blocks: [...(issue.blocks ?? [])],
-    blocked_by: [...(issue.blocked_by ?? [])],
-    relates_to: [...(issue.relates_to ?? [])],
-    duplicates: [...(issue.duplicates ?? [])],
-    supersedes: [...(issue.supersedes ?? [])],
-    documents: [...(issue.documents ?? [])],
-    metadata: { ...(issue.metadata ?? {}) },
-    body: issue.body,
-    comments: issue.comments.map((comment) => ({ ...comment })),
-    revision,
-  };
-}
-
-const DEFAULT_CANDIDATE_LIMIT = 100_000;
-const CONTROL_DIRECTORY = '.control';
-const ARCHIVE_DIRECTORY = 'archived';
-const MIGRATION_MESSAGE = 'legacy issue storage requires the separately delivered Story 00006 migration';
 
 export function discoverIssueStorage(
   repositoryRoot: string,
   options: DiscoverIssueStorageOptions = {},
 ): IssueStorageCatalog {
   const root = validateRepositoryRoot(repositoryRoot);
-  const issuePrefix = validateIssuePrefix(options.issuePrefix ?? '');
-  const candidateLimit = validateCandidateLimit(options.candidateLimit ?? DEFAULT_CANDIDATE_LIMIT);
-  const issuesRoot = join(root, '.issues');
+  const issueRoot = validateIssueRoot(options.issueRoot ?? DEFAULT_ISSUE_ROOT);
+  const prefix = validateIssuePrefix(options.issuePrefix ?? '');
+  const limit = validateCandidateLimit(options.candidateLimit ?? MAX_ISSUE_FILES);
   const findings: IssueStorageFinding[] = [];
   const candidates: IssueStorageCandidate[] = [];
-  let legacy = false;
-
-  if (!existsSync(issuesRoot)) return catalog(root, 'empty', candidates, findings);
-  if (!isRegularDirectory(issuesRoot)) {
-    findings.push(pathFinding('.issues', 'managed issue root must be a non-symlink directory'));
-    return catalog(root, 'invalid', candidates, findings);
+  const absoluteRoot = resolve(root, issueRoot);
+  const unsafe = unsafeAncestor(root, issueRoot);
+  if (unsafe)
+    return makeCatalog(root, issueRoot, 'invalid', candidates, [
+      pathFinding(unsafe, 'managed issue root must use non-symlink directories'),
+    ]);
+  if (!existsSync(absoluteRoot)) return makeCatalog(root, issueRoot, 'empty', candidates, findings);
+  if (!isSafeDirectory(absoluteRoot)) {
+    return makeCatalog(root, issueRoot, 'invalid', candidates, [
+      pathFinding(issueRoot, 'managed issue root must be a non-symlink directory'),
+    ]);
   }
-  const controlRoot = join(issuesRoot, CONTROL_DIRECTORY);
-  if (existsSync(controlRoot) && !isRegularDirectory(controlRoot)) {
-    findings.push(pathFinding('.issues/.control', 'managed control root must be a non-symlink directory'));
-  }
 
-  const activeScan = scanDirectory(root, issuesRoot, 'active', issuePrefix, candidateLimit, candidates, findings);
-  legacy ||= activeScan.legacy;
-  const archiveRoot = join(issuesRoot, ARCHIVE_DIRECTORY);
+  let legacy = scan(root, absoluteRoot, 'active', prefix, limit, candidates, findings);
+  const archiveRoot = join(absoluteRoot, ARCHIVE_DIRECTORY);
   if (existsSync(archiveRoot)) {
-    if (!isRegularDirectory(archiveRoot)) {
-      findings.push(pathFinding('.issues/archived', 'managed archive root must be a non-symlink directory'));
-    } else {
-      const archiveScan = scanDirectory(
-        root,
-        archiveRoot,
-        'archived',
-        issuePrefix,
-        candidateLimit,
-        candidates,
-        findings,
-      );
-      legacy ||= archiveScan.legacy;
-    }
+    if (!isSafeDirectory(archiveRoot))
+      findings.push(pathFinding(`${issueRoot}/archived`, 'managed archive root must be a non-symlink directory'));
+    else legacy ||= scan(root, archiveRoot, 'archived', prefix, limit, candidates, findings);
   }
-
   addIdentityFindings(candidates, findings);
   const canonical = candidates.length > 0;
-  let status: IssueStorageStatus;
-  if (legacy && canonical) status = 'mixed';
-  else if (legacy) status = 'legacy';
-  else if (findings.length > 0) status = 'invalid';
-  else if (canonical) status = 'canonical';
-  else status = 'empty';
-
-  if (status === 'legacy' || status === 'mixed') {
-    findings.push({ category: 'storage_classification', message: MIGRATION_MESSAGE });
-  }
-  return catalog(root, status, candidates, findings);
+  const status: IssueStorageStatus = legacy
+    ? canonical
+      ? 'mixed'
+      : 'legacy'
+    : findings.length > 0
+      ? 'invalid'
+      : canonical
+        ? 'canonical'
+        : 'empty';
+  if (legacy) findings.push({ category: 'storage_classification', message: 'legacy issue storage is unsupported' });
+  return makeCatalog(root, issueRoot, status, candidates, findings);
 }
-
-export const classifyIssueStorage = discoverIssueStorage;
 
 export function resolveIssueCandidate(
   storage: IssueStorageCatalog,
   id: string,
   location?: IssueLocation,
 ): IssueStorageCandidate {
-  if (storage.status === 'legacy' || storage.status === 'mixed') throw storageClassificationError(storage);
   const matches = (storage.byId.get(id) ?? []).filter(
     (candidate) => location === undefined || candidate.location === location,
   );
-  if (matches.length === 0) {
-    throw new IssueError('schema', `canonical issue was not found: ${id}`, { issueIds: [id] });
-  }
-  if (matches.length !== 1) {
+  if (matches.length === 0) throw new IssueError('schema', `canonical issue was not found: ${id}`, { issueIds: [id] });
+  if (matches.length !== 1)
     throw new IssueError('identity_ambiguity', `canonical issue ID is ambiguous: ${id}`, {
       issueIds: [id],
-      paths: matches.map((candidate) => candidate.path),
+      paths: matches.map((item) => item.path),
     });
-  }
-  if (storage.status === 'invalid') throw storageClassificationError(storage);
+  if (storage.status !== 'canonical') throw classificationError(storage);
   const candidate = matches[0];
   if (!candidate) throw new IssueError('identity_ambiguity', `canonical issue ID is ambiguous: ${id}`);
   if (candidate.error) throw candidate.error;
   return candidate;
 }
 
-export const resolveIssueById = resolveIssueCandidate;
-
-export function createCanonicalIssueFile(
-  repositoryRoot: string,
-  issue: CanonicalIssueDocument,
-  location: IssueLocation = 'active',
-  options: DiscoverIssueStorageOptions = {},
-): IssueStorageCandidate {
-  const storage = discoverIssueStorage(repositoryRoot, options);
-  assertMutableStorage(storage);
-  if (storage.byId.has(issue.id)) {
-    throw new IssueError('identity_ambiguity', `canonical issue ID already exists: ${issue.id}`, {
-      issueIds: [issue.id],
-      paths: storage.byId.get(issue.id)?.map((candidate) => candidate.path),
-    });
+export function validateIssueRoot(value: string): string {
+  if (
+    !value ||
+    value.includes('\0') ||
+    value.includes('\\') ||
+    value.startsWith('/') ||
+    /^[A-Za-z]:/u.test(value) ||
+    value.split('/').some((part) => !part || part === '.' || part === '..')
+  ) {
+    throw new IssueError('configuration', 'configured issue root must be a safe project-relative path');
   }
-  const bytes = encodeCanonicalIssue(issue);
-  const directory = ensureLocationDirectory(storage.repositoryRoot, location);
-  const filename = canonicalIssueFilename(issue.id, issue.title);
-  assertNoPortableNameCollision(directory, filename);
-  const absolutePath = join(directory, filename);
-  writeExclusiveDurable(absolutePath, bytes);
-  return readCreatedCandidate(storage.repositoryRoot, absolutePath, issue.id, location, options.issuePrefix ?? '');
+  return value;
 }
 
-export const atomicCreateIssue = createCanonicalIssueFile;
-
-export function rewriteCanonicalIssueFile(
-  repositoryRoot: string,
-  currentPath: string,
-  issue: CanonicalIssueDocument,
-  options: DiscoverIssueStorageOptions = {},
-): IssueStorageCandidate {
-  const storage = discoverIssueStorage(repositoryRoot, options);
-  assertMutableStorage(storage);
-  const source = candidateAtPath(storage, currentPath);
-  if (source.id !== issue.id) throw new IssueError('schema', 'rewritten issue ID must remain unchanged');
-  if (source.error) throw source.error;
-
-  const bytes = encodeCanonicalIssue(issue);
-  const destinationName = canonicalIssueFilename(issue.id, issue.title);
-  const destination = join(dirname(source.absolutePath), destinationName);
-  if (destination === source.absolutePath) {
-    replaceDurable(source.absolutePath, bytes);
-  } else {
-    assertNoPortableNameCollision(dirname(destination), destinationName, source.absolutePath);
-    rewriteThenRename(source.absolutePath, destination, bytes);
-  }
-  return readCreatedCandidate(
-    storage.repositoryRoot,
-    destination,
-    issue.id,
-    source.location,
-    options.issuePrefix ?? '',
-  );
-}
-
-export const atomicRewriteIssue = rewriteCanonicalIssueFile;
-export const atomicRenameIssue = rewriteCanonicalIssueFile;
-
-function scanDirectory(
+function scan(
   repositoryRoot: string,
   directory: string,
   location: IssueLocation,
@@ -309,104 +247,100 @@ function scanDirectory(
   limit: number,
   candidates: IssueStorageCandidate[],
   findings: IssueStorageFinding[],
-): { legacy: boolean } {
+): boolean {
   let legacy = false;
-  const names = readdirSync(directory).sort(compareCodePoints);
-  for (const name of names) {
-    if (location === 'active' && (name === ARCHIVE_DIRECTORY || name === CONTROL_DIRECTORY)) continue;
+  for (const name of readdirSync(directory).sort(compareCodePoints)) {
+    if (location === 'active' && (name === ARCHIVE_DIRECTORY || name === '.control')) continue;
     const absolutePath = join(directory, name);
-    const relativePath = portableRelative(repositoryRoot, absolutePath);
+    const path = portableRelative(repositoryRoot, absolutePath);
     const stat = lstatSync(absolutePath);
     if (stat.isSymbolicLink()) {
-      findings.push(pathFinding(relativePath, 'symlinks are not permitted in canonical issue storage'));
+      findings.push(pathFinding(path, 'symlinks are not permitted in canonical issue storage'));
       continue;
     }
     if (stat.isDirectory()) {
-      if (isLegacyIssueDirectory(absolutePath)) legacy = true;
-      else findings.push(pathFinding(relativePath, 'unexpected nested directory in canonical issue storage'));
+      if (existsSync(join(absolutePath, 'issue.md')) || existsSync(join(absolutePath, 'comments'))) legacy = true;
+      else findings.push(pathFinding(path, 'unexpected nested directory in canonical issue storage'));
       continue;
     }
     if (!stat.isFile()) {
-      findings.push(pathFinding(relativePath, 'canonical issue candidates must be regular files'));
+      findings.push(pathFinding(path, 'canonical issue candidates must be regular files'));
       continue;
     }
-    const parsed = parseCandidateName(name, prefix);
-    if (!parsed) {
-      if (looksIssueLike(name)) {
-        findings.push(pathFinding(relativePath, 'unsupported or malformed canonical issue filename'));
-      }
+    const id = parseCandidateName(name, prefix);
+    if (!id) {
+      if (/\.(?:ya?ml|tmp)$/iu.test(name))
+        findings.push(pathFinding(path, 'unsupported or malformed canonical issue filename'));
       continue;
     }
-    if (candidates.length >= limit) {
-      throw new IssueError('resource_limit', 'issue discovery candidate limit exceeded', { limit: 'candidates' });
-    }
-    const candidate: IssueStorageCandidate = { id: parsed.id, location, path: relativePath, absolutePath };
+    if (candidates.length >= limit)
+      throw new IssueError('resource_limit', 'issue discovery candidate limit exceeded', {
+        limit: 'candidates',
+        paths: [path],
+      });
+    const candidate: IssueStorageCandidate = { id, location, path, absolutePath };
     try {
-      const decoded = decodeIssueDocument(readFileSync(absolutePath), { expectedId: parsed.id, issuePrefix: prefix });
-      const expectedName = canonicalIssueFilename(decoded.issue.id, decoded.issue.title);
-      if (expectedName !== name) {
-        throw new IssueError('schema', 'canonical issue filename slug does not match its title', {
-          issueIds: [parsed.id],
-          paths: [relativePath],
-        });
-      }
+      const decoded = decodeIssueDocument(readBoundedIssueFile(absolutePath, path), {
+        expectedId: id,
+        issuePrefix: prefix,
+      });
+      if (canonicalIssueFilename(id, decoded.issue.title) !== name)
+        throw new IssueError('schema', 'canonical issue filename slug does not match its title');
       candidate.decoded = decoded;
     } catch (error: unknown) {
-      candidate.error = asIssueError(error, relativePath, parsed.id);
+      candidate.error = asIssueError(error, path, id);
       findings.push({
         category: findingCategory(candidate.error.category),
         message: candidate.error.message,
-        path: relativePath,
-        issueId: parsed.id,
+        path,
+        issueId: id,
       });
     }
     candidates.push(candidate);
   }
-  return { legacy };
+  return legacy;
 }
 
-function addIdentityFindings(candidates: IssueStorageCandidate[], findings: IssueStorageFinding[]): void {
+function addIdentityFindings(candidates: readonly IssueStorageCandidate[], findings: IssueStorageFinding[]): void {
   const byId = new Map<string, IssueStorageCandidate[]>();
-  const byPortablePath = new Map<string, IssueStorageCandidate[]>();
+  const byPath = new Map<string, IssueStorageCandidate[]>();
   for (const candidate of candidates) {
-    appendMap(byId, candidate.id, candidate);
-    appendMap(byPortablePath, candidate.path.normalize('NFKC').toLowerCase(), candidate);
+    append(byId, candidate.id, candidate);
+    append(byPath, portableKey(candidate.path), candidate);
   }
-  for (const [id, matches] of byId) {
-    if (matches.length < 2) continue;
-    for (const candidate of matches) {
-      findings.push({
-        category: 'identity_ambiguity',
-        message: `duplicate canonical issue ID: ${id}`,
-        path: candidate.path,
-        issueId: id,
-      });
-    }
-  }
-  for (const matches of byPortablePath.values()) {
-    if (matches.length < 2) continue;
-    for (const candidate of matches) {
-      findings.push({
-        category: 'identity_ambiguity',
-        message: 'canonical issue paths collide under portable comparison',
-        path: candidate.path,
-        issueId: candidate.id,
-      });
-    }
-  }
+  for (const [id, matches] of byId)
+    if (matches.length > 1)
+      for (const candidate of matches)
+        findings.push({
+          category: 'identity_ambiguity',
+          message: `duplicate canonical issue ID: ${id}`,
+          path: candidate.path,
+          issueId: id,
+        });
+  for (const matches of byPath.values())
+    if (matches.length > 1)
+      for (const candidate of matches)
+        findings.push({
+          category: 'identity_ambiguity',
+          message: 'canonical issue paths collide under portable comparison',
+          path: candidate.path,
+          issueId: candidate.id,
+        });
 }
 
-function catalog(
+function makeCatalog(
   repositoryRoot: string,
+  issueRoot: string,
   status: IssueStorageStatus,
   candidates: IssueStorageCandidate[],
   findings: IssueStorageFinding[],
 ): IssueStorageCatalog {
   const ordered = [...candidates].sort((left, right) => compareCodePoints(left.path, right.path));
   const byId = new Map<string, IssueStorageCandidate[]>();
-  for (const candidate of ordered) appendMap(byId, candidate.id, candidate);
+  for (const candidate of ordered) append(byId, candidate.id, candidate);
   return {
     repositoryRoot,
+    issueRoot,
     status,
     candidates: ordered,
     active: ordered.filter((candidate) => candidate.location === 'active'),
@@ -417,263 +351,233 @@ function catalog(
   };
 }
 
-function candidateAtPath(storage: IssueStorageCatalog, path: string): IssueStorageCandidate {
-  const relativePath = validateCanonicalRelativePath(path);
-  const candidate = storage.candidates.find((item) => item.path === relativePath);
-  if (!candidate) {
-    throw new IssueError('path_safety', `canonical issue path is not a discovered regular file: ${relativePath}`, {
-      paths: [relativePath],
-    });
+function publishReplacement(root: string, path: string, bytes: Uint8Array | undefined): void {
+  const absolute = validateManagedIssuePath(root, path);
+  ensureSafeDirectoryTree(root, portableRelative(root, dirname(absolute)));
+  if (bytes === undefined) {
+    if (!existsSync(absolute)) return;
+    assertRegularFile(absolute);
+    unlinkSync(absolute);
+    fsyncDirectory(dirname(absolute));
+    return;
   }
-  return candidate;
+  if (existsSync(absolute)) assertRegularFile(absolute);
+  const temporary = join(dirname(absolute), `.${randomBytes(12).toString('hex')}.tmp`);
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(temporary, 'wx', 0o600);
+    writeFileSync(descriptor, bytes);
+    fsyncSync(descriptor);
+    closeSync(descriptor);
+    descriptor = undefined;
+    if (existsSync(absolute)) assertRegularFile(absolute);
+    renameSync(temporary, absolute);
+    fsyncDirectory(dirname(absolute));
+  } catch (error: unknown) {
+    if (descriptor !== undefined) closeSync(descriptor);
+    rmSync(temporary, { force: true });
+    if (error instanceof IssueError) throw error;
+    throw new IssueError('filesystem_durability', `cannot publish canonical issue path: ${path}`, { paths: [path] });
+  }
 }
 
-function validateCanonicalRelativePath(path: string): string {
+function validateManagedIssuePath(root: string, value: string): string {
   if (
-    !path ||
-    path.includes(String.fromCharCode(92)) ||
-    path.includes(String.fromCharCode(0)) ||
-    path.split('/').includes('..')
+    !value ||
+    value.includes('\0') ||
+    value.includes('\\') ||
+    value.startsWith('/') ||
+    value.split('/').some((part) => !part || part === '.' || part === '..')
   ) {
-    throw new IssueError('path_safety', 'canonical issue path is unsafe');
+    throw new IssueError('path_safety', 'managed issue path is unsafe');
   }
-  if (!path.startsWith('.issues/') || resolve('/', path) === resolve('/.issues')) {
-    throw new IssueError('path_safety', 'canonical issue path must be repository-relative under .issues');
+  const absolute = resolve(root, value);
+  assertContained(root, absolute);
+  const parts = value.split('/');
+  if (!parts.at(-1)?.endsWith('.yml')) throw new IssueError('path_safety', 'managed issue path must name a YAML file');
+  let current = root;
+  for (const component of parts.slice(0, -1)) {
+    current = join(current, component);
+    if (existsSync(current) && !isSafeDirectory(current))
+      throw new IssueError('path_safety', 'managed issue ancestor must be a non-symlink directory', {
+        paths: [portableRelative(root, current)],
+      });
   }
-  return path;
+  return absolute;
 }
 
-function validateRepositoryRoot(repositoryRoot: string): string {
-  if (!repositoryRoot || repositoryRoot.includes('\0'))
-    throw new IssueError('configuration', 'repository root is invalid');
-  const root = resolve(repositoryRoot);
-  if (!existsSync(root) || !isRegularDirectory(root)) {
-    throw new IssueError('path_safety', 'repository root must be an existing non-symlink directory');
+function readOptionalRegularFile(root: string, absolute: string, path: string): Uint8Array | undefined {
+  assertContained(root, absolute);
+  if (!existsSync(absolute)) return undefined;
+  try {
+    return readBoundedIssueFile(absolute, path);
+  } catch (error: unknown) {
+    if (error instanceof IssueError) throw error;
+    throw new IssueError('filesystem_durability', 'cannot read issue before-image', { paths: [path] });
   }
+}
+
+function readBoundedIssueFile(absolute: string, path: string): Uint8Array {
+  assertRegularFile(absolute);
+  const size = lstatSync(absolute).size;
+  if (size > MAX_ISSUE_FILE_BYTES)
+    throw new IssueError('resource_limit', 'issue file exceeds 16 MiB', { limit: 'fileBytes', paths: [path] });
+  try {
+    return readFileSync(absolute);
+  } catch {
+    throw new IssueError('filesystem_durability', 'cannot read issue file', { paths: [path] });
+  }
+}
+
+function validateRepositoryRoot(value: string): string {
+  if (!value || value.includes('\0')) throw new IssueError('configuration', 'repository root is invalid');
+  const root = resolve(value);
+  if (!existsSync(root) || !isSafeDirectory(root))
+    throw new IssueError('path_safety', 'repository root must be an existing non-symlink directory');
   return root;
 }
 
-function validateIssuePrefix(prefix: string): string {
-  const hasControl = Array.from(prefix).some((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint <= 0x1f || codePoint === 0x7f;
-  });
-  if (hasControl || /[/\\<>:"|?*]/u.test(prefix) || prefix === '.' || prefix === '..') {
-    throw new IssueError('configuration', 'configured issue prefix is unsafe');
+function ensureSafeDirectoryTree(root: string, path: string): void {
+  let current = root;
+  for (const component of path.split('/')) {
+    current = join(current, component);
+    if (existsSync(current)) {
+      if (!isSafeDirectory(current)) throw new IssueError('path_safety', 'managed directory ancestor is unsafe');
+      continue;
+    }
+    mkdirSync(current, { mode: 0o700 });
+    fsyncDirectory(dirname(current));
   }
-  return prefix;
 }
 
-function validateCandidateLimit(value: number): number {
-  if (!Number.isInteger(value) || value <= 0 || value > DEFAULT_CANDIDATE_LIMIT) {
-    throw new IssueError('configuration', 'issue discovery candidate limit is invalid', { limit: 'candidates' });
+function unsafeAncestor(root: string, path: string): string | undefined {
+  let current = root;
+  for (const component of path.split('/')) {
+    current = join(current, component);
+    if (!existsSync(current)) return undefined;
+    if (!isSafeDirectory(current)) return portableRelative(root, current);
   }
-  return value;
+  return undefined;
 }
 
-function parseCandidateName(name: string, prefix: string): { id: string } | undefined {
-  const expression = new RegExp(`^(${escapeRegex(prefix)}\\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\\.yml$`, 'u');
-  const match = expression.exec(name);
-  return match?.[1] ? { id: match[1] } : undefined;
-}
-
-function looksIssueLike(name: string): boolean {
-  return /\.(?:ya?ml|tmp)$/iu.test(name) || /^.+-.*\.yml$/iu.test(name);
-}
-
-function isLegacyIssueDirectory(path: string): boolean {
-  return existsSync(join(path, 'issue.md')) || existsSync(join(path, 'comments'));
-}
-
-function isRegularDirectory(path: string): boolean {
-  const stat = lstatSync(path);
-  return !stat.isSymbolicLink() && stat.isDirectory();
-}
-
-function assertMutableStorage(storage: IssueStorageCatalog): void {
-  if (storage.status === 'empty' || storage.status === 'canonical') return;
-  throw storageClassificationError(storage);
-}
-
-function storageClassificationError(storage: IssueStorageCatalog): IssueError {
-  const migration = storage.status === 'legacy' || storage.status === 'mixed' ? `; ${MIGRATION_MESSAGE}` : '';
-  return new IssueError('storage_classification', `issue storage is ${storage.status}${migration}`, {
+function classificationError(storage: IssueStorageCatalog): IssueError {
+  return new IssueError('storage_classification', `issue storage is ${storage.status}`, {
     paths: storage.findings.flatMap((finding) => (finding.path ? [finding.path] : [])),
   });
 }
 
-function ensureLocationDirectory(repositoryRoot: string, location: IssueLocation): string {
-  const issuesRoot = join(repositoryRoot, '.issues');
-  ensureDirectory(issuesRoot);
-  if (location === 'active') return issuesRoot;
-  const archiveRoot = join(issuesRoot, ARCHIVE_DIRECTORY);
-  ensureDirectory(archiveRoot);
-  return archiveRoot;
-}
-
-function ensureDirectory(path: string): void {
-  if (!existsSync(path)) {
-    mkdirSync(path, { mode: 0o700 });
-    fsyncDirectory(dirname(path));
-    return;
-  }
-  if (!isRegularDirectory(path)) throw new IssueError('path_safety', 'managed path is not a safe directory');
-}
-
-function assertNoPortableNameCollision(directory: string, name: string, excludedPath?: string): void {
-  const comparison = name.normalize('NFKC').toLowerCase();
-  if (!existsSync(directory)) return;
-  for (const existingName of readdirSync(directory)) {
-    const existingPath = join(directory, existingName);
-    if (excludedPath && existingPath === excludedPath) continue;
-    if (existingName.normalize('NFKC').toLowerCase() === comparison) {
-      throw new IssueError('identity_ambiguity', `canonical destination already exists: ${name}`, {
-        paths: [portableRelative(dirname(dirname(directory)), existingPath)],
-      });
-    }
-  }
-}
-
-function writeExclusiveDurable(path: string, bytes: Uint8Array): void {
-  let descriptor: number;
+function assertLease(lease: BarrierLease): void {
   try {
-    descriptor = openSync(path, 'wx', 0o600);
+    assertLocalBarrierLease(lease);
   } catch (error: unknown) {
-    throw filesystemError(error, `cannot exclusively create canonical issue: ${path}`);
-  }
-  try {
-    writeFileSync(descriptor, bytes);
-    fsyncSync(descriptor);
-  } catch (error: unknown) {
-    rmSync(path, { force: true });
-    throw filesystemError(error, `cannot durably write canonical issue: ${path}`);
-  } finally {
-    closeSync(descriptor);
-  }
-  fsyncDirectory(dirname(path));
-}
-
-function replaceDurable(path: string, bytes: Uint8Array): void {
-  assertRegularFile(path);
-  const temporary = temporaryPath(path);
-  try {
-    writeExclusiveDurable(temporary, bytes);
-    assertRegularFile(path);
-    renameSync(temporary, path);
-    fsyncDirectory(dirname(path));
-  } catch (error: unknown) {
-    rmSync(temporary, { force: true });
-    if (error instanceof IssueError) throw error;
-    throw filesystemError(error, `cannot atomically replace canonical issue: ${path}`);
-  }
-}
-
-function rewriteThenRename(source: string, destination: string, bytes: Uint8Array): void {
-  assertRegularFile(source);
-  const reservation = openSync(destination, 'wx', 0o600);
-  closeSync(reservation);
-  try {
-    replaceDurable(source, bytes);
-    const destinationStat = lstatSync(destination);
-    if (!destinationStat.isFile() || destinationStat.size !== 0) {
-      throw new IssueError('identity_ambiguity', 'canonical rename destination changed during mutation');
-    }
-    renameSync(source, destination);
-    fsyncDirectory(dirname(source));
-  } catch (error: unknown) {
-    rmSync(destination, { force: true });
-    if (error instanceof IssueError) throw error;
-    throw filesystemError(error, `cannot atomically rename canonical issue: ${source}`);
+    throw asIssuePersistenceError(error);
   }
 }
 
 function assertRegularFile(path: string): void {
-  if (!existsSync(path)) throw new IssueError('path_safety', 'canonical issue file does not exist');
   const stat = lstatSync(path);
-  if (stat.isSymbolicLink() || !stat.isFile()) {
-    throw new IssueError('path_safety', 'canonical issue path must be a regular non-symlink file');
-  }
+  if (stat.isSymbolicLink() || !stat.isFile())
+    throw new IssueError('path_safety', 'managed issue path must be a regular non-symlink file');
 }
 
-function readCreatedCandidate(
-  repositoryRoot: string,
-  absolutePath: string,
-  id: string,
-  location: IssueLocation,
-  issuePrefix: string,
-): IssueStorageCandidate {
-  assertContained(repositoryRoot, absolutePath);
-  const decoded = decodeIssueDocument(readFileSync(absolutePath), { expectedId: id, issuePrefix });
-  return {
-    id,
-    location,
-    path: portableRelative(repositoryRoot, absolutePath),
-    absolutePath,
-    decoded,
-  };
+function isSafeDirectory(path: string): boolean {
+  const stat = lstatSync(path);
+  return !stat.isSymbolicLink() && stat.isDirectory();
 }
 
-function assertContained(root: string, path: string): void {
-  const difference = relative(root, path);
-  if (difference === '..' || difference.startsWith(`..${sep}`) || resolve(path) === resolve(root)) {
-    throw new IssueError('path_safety', 'managed issue path escapes the repository root');
-  }
+function validateIssuePrefix(prefix: string): string {
+  if (
+    Array.from(prefix).some((character) => (character.codePointAt(0) ?? 0) <= 0x1f) ||
+    /[/\\<>:"|?*]/u.test(prefix) ||
+    prefix === '.' ||
+    prefix === '..'
+  )
+    throw new IssueError('configuration', 'configured issue prefix is unsafe');
+  return prefix;
 }
 
-function fsyncDirectory(path: string): void {
-  if (process.platform === 'win32') return;
-  const descriptor = openSync(path, 'r');
-  try {
-    fsyncSync(descriptor);
-  } finally {
-    closeSync(descriptor);
-  }
+function validateCandidateLimit(value: number): number {
+  if (!Number.isInteger(value) || value <= 0 || value > MAX_ISSUE_FILES)
+    throw new IssueError('configuration', 'issue discovery candidate limit is invalid', { limit: 'candidates' });
+  return value;
 }
 
-function temporaryPath(path: string): string {
-  return join(dirname(path), `.${randomBytes(12).toString('hex')}.tmp`);
-}
-
-function pathFinding(path: string, message: string): IssueStorageFinding {
-  return { category: 'path_safety', message, path };
+function parseCandidateName(name: string, prefix: string): string | undefined {
+  return new RegExp(`^(${escapeRegex(prefix)}\\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\\.yml$`, 'u').exec(name)?.[1];
 }
 
 function asIssueError(error: unknown, path: string, id: string): IssueError {
-  if (error instanceof IssueError) {
+  if (error instanceof IssueError)
     return new IssueError(error.category, error.message, {
       issueIds: error.issueIds ?? [id],
       paths: error.paths ?? [path],
       limit: error.limit,
       retryable: error.retryable,
     });
-  }
   return new IssueError('parse_safety', 'canonical issue could not be read', { issueIds: [id], paths: [path] });
 }
 
 function findingCategory(category: IssueError['category']): IssueStorageFinding['category'] {
-  if (
-    category === 'storage_classification' ||
-    category === 'path_safety' ||
-    category === 'parse_safety' ||
-    category === 'schema' ||
-    category === 'canonical_form' ||
-    category === 'identity_ambiguity'
-  ) {
-    return category;
-  }
-  return 'schema';
+  return [
+    'storage_classification',
+    'path_safety',
+    'parse_safety',
+    'schema',
+    'canonical_form',
+    'resource_limit',
+    'identity_ambiguity',
+  ].includes(category)
+    ? (category as IssueStorageFinding['category'])
+    : 'schema';
 }
 
-function filesystemError(error: unknown, message: string): IssueError {
-  const retryable = isErrorCode(error, 'EBUSY') || isErrorCode(error, 'EPERM');
-  return new IssueError('filesystem_durability', message, { retryable });
+function pathFinding(path: string, message: string): IssueStorageFinding {
+  return { category: 'path_safety', message, path };
+}
+
+function assertContained(root: string, path: string): void {
+  const difference = relative(root, path);
+  if (!difference || difference === '..' || difference.startsWith(`..${sep}`))
+    throw new IssueError('path_safety', 'managed issue path escapes the repository root');
+}
+
+function fsyncDirectory(path: string): void {
+  if (process.platform === 'win32' || !existsSync(path)) return;
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(path, 'r');
+    fsyncSync(descriptor);
+  } catch (error: unknown) {
+    if (!isUnsupportedDirectorySync(error)) throw error;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function isUnsupportedDirectorySync(error: unknown): boolean {
+  return ['EINVAL', 'ENOTSUP', 'EISDIR', 'EBADF'].some((code) => isErrorCode(error, code));
 }
 
 function isErrorCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
 
-function appendMap<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+function asIssuePersistenceError(error: unknown): unknown {
+  if (!(error instanceof LocalPersistenceError)) return error;
+  const category =
+    error.category === 'synchronization'
+      ? 'filesystem_durability'
+      : error.category === 'path_safety'
+        ? 'path_safety'
+        : error.category === 'resource_limit'
+          ? 'resource_limit'
+          : error.category === 'lock_contention'
+            ? 'lock_contention'
+            : 'configuration';
+  return new IssueError(category, error.message, { retryable: error.retryable });
+}
+
+function append<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   const values = map.get(key);
   if (values) values.push(value);
   else map.set(key, [value]);
@@ -681,6 +585,10 @@ function appendMap<K, V>(map: Map<K, V[]>, key: K, value: V): void {
 
 function portableRelative(root: string, path: string): string {
   return relative(root, path).split(sep).join('/');
+}
+
+function portableKey(value: string): string {
+  return value.normalize('NFKC').toLowerCase();
 }
 
 function compareCodePoints(left: string, right: string): number {

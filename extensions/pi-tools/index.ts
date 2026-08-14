@@ -87,7 +87,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'issue_create',
     label: 'Issue Create',
-    description: 'Create a canonical local issue YAML file in the project .issues/ directory.',
+    description: 'Create a canonical local issue YAML file under the configured issues.root directory.',
     parameters: Type.Object({
       type: Type.String({ description: 'Issue type: initiative, epic, story, task, or bug' }),
       title: Type.String({ description: 'Human-readable issue title' }),
@@ -118,7 +118,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'issue_list',
     label: 'Issue List',
-    description: 'List local issue files from the project .issues/ directory.',
+    description: 'List local issue files from the configured issues.root directory.',
     parameters: Type.Object({
       status: Type.Optional(Type.String({ description: 'Filter by status' })),
       type: Type.Optional(Type.String({ description: 'Filter by issue type' })),
@@ -135,7 +135,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'issue_archive',
     label: 'Issue Archive',
-    description: 'Move an issue and its active descendants to .issues/archived/.',
+    description: 'Move an issue and its active descendants under the configured issues.root archive.',
     parameters: Type.Object({
       id: Type.String({ description: 'Issue ID to archive' }),
     }),

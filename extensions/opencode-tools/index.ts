@@ -181,7 +181,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     issue_create: tool({
-      description: 'Create a canonical local issue YAML file in the project .issues/ directory.',
+      description: 'Create a canonical local issue YAML file under the configured issues.root directory.',
       args: {
         type: tool.schema.string().describe('Issue type: initiative, epic, story, task, or bug'),
         title: tool.schema.string().describe('Human-readable issue title'),
@@ -207,7 +207,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     issue_list: tool({
-      description: 'List local issue files from the project .issues/ directory.',
+      description: 'List local issue files from the configured issues.root directory.',
       args: {
         status: tool.schema.string().describe('Filter by status').optional(),
         type: tool.schema.string().describe('Filter by issue type').optional(),
@@ -346,7 +346,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     issue_archive: tool({
-      description: 'Move an issue and its active descendants to .issues/archived/.',
+      description: 'Move an issue and its active descendants under the configured issues.root archive.',
       args: {
         id: tool.schema.string().describe('Issue ID to archive'),
       },

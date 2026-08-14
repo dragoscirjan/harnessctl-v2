@@ -71,7 +71,7 @@ def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
         install(tmp_path, "unknown")
 
 
-@pytest.mark.parametrize("unsafe_path", [r"C:outside.db", r"C:\outside.db", r"..\outside.db"])
+@pytest.mark.parametrize("unsafe_path", [r"C:outside", r"C:\outside", r"..\outside"])
 def test_config_rejects_windows_native_escape_paths(tmp_path: Path, unsafe_path: str) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
@@ -81,7 +81,7 @@ def test_config_rejects_windows_native_escape_paths(tmp_path: Path, unsafe_path:
                 "version: 1",
                 "memory:",
                 "  repository:",
-                f"    cache: '{unsafe_path}'",
+                f"    root: '{unsafe_path}'",
             ]
         ),
         encoding="utf-8",
@@ -95,6 +95,8 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     first = load_config(tmp_path)
 
     assert first["paths"]["tasks"] == ".harnessctl/tasks"
+    assert first["issues"]["root"] == ".harnessctl/issues"
+    assert first["issues"]["prefix"] == "hrn-"
     assert first["issues"]["tools"].split(",") == [
         "issue_id",
         "issue_create",
@@ -112,6 +114,22 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     first["paths"]["tasks"] = "mutated"
     assert load_config(tmp_path)["paths"]["tasks"] == ".harnessctl/tasks"
     assert not (tmp_path / ".harnessctl/config.yaml").exists()
+
+
+@pytest.mark.parametrize(
+    "unsafe_root",
+    ["../issues", "/tmp/issues", r"C:\issues", ".", "nested//issues", ".harnessctl/issues/"],
+)
+def test_config_rejects_unsafe_issue_roots(tmp_path: Path, unsafe_root: str) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        f"version: 2\nissues:\n  root: '{unsafe_root}'\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="issues.root must stay inside project root"):
+        load_config(tmp_path)
 
 
 def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
@@ -154,7 +172,6 @@ def test_repository_memory_skill_is_specialized_and_bounded() -> None:
         retrieval_limit=8,
         max_chars=12_000,
         repository_root=".harnessctl/memory",
-        cache_path=".harnessctl/cache/memory-index.json",
     )
 
     assert "`memory_search`" in rendered
@@ -162,6 +179,7 @@ def test_repository_memory_skill_is_specialized_and_bounded() -> None:
     assert "Mem0" not in rendered
     assert "Graphiti" not in rendered
     assert "chain-of-thought" in rendered
+    assert ".harnessctl/cache/harnessctl.sqlite" in rendered
 
 
 def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
