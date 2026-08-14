@@ -14,7 +14,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createConfig, readConfig } from '@harnessctl/generic-tools';
+import { createConfig, createIssueRecord, getIssue, readConfig } from '@harnessctl/generic-tools';
 import { createOpencodeClient } from '@opencode-ai/sdk';
 import { describe, expect, it } from 'vitest';
 
@@ -56,7 +56,7 @@ describe('OpenCode SDK integration', () => {
       expect(result.toolNames).toContain('config_create');
       expect(existsSync(resolve(cwd, '.harnessctl/config.yaml'))).toBe(true);
       expect(readConfig(cwd)).toMatchObject({
-        version: 1,
+        version: 2,
         paths: { tasks: '.harnessctl/tasks' },
       });
       expect(result.text.toLowerCase()).toContain('created');
@@ -95,7 +95,7 @@ describe('OpenCode SDK integration', () => {
       );
 
       expect(normalizeToolNames(result.toolNames)).toContain('issue_create');
-      expect(existsSync(resolve(cwd, '.issues/00001/issue.md'))).toBe(true);
+      expect(existsSync(resolve(cwd, '.harnessctl/issues/hrn-00001-document-integration-coverage.yml'))).toBe(true);
       expect(extractIssueNumbers(result.text)).toEqual(['00001']);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -106,19 +106,8 @@ describe('OpenCode SDK integration', () => {
     const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-issue-list-'));
 
     try {
-      mkdirSync(resolve(cwd, '.issues'), { recursive: true });
-      mkdirSync(resolve(cwd, '.issues/00001'), { recursive: true });
-      writeFileSync(
-        resolve(cwd, '.issues/00001/issue.md'),
-        '---\nid: "00001"\ntype: task\ntitle: "First task"\nstatus: open\n---\n',
-        'utf8',
-      );
-      mkdirSync(resolve(cwd, '.issues/00002'), { recursive: true });
-      writeFileSync(
-        resolve(cwd, '.issues/00002/issue.md'),
-        '---\nid: "00002"\ntype: bug\ntitle: "Second bug"\nstatus: closed\n---\n',
-        'utf8',
-      );
+      writeIssueFixture(cwd, 'hrn-00001', 'First task', 'open');
+      writeIssueFixture(cwd, 'hrn-00002', 'Second bug', 'closed', 'bug');
       writeOpenCodeProjectConfig(cwd);
       const result = await promptOpenCode(
         cwd,
@@ -138,11 +127,11 @@ describe('OpenCode SDK integration', () => {
 
       try {
         createConfig(cwd);
-        writeIssueFixture(cwd, '00001', 'Lifecycle task', 'open');
+        writeIssueFixture(cwd, 'hrn-00001', 'Lifecycle task', 'open');
         writeOpenCodeProjectConfig(cwd);
         const result = await promptOpenCode(
           cwd,
-          'Use these tools exactly once in order for issue 00001: issue_get, then use its returned revision as expectedRevision for issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, then use the updated revision for issue_transition to done, issue_comment with body "Reviewed" and author "integration", and issue_validate. After all tools succeed, reply with only done.',
+          'Use these tools exactly once in order for issue hrn-00001: issue_get, then use its returned revision as expectedRevision for issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, then use the updated revision for issue_transition to done, issue_comment with body "Reviewed" and author "integration", and issue_validate. After all tools succeed, reply with only done.',
         );
 
         expect(normalizeToolNames(result.toolNames)).toEqual([
@@ -152,11 +141,13 @@ describe('OpenCode SDK integration', () => {
           'issue_comment',
           'issue_validate',
         ]);
-        const issue = readIssueFixture(cwd, '00001');
+        const issue = readIssueFixture(cwd, 'hrn-00001');
         expect(issue).toContain('title: Updated lifecycle task');
         expect(issue).toContain('status: done');
         expect(issue).toContain('## Summary');
-        expect(existsSync(resolve(cwd, '.issues/00001/comments/0001.md'))).toBe(true);
+        expect(getIssue(cwd, 'hrn-00001').comments).toEqual([
+          expect.objectContaining({ body: 'Reviewed', created_by: 'integration' }),
+        ]);
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }
@@ -167,17 +158,17 @@ describe('OpenCode SDK integration', () => {
 
       try {
         createConfig(cwd);
-        writeIssueFixture(cwd, '00001', 'Archive source', 'open');
-        writeIssueFixture(cwd, '00002', 'Related target', 'open');
+        writeIssueFixture(cwd, 'hrn-00001', 'Archive source', 'open');
+        writeIssueFixture(cwd, 'hrn-00002', 'Related target', 'open');
         writeOpenCodeProjectConfig(cwd);
         const result = await promptOpenCode(
           cwd,
-          'Use these tools exactly once in order: issue_relate with id 00001, relationship blocks, targetId 00002; issue_unrelate with the same arguments; issue_archive with id 00001. After all tools succeed, reply with only archived.',
+          'Use these tools exactly once in order: issue_relate with id hrn-00001, relationship blocks, targetId hrn-00002; issue_unrelate with the same arguments; issue_archive with id hrn-00001. After all tools succeed, reply with only archived.',
         );
 
         expect(normalizeToolNames(result.toolNames)).toEqual(['issue_relate', 'issue_unrelate', 'issue_archive']);
-        expect(existsSync(resolve(cwd, '.issues/archived/00001/issue.md'))).toBe(true);
-        expect(existsSync(resolve(cwd, '.issues/00002/issue.md'))).toBe(true);
+        expect(getIssue(cwd, 'hrn-00001').location).toBe('archived');
+        expect(getIssue(cwd, 'hrn-00002').location).toBe('active');
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }
@@ -188,17 +179,17 @@ describe('OpenCode SDK integration', () => {
 
       try {
         createConfig(cwd);
-        writeIssueFixture(cwd, '00001', 'Documented task', 'open');
+        writeIssueFixture(cwd, 'hrn-00001', 'Documented task', 'open');
         mkdirSync(resolve(cwd, '.harnessctl/tasks/00001'), { recursive: true });
         writeFileSync(resolve(cwd, '.harnessctl/tasks/00001/plan.md'), '# Plan\n', 'utf8');
         writeOpenCodeProjectConfig(cwd);
         const result = await promptOpenCode(
           cwd,
-          'Use issue_link_document exactly once with id 00001, path .harnessctl/tasks/00001/plan.md, and kind task. After it succeeds, reply with only linked.',
+          'Use issue_link_document exactly once with id hrn-00001, path .harnessctl/tasks/00001/plan.md, and kind task. After it succeeds, reply with only linked.',
         );
 
         expect(normalizeToolNames(result.toolNames)).toEqual(['issue_link_document']);
-        expect(readIssueFixture(cwd, '00001')).toContain('.harnessctl/tasks/00001/plan.md');
+        expect(readIssueFixture(cwd, 'hrn-00001')).toContain('.harnessctl/tasks/00001/plan.md');
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }
@@ -219,17 +210,13 @@ function writeOpenCodeProjectConfig(cwd: string): void {
   );
 }
 
-function writeIssueFixture(cwd: string, id: string, title: string, status: string): void {
-  mkdirSync(resolve(cwd, `.issues/${id}`), { recursive: true });
-  writeFileSync(
-    resolve(cwd, `.issues/${id}/issue.md`),
-    `---\nid: "${id}"\ntype: task\ntitle: "${title}"\nstatus: ${status}\ncreated_at: "2026-01-01T00:00:00.000Z"\nupdated_at: "2026-01-01T00:00:00.000Z"\ncreated_by: "integration"\n---\n\n# ${title}\n`,
-    'utf8',
-  );
+function writeIssueFixture(cwd: string, id: string, title: string, status: string, type = 'task'): void {
+  const created = createIssueRecord(cwd, { type, title, status, author: 'integration' });
+  expect(created.id).toBe(id);
 }
 
 function readIssueFixture(cwd: string, id: string): string {
-  return readFileSync(resolve(cwd, `.issues/${id}/issue.md`), 'utf8');
+  return readFileSync(resolve(cwd, getIssue(cwd, id).path), 'utf8');
 }
 
 async function promptOpenCode(cwd: string, prompt: string): Promise<{ text: string; toolNames: string[] }> {

@@ -7,15 +7,13 @@ import {
   type ConfigDocument,
 } from './config.js';
 export {
-  archiveIssue,
   archiveIssueReport,
   commentIssue,
-  createIssue,
   createIssueRecord,
+  createFilesystemIssueProvider,
   getIssue,
   linkDocument,
   listIssueSummaries,
-  listIssues,
   parseIssueId,
   parseIssueIds,
   relateIssue,
@@ -37,7 +35,27 @@ export type {
   Relationship,
   ValidationFinding,
   ValidationReport,
+  FilesystemIssueProvider,
+  FilesystemIssueProviderOptions,
 } from './issues.js';
+export {
+  IssueError,
+  IssueToolResultEncoder,
+  decodeCanonicalIssue,
+  decodeIssueDocument,
+  encodeIssueToolResult,
+  issueMetadataText,
+  parseIssueMetadataText,
+} from './issues-contract.js';
+export type {
+  DecodeIssueOptions,
+  DecodedIssueDocument,
+  IssueErrorCategory,
+  IssueMetadata,
+  IssueMetadataText,
+  IssueMetadataValue,
+} from './issues-contract.js';
+export type { IssueStorageCatalog, IssueStorageCandidate, IssueStorageStatus } from './issues-storage.js';
 
 export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };

@@ -1,0 +1,21 @@
+"version": 1
+"id": "hrn-00030"
+"type": "story"
+"title": "Migrate legacy issues before YAML rollout"
+"status": "done"
+"created_at": "2026-08-14T13:16:30.809Z"
+"updated_at": "2026-08-14T21:44:49.614Z"
+"created_by": "lead-engineer"
+"assigned_to": "tech-advisor"
+"parent": "hrn-00025"
+"depends_on":
+  - "hrn-00028"
+"metadata":
+  "implementation": "deferred"
+  "scope": "rollout-gate"
+"body": "\n# Migrate legacy issues before YAML rollout\n\n## Story\n\nAs a repository maintainer\nI want an explicit migration and rollout plan for legacy Markdown issues\nSo that canonical YAML storage is never enabled against an incompatible repository silently.\n\n## Scope\n\n- Define legacy Markdown/frontmatter and comment-folder discovery.\n- Define an explicit, separately invoked migration.\n- Preserve every managed field and comment.\n- Validate migrated YAML before removing or archiving legacy inputs.\n- Define backup, rollback, dry-run, and mixed-format rejection behavior.\n- Gate production rollout of canonical YAML issue storage until migration is delivered.\n\n## Out of Scope\n\nImplementation is deferred and is not part of Epic #hrn-00028 or the current Initiative implementation request.\n\n## Acceptance Criteria\n\n### Scenario: Explicit migration\n\nGiven legacy issue storage exists\nWhen canonical YAML storage is introduced\nThen no migration occurs implicitly\nAnd users receive an actionable migration requirement.\n\n### Scenario: Safe future rollout\n\nGiven a future migration implementation\nWhen migration succeeds\nThen all issue-managed state and comments are preserved\nAnd canonical YAML validates before legacy state is retired.\n"
+"comments":
+  - "id": "hrn-00030-C0001"
+    "created_at": "2026-08-14T21:44:49.482Z"
+    "created_by": "lead-engineer"
+    "body": "Migrated 24 file-based issues to hrn-00001..hrn-00024 and appended 15 folder-based issues as hrn-00025..hrn-00039. Preserved bodies, metadata, hierarchy, dependencies, documents, and comments; canonical validation and SQLite synchronization passed."

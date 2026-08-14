@@ -1,19 +1,24 @@
-import { posix } from 'node:path';
 import * as z from 'zod';
 
 const nonemptyString = z.string().min(1).regex(/\S/, 'must not be blank');
 const safeProjectPath = nonemptyString.regex(
-  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*(?:^|\/)\.\.(?:\/|$)).+$/,
+  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*\/\/)(?!.*\/$)(?!.*(?:^|\/)\.{1,2}(?:\/|$)).+$/,
   'must stay inside project root',
 );
-
-function canonicalProjectPath(value: string): string {
-  return posix.normalize(value).replace(/^\.\//, '').replace(/\/$/, '');
-}
 
 export const configV2Schema = z
   .object({
     version: z.literal(2),
+    issues: z
+      .object({
+        root: safeProjectPath,
+        prefix: z
+          .string()
+          .regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
+        type: z.literal('filesystem'),
+        tools: nonemptyString,
+      })
+      .strict(),
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),
@@ -37,26 +42,16 @@ export const configV2Schema = z
             include_superseded: z.boolean(),
           })
           .strict(),
-        repository: z.object({ root: safeProjectPath, cache: safeProjectPath }).strict(),
+        // Deliberately loose for one compatibility release: the retired
+        // repository.cache key is accepted as input but never used.
+        repository: z.looseObject({ root: safeProjectPath }),
       })
       .strict(),
   })
   .passthrough()
-  .superRefine((config, context) => {
-    const root = canonicalProjectPath(config.memory.repository.root);
-    const cache = canonicalProjectPath(config.memory.repository.cache);
-    const relativeCache = posix.relative(root, cache);
-    if (relativeCache === '' || (!relativeCache.startsWith('../') && relativeCache !== '..')) {
-      context.addIssue({
-        code: 'custom',
-        path: ['memory', 'repository', 'cache'],
-        message: 'must be outside memory.repository.root',
-      });
-    }
-  })
   .meta({
     description:
-      'Repository paths are project-relative. Cache containment is also checked at runtime after canonical path normalization because standard JSON Schema cannot compare sibling path values.',
+      'Repository paths are project-relative. The local SQLite cache uses the fixed .harnessctl/cache/harnessctl.sqlite path.',
   });
 
 export type ConfigV2 = z.infer<typeof configV2Schema>;

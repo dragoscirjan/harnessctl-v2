@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00005"
+"type": "task"
+"title": "Implement Pi configuration adapter"
+"status": "open"
+"created_at": "2026-07-15T23:03:19.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00002"
+"depends_on":
+  - "hrn-00003"
+"body": "\n# Implement Pi configuration adapter\n\n## Technical Requirements\n\n- Create `extensions/pi-tools` as `@harnessctl/pi-tools`.\n- Register equivalent `config_create` and `config_get` tools through the Pi\n  extension API.\n- Delegate all configuration behavior to `@harnessctl/generic-tools`.\n- Keep the package independent of OpenCode APIs.\n\n## Acceptance Criteria\n\n- [ ] The package uses the `@harnessctl/pi-tools` name.\n- [ ] Both tools are registered through the Pi host API.\n- [ ] No configuration logic is duplicated from the generic package.\n- [ ] Package validation passes.\n"
+"comments": []

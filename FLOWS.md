@@ -38,6 +38,22 @@ The issue-management tools own IDs, parent/child relationships, dependencies, an
 document links. The assistant proposes content and intent; it must not allocate IDs
 or manually rewrite issue files.
 
+Filesystem issues use one canonical, versioned YAML document under configurable
+`issues.root`, defaulting to `.harnessctl/issues/<id>-<title-slug>.yml`; archived
+issues use the same filename under its `archived/` child. The document contains all
+managed state, including body and append-only comments. The default ID prefix is
+`hrn-`. Safe, semantically valid YAML presentation is accepted and tool writes are
+deterministic. Legacy `<issues.root>/<id>/issue.md` and mixed storage are unsupported;
+there is no legacy migration in harnessctl.
+
+All local issue and enabled repository-memory operations use one exclusive project
+barrier. Reads always come from filesystem YAML. Successful mutations synchronously
+write through to the disposable `.harnessctl/cache/harnessctl.sqlite`; missing, stale,
+corrupt, or incompatible cache state is rebuilt internally from valid canonical YAML.
+There are no application journals, projection sinks, dirty protocols, cache-first
+agent reads, or agent cache tools. Remote memory backends bypass this local cache.
+Installation does not create the database; first runtime use does.
+
 ## 2. Command vocabulary
 
 This document uses **short stage labels** in flow diagrams and command contracts for
@@ -527,7 +543,7 @@ yet generate or link them automatically.
 **Artifacts:**
 
 ```text
-.issues/<task-id>/issue.md
+.harnessctl/issues/<task-id>-<title-slug>.yml
 .harnessctl/write-tasks/<task-id>/task.yaml
 .harnessctl/write-tasks/<task-id>/links.md
 ```
@@ -774,6 +790,10 @@ The assistant must stop and report `BLOCKED` when:
 ### Implemented
 
 - Generic filesystem issue tools and relationships.
+- Safe permissive canonical YAML reads with deterministic writes.
+- Canonical filesystem reads plus synchronous issue and repository-memory
+  write-through to one disposable SQLite cache.
+- One shared local-operation barrier and internal cache rebuild/repair.
 - OpenCode and Pi adapter tools.
 - uv/Jinja prompt installer.
 - `work-new`, `work-explore`, and `work-plan` prompt templates, although their
@@ -800,6 +820,7 @@ The assistant must stop and report `BLOCKED` when:
 - Pi grouped command extension.
 - Orchestrator, workers, model tiers, retry, ensemble, and escalation routing.
 - External tracker adapters and self-development mode.
+- Legacy issue migration, agent cache tools, and remote-backend local caching.
 - Automatic merge.
 
 ## 22. Recommended implementation order

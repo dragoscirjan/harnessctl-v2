@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M00AZB016K43J6T1WH2ME90G
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: task-00012
+summary: Implemented cache-ready filesystem issue projections and mutation notifications with lossless OpenCode/Pi metadata handling.
+details: Generic tools now export projection/provider and exact-result contracts; committed mutations notify an idempotent sink, retain dirty recovery state on failure, and replay notifications. Adapter tests exercise every issue operation and exact large-number metadata. Workspace lint, strict typecheck, tests (80 generic, 2 OpenCode, 3 Pi), and package build passed.
+source:
+  kind: artifact
+  ref: extensions/generic-tools/issues-storage.ts
+  revision: null
+created_at: 2026-08-14T14:31:47.969Z
+created_by: backend-dev
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - issues
+  - projection
+  - adapters
+  - task-00012

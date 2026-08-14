@@ -225,3 +225,5 @@ tmp/
 .memory.jsonl
 .memory.db
 .web_stash.db
+.ai.tmp/
+/.harnessctl/cache/

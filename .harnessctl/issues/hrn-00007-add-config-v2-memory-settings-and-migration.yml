@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00007"
+"type": "task"
+"title": "Add config v2 memory settings and migration"
+"status": "done"
+"created_at": "2026-08-12T13:08:50.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"body": "\n# Add config v2 memory settings and migration\n\nGiven an existing v1 project config\nWhen config is loaded or created\nThen backward-compatible v2 communication and memory settings are validated consistently.\n\n## Technical Requirements\n\n- Add canonical config v2 schema, defaults, migration, and shared fixtures per LLD.\n- Accept only `repository` memory backend in v2.\n- Reject unsafe paths, invalid namespaces, and unsupported modes.\n\n## Acceptance Criteria\n\n- [x] Python and TypeScript agree on valid and invalid fixtures.\n- [x] Existing v1 config remains usable with documented defaults.\n- [x] Config tests pass.\n"
+"comments":
+  - "id": "hrn-00007-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "- 2026-08-11: Added config v2 defaults/schema, v1 migration, validation, fixtures, and passing focused tests/typecheck.\n- 2026-08-12: Verified all acceptance criteria through Python and TypeScript config tests."

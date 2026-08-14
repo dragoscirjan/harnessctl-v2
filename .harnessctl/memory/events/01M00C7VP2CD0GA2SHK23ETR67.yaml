@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M00C7VP2CD0GA2SHK23ETR67
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: canonical-yaml-issue-storage
+summary: "Round-2 recovery blockers fixed: staged symlink rejection, canonical after-image revalidation, control-evidence validation, and fault/concurrency tests."
+details: issues-transactions now rejects symlinked staging roots/files, decode/re-encodes every staged after-image and reconciles manifest digest/revision/path/action/ID inventory before canonical or projection publication. validateIssues reports projection-dirty and retained transaction evidence with transaction IDs/remedies. Full mise quality passed (97 generic tests plus adapters and Python).
+source:
+  kind: artifact
+  ref: extensions/generic-tools/issues-transactions.ts
+  revision: null
+created_at: 2026-08-14T14:53:55.778Z
+created_by: backend-dev
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - recovery
+  - issues
+  - validation
+  - tests

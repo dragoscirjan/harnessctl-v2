@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00036"
+"type": "task"
+"title": "Add issue projection boundary and adapter compatibility"
+"status": "done"
+"created_at": "2026-08-14T13:44:04.551Z"
+"updated_at": "2026-08-14T14:32:29.877Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00028"
+"depends_on":
+  - "hrn-00035"
+"body": "\n# Add issue projection boundary and adapter compatibility\n\nGiven host adapters and a future local cache\nWhen issue entities are queried or mutated\nThen filesystem decoding/projection and mutation notifications remain separate from OpenCode/Pi registration.\n\n## Deliverables\n\n- Cache-ready issue provider projection boundary.\n- OpenCode/Pi adapter compatibility, including lossless metadata handling.\n- Adapter tests across all issue tools.\n\n## Acceptance\n\n- [x] Provider exposes deterministic projected entities and successful mutation notifications.\n- [x] Remote providers remain outside local persistence behavior.\n- [x] Adapter payloads preserve accepted metadata semantics.\n"
+"comments": []

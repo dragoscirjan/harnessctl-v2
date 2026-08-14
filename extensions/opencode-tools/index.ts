@@ -4,6 +4,7 @@ import {
   commentIssue,
   createConfig,
   createIssueRecord,
+  encodeIssueToolResult,
   getIssue,
   getConfigValue,
   deleteMemory,
@@ -23,6 +24,7 @@ import {
   unrelateIssue,
   updateIssue,
   validateIssues,
+  issueMetadataText,
 } from '@harnessctl/generic-tools';
 import { tool, type Plugin } from '@opencode-ai/plugin';
 
@@ -175,11 +177,11 @@ export const CustomToolsPlugin: Plugin = async () => ({
         prompt: tool.schema.string().describe('Text containing an issue ID'),
       },
       async execute(args, context) {
-        return JSON.stringify(parseIssueIds(args.prompt, context.directory));
+        return encodeIssueToolResult(parseIssueIds(args.prompt, context.directory));
       },
     }),
     issue_create: tool({
-      description: 'Create a local issue file in the project .issues/ directory.',
+      description: 'Create a canonical local issue YAML file under the configured issues.root directory.',
       args: {
         type: tool.schema.string().describe('Issue type: initiative, epic, story, task, or bug'),
         title: tool.schema.string().describe('Human-readable issue title'),
@@ -193,10 +195,10 @@ export const CustomToolsPlugin: Plugin = async () => ({
       async execute(args, context) {
         try {
           const { metadata, ...fields } = args;
-          return JSON.stringify(
+          return encodeIssueToolResult(
             createIssueRecord(context.directory, {
               ...fields,
-              metadata: metadata ? parseJsonObject(metadata) : undefined,
+              ...(metadata === undefined ? {} : { metadataText: issueMetadataText(metadata) }),
             }),
           );
         } catch (error: unknown) {
@@ -205,14 +207,14 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     issue_list: tool({
-      description: 'List local issue files from the project .issues/ directory.',
+      description: 'List local issue files from the configured issues.root directory.',
       args: {
         status: tool.schema.string().describe('Filter by status').optional(),
         type: tool.schema.string().describe('Filter by issue type').optional(),
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(listIssueSummaries(context.directory, args));
+          return encodeIssueToolResult(listIssueSummaries(context.directory, args));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -223,7 +225,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       args: { id: tool.schema.string().describe('Issue ID') },
       async execute(args, context) {
         try {
-          return JSON.stringify(getIssue(context.directory, args.id));
+          return encodeIssueToolResult(getIssue(context.directory, args.id));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -246,7 +248,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       async execute(args, context) {
         try {
           const { id, sections, ...changes } = args;
-          return JSON.stringify(
+          return encodeIssueToolResult(
             updateIssue(context.directory, id, {
               ...changes,
               sections: sections ? (parseJsonObject(sections) as Record<string, string>) : undefined,
@@ -266,7 +268,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(transitionIssue(context.directory, args.id, args.status, args.expectedRevision));
+          return encodeIssueToolResult(transitionIssue(context.directory, args.id, args.status, args.expectedRevision));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -281,7 +283,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(commentIssue(context.directory, args.id, args.body, args.author));
+          return encodeIssueToolResult(commentIssue(context.directory, args.id, args.body, args.author));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -296,7 +298,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(relateIssue(context.directory, args.id, args.relationship, args.targetId));
+          return encodeIssueToolResult(relateIssue(context.directory, args.id, args.relationship, args.targetId));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -311,7 +313,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(unrelateIssue(context.directory, args.id, args.relationship, args.targetId));
+          return encodeIssueToolResult(unrelateIssue(context.directory, args.id, args.relationship, args.targetId));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -326,7 +328,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(linkDocument(context.directory, args.id, args.path, args.kind));
+          return encodeIssueToolResult(linkDocument(context.directory, args.id, args.path, args.kind));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
@@ -337,20 +339,20 @@ export const CustomToolsPlugin: Plugin = async () => ({
       args: { id: tool.schema.string().describe('Optional issue ID').optional() },
       async execute(args, context) {
         try {
-          return JSON.stringify(validateIssues(context.directory, args.id));
+          return encodeIssueToolResult(validateIssues(context.directory, args.id));
         } catch (error: unknown) {
           return formatIssueError(error);
         }
       },
     }),
     issue_archive: tool({
-      description: 'Move an issue and its active descendants to .issues/archived/.',
+      description: 'Move an issue and its active descendants under the configured issues.root archive.',
       args: {
         id: tool.schema.string().describe('Issue ID to archive'),
       },
       async execute(args, context) {
         try {
-          return JSON.stringify(archiveIssueReport(context.directory, args.id));
+          return encodeIssueToolResult(archiveIssueReport(context.directory, args.id));
         } catch (error: unknown) {
           return formatIssueError(error);
         }

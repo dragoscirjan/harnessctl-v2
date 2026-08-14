@@ -338,11 +338,16 @@ Current installer targets:
 
 Implemented in `extensions/generic-tools/`:
 
-- Prefix-based issue ID allocation.
+- One versioned, canonical YAML document per issue under configurable
+  `issues.root` (default `.harnessctl/issues`), or its `archived/` child after
+  archival.
+- Complete issue-managed state in that document, including the Markdown body,
+  relationships, metadata, document links, and append-only comments.
+- Prefix-based issue ID allocation, defaulting to `hrn-` (`hrn-00001`).
 - Multi-ID prompt extraction.
 - Structured issue creation and listing.
 - Issue retrieval and updates.
-- Mandatory revision-aware updates and per-issue locking.
+- Mandatory revision-aware updates and one shared project-local operation barrier.
 - Status transitions.
 - Append-only comments.
 - Parent/child hierarchy.
@@ -350,6 +355,45 @@ Implemented in `extensions/generic-tools/`:
 - Document links.
 - Validation reports.
 - Recursive archive with rollback and archived-descendant handling.
+
+Issue YAML uses a safe, permissive reader: semantically valid formatting, quoting,
+and field ordering are accepted, while aliases, merge keys, explicit tags, duplicate
+keys, multiple documents, unsafe paths, and invalid schema values are rejected. Tool
+writes are deterministic. Parent, child, blocking, and symmetric relationship views
+are derived from a single persisted direction rather than duplicated across files.
+
+### Simplified local persistence
+
+Filesystem issues and enabled repository memory are the only canonical local state.
+Every issue get/list/validation and memory get/list/search/export operation reads YAML
+from the filesystem; SQLite never supplies an agent result or repairs YAML.
+
+Participating local issue and repository-memory operations share one exclusive,
+non-reentrant barrier at `.harnessctl/cache/local-operations.lock`. Canonical writes
+use same-directory replacement and bounded in-process rollback for ordinary failures.
+There are no application transaction journals, projection sinks or change sets,
+dirty markers, startup roll-forward, or agent-facing cache tools. A process crash can
+leave partial canonical state; later validation reports it for manual correction.
+
+After each successful issue or repository-memory mutation, harnessctl synchronously
+refreshes the disposable cache at `.harnessctl/cache/harnessctl.sqlite`. Missing,
+stale, corrupt, incompatible, or failed direct synchronization is repaired internally
+by rebuilding the complete cache from valid canonical YAML. A failed repair returns an
+error even though canonical data may already be committed. The cache uses lazily
+loaded runtime-specific SQLite support: `bun:sqlite` on supported Bun and
+`node:sqlite` on supported Node. Remote memory backends bypass this local barrier and
+cache; only the repository backend is currently implemented by generic-tools.
+
+Installation does not create or initialize the SQLite file. It only ignores the
+cache directory when repository memory is installed; the first participating runtime
+operation creates or repairs the cache.
+
+#### Canonical issue storage compatibility
+
+Canonical YAML storage operates on an empty configured `issues.root` or a root that
+already contains canonical issue files. Legacy `<issues.root>/<id>/issue.md` and mixed
+layouts are unsupported and fail closed. Harnessctl provides no legacy migration;
+repositories must be converted outside these tools before canonical operations begin.
 
 ### Harness adapters
 
@@ -573,14 +617,14 @@ before taking action.
 
 ## Important documents
 
-| Document                                                                              | Purpose                                       |
-| ------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `.specs/00001-prd-human-governed-sdlc-v1.md`                                          | Product and architecture baseline             |
-| `.specs/00002-lld-filesystem-issue-management-v2.md`                                  | Filesystem issue-management design            |
-| `.specs/00003-lld-harness-neutral-sdlc-prompt-templates-and-harness-installers-v2.md` | Prompt templates and installer design         |
-| `.issues/00001-initiative-human-governed-extensible-sdlc-for-coding-harnesses.md`     | Long-term initiative and roadmap              |
-| `mise.toml`                                                                           | Root tool versions and cross-language tasks   |
-| `pyproject.toml`                                                                      | Python dependencies and quality configuration |
+| Document                                                                                     | Purpose                                       |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `.specs/00001-prd-human-governed-sdlc-v1.md`                                                 | Product and architecture baseline             |
+| `.specs/00002-lld-filesystem-issue-management-v2.md`                                         | Filesystem issue-management design            |
+| `.specs/00003-lld-harness-neutral-sdlc-prompt-templates-and-harness-installers-v2.md`        | Prompt templates and installer design         |
+| `.harnessctl/issues/00001-initiative-human-governed-extensible-sdlc-for-coding-harnesses.md` | Long-term initiative and roadmap              |
+| `mise.toml`                                                                                  | Root tool versions and cross-language tasks   |
+| `pyproject.toml`                                                                             | Python dependencies and quality configuration |
 
 ## Human-only boundaries
 

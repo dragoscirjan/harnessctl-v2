@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00008"
+"type": "task"
+"title": "Package OpenCode adapter and plugin registration"
+"status": "done"
+"created_at": "2026-08-12T13:09:51.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00007"
+"body": "\n# Package OpenCode adapter and plugin registration\n\nGiven an OpenCode project\nWhen harnessctl enables repository memory\nThen exact-version adapter dependency and auto-discovered plugin shim can be installed safely.\n\n## Technical Requirements\n\n- Make `@harnessctl/opencode-tools` publishable compiled ESM.\n- Define exact-version package merge and fixed plugin shim contract.\n- Preserve unrelated package fields and support exact-byte rollback.\n\n## Acceptance Criteria\n\n- [ ] Package exports and runtime dependencies are complete.\n- [ ] Compatible merge succeeds; incompatible version conflicts without force.\n- [ ] Registration packaging tests pass.\n"
+"comments":
+  - "id": "hrn-00008-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "- 2026-08-11: Added compiled ESM exports/builds and exact runtime dependencies; package dry-run contains only publishable artifacts."

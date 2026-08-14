@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00033"
+"type": "task"
+"title": "Implement issue mutation locks and recovery"
+"status": "done"
+"created_at": "2026-08-14T13:43:48.382Z"
+"updated_at": "2026-08-14T14:09:52.229Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00028"
+"depends_on":
+  - "hrn-00032"
+"body": "\n# Implement issue mutation locks and recovery\n\nGiven concurrent or interrupted issue mutations\nWhen recovery or a new mutation starts\nThen one project lock serializes state changes and prepared transactions recover idempotently before classification.\n\n## Deliverables\n\n- `issues-transactions.ts` lock, manifests, staged writes, fsync/rename rules, recovery, conflicts.\n- Final destination revalidation before committed marker.\n- Cross-platform durability behavior and fault-injection tests.\n\n## Acceptance\n\n- [x] Stale revisions and external edits never overwrite canonical state.\n- [x] Exact completed actions roll forward idempotently.\n- [x] Mismatched destination bytes produce hard conflicts without overwrite.\n"
+"comments": []

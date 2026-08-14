@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00003"
+"type": "task"
+"title": "Implement generic configuration package"
+"status": "open"
+"created_at": "2026-07-15T23:03:19.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00002"
+"body": "\n# Implement generic configuration package\n\n## Technical Requirements\n\n- Create `extensions/generic-tools` as `@harnessctl/generic-tools`.\n- Implement default `.harnessctl/config.yaml` creation without overwriting.\n- Parse YAML and resolve dotted paths such as `paths.tasks`.\n- Return explicit results for missing files, malformed YAML, empty paths, and\n  missing keys.\n- Add unit tests for creation, parsing, lookup, and error cases.\n\n## Acceptance Criteria\n\n- [ ] Generic code imports no OpenCode or Pi SDK.\n- [ ] A new project receives the harness-neutral default config.\n- [ ] Existing config files remain unchanged.\n- [ ] `config-get` resolves nested scalar and mapping values.\n- [ ] Generic package validation passes.\n"
+"comments": []

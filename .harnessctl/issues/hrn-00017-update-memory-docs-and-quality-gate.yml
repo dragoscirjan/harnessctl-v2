@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00017"
+"type": "task"
+"title": "Update memory docs and quality gate"
+"status": "open"
+"created_at": "2026-08-11T23:13:51.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00016"
+"body": "\n# Update memory docs and quality gate\n\nGiven completed implementation\nWhen maintainers and users inspect or validate project\nThen documentation is accurate and all required checks run from the main quality target.\n\n## Technical Requirements\n\n- Update README/FLOWS with skill install, config, authority, security, and backend status.\n- Add strict TypeScript typecheck and memory validation to quality gate.\n- Document test procedure and known Pi/remote limitations.\n\n## Acceptance Criteria\n\n- [ ] Documentation matches shipped behavior.\n- [ ] Full quality suite includes strict typecheck and passes.\n- [ ] User-facing install/test steps are reproducible.\n"
+"comments": []

@@ -9,13 +9,19 @@ import { configV2Schema, formatSchemaError, memoryRecordSchema, memoryTombstoneS
 
 const validConfig = {
   version: 2,
+  issues: {
+    root: '.harnessctl/issues',
+    prefix: 'hrn-',
+    type: 'filesystem',
+    tools: 'issue_id,issue_create',
+  },
   communication: { caveman: { enabled: true, mode: 'strict' } },
   memory: {
     enabled: true,
     backend: 'repository',
     namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
     retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
-    repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory-index.json' },
+    repository: { root: '.harnessctl/memory' },
   },
 };
 
@@ -44,6 +50,7 @@ describe('canonical Zod schemas', () => {
   it('produces readable configuration errors with field paths', () => {
     const result = configV2Schema.safeParse({
       version: 2,
+      issues: validConfig.issues,
       communication: { caveman: { enabled: true, mode: 'verbose' } },
       memory: {
         enabled: false,
@@ -59,20 +66,6 @@ describe('canonical Zod schemas', () => {
     const message = formatSchemaError(result.error);
     expect(message).toContain('communication.caveman.mode');
     expect(message).toContain('memory.retrieval.limit');
-    const crossFieldResult = configV2Schema.safeParse({
-      version: 2,
-      communication: { caveman: { enabled: true, mode: 'strict' } },
-      memory: {
-        enabled: false,
-        backend: 'repository',
-        namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
-        retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
-        repository: { root: '.harnessctl/memory', cache: '.harnessctl/memory/cache.db' },
-      },
-    });
-    expect(crossFieldResult.success).toBe(false);
-    const crossFieldMessage = crossFieldResult.success ? '' : formatSchemaError(crossFieldResult.error);
-    expect(crossFieldMessage).toContain('memory.repository.cache');
   });
 
   it('uses generated portable contracts with stable identities', () => {
@@ -123,16 +116,18 @@ describe('canonical Zod schemas', () => {
     expect(formatSchemaError(result.error)).toContain('memory_type');
   });
 
-  it('rejects unsafe and canonically nested repository paths', () => {
-    for (const repository of [
-      { root: '.harnessctl/memory', cache: 'C:outside.db' },
-      { root: '.harnessctl/memory', cache: '..\\outside.db' },
-      { root: '.harnessctl/memory/', cache: '.harnessctl/./memory/cache.db' },
-    ]) {
+  it('rejects unsafe canonical roots and tolerates the retired cache key', () => {
+    for (const repository of [{ root: '../memory' }, { root: '..\\memory' }, { root: '.harnessctl/memory/' }]) {
       expect(configV2Schema.safeParse({ ...validConfig, memory: { ...validConfig.memory, repository } }).success).toBe(
         false,
       );
     }
+    expect(
+      configV2Schema.safeParse({
+        ...validConfig,
+        memory: { ...validConfig.memory, repository: { root: '.harnessctl/memory', cache: 'legacy/cache.json' } },
+      }).success,
+    ).toBe(true);
   });
 
   it('makes generated contracts reject expressible invalid values', () => {
@@ -150,7 +145,7 @@ describe('canonical Zod schemas', () => {
     expect(
       validateConfig({
         ...validConfig,
-        memory: { ...validConfig.memory, repository: { root: '.harnessctl/memory', cache: 'C:outside.db' } },
+        memory: { ...validConfig.memory, repository: { root: '../memory' } },
       }),
     ).toBe(false);
     expect(validateMemory({ ...validRecord, memory_type: 'episodic' })).toBe(false);
