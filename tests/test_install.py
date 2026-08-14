@@ -91,6 +91,52 @@ def test_config_rejects_windows_native_escape_paths(tmp_path: Path, unsafe_path:
         load_config(tmp_path)
 
 
+def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
+    first = load_config(tmp_path)
+
+    assert first["paths"]["tasks"] == ".harnessctl/tasks"
+    assert first["issues"]["tools"].split(",") == [
+        "issue_id",
+        "issue_create",
+        "issue_list",
+        "issue_get",
+        "issue_update",
+        "issue_transition",
+        "issue_comment",
+        "issue_relate",
+        "issue_unrelate",
+        "issue_link_document",
+        "issue_validate",
+        "issue_archive",
+    ]
+    first["paths"]["tasks"] = "mutated"
+    assert load_config(tmp_path)["paths"]["tasks"] == ".harnessctl/tasks"
+    assert not (tmp_path / ".harnessctl/config.yaml").exists()
+
+
+def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "version: 2\nmemory:\n  enabled: true\n  retrieval:\n    limit: 3\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(tmp_path)
+
+    assert config["memory"]["enabled"] is True
+    assert config["memory"]["backend"] == "repository"
+    assert config["memory"]["retrieval"] == {
+        "limit": 3,
+        "max_chars": 12_000,
+        "include_superseded": False,
+    }
+    assert config["communication"]["caveman"] == {
+        "enabled": True,
+        "mode": "strict",
+    }
+
+
 def test_caveman_renders_only_selected_mode() -> None:
     strict = render_skill("caveman", mode="strict")
     balanced = render_skill("caveman", mode="balanced")

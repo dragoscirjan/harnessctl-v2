@@ -47,11 +47,11 @@ describe('issue ID parsing', () => {
     }
   });
 
-  it('returns no IDs when configuration is unavailable or invalid', () => {
+  it('uses the default prefix without a file and returns no IDs for invalid configuration', () => {
     const missing = temporaryDirectory();
     const invalid = temporaryDirectory();
     try {
-      expect(parseIssueIds('Issue 123', missing)).toEqual([]);
+      expect(parseIssueIds('Issue 123', missing)).toEqual(['123']);
       mkdirSync(join(invalid, '.harnessctl'), { recursive: true });
       writeFileSync(join(invalid, '.harnessctl', 'config.yaml'), 'issues:\n  prefix: "bad/prefix"\n', 'utf8');
       expect(parseIssueIds('Issue bad/prefix123', invalid)).toEqual([]);

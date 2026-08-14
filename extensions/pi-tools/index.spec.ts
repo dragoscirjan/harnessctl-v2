@@ -67,6 +67,7 @@ describe('Pi adapter', () => {
       const createTool = toolNamed(tools, 'config_create');
       const getTool = toolNamed(tools, 'config_get');
 
+      const defaultTasksPath = await getTool?.execute('call-0', { path: 'paths.tasks' }, undefined, undefined, { cwd });
       await createTool?.execute('call-1', {}, undefined, undefined, { cwd });
       const result = await getTool?.execute('call-2', { path: 'version' }, undefined, undefined, { cwd });
       const issueId = await toolNamed(tools, 'issue_id').execute(
@@ -107,6 +108,7 @@ describe('Pi adapter', () => {
         cwd,
       });
 
+      expect(defaultTasksPath?.content[0]?.text).toBe('".harnessctl/tasks"');
       expect(result?.content[0]?.text).toBe('2');
       expect(issueId?.content[0]?.text).toBe('["00042","00007"]');
       expect(JSON.parse(issue?.content[0]?.text ?? '').id).toBe('00001');

@@ -10,6 +10,21 @@ import yaml
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
+    "issues": {
+        "prefix": "",
+        "type": "filesystem",
+        "tools": (
+            "issue_id,issue_create,issue_list,issue_get,issue_update,"
+            "issue_transition,issue_comment,issue_relate,issue_unrelate,"
+            "issue_link_document,issue_validate,issue_archive"
+        ),
+    },
+    "paths": {
+        "root": ".harnessctl",
+        "tasks": ".harnessctl/tasks",
+        "reports": ".harnessctl/reports",
+    },
+    "workflow": {"default_task_type": "bug"},
     "communication": {"caveman": {"enabled": True, "mode": "strict"}},
     "memory": {
         "enabled": False,
@@ -35,18 +50,22 @@ class ConfigError(ValueError):
 def load_config(cwd: Path) -> dict[str, Any]:
     """Load, migrate, and validate project config without mutating it."""
     path = cwd / ".harnessctl/config.yaml"
-    if not path.exists():
-        return deepcopy(DEFAULT_CONFIG)
     try:
-        value = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as error:
+        content = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return deepcopy(DEFAULT_CONFIG)
+    except OSError as error:
+        raise ConfigError(f"unable to read {path}: {error}") from error
+    try:
+        value = yaml.safe_load(content)
+    except yaml.YAMLError as error:
         raise ConfigError(f"unable to read {path}: {error}") from error
     if not isinstance(value, dict):
         raise ConfigError("configuration root must be a YAML mapping")
     version = value.get("version")
     if version not in (None, 1, 2):
         raise ConfigError(f"unsupported configuration version: {version}")
-    config = value if version == 2 else _merge(DEFAULT_CONFIG, value)
+    config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
     _validate(config)
     return config

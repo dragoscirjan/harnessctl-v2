@@ -42,7 +42,7 @@ only adapt that behavior to their host tool-registration APIs.
 - OpenCode tool registration in `extensions/opencode-tools/index.ts`.
 - Pi extension registration in `extensions/pi-tools/index.ts`, using the
   installed Pi extension API.
-- Unit tests for generic creation, parsing, path lookup, missing files, and
+- Unit tests for generic creation, parsing, default overlays, path lookup, and
   existing-file protection.
 
 ### Out of scope
@@ -106,8 +106,12 @@ not silently rewrite an existing file.
 
 `config-get` resolves only mappings through dot-separated keys. Array indexing,
 wildcards, expressions, and mutation are not part of the first contract.
-Missing files, malformed YAML, empty paths, and missing keys return explicit
-errors rather than throwing for normal user input.
+Every read starts with a fresh deep copy of the complete default configuration,
+then recursively overlays the project YAML when present. Nested mappings merge;
+scalars and arrays replace defaults. A missing file therefore serves defaults
+without creating a file. Malformed YAML, invalid provided values, empty paths,
+and unknown keys return explicit errors rather than throwing for normal user
+input.
 
 ## Dependency direction
 
@@ -164,9 +168,10 @@ Required behavior tests:
 3. Read the complete YAML document.
 4. Resolve a nested dotted path.
 5. Resolve scalar, mapping, and empty values correctly.
-6. Report missing keys and missing files.
-7. Report malformed YAML.
-8. Register both tools in each host adapter without duplicating config logic.
+6. Serve fresh defaults without creating a missing file.
+7. Deep-merge partial version 1 and version 2 files over defaults.
+8. Report missing keys and malformed YAML.
+9. Register both tools in each host adapter without duplicating config logic.
 
 ## Resolved decision
 

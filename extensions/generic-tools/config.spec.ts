@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -20,7 +20,8 @@ describe('configuration tools', () => {
         issues: {
           prefix: '',
           type: 'filesystem',
-          tools: 'issue-create,issue-read,issue-delete,issue-comment',
+          tools:
+            'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
         },
         paths: {
           root: '.harnessctl',
@@ -76,16 +77,53 @@ describe('configuration tools', () => {
     }
   });
 
-  it('reports missing files, keys, empty paths, and malformed YAML', () => {
+  it('serves fresh defaults when the configuration file is absent', () => {
     const cwd = temporaryDirectory();
     try {
-      expect(readConfig(cwd)).toBeInstanceOf(ConfigError);
-      expect(getConfigValue(cwd, 'paths.tasks')).toBeInstanceOf(ConfigError);
+      expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
+      const first = readConfig(cwd);
+      if (first instanceof ConfigError) throw first;
+      (first.paths as Record<string, unknown>).tasks = 'mutated';
+      expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
+      expect(existsSync(join(cwd, '.harnessctl', 'config.yaml'))).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 
+  it('deep-merges partial version 2 configuration over defaults', () => {
+    const cwd = temporaryDirectory();
+    try {
       createConfig(cwd);
+      writeFileSync(
+        join(cwd, '.harnessctl', 'config.yaml'),
+        'version: 2\nmemory:\n  enabled: true\n  retrieval:\n    limit: 3\n',
+        'utf8',
+      );
+
+      expect(readConfig(cwd)).toMatchObject({
+        version: 2,
+        paths: { tasks: '.harnessctl/tasks' },
+        communication: { caveman: { enabled: true, mode: 'strict' } },
+        memory: {
+          enabled: true,
+          backend: 'repository',
+          retrieval: { limit: 3, max_chars: 12_000, include_superseded: false },
+          repository: { root: '.harnessctl/memory', cache: '.harnessctl/cache/memory-index.json' },
+        },
+      });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('reports missing keys, empty paths, and malformed YAML', () => {
+    const cwd = temporaryDirectory();
+    try {
       expect(getConfigValue(cwd, '')).toBeInstanceOf(ConfigError);
       expect(getConfigValue(cwd, 'missing.key')).toBeInstanceOf(ConfigError);
 
+      createConfig(cwd);
       writeFileSync(join(cwd, '.harnessctl', 'config.yaml'), 'version: [unterminated\n', 'utf8');
       expect(readConfig(cwd)).toBeInstanceOf(ConfigError);
     } finally {

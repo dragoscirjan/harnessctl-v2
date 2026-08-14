@@ -54,6 +54,7 @@ describe('OpenCode adapter', () => {
     try {
       const context = { directory: cwd } as never;
 
+      const defaultTasksPath = await tools.config_get?.execute({ path: 'paths.tasks' }, context);
       await tools.config_create?.execute({}, context);
       const result = await tools.config_get?.execute({ path: 'version' }, context);
       const stored = await tools['memory_store']?.execute(
@@ -88,6 +89,7 @@ describe('OpenCode adapter', () => {
       const validation = await tools['issue_validate']?.execute({}, context);
       const archive = await tools['issue_archive']?.execute({ id: '00001' }, context);
 
+      expect(defaultTasksPath).toBe('".harnessctl/tasks"');
       expect(result).toBe('2');
       expect(JSON.parse(String(stored)).summary).toContain('repository storage');
       expect(JSON.parse(String(searched))).toEqual([

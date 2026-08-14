@@ -18,7 +18,8 @@ export const DEFAULT_CONFIG: ConfigDocument = {
   issues: {
     prefix: '',
     type: 'filesystem',
-    tools: 'issue-create,issue-read,issue-delete,issue-comment',
+    tools:
+      'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
   },
   paths: {
     root: '.harnessctl',
@@ -73,7 +74,7 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
   if (version !== undefined && version !== 1 && version !== 2)
     throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
 
-  const config = version === 2 ? structuredClone(value) : deepMerge(DEFAULT_CONFIG, value);
+  const config = deepMerge(DEFAULT_CONFIG, value);
   config.version = 2;
   const result = configV2Schema.safeParse(config);
   if (!result.success) throw new ConfigError(`Invalid configuration:\n${formatSchemaError(result.error)}`);
@@ -114,6 +115,7 @@ export function readConfig(cwd: string): ConfigDocument | ConfigError {
   try {
     return parseConfig(readFileSync(path, 'utf8'));
   } catch (error: unknown) {
+    if (isMissingFileError(error)) return validateAndMigrateConfig({});
     return toConfigError(`Unable to read ${path}`, error);
   }
 }
@@ -159,10 +161,6 @@ function errorMessage(error: unknown): string {
 function toConfigError(prefix: string, error: unknown): ConfigError {
   if (error instanceof ConfigError) {
     return error;
-  }
-
-  if (isMissingFileError(error)) {
-    return new ConfigError(`${prefix}: configuration file does not exist.`);
   }
 
   return new ConfigError(`${prefix}: ${errorMessage(error)}`);
