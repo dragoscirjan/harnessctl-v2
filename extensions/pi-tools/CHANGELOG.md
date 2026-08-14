@@ -1,5 +1,18 @@
 # @harnessctl/pi-tools
 
+## 0.1.3
+
+### Patch Changes
+
+- [#19](https://github.com/dragoscirjan/harnessctl-v2/pull/19) [`155788c`](https://github.com/dragoscirjan/harnessctl-v2/commit/155788c5cd735bf03ac872b0d180e2c1de9ab339) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Store complete issues and embedded comments in safe, permissively read canonical YAML
+  beneath configurable `issues.root`, defaulting to `.harnessctl/issues` and the `hrn-`
+  prefix. Local issue and repository-memory operations now share one barrier and
+  synchronously write through to an internally rebuilt disposable SQLite cache while all
+  agent reads remain filesystem-only. Legacy and mixed issue layouts remain unsupported
+  with no migration.
+- Updated dependencies [[`155788c`](https://github.com/dragoscirjan/harnessctl-v2/commit/155788c5cd735bf03ac872b0d180e2c1de9ab339), [`55a0798`](https://github.com/dragoscirjan/harnessctl-v2/commit/55a0798381d0e11cb8936cbf7f3bf9eb99e4eab4)]:
+  - @harnessctl/generic-tools@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
