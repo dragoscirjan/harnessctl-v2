@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -74,16 +74,39 @@ describe('OpenCode adapter', () => {
         { prompt: 'Please investigate issues 00042 and 00007' },
         context,
       );
-      const issue = await tools['issue_create']?.execute({ type: 'task', title: 'Example task' }, context);
+      const issue = await tools['issue_create']?.execute(
+        { type: 'task', title: 'Example task', metadata: '{"huge":9007199254740993}' },
+        context,
+      );
+      await tools['issue_create']?.execute({ type: 'task', title: 'Related task' }, context);
       const issues = await tools['issue_list']?.execute({}, context);
       const fetched = await tools['issue_get']?.execute({ id: '00001' }, context);
       const fetchedIssue = JSON.parse(String(fetched)) as { revision: string };
+      const updated = await tools['issue_update']?.execute(
+        { id: '00001', title: 'Updated task', expectedRevision: fetchedIssue.revision },
+        context,
+      );
+      const updatedIssue = JSON.parse(String(updated)) as { revision: string };
       const transitioned = await tools['issue_transition']?.execute(
-        { id: '00001', status: 'done', expectedRevision: fetchedIssue.revision },
+        { id: '00001', status: 'done', expectedRevision: updatedIssue.revision },
         context,
       );
       const comment = await tools['issue_comment']?.execute(
         { id: '00001', body: 'Review this', author: 'tester' },
+        context,
+      );
+      const related = await tools['issue_relate']?.execute(
+        { id: '00001', relationship: 'relates_to', targetId: '00002' },
+        context,
+      );
+      const unrelated = await tools['issue_unrelate']?.execute(
+        { id: '00001', relationship: 'relates_to', targetId: '00002' },
+        context,
+      );
+      mkdirSync(join(cwd, '.specs'));
+      writeFileSync(join(cwd, '.specs', 'adapter.md'), '# Adapter\n');
+      const linked = await tools['issue_link_document']?.execute(
+        { id: '00001', path: '.specs/adapter.md', kind: 'design' },
         context,
       );
       const validation = await tools['issue_validate']?.execute({}, context);
@@ -99,14 +122,17 @@ describe('OpenCode adapter', () => {
         expect.objectContaining({ valid: true, records: 1, tombstones: 0 }),
       );
       expect(issueId).toBe('["00042","00007"]');
+      expect(String(issue)).toContain('"huge":9007199254740993');
       expect(JSON.parse(String(issue)).id).toBe('00001');
-      expect(JSON.parse(String(issues))).toEqual([
-        expect.objectContaining({ id: '00001', type: 'task', status: 'open' }),
-      ]);
+      expect(JSON.parse(String(issues))).toHaveLength(2);
       expect(JSON.parse(String(archive)).archived).toEqual(['00001']);
       expect(fetched).toContain('Example task');
+      expect(updated).toContain('Updated task');
       expect(transitioned).toContain('"status":"done"');
       expect(comment).toContain('00001-C0001');
+      expect(related).toContain('"relates_to":["00002"]');
+      expect(unrelated).not.toContain('"relates_to"');
+      expect(linked).toContain('.specs/adapter.md');
       expect(validation).toContain('"valid":true');
       const invalidIssue = await tools['issue_create']?.execute({ type: 'invalid', title: 'Invalid' }, context);
       expect(invalidIssue).toContain('Issue error: invalid type');

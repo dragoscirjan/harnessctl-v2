@@ -38,6 +38,13 @@ The issue-management tools own IDs, parent/child relationships, dependencies, an
 document links. The assistant proposes content and intent; it must not allocate IDs
 or manually rewrite issue files.
 
+Filesystem issues use one canonical, versioned YAML document at
+`.issues/<id>-<title-slug>.yml`; archived issues use the same filename under
+`.issues/archived/`. The document contains all managed state, including body and
+append-only comments. Legacy `.issues/<id>/issue.md` repositories are not converted
+implicitly. Legacy or mixed storage blocks canonical operations until the separately
+delivered migration Story 00006 is explicitly run and validated.
+
 ## 2. Command vocabulary
 
 This document uses **short stage labels** in flow diagrams and command contracts for
@@ -527,7 +534,7 @@ yet generate or link them automatically.
 **Artifacts:**
 
 ```text
-.issues/<task-id>/issue.md
+.issues/<task-id>-<title-slug>.yml
 .harnessctl/write-tasks/<task-id>/task.yaml
 .harnessctl/write-tasks/<task-id>/links.md
 ```

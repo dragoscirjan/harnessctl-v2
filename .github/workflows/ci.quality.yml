@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       extended:
-        description: Run Linux-only packaging and audit checks
+        description: Run Linux-only audit and coverage checks
         required: false
         default: false
         type: boolean
@@ -31,9 +31,8 @@ jobs:
         run: mise run quality
         shell: bash
 
-      - name: Build and inspect packages
-        if: inputs.extended
-        run: mise run node-build
+      - name: Build, inspect, and smoke-test packages
+        run: mise run runtime-smoke
         shell: bash
 
       - name: Report dependency vulnerabilities

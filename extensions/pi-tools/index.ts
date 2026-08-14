@@ -5,6 +5,7 @@ import {
   commentIssue,
   createConfig,
   createIssueRecord,
+  encodeIssueToolResult,
   getIssue,
   getConfigValue,
   linkDocument,
@@ -15,6 +16,7 @@ import {
   unrelateIssue,
   updateIssue,
   validateIssues,
+  issueMetadataText,
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
 import { registerMemoryTools } from './memory-tools.js';
@@ -74,7 +76,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(parseIssueIds(params.prompt, context.cwd)),
+            text: encodeIssueToolResult(parseIssueIds(params.prompt, context.cwd)),
           },
         ],
         details: {},
@@ -85,7 +87,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'issue_create',
     label: 'Issue Create',
-    description: 'Create a local issue file in the project .issues/ directory.',
+    description: 'Create a canonical local issue YAML file in the project .issues/ directory.',
     parameters: Type.Object({
       type: Type.String({ description: 'Issue type: initiative, epic, story, task, or bug' }),
       title: Type.String({ description: 'Human-readable issue title' }),
@@ -100,8 +102,11 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       try {
         const { metadata, ...fields } = params;
         return textResult(
-          JSON.stringify(
-            createIssueRecord(context.cwd, { ...fields, metadata: metadata ? parseJsonObject(metadata) : undefined }),
+          encodeIssueToolResult(
+            createIssueRecord(context.cwd, {
+              ...fields,
+              ...(metadata === undefined ? {} : { metadataText: issueMetadataText(metadata) }),
+            }),
           ),
         );
       } catch (error: unknown) {
@@ -120,7 +125,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(JSON.stringify(listIssueSummaries(context.cwd, params)));
+        return textResult(encodeIssueToolResult(listIssueSummaries(context.cwd, params)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -136,7 +141,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(JSON.stringify(archiveIssueReport(context.cwd, params.id)));
+        return textResult(encodeIssueToolResult(archiveIssueReport(context.cwd, params.id)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -150,7 +155,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     parameters: Type.Object({ id: Type.String({ description: 'Issue ID' }) }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(JSON.stringify(getIssue(context.cwd, params.id)));
+        return textResult(encodeIssueToolResult(getIssue(context.cwd, params.id)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -177,7 +182,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       try {
         const { id, sections, ...changes } = params;
         return textResult(
-          JSON.stringify(
+          encodeIssueToolResult(
             updateIssue(context.cwd, id, {
               ...changes,
               sections: sections ? (parseJsonObject(sections) as Record<string, string>) : undefined,
@@ -202,7 +207,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
         return textResult(
-          JSON.stringify(transitionIssue(context.cwd, params.id, params.status, params.expectedRevision)),
+          encodeIssueToolResult(transitionIssue(context.cwd, params.id, params.status, params.expectedRevision)),
         );
       } catch (error: unknown) {
         return issueError(error);
@@ -221,7 +226,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(JSON.stringify(commentIssue(context.cwd, params.id, params.body, params.author)));
+        return textResult(encodeIssueToolResult(commentIssue(context.cwd, params.id, params.body, params.author)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -243,7 +248,9 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       }),
       async execute(_toolCallId, params, _signal, _onUpdate, context) {
         try {
-          return textResult(JSON.stringify(operation(context.cwd, params.id, params.relationship, params.targetId)));
+          return textResult(
+            encodeIssueToolResult(operation(context.cwd, params.id, params.relationship, params.targetId)),
+          );
         } catch (error: unknown) {
           return issueError(error);
         }
@@ -262,7 +269,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(JSON.stringify(linkDocument(context.cwd, params.id, params.path, params.kind)));
+        return textResult(encodeIssueToolResult(linkDocument(context.cwd, params.id, params.path, params.kind)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -275,7 +282,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     description: 'Validate one issue or all active local issues without mutating them.',
     parameters: Type.Object({ id: Type.Optional(Type.String({ description: 'Optional issue ID' })) }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return textResult(JSON.stringify(validateIssues(context.cwd, params.id)));
+      return textResult(encodeIssueToolResult(validateIssues(context.cwd, params.id)));
     },
   });
 }

@@ -12,6 +12,7 @@ export {
   commentIssue,
   createIssue,
   createIssueRecord,
+  createFilesystemIssueProvider,
   getIssue,
   linkDocument,
   listIssueSummaries,
@@ -37,7 +38,37 @@ export type {
   Relationship,
   ValidationFinding,
   ValidationReport,
+  FilesystemIssueProvider,
+  FilesystemIssueProviderOptions,
 } from './issues.js';
+export {
+  ExactDecimalValue,
+  IssueError,
+  IssueToolResultEncoder,
+  decodeCanonicalIssue,
+  decodeIssueDocument,
+  encodeIssueToolResult,
+  issueMetadataText,
+  parseIssueMetadataText,
+} from './issues-contract.js';
+export type {
+  DecodeIssueOptions,
+  DecodedIssueDocument,
+  IssueErrorCategory,
+  IssueMetadata,
+  IssueMetadataText,
+  IssueMetadataValue,
+} from './issues-contract.js';
+export { projectIssueCandidate, projectIssueDocument } from './issues-storage.js';
+export type {
+  IssueProjectionChange,
+  IssueProjectionChangeSet,
+  IssueProjectionRecord,
+  IssueProjectionSink,
+  IssueStorageCatalog,
+  IssueStorageCandidate,
+  IssueStorageStatus,
+} from './issues-storage.js';
 
 export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };

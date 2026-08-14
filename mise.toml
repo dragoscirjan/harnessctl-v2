@@ -8,6 +8,10 @@ lockfile = true
 [tools.node]
 version = "24.15.0"
 
+# Bun verifies that published ESM entrypoints remain runtime-neutral for OpenCode.
+[tools.bun]
+version = "1.3.13"
+
 # Python and uv are mandatory for the installer and Python quality workflow.
 [tools.python]
 version = "3.11"
@@ -87,6 +91,11 @@ run = "npm run typecheck:strict"
 [tasks.node-build]
 description = "Build and inspect all publishable Node packages"
 run = "npm run packages:check"
+
+[tasks.runtime-smoke]
+description = "Smoke-test built package entrypoints with Node and Bun"
+depends = ["node-build"]
+run = ["node scripts/smoke-packages.mjs", "bun scripts/smoke-packages.mjs"]
 
 [tasks.actions-lint]
 description = "Validate GitHub Actions workflows"

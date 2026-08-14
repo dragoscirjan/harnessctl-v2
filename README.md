@@ -338,6 +338,10 @@ Current installer targets:
 
 Implemented in `extensions/generic-tools/`:
 
+- One versioned, canonical YAML document per issue at
+  `.issues/<id>-<title-slug>.yml`, or under `.issues/archived/` after archival.
+- Complete issue-managed state in that document, including the Markdown body,
+  relationships, metadata, document links, and append-only comments.
 - Prefix-based issue ID allocation.
 - Multi-ID prompt extraction.
 - Structured issue creation and listing.
@@ -350,6 +354,18 @@ Implemented in `extensions/generic-tools/`:
 - Document links.
 - Validation reports.
 - Recursive archive with rollback and archived-descendant handling.
+
+#### Canonical issue storage rollout gate
+
+Canonical YAML storage is enabled only for empty repositories and repositories that
+already contain canonical issue files. Existing legacy layouts at
+`.issues/<id>/issue.md` are **not** read, rewritten, or converted automatically.
+
+Repositories containing legacy storage, or a mixture of legacy and canonical files,
+fail closed with migration-required diagnostics. Migration Story 00006 must be
+implemented, explicitly invoked, and successfully validated before this format can be
+rolled out to an existing repository. Until then, retain the legacy files and do not
+manually combine the two layouts.
 
 ### Harness adapters
 
