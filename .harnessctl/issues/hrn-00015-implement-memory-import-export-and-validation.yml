@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00015"
+"type": "task"
+"title": "Implement memory import export and validation"
+"status": "open"
+"created_at": "2026-08-12T13:10:42.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00014"
+"body": "\n# Implement memory import export and validation\n\nGiven canonical portable memory data\nWhen imported, exported, or manually validated\nThen records remain canonical, secret-free, and recoverable after interruption.\n\n## Technical Requirements\n\n- Implement preview/validate and canonical JSONL/YAML export paths.\n- Implement staged manifest, durable prepare, deterministic roll-forward, and conflict checks.\n- Add manual-record validation target for hooks/CI.\n\n## Acceptance Criteria\n\n- [ ] Round-trip checksums and counts match.\n- [ ] Interrupted import recovery is idempotent.\n- [ ] Existing mismatched target causes hard conflict and no overwrite.\n"
+"comments": []

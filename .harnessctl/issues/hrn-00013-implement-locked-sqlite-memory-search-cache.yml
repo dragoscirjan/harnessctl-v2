@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00013"
+"type": "task"
+"title": "Implement locked SQLite memory search cache"
+"status": "done"
+"created_at": "2026-08-12T13:10:42.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00012"
+"body": "\n# Implement locked SQLite memory search cache\n\nGiven canonical repository records\nWhen memory is searched\nThen a disposable manifest-bound SQLite FTS cache returns bounded active results.\n\n## Technical Requirements\n\n- Build cache under lock using unique temporary DB and atomic replacement.\n- Hash sorted paths, bytes, record schema, and index schema.\n- Rebuild stale/corrupt cache; never silently use stale state.\n\n## Acceptance Criteria\n\n- [ ] Active-only scoped search respects result and character limits.\n- [ ] Pull/change simulation triggers rebuild.\n- [ ] Concurrent cache tests pass without corrupting prior cache.\n"
+"comments":
+  - "id": "hrn-00013-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "- 2026-08-11: Implemented manifest-bound disposable SQLite/FTS cache, atomic replacement, active scoped bounded search, and cache tests."

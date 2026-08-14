@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00010"
+"type": "task"
+"title": "Extend atomic installer for skills and adapter"
+"status": "done"
+"created_at": "2026-08-12T13:09:51.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00009"
+"body": "\n# Extend atomic installer for skills and adapter\n\nGiven selected OpenCode skill configuration\nWhen installation succeeds or fails\nThen skills and adapter registration are installed atomically or restored exactly.\n\n## Technical Requirements\n\n- Validate config before writes.\n- Install skill files, package dependency, plugin shim, canonical dirs, and cache ignore.\n- Preserve conflict, force, path-safety, smoke-check, and rollback semantics.\n\n## Acceptance Criteria\n\n- [ ] Successful fixture installs all selected artifacts.\n- [ ] Failure restores original bytes and removes new artifacts.\n- [ ] Existing command installation remains compatible.\n"
+"comments":
+  - "id": "hrn-00010-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "- 2026-08-11: Installer now loads/migrates config, installs specialized OpenCode skills, merges exact adapter dependency, writes plugin shim/cache ignore, initializes repository layout, smoke-checks, and rolls file writes back exactly."

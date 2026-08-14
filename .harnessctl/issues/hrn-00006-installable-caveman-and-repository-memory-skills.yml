@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00006"
+"type": "story"
+"title": "Installable caveman and repository memory skills"
+"status": "in_progress"
+"created_at": "2026-08-12T13:08:50.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00001"
+"body": "\n# Installable caveman and repository memory skills\n\nAs a development team\nI want installable concise-communication and shared-memory skills\nSo that agents use fewer tokens and retain curated project knowledge safely.\n\n## Scope\n\n- Implement approved [LLD](../.specs/lld-00002-caveman-and-memory-skills-v1.md).\n- Ship OpenCode `caveman` and repository-backed `memory` skills.\n- Provide canonical Git-shareable records, normalized tools, cache, validation, and docs.\n\n## Non-Goals\n\n- Remote memory backends.\n- Unverified Pi memory integration.\n- Persisted secrets, transcripts, or chain-of-thought.\n\n## Acceptance Criteria\n\n- [ ] All child tasks complete in dependency order.\n- [ ] Python, TypeScript, quality, and strict typecheck suites pass.\n- [ ] User can install and test both skills in an OpenCode project.\n"
+"comments": []

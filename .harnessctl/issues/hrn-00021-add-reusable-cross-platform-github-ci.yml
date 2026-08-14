@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00021"
+"type": "task"
+"title": "Add reusable cross-platform GitHub CI"
+"status": "done"
+"created_at": "2026-08-12T20:08:27.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00018"
+"depends_on":
+  - "hrn-00020"
+"body": "\n# Add reusable cross-platform GitHub CI\n\nGiven a pull request or main-branch update\nWhen GitHub CI starts\nThen locked dependencies and pinned tools run the repository quality gate across supported operating systems.\n\n## Acceptance criteria\n\n- [x] Reusable quality workflow supports Linux, macOS, and Windows runners.\n- [x] Linux additionally verifies package tarballs, production dependency audit, and coverage artifacts.\n- [x] Workflow actions use immutable commit SHAs and least-privilege permissions.\n- [x] Concurrent obsolete CI runs are cancelled.\n"
+"comments":
+  - "id": "hrn-00021-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "### 2026-08-12 — lead-engineer\n\nPinned setup action and cross-platform matrix added. `actionlint` passes."

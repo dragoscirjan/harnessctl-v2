@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00004"
+"type": "task"
+"title": "Implement OpenCode configuration adapter"
+"status": "open"
+"created_at": "2026-07-15T23:03:19.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00002"
+"depends_on":
+  - "hrn-00003"
+"body": "\n# Implement OpenCode configuration adapter\n\n## Technical Requirements\n\n- Replace `extensions/opencode-harnessctl` with\n  `extensions/opencode-tools` as `@harnessctl/opencode-tools`.\n- Register `config_create` and `config_get` using `@opencode-ai/plugin`.\n- Delegate all configuration behavior to `@harnessctl/generic-tools`.\n- Pass the OpenCode context directory to generic functions.\n- Add adapter registration tests where the host SDK permits deterministic\n  testing.\n\n## Acceptance Criteria\n\n- [ ] The package uses the corrected `@harnessctl/opencode-tools` name.\n- [ ] Both tools are registered and expose the expected arguments.\n- [ ] No `.env.ai` tools remain in the adapter.\n- [ ] No configuration logic is duplicated from the generic package.\n- [ ] Package validation passes.\n"
+"comments": []

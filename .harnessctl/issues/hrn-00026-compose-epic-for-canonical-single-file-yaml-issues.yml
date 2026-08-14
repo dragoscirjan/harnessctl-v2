@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00026"
+"type": "story"
+"title": "Compose Epic for canonical single-file YAML issues"
+"status": "done"
+"created_at": "2026-08-14T12:51:58.412Z"
+"updated_at": "2026-08-14T12:56:50.328Z"
+"created_by": "product-owner"
+"assigned_to": "product-owner"
+"parent": "hrn-00025"
+"body": "\n# Compose Epic for canonical single-file YAML issues\n\n## Story\n\nAs a product owner\nI want an Epic defining canonical single-file YAML issue storage\nSo that issue state is cohesive, reviewable, and efficient to index.\n\n## Requested Epic Scope\n\n- Define a versioned YAML issue contract containing managed metadata, body content, embedded comments, relationships, hierarchy, document links, and custom metadata.\n- Store active issues directly under configured `issues.root` as `<id>-<title-slug>.yml`.\n- Store archived issues under `<issues.root>/archived/` using the same filename convention and schema.\n- Remove the issue directory and separate comments-directory model.\n- Make comment append operations update the issue YAML atomically while preserving comment immutability.\n- Rename the file atomically when the title changes; keep the issue ID as stable identity.\n- Update create, get, list, update, transition, comment, relate, unrelate, link, validate, and archive behavior for the new representation.\n- Preserve optimistic concurrency through a deterministic revision derived from canonical issue state.\n- Add schema validation and filesystem-safety rules for IDs and title slugs.\n- Request an HLD Design Story before implementation tasks are composed.\n\n## Explicit Exclusions\n\n- Migration from existing Markdown/frontmatter issues.\n- Automatic legacy-file conversion or compatibility promises.\n- SQLite implementation, except exposing the provider projection contract required by the cache Epic.\n\n## Acceptance Criteria\n\n### Scenario: Epic is actionable\n\nGiven this Story is refined into an Epic\nWhen the Epic is reviewed\nThen it defines user value, boundaries, risks, dependencies, and testable acceptance criteria\nAnd it includes a Design Story requesting an HLD.\n\n### Scenario: Single canonical file\n\nGiven a new issue receives comments, relationships, links, or status changes\nWhen its state is persisted\nThen all managed state is represented in one YAML document\nAnd no issue-specific directory or comments directory is required.\n\n### Scenario: Stable identity and readable filename\n\nGiven an issue title changes\nWhen the update succeeds\nThen its file is atomically renamed to `<id>-<new-title-slug>.yml`\nAnd references continue using the unchanged issue ID.\n\n### Scenario: Archive consistency\n\nGiven an issue is archived\nWhen archival succeeds\nThen the same YAML document moves to `<issues.root>/archived/`\nAnd its schema and filename convention remain unchanged.\n\n### Scenario: Migration boundary\n\nGiven legacy Markdown issue files exist\nWhen this Epic is implemented\nThen they are not silently migrated\nAnd migration remains separately planned work.\n"
+"comments":
+  - "id": "hrn-00026-C0001"
+    "created_at": "2026-08-14T12:56:31.067Z"
+    "created_by": "product-owner"
+    "body": "Epic #hrn-00028 and HLD Design Story #hrn-00029 created from this composition request."

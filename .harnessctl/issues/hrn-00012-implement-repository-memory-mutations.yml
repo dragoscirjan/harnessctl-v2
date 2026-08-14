@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00012"
+"type": "task"
+"title": "Implement repository memory mutations"
+"status": "done"
+"created_at": "2026-08-12T13:10:42.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00011"
+"body": "\n# Implement repository memory mutations\n\nGiven a repository memory namespace\nWhen records are stored, superseded, or deleted\nThen immutable durable files preserve history with deterministic concurrency behavior.\n\n## Technical Requirements\n\n- Implement ULIDs, Git-friendly folder mapping, exclusive creation, and project mutation lock.\n- Implement active-state checks, supersession, and tombstones.\n- Never overwrite canonical records.\n\n## Acceptance Criteria\n\n- [ ] Store/get/list/supersede/delete tests pass.\n- [ ] Competing mutations produce first-writer-wins conflicts.\n- [ ] Canonical directory writes are durable.\n"
+"comments":
+  - "id": "hrn-00012-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "- 2026-08-11: Implemented ULID records, exclusive durable writes, mutation locking, immutable supersession/tombstones, active-state conflicts, and history tests."

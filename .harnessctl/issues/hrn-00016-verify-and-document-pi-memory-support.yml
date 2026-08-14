@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00016"
+"type": "task"
+"title": "Verify and document Pi memory support"
+"status": "done"
+"created_at": "2026-08-11T23:13:51.000Z"
+"updated_at": "2026-08-14T21:24:30.000Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00015"
+"body": "\n# Verify and document Pi memory support\n\nGiven current Pi extension and skill contracts\nWhen compatibility is investigated\nThen implementation either adds verified output or clearly reports memory support as unavailable.\n\n## Technical Requirements\n\n- Verify current Pi skill discovery and extension distribution using authoritative docs/tests.\n- Do not invent destination paths or registration behavior.\n- Caveman may ship independently if its skill path is verified.\n\n## Acceptance Criteria\n\n- [x] Evidence and supported/unsupported decision are documented.\n- [x] Any implemented Pi output has automated tests.\n- [x] Installer fails clearly for unverified memory integration.\n"
+"comments":
+  - "id": "hrn-00016-C0001"
+    "created_at": "2026-08-14T21:24:30.000Z"
+    "created_by": "lead-engineer"
+    "body": "**Status Update:**\nStrict workspace typecheck currently fails in Pi integration tests because installed `@earendil-works/pi-coding-agent` types no longer export `AuthStorage`, `ModelRegistry.inMemory`, or the previously used session options. Unit tests still pass. This failure is unrelated to the contract-copy removal but confirms Pi compatibility needs verification.\n\n**Artifacts:**\n- [`extensions/pi-tools/integration.test.ts`](../extensions/pi-tools/integration.test.ts)\n\n**Next Steps / Blockers:**\n- Verify automatic Pi extension distribution and skill discovery before enabling installer output.\n- Run full project quality checks and review the new adapter.\n\n**Implementation Update:**\n- Migrated the Pi SDK integration harness to `ModelRuntime` from the removed `AuthStorage`/`ModelRegistry.inMemory` APIs.\n- Added all nine normalized repository-memory tools to `@harnessctl/pi-tools` using Pi 0.81's verified `registerTool` contract.\n- Added unit coverage for registration plus memory store, search, and validation delegation.\n- Kept automatic Pi extension/skill installation disabled; memory-enabled Pi/all installation now fails before writes with a clear manual-registration boundary.\n\n**Verification Note:**\n- The generic `run-quality-checks` helper could not map its `format:fix` target to this repository's `format-fix` mise task. No formatter ran through that helper; repository-native `mise run quality` is used instead.\n- `mise run quality` passed: 14 Python tests, 24 generic TypeScript tests, 2 OpenCode tests, and 3 Pi tests.\n- Strict TypeScript typechecking passed for all workspaces. Model-backed Pi tests remain environment-gated and were not executed locally.\n\n---\n\nopencode-agent: lead-engineer"

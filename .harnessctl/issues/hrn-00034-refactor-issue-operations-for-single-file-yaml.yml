@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00034"
+"type": "task"
+"title": "Refactor issue operations for single-file YAML"
+"status": "done"
+"created_at": "2026-08-14T13:43:53.556Z"
+"updated_at": "2026-08-14T14:17:03.949Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00028"
+"depends_on":
+  - "hrn-00033"
+"body": "\n# Refactor issue operations for single-file YAML\n\nGiven the canonical storage layer\nWhen issue tools create, get, list, update, transition, comment, relate, unrelate, or link documents\nThen operations preserve unrelated state and write one YAML document per issue.\n\n## Deliverables\n\n- Refactored `issues.ts` façade and operation wiring.\n- Embedded append-only comments with stable identity/author/time/body.\n- Deterministic optimistic revisions and metadata preservation.\n\n## Acceptance\n\n- [x] Existing public operation signatures remain compatible unless LLD explicitly changes them.\n- [x] Title updates rename files while relationships retain IDs.\n- [x] Comment operations cannot overwrite prior comments.\n"
+"comments": []

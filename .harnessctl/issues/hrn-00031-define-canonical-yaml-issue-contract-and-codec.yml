@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00031"
+"type": "task"
+"title": "Define canonical YAML issue contract and codec"
+"status": "done"
+"created_at": "2026-08-14T13:43:36.998Z"
+"updated_at": "2026-08-14T13:53:59.853Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00028"
+"body": "\n# Define canonical YAML issue contract and codec\n\nGiven approved HLD/LLD\nWhen issue entities are encoded or decoded\nThen one versioned strict YAML contract preserves all managed state\nAnd serialization, timestamps, scalars, comments, metadata, revisions, and slugs are deterministic.\n\n## Deliverables\n\n- `issues-contract.ts` types, validation, limits, and safe metadata boundary.\n- Canonical YAML codec and deterministic UTF-8-safe slugging.\n- Tests for malformed YAML, duplicate keys, aliases/tags, limits, precision, timestamps, and canonical byte stability.\n\n## Acceptance\n\n- [x] Contract preserves existing issue fields and embedded comments.\n- [x] Re-encoding valid input is byte-stable.\n- [x] Unsafe or ambiguous documents fail with actionable errors.\n"
+"comments": []
