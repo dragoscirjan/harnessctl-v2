@@ -1,10 +1,48 @@
+import importlib
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
-from harnessctl.config import ConfigError, load_config
+from harnessctl.config import DEFAULT_CONFIG, ConfigError, load_config
 from harnessctl.install import install
-from harnessctl.templates import TEMPLATES, render_prompt, render_skill, render_work_new
+from harnessctl.templates import (
+    COMMAND_METADATA,
+    TEMPLATES,
+    render_prompt,
+    render_skill,
+    render_work_new,
+)
+
+install_module = importlib.import_module("harnessctl.install")
+
+
+def _tree_manifest(root: Path) -> dict[str, tuple[str, bytes | None]]:
+    return {
+        path.relative_to(root).as_posix(): (
+            "directory" if path.is_dir() else "file",
+            None if path.is_dir() else path.read_bytes(),
+        )
+        for path in sorted(root.rglob("*"))
+    }
+
+
+def _write_enabled_memory_config(root: Path, memory_root: str = ".harnessctl/memory") -> None:
+    config = root / ".harnessctl/config.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(
+        f"""version: 2
+communication:
+  caveman: {{enabled: true, mode: balanced}}
+memory:
+  enabled: true
+  backend: repository
+  namespace: {{organization_id: acme, project_id: widget, default_topic: general}}
+  retrieval: {{limit: 5, max_chars: 4000, include_superseded: false}}
+  repository: {{root: {memory_root}}}
+""",
+        encoding="utf-8",
+    )
 
 
 def test_rendered_prompts_share_the_canonical_body() -> None:
@@ -16,6 +54,31 @@ def test_rendered_prompts_share_the_canonical_body() -> None:
     assert opencode.endswith(pi)
     assert "{{" not in pi
     assert "No files were created or modified." in pi
+
+
+@pytest.mark.parametrize("command", ["work-new", "work-explore", "work-plan"])
+def test_enabled_memory_does_not_claim_that_no_files_changed(command: str) -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["memory"]["enabled"] = True
+
+    rendered = render_prompt(command, "opencode", config=config)
+
+    assert "No files were created or modified." not in rendered
+    assert (
+        "No source, issue, specification, or task artifact files were created or modified."
+        in rendered
+    )
+
+
+def test_memory_entry_prefers_entity_topic_before_default() -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["memory"]["enabled"] = True
+
+    rendered = render_prompt("work-explore", "opencode", config=config)
+    normalized = " ".join(rendered.split())
+
+    assert "current entity-specific topic when known" in normalized
+    assert "otherwise fall back to `general`" in normalized
 
 
 def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
@@ -155,6 +218,90 @@ def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
     }
 
 
+def test_config_requires_caveman_when_memory_is_enabled(tmp_path: Path) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "memory:\n  enabled: true\ncommunication:\n  caveman:\n    enabled: false\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ConfigError,
+        match=r"memory\.enabled=true requires communication\.caveman\.enabled=true",
+    ):
+        load_config(tmp_path)
+
+
+def test_config_allows_disabled_memory_and_caveman(tmp_path: Path) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "memory:\n  enabled: false\ncommunication:\n  caveman:\n    enabled: false\n",
+        encoding="utf-8",
+    )
+
+    config = load_config(tmp_path)
+
+    assert config["memory"]["enabled"] is False
+    assert config["communication"]["caveman"]["enabled"] is False
+
+
+def test_command_metadata_exactly_covers_templates() -> None:
+    assert len(COMMAND_METADATA) == 18
+    assert COMMAND_METADATA.keys() == TEMPLATES.keys()
+
+
+def test_memory_disabled_and_pi_prompts_compile_memory_out() -> None:
+    enabled_config = deepcopy(DEFAULT_CONFIG)
+    enabled_config["memory"]["enabled"] = True
+
+    for command in TEMPLATES:
+        disabled = render_prompt(command, "opencode")
+        pi = render_prompt(command, "pi", config=enabled_config)
+        for rendered in (disabled, pi):
+            assert "memory" not in rendered.lower()
+            assert "{{" not in rendered
+            assert "{%" not in rendered
+
+
+def test_enabled_opencode_prompts_have_bounded_shared_memory_hooks() -> None:
+    enabled_config = deepcopy(DEFAULT_CONFIG)
+    enabled_config["memory"]["enabled"] = True
+    enabled_config["memory"]["retrieval"]["limit"] = 3
+    enabled_config["memory"]["retrieval"]["max_chars"] = 2048
+    priority_commands = {
+        "work-resume",
+        "work-start-from",
+        "work-explore",
+        "work-plan",
+        "work-hld",
+        "work-lld",
+        "work-implement",
+        "work-verify",
+    }
+
+    searched_commands = set()
+    for command in TEMPLATES:
+        rendered = render_prompt(command, "opencode", config=enabled_config)
+        assert rendered.count("## Project memory boundary") == 1
+        assert rendered.count("## Project memory exit") == 1
+        assert "authoritative and override" in rendered
+        assert "provenance" in rendered
+        assert "minimum tokens" in rendered
+        assert "full technical" in rendered
+        assert "never establishes completion" in rendered
+        if "`memory_search`" in rendered:
+            searched_commands.add(command)
+            normalized = " ".join(rendered.split())
+            assert rendered.count("`memory_search`") == 1
+            assert "limit 3" in rendered
+            assert "maximum 2048 returned characters" in normalized
+            assert "call `memory_get` only" in rendered
+
+    assert searched_commands == priority_commands
+
+
 def test_caveman_renders_only_selected_mode() -> None:
     strict = render_skill("caveman", mode="strict")
     balanced = render_skill("caveman", mode="balanced")
@@ -180,39 +327,52 @@ def test_repository_memory_skill_is_specialized_and_bounded() -> None:
     assert "Graphiti" not in rendered
     assert "chain-of-thought" in rendered
     assert ".harnessctl/cache/harnessctl.sqlite" in rendered
+    assert "Every record submitted through `memory_store`" in rendered
+    assert "every replacement submitted through `memory_supersede`" in rendered
+    assert "every record proposed by `memory_import`" in rendered
+    assert "minimum tokens with full technical meaning" in rendered
 
 
 def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
-    config = tmp_path / ".harnessctl/config.yaml"
-    config.parent.mkdir(parents=True)
-    config.write_text(
-        """version: 2
-communication:
-  caveman: {enabled: true, mode: balanced}
-memory:
-  enabled: true
-  backend: repository
-  namespace: {organization_id: acme, project_id: widget, default_topic: general}
-  retrieval: {limit: 5, max_chars: 4000, include_superseded: false}
-  repository: {root: .harnessctl/memory, cache: .harnessctl/cache/memory-index.json}
-""",
-        encoding="utf-8",
-    )
+    _write_enabled_memory_config(tmp_path)
 
     installed = install(tmp_path, "opencode")
 
+    assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 18
+    for command in TEMPLATES:
+        rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
+        assert rendered.count("## Project memory boundary") == 1
+        assert rendered.count("## Project memory exit") == 1
+    assert tmp_path / ".opencode/skills/caveman/SKILL.md" in installed
     assert tmp_path / ".opencode/skills/memory/SKILL.md" in installed
     assert "@harnessctl/opencode-tools" in (tmp_path / ".opencode/package.json").read_text()
     assert (tmp_path / ".opencode/plugins/harnessctl-memory.js").exists()
     assert (tmp_path / ".harnessctl/memory/facts").is_dir()
     assert "/.harnessctl/cache/" in (tmp_path / ".gitignore").read_text()
+    assert not (tmp_path / ".harnessctl/cache/harnessctl.sqlite").exists()
+
+
+def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
+    installed = install(tmp_path, "opencode")
+
+    assert len(installed) == 19
+    for command in TEMPLATES:
+        rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
+        assert "memory_" not in rendered
+        assert "Project memory" not in rendered
+    assert (tmp_path / ".opencode/skills/caveman/SKILL.md").is_file()
+    assert not (tmp_path / ".opencode/skills/memory").exists()
+    assert not (tmp_path / ".opencode/plugins").exists()
+    assert not (tmp_path / ".opencode/package.json").exists()
 
 
 @pytest.mark.parametrize("harness", ["pi", "all"])
 def test_install_rejects_unverified_pi_memory_distribution(tmp_path: Path, harness: str) -> None:
-    config = tmp_path / ".harnessctl/config.yaml"
-    config.parent.mkdir(parents=True)
-    config.write_text("memory:\n  enabled: true\n", encoding="utf-8")
+    _write_enabled_memory_config(tmp_path)
+    marker = tmp_path / ".pi/existing.txt"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("preserve", encoding="utf-8")
+    before = _tree_manifest(tmp_path)
 
     with pytest.raises(
         RuntimeError,
@@ -220,8 +380,79 @@ def test_install_rejects_unverified_pi_memory_distribution(tmp_path: Path, harne
     ):
         install(tmp_path, harness)
 
-    assert not (tmp_path / ".pi").exists()
+    assert _tree_manifest(tmp_path) == before
+    assert marker.read_text(encoding="utf-8") == "preserve"
     assert not (tmp_path / ".opencode").exists()
+
+
+def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Path) -> None:
+    _write_enabled_memory_config(tmp_path)
+    command = tmp_path / ".opencode/commands/work-new.md"
+    skill = tmp_path / ".opencode/skills/memory/SKILL.md"
+    command.parent.mkdir(parents=True)
+    skill.parent.mkdir(parents=True)
+    command.write_text("custom command", encoding="utf-8")
+    skill.write_text("custom skill", encoding="utf-8")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError) as error:
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
+    message = str(error.value).replace("\\", "/")
+    assert ".opencode/commands/work-new.md" in message
+    assert ".opencode/skills/memory/SKILL.md" in message
+
+
+@pytest.mark.parametrize("failure_point", ["write", "initialize", "smoke"])
+def test_install_failure_restores_exact_tree_and_preserves_existing_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_point: str
+) -> None:
+    _write_enabled_memory_config(tmp_path, ".harnessctl/custom/memory")
+    existing_opencode = tmp_path / ".opencode"
+    existing_opencode.mkdir()
+    (existing_opencode / "keep.txt").write_bytes(b"keep-opencode\x00")
+    (existing_opencode / "package.json").write_bytes(b'{"name":"keep"}\n')
+    (tmp_path / ".gitignore").write_bytes(b"/existing-without-newline")
+    existing_memory_folder = tmp_path / ".harnessctl/custom/memory/facts"
+    existing_memory_folder.mkdir(parents=True)
+    (existing_memory_folder / "keep.yaml").write_bytes(b"keep-memory\n")
+    before = _tree_manifest(tmp_path)
+
+    if failure_point == "write":
+        original_write = install_module.write_atomic
+        writes = 0
+
+        def fail_during_write(target: Path, content: str) -> None:
+            nonlocal writes
+            writes += 1
+            if writes == 3:
+                raise OSError("injected command write failure")
+            original_write(target, content)
+
+        monkeypatch.setattr(install_module, "write_atomic", fail_during_write)
+    elif failure_point == "initialize":
+        original_initialize = install_module._initialize_memory_paths
+
+        def fail_during_initialize(
+            root: Path, repository: dict[str, object], created: list[Path]
+        ) -> None:
+            original_initialize(root, repository, created)
+            raise OSError("injected memory initialization failure")
+
+        monkeypatch.setattr(install_module, "_initialize_memory_paths", fail_during_initialize)
+    else:
+        monkeypatch.setattr(
+            install_module,
+            "_smoke_check",
+            lambda root: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+        )
+
+    with pytest.raises((OSError, RuntimeError), match="injected"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
+    assert not (tmp_path / ".harnessctl/cache/harnessctl.sqlite").exists()
 
 
 def test_install_preserves_unrelated_opencode_package_fields(tmp_path: Path) -> None:

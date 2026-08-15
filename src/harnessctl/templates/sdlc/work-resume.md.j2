@@ -1,7 +1,9 @@
 # Resume Work
 
+{% include "sdlc/_partials/memory-entry.md.j2" %}
+
 Operate in theoretical conversation-only mode. Do not use tools, read files, search
-repositories, access memory systems, modify artifacts, or perform any action.
+repositories, access prior-context systems, modify artifacts, or perform any action.
 
 The user wants to resume work that may have stopped in an earlier conversation or on
 an earlier day. Ask for the minimum context needed to reconstruct the work.
@@ -15,7 +17,7 @@ Ask about:
 - which decisions or documents the user remembers;
 - what the user believes the next step should be.
 
-Do not treat memory, assumptions, or recollection as confirmed facts. Distinguish:
+Do not treat assumptions or recollection as confirmed facts. Distinguish:
 
 - confirmed by the user;
 - recalled but unconfirmed;
@@ -42,3 +44,5 @@ Return:
 ### Confirmation needed
 
 Ask the user to confirm the reconstructed context before any later stage begins.
+
+{% include "sdlc/_partials/memory-exit.md.j2" %}

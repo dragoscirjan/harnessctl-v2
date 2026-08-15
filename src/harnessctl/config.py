@@ -112,6 +112,8 @@ def _validate(config: dict[str, Any]) -> None:
     memory = _mapping(config, "memory")
     if not isinstance(memory.get("enabled"), bool):
         raise ConfigError("memory.enabled must be boolean")
+    if memory["enabled"] and not caveman["enabled"]:
+        raise ConfigError("memory.enabled=true requires communication.caveman.enabled=true")
     if memory.get("backend") != "repository":
         raise ConfigError("memory.backend must be repository in config v2")
     namespace = _mapping(memory, "namespace")

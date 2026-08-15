@@ -130,6 +130,41 @@ describe('canonical Zod schemas', () => {
     ).toBe(true);
   });
 
+  it('enforces the memory-to-caveman invariant at runtime and in the generated contract', () => {
+    const invalid = {
+      ...validConfig,
+      communication: { caveman: { enabled: false, mode: 'strict' } },
+    };
+    const runtime = configV2Schema.safeParse(invalid);
+    expect(runtime.success).toBe(false);
+    const runtimeMessage = runtime.success ? '' : formatSchemaError(runtime.error);
+    expect(runtimeMessage).toContain('memory.enabled requires communication.caveman.enabled to be true');
+
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const contract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+    ) as object;
+    const validate = ajv.compile(contract);
+    expect(validate(invalid)).toBe(false);
+    expect(validate({ ...invalid, memory: { ...invalid.memory, enabled: false } })).toBe(true);
+  });
+
+  it('retains canonical memory record limits in runtime and generated schemas', () => {
+    const boundary = { ...validRecord, summary: 's'.repeat(1000), details: 'd'.repeat(12_000) };
+    expect(memoryRecordSchema.safeParse(boundary).success).toBe(true);
+    expect(memoryRecordSchema.safeParse({ ...boundary, summary: `${boundary.summary}s` }).success).toBe(false);
+    expect(memoryRecordSchema.safeParse({ ...boundary, details: `${boundary.details}d` }).success).toBe(false);
+
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const contract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'memory-record-v1.schema.json'), 'utf8'),
+    ) as object;
+    const validate = ajv.compile(contract);
+    expect(validate(boundary)).toBe(true);
+  });
+
   it('makes generated contracts reject expressible invalid values', () => {
     const ajv = new Ajv2020({ allErrors: true, strict: true });
     addFormats(ajv);

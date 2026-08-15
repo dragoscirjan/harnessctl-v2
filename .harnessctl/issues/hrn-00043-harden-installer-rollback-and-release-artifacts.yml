@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00043"
+"type": "task"
+"title": "Harden installer rollback and release artifacts"
+"status": "done"
+"created_at": "2026-08-14T23:38:16.364Z"
+"updated_at": "2026-08-14T23:51:05.089Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00042"
+"body": "Given installation or packaged distribution, when hooks are installed or failures occur, then outputs are complete and rollback restores the exact prior tree.\n\nAcceptance:\n- Enabled OpenCode installs hooked commands, both skills, plugin, and dependency.\n- Enabled Pi/all fails before writes.\n- Rollback removes only transaction-created empty directories.\n- Wheel/sdist contain templates and partials; isolated CLI checks pass."
+"comments": []

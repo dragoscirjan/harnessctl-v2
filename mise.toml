@@ -105,6 +105,14 @@ run = "actionlint"
 description = "Run Python tests"
 run = "uv run pytest"
 
+[tasks.release-artifacts]
+description = "Build and verify isolated Python release artifacts"
+run = "uv run pytest tests/test_release_artifacts.py"
+
+[tasks.build]
+description = "Build and inspect all publishable packages"
+depends = ["node-build", "release-artifacts"]
+
 [tasks.node-dupcheck]
 description = "Check Node and Python duplication"
 run = "npm run dupcheck"
@@ -135,7 +143,7 @@ depends = ["node-test", "python-test"]
 
 [tasks.quality]
 description = "Run the complete local quality gate"
-depends = ["format", "lint", "test", "node-typecheck", "node-dupcheck", "python-deadcode", "actions-lint"]
+depends = ["format", "lint", "test", "build", "node-typecheck", "node-dupcheck", "python-deadcode", "actions-lint"]
 
 [tasks.integration]
 description = "Run harness integration tests using configured model environments"

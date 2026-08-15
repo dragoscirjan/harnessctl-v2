@@ -3,6 +3,44 @@
   "$id": "https://harnessctl.dev/contracts/config-v2.schema.json",
   "title": "harnessctl project configuration v2",
   "description": "Repository paths are project-relative. The local SQLite cache uses the fixed .harnessctl/cache/harnessctl.sqlite path.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "memory": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": ["enabled"]
+          }
+        },
+        "required": ["memory"]
+      },
+      "then": {
+        "properties": {
+          "communication": {
+            "type": "object",
+            "properties": {
+              "caveman": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": ["enabled"]
+              }
+            },
+            "required": ["caveman"]
+          }
+        },
+        "required": ["communication"]
+      }
+    }
+  ],
   "type": "object",
   "properties": {
     "version": {

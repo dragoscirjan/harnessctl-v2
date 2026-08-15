@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00041"
+"type": "task"
+"title": "Compile bounded memory hooks across SDLC commands"
+"status": "done"
+"created_at": "2026-08-14T23:38:16.028Z"
+"updated_at": "2026-08-14T23:44:36.353Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00040"
+"body": "Given any canonical SDLC command, when rendered for memory-capable OpenCode, then shared bounded memory hooks are compiled according to command metadata.\n\nAcceptance:\n- All 18 commands use shared partials.\n- Exactly eight priority commands permit one narrow entry search.\n- Disabled OpenCode and every Pi render contain no memory references.\n- Authoritative artifacts override advisory memory."
+"comments": []

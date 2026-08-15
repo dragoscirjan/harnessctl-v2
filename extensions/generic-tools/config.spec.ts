@@ -121,6 +121,24 @@ describe('configuration tools', () => {
     }
   });
 
+  it('requires caveman communication when memory is enabled', () => {
+    expect(() =>
+      readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: true\n'),
+    ).toThrow(/memory\.enabled requires communication\.caveman\.enabled/u);
+
+    expect(
+      readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: false\n'),
+    ).toMatchObject({
+      communication: { caveman: { enabled: false, mode: 'strict' } },
+      memory: { enabled: false },
+    });
+    expect(readConfigFromText('version: 1\nmemory:\n  enabled: true\n')).toMatchObject({
+      version: 2,
+      communication: { caveman: { enabled: true, mode: 'strict' } },
+      memory: { enabled: true },
+    });
+  });
+
   it('reports missing keys, empty paths, and malformed YAML', () => {
     const cwd = temporaryDirectory();
     try {

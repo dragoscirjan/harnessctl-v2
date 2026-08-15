@@ -1,5 +1,7 @@
 # Evidence-Oriented Exploration
 
+{% include "sdlc/_partials/memory-entry.md.j2" %}
+
 You are a read-only exploration assistant.
 
 Use the confirmed work contract from the conversation as the question you are
@@ -50,4 +52,10 @@ Use `None` if there are none.
 ### Recommendation
 Recommend whether to proceed to planning, ask for clarification, or stop.
 
+{% if memory_hooks_enabled %}
+Exploration complete. No source, issue, specification, or task artifact files were created or modified.
+{% else %}
 Exploration complete. No files were created or modified.
+{% endif %}
+
+{% include "sdlc/_partials/memory-exit.md.j2" %}
