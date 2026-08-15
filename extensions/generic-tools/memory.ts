@@ -105,6 +105,9 @@ const MAX_QUERY_BYTES = 16 * 1024;
 const MAX_BATCH_PATHS = 10_000;
 const MAX_BEFORE_BYTES = 256 * 1024 * 1024;
 const MAX_ERRORS = 100;
+const MUTATION_SUMMARY_CHARACTERS = 240;
+const MUTATION_DETAILS_CHARACTERS = 2_000;
+const MUTATION_DETAILS_LINES = 12;
 
 interface MemorySettings {
   organizationId: string;
@@ -128,7 +131,18 @@ interface Replacement {
   exclusive?: boolean;
 }
 
+interface ImportCandidate {
+  value: unknown;
+  line: number;
+}
+
+interface ValidatedImport {
+  records: MemoryRecord[];
+  tombstones: MemoryTombstone[];
+}
+
 export function storeMemory(cwd: string, input: StoreMemoryInput): MemoryRecord {
+  validateMutationCompactness(input, 'memory_store');
   return execute(cwd, true, (settings, state, lease) => {
     const record = makeRecord(settings, input, []);
     validateRecord(record, settings);
@@ -139,6 +153,7 @@ export function storeMemory(cwd: string, input: StoreMemoryInput): MemoryRecord 
 }
 
 export function supersedeMemory(cwd: string, targetId: string, input: StoreMemoryInput): MemoryRecord {
+  validateMutationCompactness(input, 'memory_supersede');
   return execute(cwd, true, (settings, state, lease) => {
     requireActiveTarget(state, targetId);
     const record = makeRecord(settings, input, [targetId]);
@@ -269,49 +284,78 @@ export function exportMemory(cwd: string): string {
 }
 
 export function importMemory(cwd: string, content: string, preview = false): MemoryValidationReport {
-  if (Buffer.byteLength(content, 'utf8') > MAX_PAYLOAD_BYTES)
-    throw new MemoryError('memory import exceeds the 64 MiB payload limit.');
-  return execute(cwd, !preview, (settings, state, lease) => {
-    const items = content
-      .split(/\r?\n/u)
-      .filter((line) => line.trim())
-      .map((line, index) => {
-        try {
-          return JSON.parse(line) as unknown;
-        } catch (error: unknown) {
-          throw new MemoryError(`Invalid JSONL at line ${index + 1}: ${errorMessage(error)}`);
-        }
-      });
-    const records: MemoryRecord[] = [];
-    const tombstones: MemoryTombstone[] = [];
-    const ids = new Set([...state.records, ...state.tombstones].map((item) => item.id));
-    for (const item of items) {
-      if (isTombstone(item)) {
-        validateTombstone(item, settings);
-        if (ids.has(item.id)) throw new MemoryConflictError(`Memory ID already exists: ${item.id}`);
-        ids.add(item.id);
-        tombstones.push(item);
-      } else {
-        validateRecord(item, settings);
-        if (ids.has(item.id)) throw new MemoryConflictError(`Memory ID already exists: ${item.id}`);
-        ids.add(item.id);
-        records.push(item);
-      }
-    }
-    assertImportRelationships(state, records, tombstones);
-    if (!preview) {
-      const replacements: Replacement[] = [
-        ...records.map((record) => ({ path: recordPath(settings, record), bytes: encode(record), exclusive: true })),
-        ...tombstones.map((value) => ({
-          path: `${settings.root}/tombstones/${value.id}.yaml`,
-          bytes: encode(value),
-          exclusive: true,
-        })),
-      ];
-      if (replacements.length) applyBatch(lease, replacements);
-    }
-    return { valid: true, records: records.length, tombstones: tombstones.length, errors: [] };
+  let validated: ValidatedImport;
+  try {
+    if (Buffer.byteLength(content, 'utf8') > MAX_PAYLOAD_BYTES)
+      throw new MemoryError('memory import exceeds the 64 MiB payload limit.');
+    const settings = settingsFor(cwd);
+    const state = loadState(cwd, settings);
+    assertCanonicalIssueGraph(cwd);
+    validated = validateImportBatch(parseImportCandidates(content), settings, state);
+  } catch (error: unknown) {
+    if (preview) return invalidReport(error);
+    throw asMemoryError(error);
+  }
+  if (preview)
+    return { valid: true, records: validated.records.length, tombstones: validated.tombstones.length, errors: [] };
+
+  return execute(cwd, true, (settings, state, lease) => {
+    const current = validateImportBatch(parseImportCandidates(content), settings, state);
+    const replacements: Replacement[] = [
+      ...current.records.map((record) => ({
+        path: recordPath(settings, record),
+        bytes: encode(record),
+        exclusive: true,
+      })),
+      ...current.tombstones.map((value) => ({
+        path: `${settings.root}/tombstones/${value.id}.yaml`,
+        bytes: encode(value),
+        exclusive: true,
+      })),
+    ];
+    if (replacements.length) applyBatch(lease, replacements);
+    return { valid: true, records: current.records.length, tombstones: current.tombstones.length, errors: [] };
   });
+}
+
+function parseImportCandidates(content: string): ImportCandidate[] {
+  const candidates: ImportCandidate[] = [];
+  for (const [index, line] of content.split(/\r?\n/u).entries()) {
+    if (!line.trim()) continue;
+    try {
+      candidates.push({ value: JSON.parse(line) as unknown, line: index + 1 });
+    } catch (error: unknown) {
+      throw new MemoryError(`Invalid JSONL at line ${index + 1}: ${errorMessage(error)}`);
+    }
+  }
+  return candidates;
+}
+
+function validateImportBatch(
+  candidates: readonly ImportCandidate[],
+  settings: MemorySettings,
+  state: MemoryState,
+): ValidatedImport {
+  const records: MemoryRecord[] = [];
+  const tombstones: MemoryTombstone[] = [];
+  const ids = new Set([...state.records, ...state.tombstones].map((item) => item.id));
+  for (const candidate of candidates) {
+    const item = candidate.value;
+    if (isTombstone(item)) {
+      validateTombstone(item, settings);
+      if (ids.has(item.id)) throw new MemoryConflictError(`Memory ID already exists: ${item.id}`);
+      ids.add(item.id);
+      tombstones.push(item);
+      continue;
+    }
+    validateRecord(item, settings);
+    validateMutationCompactness(item, 'memory_import', candidate.line, item.id);
+    if (ids.has(item.id)) throw new MemoryConflictError(`Memory ID already exists: ${item.id}`);
+    ids.add(item.id);
+    records.push(item);
+  }
+  assertImportRelationships(state, records, tombstones);
+  return { records, tombstones };
 }
 
 function execute<T>(
@@ -522,6 +566,41 @@ function validateRecord(value: unknown, settings: MemorySettings): asserts value
   if (!result.success) throw new MemoryError(`Invalid memory record:\n${formatSchemaError(result.error)}`);
   assertScope(result.data, settings);
   scanSecrets(result.data);
+}
+
+function validateMutationCompactness(
+  value: Pick<StoreMemoryInput, 'summary' | 'details'>,
+  operation: 'memory_store' | 'memory_supersede' | 'memory_import',
+  line?: number,
+  recordId?: string,
+): void {
+  const context = [
+    operation,
+    line === undefined ? undefined : `line ${line}`,
+    recordId ? `record ${recordId}` : undefined,
+  ]
+    .filter((part): part is string => part !== undefined)
+    .join(' ');
+  const summaryCharacters = unicodeCharacters(value.summary);
+  if (summaryCharacters > MUTATION_SUMMARY_CHARACTERS)
+    throw new MemoryError(
+      `${context}: summary has ${summaryCharacters} Unicode characters; limit is ${MUTATION_SUMMARY_CHARACTERS}.`,
+    );
+  if (value.details === undefined || value.details === null) return;
+  const detailCharacters = unicodeCharacters(value.details);
+  if (detailCharacters > MUTATION_DETAILS_CHARACTERS)
+    throw new MemoryError(
+      `${context}: details has ${detailCharacters} Unicode characters; limit is ${MUTATION_DETAILS_CHARACTERS}.`,
+    );
+  const nonEmptyLines = value.details.split(/\r\n|[\n\r\u2028\u2029]/u).filter((lineValue) => lineValue.trim()).length;
+  if (nonEmptyLines > MUTATION_DETAILS_LINES)
+    throw new MemoryError(
+      `${context}: details has ${nonEmptyLines} non-empty lines; limit is ${MUTATION_DETAILS_LINES}.`,
+    );
+}
+
+function unicodeCharacters(value: string): number {
+  return Array.from(value).length;
 }
 
 function validateTombstone(value: unknown, settings: MemorySettings): asserts value is MemoryTombstone {

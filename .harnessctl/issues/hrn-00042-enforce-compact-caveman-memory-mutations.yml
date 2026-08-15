@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00042"
+"type": "task"
+"title": "Enforce compact caveman memory mutations"
+"status": "done"
+"created_at": "2026-08-14T23:38:16.197Z"
+"updated_at": "2026-08-14T23:44:36.469Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"depends_on":
+  - "hrn-00041"
+"body": "Given a proposed store, supersede, or record import, when mutation policy is evaluated, then concise caveman input is required without invalidating existing records.\n\nAcceptance:\n- Mutation limits are 240 summary characters, 2,000 detail characters, and 12 non-empty detail lines.\n- Preview and mutating import return equivalent diagnostics.\n- Existing records at canonical v1 limits still load, validate, retrieve, and export."
+"comments": []

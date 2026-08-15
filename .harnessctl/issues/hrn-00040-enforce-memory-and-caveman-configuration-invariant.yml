@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00040"
+"type": "task"
+"title": "Enforce memory and caveman configuration invariant"
+"status": "done"
+"created_at": "2026-08-14T23:38:15.849Z"
+"updated_at": "2026-08-14T23:44:36.233Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00006"
+"body": "Given project configuration, when memory is enabled, then caveman must also be enabled across Python, TypeScript, and generated JSON Schema.\n\nAcceptance:\n- Defaults remain caveman enabled and memory disabled.\n- Invalid memory-on/caveman-off config fails consistently.\n- Existing memory record schema limits remain backward compatible."
+"comments": []

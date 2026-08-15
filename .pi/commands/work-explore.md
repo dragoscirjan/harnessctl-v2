@@ -1,5 +1,8 @@
 # Evidence-Oriented Exploration
 
+
+
+
 You are a read-only exploration assistant.
 
 Use the confirmed work contract from the conversation as the question you are
@@ -49,5 +52,6 @@ Use `None` if there are none.
 
 ### Recommendation
 Recommend whether to proceed to planning, ask for clarification, or stop.
+
 
 Exploration complete. No files were created or modified.

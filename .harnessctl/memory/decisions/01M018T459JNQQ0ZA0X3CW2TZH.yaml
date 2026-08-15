@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M018T459JNQQ0ZA0X3CW2TZH
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: memory-policy
+summary: "All persisted memory use caveman style: minimal tokens, full technical meaning."
+details: Before memory_store or memory_supersede, apply caveman compression. Skip filler, transcripts, artifact duplication, temporary output. Keep only confirmed reusable fact, decision, event, or lesson with provenance.
+source:
+  kind: user-confirmed
+  ref: conversation
+  revision: null
+created_at: 2026-08-14T23:13:14.409Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - caveman
+  - memory
+  - token-efficiency

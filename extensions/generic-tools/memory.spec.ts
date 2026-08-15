@@ -97,6 +97,36 @@ describe('repository memory', () => {
     }
   });
 
+  it('enforces compact mutation boundaries for store and supersede using Unicode characters', () => {
+    const cwd = fixture();
+    try {
+      const boundaryDetails = [...Array.from({ length: 11 }, () => 'x'), 'x'.repeat(1978)].join('\n');
+      const accepted = storeMemory(cwd, {
+        ...fact('🙂'.repeat(240)),
+        details: boundaryDetails,
+      });
+      expect(accepted.summary).toBe('🙂'.repeat(240));
+      expect(Array.from(accepted.details ?? '')).toHaveLength(2000);
+      expect(accepted.details?.split('\n')).toHaveLength(12);
+
+      expect(() => storeMemory(cwd, fact('🙂'.repeat(241)))).toThrow(
+        /memory_store: summary has 241 Unicode characters; limit is 240/u,
+      );
+      expect(() => supersedeMemory(cwd, accepted.id, { ...fact('replacement'), details: 'd'.repeat(2001) })).toThrow(
+        /memory_supersede: details has 2001 Unicode characters; limit is 2000/u,
+      );
+      expect(() =>
+        supersedeMemory(cwd, accepted.id, {
+          ...fact('replacement'),
+          details: Array.from({ length: 13 }, () => 'non-empty').join('\n\n'),
+        }),
+      ).toThrow(/memory_supersede: details has 13 non-empty lines; limit is 12/u);
+      expect(listMemory(cwd, { include_superseded: true })).toEqual([accepted]);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('supersedes and tombstones without overwriting history', () => {
     const cwd = fixture();
     try {
@@ -165,6 +195,71 @@ describe('repository memory', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(destination, { recursive: true, force: true });
+    }
+  });
+
+  it('returns identical compactness diagnostics for preview and mutating import without partial writes', () => {
+    const source = fixture();
+    const destination = fixture();
+    try {
+      const first = storeMemory(source, fact('Compact import candidate'));
+      const second = { ...first, id: '01ARZ3NDEKTSV4RRFFQ69G5FAW', summary: 'x'.repeat(241) };
+      const content = `${JSON.stringify(first)}\n${JSON.stringify(second)}\n`;
+
+      const preview = importMemory(destination, content, true);
+      expect(preview).toMatchObject({ valid: false, records: 0, tombstones: 0 });
+      expect(preview.errors[0]).toMatch(
+        /memory_import line 2 record 01ARZ3NDEKTSV4RRFFQ69G5FAW: summary has 241 Unicode characters; limit is 240/u,
+      );
+      expect(() => importMemory(destination, content)).toThrow(preview.errors[0]);
+      expect(listMemory(destination)).toEqual([]);
+    } finally {
+      rmSync(source, { recursive: true, force: true });
+      rmSync(destination, { recursive: true, force: true });
+    }
+  });
+
+  it('previews imports without creating project, memory, cache, or lock directories', () => {
+    const source = fixture();
+    const destination = mkdtempSync(join(tmpdir(), 'harnessctl-memory-preview-'));
+    try {
+      storeMemory(source, fact('Side-effect-free preview'));
+      const exported = exportMemory(source);
+      expect(existsSync(join(destination, '.harnessctl'))).toBe(false);
+      expect(importMemory(destination, exported, true)).toMatchObject({ valid: true, records: 1, tombstones: 0 });
+      expect(existsSync(join(destination, '.harnessctl'))).toBe(false);
+    } finally {
+      rmSync(source, { recursive: true, force: true });
+      rmSync(destination, { recursive: true, force: true });
+    }
+  });
+
+  it('loads, validates, retrieves, searches, and exports canonical records at legacy limits', () => {
+    const cwd = fixture();
+    try {
+      const seed = storeMemory(cwd, fact('Seed'));
+      const path = join(cwd, '.harnessctl', 'memory', 'facts', `${seed.id}.yaml`);
+      const legacy = { ...seed, summary: 's'.repeat(1000), details: 'd'.repeat(12_000) };
+      writeFileSync(path, stringify(legacy, { lineWidth: 0 }), 'utf8');
+
+      expect(validateMemory(cwd)).toMatchObject({ valid: true, records: 1 });
+      expect(getMemory(cwd, seed.id)).toEqual(legacy);
+      expect(searchMemory(cwd, { query: 's'.repeat(100), max_chars: 100_000 })).toEqual([legacy]);
+      const exported = exportMemory(cwd);
+      expect(exported).toContain('s'.repeat(1000));
+
+      const destination = fixture();
+      try {
+        const preview = importMemory(destination, exported, true);
+        expect(preview.valid).toBe(false);
+        expect(preview.errors[0]).toMatch(/summary has 1000 Unicode characters; limit is 240/u);
+        expect(() => importMemory(destination, exported)).toThrow(preview.errors[0]);
+        expect(listMemory(destination)).toEqual([]);
+      } finally {
+        rmSync(destination, { recursive: true, force: true });
+      }
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 

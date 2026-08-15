@@ -15,7 +15,7 @@ communication:
     enabled: true
     mode: strict
 memory:
-  enabled: false
+  enabled: true
   backend: repository
   namespace:
     organization_id: local

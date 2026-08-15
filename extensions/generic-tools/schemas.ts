@@ -49,9 +49,43 @@ export const configV2Schema = z
       .strict(),
   })
   .passthrough()
+  .superRefine((config, context) => {
+    if (config.memory.enabled && !config.communication.caveman.enabled)
+      context.addIssue({
+        code: 'custom',
+        path: ['memory', 'enabled'],
+        message: 'memory.enabled requires communication.caveman.enabled to be true',
+      });
+  })
   .meta({
     description:
       'Repository paths are project-relative. The local SQLite cache uses the fixed .harnessctl/cache/harnessctl.sqlite path.',
+    allOf: [
+      {
+        if: {
+          properties: {
+            memory: { type: 'object', properties: { enabled: { const: true } }, required: ['enabled'] },
+          },
+          required: ['memory'],
+        },
+        then: {
+          properties: {
+            communication: {
+              type: 'object',
+              properties: {
+                caveman: {
+                  type: 'object',
+                  properties: { enabled: { const: true } },
+                  required: ['enabled'],
+                },
+              },
+              required: ['caveman'],
+            },
+          },
+          required: ['communication'],
+        },
+      },
+    ],
   });
 
 export type ConfigV2 = z.infer<typeof configV2Schema>;
