@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00047"
+"type": "task"
+"title": "Write harnessctl documentation set"
+"status": "done"
+"created_at": "2026-08-16T21:52:33.643Z"
+"updated_at": "2026-08-16T22:04:12.492Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00044"
+"body": "Given a new harnessctl user\nWhen they open `docs/README.md`\nThen they can navigate SDLC, skills, configuration, memory, and issue documentation\nAnd distinguish implemented behavior from future plans.\n\n## Deliverables\n\n- `docs/README.md`\n- `docs/sdlc.md`\n- `docs/skills.md`\n- `docs/configuration.md`\n- `docs/memory.md`\n- `docs/issues.md`\n- Root README link.\n\n## Acceptance Criteria\n\n- [x] Config tools and overlay/default behavior are explained.\n- [x] Skill-specific config values are documented.\n- [x] Memory current and planned backends are clearly separated.\n- [x] Issue provider CLI/auth boundaries are accurate.\n- [x] Cross-links resolve."
+"comments": []

@@ -1,0 +1,54 @@
+---
+name: issue-tracking
+description: Manage project issues through the configured {{ provider }} issue authority.
+---
+
+# Issue Tracking
+
+Use only the configured issue tooling described below. Never switch providers, call an unconfigured tool, or edit provider storage directly. If a required tool is unavailable, stop and report the exact missing capability to the user.
+
+## Issue Content
+
+Manage initiatives, epics, stories, tasks, and bugs. Use this hierarchy where provider capabilities permit:
+
+- Initiative: top-level business goal.
+  - Epic: large project phase.
+    - Story: user-facing feature.
+      - Task: atomic implementation step.
+      - Bug: defect in a story.
+    - Bug: defect in an epic.
+
+Write clear, testable acceptance criteria. When useful, describe a feature as “As a …, I want …, so that …” or a defect with `Given` / `When` / `Then` Gherkin steps.
+
+Keep progress comments concise: status, links to produced artifacts, next step or blocker, and agent attribution. Link to `.specs/`, task documents, and source artifacts instead of pasting their bodies.
+
+Record an execution failure as an issue comment only when its target issue is known and the configured tooling, repository context, authentication when applicable, and comment capability remain operational. If the provider, CLI, authentication, repository resolution, or comment operation fails, stop and report directly to the user. Never retry failure reporting through the broken issue channel.
+
+{% if provider == "filesystem" -%}
+## Filesystem Provider
+
+Canonical issues are under `{{ issue_root }}` and use the `{{ issue_prefix }}` ID prefix. Available normalized harnessctl tools: `{{ tools }}`.
+
+1. Use `issue_create` to create metadata and obtain an ID.
+2. Use `issue_get` to read that issue and obtain its latest `expectedRevision`.
+3. Use `issue_update` with the complete body and that `expectedRevision`.
+4. Before every later revision-sensitive `issue_update` or `issue_transition`, call `issue_get` again and pass the newly returned `expectedRevision`.
+
+Use `issue_list` for discovery, `issue_comment` for append-only progress, and `issue_link_document` for task or design documents. Use relationship and archive tools rather than encoding those changes in text. Never directly edit canonical files under `{{ issue_root }}`: IDs, front matter, timestamps, relationships, revisions, and comments are tool-managed. A revision conflict requires a fresh `issue_get`; never bypass concurrency or validation controls.
+{% else -%}
+## Remote Provider
+
+The operator must install and authenticate `{{ tools }}`. Harnessctl does not log in, accept credentials, install a CLI, or choose a repository. Confirm the CLI's active repository before mutation whenever repository resolution is ambiguous.
+
+Remote issue titles must use the hierarchy prefix: 🚀 Initiative, 🏔️ Epic, 📖 Story, 🛠️ Task, or 🐛 Bug. Represent hierarchy through issue links and body text. Do not require labels; use only operator-established repository conventions.
+
+{% if provider == "github" -%}
+Official GitHub CLI `gh issue` supports create, list, view, edit, comment, close, and reopen. Consult installed `gh issue --help` and subcommand help for exact options.
+{% elif provider == "gitlab" -%}
+Official GitLab CLI `glab issue` supports create, list, view, update, note, close, and reopen. Consult installed `glab issue --help` and subcommand help for exact options.
+{% elif provider == "gitea" -%}
+Gitea's official CLI is `tea`; its issue-facing command groups include `issues` or `issue` and `comment`. Consult installed `tea --help` and command-group help for exact options.
+{% elif provider == "forgejo" -%}
+No official Forgejo CLI or syntax is verified here. `{{ tools }}` is an operator-selected executable whose Forgejo compatibility and authentication are operator-verified. Inspect `{{ tools }} --help` before every planned operation. Infer no capability, subcommand, or syntax from this executable's use with another provider.
+{% endif -%}
+{% endif -%}

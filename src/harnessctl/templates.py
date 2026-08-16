@@ -202,6 +202,7 @@ DESCRIPTIONS = {
 }
 SKILL_TEMPLATES = {
     "caveman": "skills/caveman/SKILL.md.j2",
+    "issue-tracking": "skills/issue-tracking/SKILL.md.j2",
     "memory": "skills/memory/SKILL.md.j2",
 }
 

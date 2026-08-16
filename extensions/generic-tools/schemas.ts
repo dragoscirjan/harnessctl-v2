@@ -2,23 +2,30 @@ import * as z from 'zod';
 
 const nonemptyString = z.string().min(1).regex(/\S/, 'must not be blank');
 const safeProjectPath = nonemptyString.regex(
-  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*\/\/)(?!.*\/$)(?!.*(?:^|\/)\.{1,2}(?:\/|$)).+$/,
+  // eslint-disable-next-line no-control-regex -- config paths must reject control characters before prompt rendering
+  /^(?!\/)(?![A-Za-z]:)(?!.*[\u0000-\u001F\u007F-\u009F\u2028\u2029])(?!.*\\)(?!.*`)(?!.*\/\/)(?!.*\/$)(?!.*(?:^|\/)\.{1,2}(?:\/|$)).+$/,
   'must stay inside project root',
 );
+
+export const FILESYSTEM_ISSUE_TOOLS =
+  'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive';
+const safeExecutable = z.string().regex(/^[A-Za-z0-9_-]+$/, 'must be one safe executable identifier');
+const issueBase = {
+  root: safeProjectPath,
+  prefix: z.string().regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
+};
+const issuesSchema = z.discriminatedUnion('type', [
+  z.object({ ...issueBase, type: z.literal('filesystem'), tools: z.literal(FILESYSTEM_ISSUE_TOOLS) }).strict(),
+  z.object({ ...issueBase, type: z.literal('github'), tools: z.literal('gh') }).strict(),
+  z.object({ ...issueBase, type: z.literal('gitlab'), tools: z.literal('glab') }).strict(),
+  z.object({ ...issueBase, type: z.literal('gitea'), tools: z.literal('tea') }).strict(),
+  z.object({ ...issueBase, type: z.literal('forgejo'), tools: safeExecutable }).strict(),
+]);
 
 export const configV2Schema = z
   .object({
     version: z.literal(2),
-    issues: z
-      .object({
-        root: safeProjectPath,
-        prefix: z
-          .string()
-          .regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
-        type: z.literal('filesystem'),
-        tools: nonemptyString,
-      })
-      .strict(),
+    issues: issuesSchema,
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),

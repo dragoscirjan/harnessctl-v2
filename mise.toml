@@ -92,6 +92,11 @@ run = "npm run typecheck:strict"
 description = "Build and inspect all publishable Node packages"
 run = "npm run packages:check"
 
+[tasks.node-quality]
+description = "Run Node type checks, tests, and package inspection sequentially"
+depends = ["node-test"]
+run = "npm run packages:check"
+
 [tasks.runtime-smoke]
 description = "Smoke-test built package entrypoints with Node and Bun"
 depends = ["node-build"]
@@ -143,7 +148,7 @@ depends = ["node-test", "python-test"]
 
 [tasks.quality]
 description = "Run the complete local quality gate"
-depends = ["format", "lint", "test", "build", "node-typecheck", "node-dupcheck", "python-deadcode", "actions-lint"]
+depends = ["format", "lint", "node-quality", "python-test", "release-artifacts", "node-dupcheck", "python-deadcode", "actions-lint"]
 
 [tasks.integration]
 description = "Run harness integration tests using configured model environments"

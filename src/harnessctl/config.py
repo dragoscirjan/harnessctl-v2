@@ -8,17 +8,21 @@ from typing import Any
 
 import yaml
 
+FILESYSTEM_ISSUE_TOOLS = (
+    "issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,"
+    "issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,"
+    "issue_archive"
+)
+REMOTE_ISSUE_TYPES = frozenset({"github", "gitlab", "gitea", "forgejo"})
+EXPECTED_PROVIDER_TOOL = {"github": "gh", "gitlab": "glab", "gitea": "tea"}
+
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
     "issues": {
         "root": ".harnessctl/issues",
         "prefix": "hrn-",
         "type": "filesystem",
-        "tools": (
-            "issue_id,issue_create,issue_list,issue_get,issue_update,"
-            "issue_transition,issue_comment,issue_relate,issue_unrelate,"
-            "issue_link_document,issue_validate,issue_archive"
-        ),
+        "tools": FILESYSTEM_ISSUE_TOOLS,
     },
     "paths": {
         "root": ".harnessctl",
@@ -65,6 +69,7 @@ def load_config(cwd: Path) -> dict[str, Any]:
     version = value.get("version")
     if version not in (None, 1, 2):
         raise ConfigError(f"unsupported configuration version: {version}")
+    _require_explicit_remote_tools(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
     _validate(config)
@@ -98,10 +103,10 @@ def _validate(config: dict[str, Any]) -> None:
         raise ConfigError(
             "issues.prefix must contain only ASCII letters, digits, underscores, or hyphens"
         )
-    if issues.get("type") != "filesystem":
-        raise ConfigError("issues.type must be filesystem in config v2")
-    if not isinstance(issues.get("tools"), str) or not issues["tools"].strip():
-        raise ConfigError("issues.tools must be a non-empty string")
+    issue_type = issues.get("type")
+    if issue_type not in {"filesystem", *REMOTE_ISSUE_TYPES}:
+        raise ConfigError("issues.type must be filesystem, github, gitlab, gitea, or forgejo")
+    _normalize_issue_tools(issues, issue_type)
 
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):
@@ -129,6 +134,61 @@ def _validate(config: dict[str, Any]) -> None:
     _safe_path(repository, "root", "memory.repository")
 
 
+def _require_explicit_remote_tools(source: dict[str, Any]) -> None:
+    issues = source.get("issues")
+    if (
+        isinstance(issues, dict)
+        and issues.get("type") in REMOTE_ISSUE_TYPES
+        and "tools" not in issues
+    ):
+        raise ConfigError(
+            f"issues.type={issues['type']} requires issues.tools to be selected explicitly"
+        )
+
+
+def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
+    value = issues.get("tools")
+    if not isinstance(value, str):
+        raise ConfigError("issues.tools must be a string")
+    tools = [tool.strip() for tool in value.split(",")]
+    if any(
+        not tool
+        or not all(
+            character.isascii() and (character.isalnum() or character in "_-") for character in tool
+        )
+        for tool in tools
+    ):
+        raise ConfigError(
+            "issues.tools entries must be safe executable identifiers without "
+            "arguments, paths, assignments, or shell operators"
+        )
+    if issue_type == "filesystem":
+        required = FILESYSTEM_ISSUE_TOOLS.split(",")
+        if (
+            len(tools) != len(required)
+            or len(set(tools)) != len(tools)
+            or any(tool not in required for tool in tools)
+        ):
+            raise ConfigError(
+                f"issues.tools must be exactly {FILESYSTEM_ISSUE_TOOLS} for issues.type=filesystem"
+            )
+        issues["tools"] = FILESYSTEM_ISSUE_TOOLS
+        return
+    expected = EXPECTED_PROVIDER_TOOL.get(issue_type)
+    if expected is not None:
+        if tools != [expected]:
+            raise ConfigError(
+                f"issues.tools must be exactly {expected} for issues.type={issue_type}"
+            )
+        issues["tools"] = expected
+        return
+    if len(tools) != 1:
+        raise ConfigError(
+            "issues.tools must contain exactly one safe executable for issues.type=forgejo"
+        )
+    issues["tools"] = tools[0]
+
+
 def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> None:
     value = parent.get(key)
     if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
@@ -144,6 +204,8 @@ def _safe_path(parent: dict[str, Any], key: str, namespace: str) -> PurePosixPat
         or "//" in value
         or value.endswith("/")
         or "\\" in value
+        or "`" in value
+        or not value.isprintable()
         or (len(value) >= 2 and value[0].isalpha() and value[1] == ":")
     ):
         raise ConfigError(f"{namespace}.{key} must stay inside project root")

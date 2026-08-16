@@ -14,6 +14,20 @@ The project exists to make development work:
 - more economical through staged model usage and local-model support;
 - portable across coding harnesses instead of being coupled to one runtime.
 
+## Documentation
+
+Start with the [documentation index](docs/README.md), then use the focused guides:
+
+- [SDLC commands and approval boundaries](docs/sdlc.md)
+- [Generated skills and host boundaries](docs/skills.md)
+- [Configuration and tool settings](docs/configuration.md)
+- [Repository memory and disposable cache](docs/memory.md)
+- [Filesystem issues and configured provider routing](docs/issues.md)
+
+The detailed intended lifecycle remains in [FLOWS.md](FLOWS.md). Topic guides label
+implemented behavior separately from plans so roadmap material is not mistaken for a
+current capability.
+
 ## Product model
 
 The product has four layers:
@@ -314,25 +328,9 @@ Implemented in `src/harnessctl/`:
 - OpenCode and Pi target generation.
 - Packaged prompt templates that are included in built wheels.
 
-Current canonical templates:
-
-```text
-src/harnessctl/templates/sdlc/work-new.md.j2
-src/harnessctl/templates/sdlc/work-explore.md.j2
-src/harnessctl/templates/sdlc/work-plan.md.j2
-```
-
-Current installer targets:
-
-```text
-.opencode/commands/work-new.md
-.opencode/commands/work-explore.md
-.opencode/commands/work-plan.md
-
-.pi/commands/work-new.md
-.pi/commands/work-explore.md
-.pi/commands/work-plan.md
-```
+The current registry contains 18 canonical templates and installs each under the
+OpenCode and Pi command directories. See the [SDLC guide](docs/sdlc.md) for the exact
+command set and current host boundaries.
 
 ### Generic issue tooling
 
@@ -436,7 +434,6 @@ The repository now uses:
 
 The following are intentionally not part of the current slice:
 
-- `/implement`, `/verify`, `/review`, or `/finish` prompt templates;
 - a Pi extension that exposes `/work new` and grouped subcommands;
 - a primary Orchestrator agent definition;
 - anonymous worker assignment and result contracts in prompts;
@@ -451,52 +448,16 @@ The following are intentionally not part of the current slice:
 - game-development-specific workflows.
 
 The generic issue tools are more advanced than the prompt workflow because they were
-implemented as a separate filesystem-management slice. They are available for later
-prompt stages but are not yet orchestrated by the prompts.
+implemented as a separate filesystem-management slice. The 18 prompt templates are
+currently conversation-only proposals and do not orchestrate those tools.
 
 ## Next implementation steps
 
-The recommended order is:
-
-### Immediate
-
-1. Exercise `work-new`, `work-explore`, and `work-plan` manually in OpenCode.
-2. Refine the language based on real conversations.
-3. Add the Pi extension that loads `.pi/commands/*.md` and exposes grouped `/work`
-   subcommands.
-4. Decide whether OpenCode should keep hyphenated names or receive aliases such as
-   `/work.new`.
-
-### Workflow safety
-
-5. Define a durable artifact layout under `.harnessctl/tasks/<id>/`.
-6. Add a plan artifact containing a revision/content hash.
-7. Add an explicit human approval artifact tied to that exact plan.
-8. Add resume behavior based on artifacts rather than chat history.
-
-### Implementation workflow
-
-9. Write `/implement` with strict scope and protected-file rules.
-10. Write `/verify` with command execution and evidence capture.
-11. Write `/review` with human decision output.
-12. Write `/finish` as metadata/command preparation only.
-
-### Intelligence allocation
-
-13. Add generic model-tier configuration.
-14. Start with the cheapest reasonable model.
-15. Retry only with concrete feedback.
-16. Escalate only on observable failure, contradiction, insufficient evidence, or
-    policy-defined risk.
-17. Preserve failed attempts and judge findings when escalating.
-
-### Delivery and expansion
-
-18. Add optional commit/push/PR preparation policies.
-19. Keep merge human-only.
-20. Add external provider adapters only after the local filesystem workflow is stable.
-21. Add self-development only with protected policy, permission, escalation, and merge
-    controls.
+Current roadmap areas include durable approval artifacts, grouped Pi command
+dispatch, model-tier and retry policy, remote provider adapters, and protected
+self-development. These remain separate from the installed 18-command prompt set.
+See [FLOWS.md](FLOWS.md) for intended sequencing and the
+[topic documentation](docs/README.md) for current-versus-planned boundaries.
 
 ## Installing prompts
 

@@ -121,6 +121,67 @@ describe('configuration tools', () => {
     }
   });
 
+  it.each([
+    ['github', ' gh ', 'gh'],
+    ['gitlab', ' glab ', 'glab'],
+    ['gitea', ' tea ', 'tea'],
+    ['forgejo', ' forgejo-cli ', 'forgejo-cli'],
+  ])('normalizes explicit %s tooling while config tools remain available', (type, tools, normalized) => {
+    const config = readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n`);
+    expect(config).toMatchObject({ issues: { type, tools: normalized } });
+  });
+
+  it('keeps create and get tools operational for remote configuration', () => {
+    const cwd = temporaryDirectory();
+    try {
+      const path = createConfig(cwd);
+      writeFileSync(path, 'version: 2\nissues:\n  type: github\n  tools: gh\n', 'utf8');
+      expect(getConfigValue(cwd, 'issues.type')).toBe('github');
+      expect(getConfigValue(cwd, 'issues.tools')).toBe('gh');
+      createConfig(cwd);
+      expect(readFileSync(path, 'utf8')).toContain('type: github');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('normalizes the complete filesystem tool set to canonical order', () => {
+    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
+    const reordered = canonical.split(',').reverse().join(' , ');
+    expect(readConfigFromText(`version: 2\nissues:\n  tools: "${reordered}"\n`)).toMatchObject({
+      issues: { type: 'filesystem', tools: canonical },
+    });
+  });
+
+  it.each(['github', 'gitlab', 'gitea', 'forgejo'])('requires explicit tools for remote type %s', (type) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n`)).toThrow(
+      new RegExp(`issues\\.type=${type} requires issues\\.tools`, 'u'),
+    );
+  });
+
+  it.each([
+    ['github', 'glab'],
+    ['gitlab', 'gh'],
+    ['gitea', 'gh'],
+    ['forgejo', 'tea,gh'],
+  ])('rejects provider/tool mismatch %s with %s', (type, tools) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n`)).toThrow(
+      /issues\.tools/u,
+    );
+  });
+
+  it.each(['gh --token secret', '../gh', 'TOKEN=value', 'gh;rm', 'gh,', ''])('rejects unsafe tool text %j', (tools) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: forgejo\n  tools: "${tools}"\n`)).toThrow(
+      /issues\.tools/u,
+    );
+  });
+
+  it('rejects incomplete, extended, and duplicate filesystem tool sets', () => {
+    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
+    for (const tools of [canonical.split(',').slice(1).join(','), `${canonical},extra`, `${canonical},issue_id`])
+      expect(() => readConfigFromText(`version: 2\nissues:\n  tools: "${tools}"\n`)).toThrow(/must be exactly/u);
+  });
+
   it('requires caveman communication when memory is enabled', () => {
     expect(() =>
       readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: true\n'),
@@ -173,7 +234,15 @@ describe('configuration tools', () => {
   it('rejects unsafe issue roots and prefixes', () => {
     const base = readConfigFromText('version: 2\n');
     const issues = base.issues as Record<string, unknown>;
-    for (const root of ['../issues', '.', 'nested//issues', '.harnessctl/issues/']) {
+    for (const root of [
+      '../issues',
+      '.',
+      'nested//issues',
+      '.harnessctl/issues/',
+      '.harnessctl/`issues',
+      '.harnessctl/\0issues',
+      '.harnessctl/\nissues',
+    ]) {
       issues.root = root;
       expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
     }

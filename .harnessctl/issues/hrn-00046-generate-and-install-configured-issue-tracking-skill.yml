@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00046"
+"type": "task"
+"title": "Generate and install configured issue-tracking skill"
+"status": "done"
+"created_at": "2026-08-16T21:52:33.522Z"
+"updated_at": "2026-08-16T22:04:12.396Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00044"
+"body": "Given a valid issue provider configuration\nWhen harnessctl installs OpenCode assets\nThen it generates a self-contained provider-specific issue-tracking skill\nAnd excludes unrelated provider instructions.\n\n## Technical Requirements\n\n- Add Jinja issue-tracking skill adapted from the existing OpenCode skill.\n- Embed hierarchy, Gherkin, comments, links-over-text, and provider failure rules.\n- Install under `.opencode/skills/issue-tracking/SKILL.md`.\n- Preserve exact-tree rollback, conflict handling, and Pi boundary.\n\n## Acceptance Criteria\n\n- [x] Filesystem skill uses normalized harnessctl tools and revisions.\n- [x] Hosted-provider skills route only through configured CLI guidance.\n- [x] Forgejo syntax is not invented.\n- [x] Installer rollback and release artifacts include the skill."
+"comments": []

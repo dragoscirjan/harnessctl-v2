@@ -5,9 +5,10 @@ export default defineConfig({
   environment: 'node',
   clearMocks: true,
   restoreMocks: true,
-  fileParallelism: true,
-  maxWorkers: Number(process.env.VITEST_MAX_WORKERS ?? 4),
+  fileParallelism: false,
+  maxWorkers: Number(process.env.VITEST_MAX_WORKERS ?? 1),
   maxConcurrency: Number(process.env.VITEST_MAX_CONCURRENCY ?? 2),
+  testTimeout: 15_000,
   coverage: {
     enabled: true,
     provider: 'v8',

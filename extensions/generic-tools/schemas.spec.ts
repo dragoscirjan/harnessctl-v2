@@ -5,7 +5,13 @@ import type { FormatsPlugin } from 'ajv-formats';
 import addFormatsModule from 'ajv-formats';
 import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
-import { configV2Schema, formatSchemaError, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';
+import {
+  configV2Schema,
+  FILESYSTEM_ISSUE_TOOLS,
+  formatSchemaError,
+  memoryRecordSchema,
+  memoryTombstoneSchema,
+} from './schemas.js';
 
 const validConfig = {
   version: 2,
@@ -13,7 +19,7 @@ const validConfig = {
     root: '.harnessctl/issues',
     prefix: 'hrn-',
     type: 'filesystem',
-    tools: 'issue_id,issue_create',
+    tools: FILESYSTEM_ISSUE_TOOLS,
   },
   communication: { caveman: { enabled: true, mode: 'strict' } },
   memory: {
@@ -187,4 +193,44 @@ describe('canonical Zod schemas', () => {
     expect(validateMemory({ ...validRecord, source: { ...validRecord.source, kind: 'discussion' } })).toBe(false);
     expect(validateMemory({ ...validRecord, tags: ['duplicate', 'duplicate'] })).toBe(false);
   });
+
+  it.each([
+    ['filesystem', FILESYSTEM_ISSUE_TOOLS],
+    ['github', 'gh'],
+    ['gitlab', 'glab'],
+    ['gitea', 'tea'],
+    ['forgejo', 'forgejo-cli'],
+  ])('accepts exact %s tooling in runtime and portable schemas', (type, tools) => {
+    const document = { ...validConfig, issues: { ...validConfig.issues, type, tools } };
+    expect(configV2Schema.safeParse(document).success).toBe(true);
+    expect(configContractValidator()(document)).toBe(true);
+  });
+
+  it.each([
+    ['github', 'glab'],
+    ['gitlab', 'gh'],
+    ['gitea', 'gh'],
+    ['forgejo', 'tea,gh'],
+    ['forgejo', 'gh --token secret'],
+    ['filesystem', 'issue_id'],
+  ])('rejects invalid %s tooling %s in runtime and portable schemas', (type, tools) => {
+    const document = { ...validConfig, issues: { ...validConfig.issues, type, tools } };
+    expect(configV2Schema.safeParse(document).success).toBe(false);
+    expect(configContractValidator()(document)).toBe(false);
+  });
+
+  it.each(['libsql', 'mem0', 'graphiti', 'custom'])('continues rejecting future memory backend %s', (backend) => {
+    const document = { ...validConfig, memory: { ...validConfig.memory, backend } };
+    expect(configV2Schema.safeParse(document).success).toBe(false);
+    expect(configContractValidator()(document)).toBe(false);
+  });
 });
+
+function configContractValidator(): ReturnType<Ajv2020['compile']> {
+  const ajv = new Ajv2020({ allErrors: true, strict: true });
+  addFormats(ajv);
+  const contract = JSON.parse(
+    readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+  ) as object;
+  return ajv.compile(contract);
+}

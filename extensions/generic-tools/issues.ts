@@ -177,6 +177,14 @@ export function createFilesystemIssueProvider(
   cwd: string,
   options: FilesystemIssueProviderOptions = {},
 ): FilesystemIssueProvider {
+  assertLocalIssueProvider(cwd, 'createFilesystemIssueProvider');
+  return buildFilesystemIssueProvider(cwd, options);
+}
+
+function buildFilesystemIssueProvider(
+  cwd: string,
+  options: FilesystemIssueProviderOptions = {},
+): FilesystemIssueProvider {
   const { prefix, issueRoot } = getIssueStorageConfig(cwd);
   const clock = options.clock ?? (() => new Date());
   const locked = <T>(operation: (lease: BarrierLease) => T, mutation = false): T =>
@@ -240,53 +248,66 @@ export function createFilesystemIssueProvider(
 }
 
 export function parseIssueIds(prompt: string, cwd = process.cwd()): string[] {
+  assertLocalIssueProvider(cwd, 'parseIssueIds');
   const prefix = readIssuePrefix(cwd);
   return prefix === undefined ? [] : parseIdsWithPrefix(prompt, prefix);
 }
 
 export function parseIssueId(prompt: string, cwd = process.cwd()): string {
-  return parseIssueIds(prompt, cwd)[0] ?? '';
+  assertLocalIssueProvider(cwd, 'parseIssueId');
+  const prefix = readIssuePrefix(cwd);
+  return prefix === undefined ? '' : (parseIdsWithPrefix(prompt, prefix)[0] ?? '');
 }
 
 export function createIssueRecord(cwd: string, options: CreateIssueOptions): Issue {
-  return createFilesystemIssueProvider(cwd).create(options);
+  assertLocalIssueProvider(cwd, 'createIssueRecord');
+  return buildFilesystemIssueProvider(cwd).create(options);
 }
 
 export function getIssue(cwd: string, id: string): Issue {
-  return createFilesystemIssueProvider(cwd).get(id);
+  assertLocalIssueProvider(cwd, 'getIssue');
+  return buildFilesystemIssueProvider(cwd).get(id);
 }
 
 export function listIssueSummaries(cwd: string, options: ListIssueOptions = {}): IssueSummary[] {
-  return createFilesystemIssueProvider(cwd).list(options);
+  assertLocalIssueProvider(cwd, 'listIssueSummaries');
+  return buildFilesystemIssueProvider(cwd).list(options);
 }
 
 export function updateIssue(cwd: string, id: string, changes: IssueUpdateChanges): Issue {
-  return createFilesystemIssueProvider(cwd).update(id, changes);
+  assertLocalIssueProvider(cwd, 'updateIssue');
+  return buildFilesystemIssueProvider(cwd).update(id, changes);
 }
 
 export function transitionIssue(cwd: string, id: string, status: string, expectedRevision: string): Issue {
-  return createFilesystemIssueProvider(cwd).transition(id, status, expectedRevision);
+  assertLocalIssueProvider(cwd, 'transitionIssue');
+  return buildFilesystemIssueProvider(cwd).transition(id, status, expectedRevision);
 }
 
 export function commentIssue(cwd: string, id: string, body: string, author: string): IssueComment {
-  return createFilesystemIssueProvider(cwd).appendComment(id, body, author);
+  assertLocalIssueProvider(cwd, 'commentIssue');
+  return buildFilesystemIssueProvider(cwd).appendComment(id, body, author);
 }
 
 export function relateIssue(cwd: string, id: string, relationship: string, targetId: string): Issue {
-  return createFilesystemIssueProvider(cwd).relate(id, relationship, targetId);
+  assertLocalIssueProvider(cwd, 'relateIssue');
+  return buildFilesystemIssueProvider(cwd).relate(id, relationship, targetId);
 }
 
 export function unrelateIssue(cwd: string, id: string, relationship: string, targetId: string): Issue {
-  return createFilesystemIssueProvider(cwd).unrelate(id, relationship, targetId);
+  assertLocalIssueProvider(cwd, 'unrelateIssue');
+  return buildFilesystemIssueProvider(cwd).unrelate(id, relationship, targetId);
 }
 
 export function linkDocument(cwd: string, id: string, documentPath: string, kind?: string): Issue {
-  return createFilesystemIssueProvider(cwd).linkDocument(id, documentPath, kind);
+  assertLocalIssueProvider(cwd, 'linkDocument');
+  return buildFilesystemIssueProvider(cwd).linkDocument(id, documentPath, kind);
 }
 
 export function validateIssues(cwd: string, id?: string): ValidationReport {
   try {
-    return createFilesystemIssueProvider(cwd).validate(id);
+    assertLocalIssueProvider(cwd, 'validateIssues');
+    return buildFilesystemIssueProvider(cwd).validate(id);
   } catch (error: unknown) {
     return { valid: false, findings: [findingFromError(error, id)] };
   }
@@ -312,7 +333,8 @@ export function validateCanonicalIssueGraph(cwd: string): ValidationReport {
 }
 
 export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
-  return createFilesystemIssueProvider(cwd).archiveTree(id);
+  assertLocalIssueProvider(cwd, 'archiveIssueReport');
+  return buildFilesystemIssueProvider(cwd).archiveTree(id);
 }
 
 function createUnlocked(
@@ -933,6 +955,21 @@ function getIssueStorageConfig(cwd: string): { prefix: string; issueRoot: string
     throw new IssueError('configuration', 'issue prefix must be a safe string');
   if (typeof root !== 'string') throw new IssueError('configuration', 'issue root must be a safe string');
   return { prefix, issueRoot: validateIssueRoot(root) };
+}
+
+function assertLocalIssueProvider(cwd: string, operation: string): void {
+  const config = readConfig(cwd);
+  if (config instanceof ConfigError)
+    throw new IssueError('configuration', `unable to read issue configuration: ${config.message}`);
+  const issues = config.issues;
+  if (issues === null || typeof issues !== 'object' || Array.isArray(issues))
+    throw new IssueError('configuration', 'issue configuration must be a mapping');
+  const { type, tools } = issues as Record<string, unknown>;
+  if (type === 'filesystem') return;
+  throw new IssueError(
+    'configuration',
+    `${operation} cannot use harnessctl local issue tools with issues.type=${String(type)} and configured executable ${String(tools)}; harnessctl local issue tools are available only for issues.type=filesystem.`,
+  );
 }
 
 function readIssuePrefix(cwd: string): string | undefined {
