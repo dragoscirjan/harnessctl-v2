@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## 0.1.5
+
+### Patch Changes
+
+- [#23](https://github.com/dragoscirjan/harnessctl-v2/pull/23) [`2df8994`](https://github.com/dragoscirjan/harnessctl-v2/commit/2df8994dc2bcbe885775590d6b376de51608878b) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add provider-aware issue configuration, explicit remote URL and token-environment contracts, fail-closed remote-mode safeguards for the generated issue-tracking skill, and clear memory service support and configuration examples.
+
 ## 0.1.4
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @harnessctl/pi-tools
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [[`2df8994`](https://github.com/dragoscirjan/harnessctl-v2/commit/2df8994dc2bcbe885775590d6b376de51608878b)]:
+  - @harnessctl/generic-tools@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes
