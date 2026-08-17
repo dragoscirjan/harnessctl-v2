@@ -153,9 +153,10 @@ def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> Non
     target.write_bytes(b"operator content\x00")
     before = _tree_manifest(tmp_path)
 
-    with pytest.raises(FileExistsError, match="issue-tracking/SKILL.md"):
+    with pytest.raises(FileExistsError) as error:
         install(tmp_path, "opencode")
 
+    assert "issue-tracking/SKILL.md" in str(error.value).replace("\\", "/")
     assert _tree_manifest(tmp_path) == before
 
 
