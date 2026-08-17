@@ -40,12 +40,66 @@ runner, repository selector, or credential store exists. Local issue operations 
 not a remote-provider interface.
 
 Routing pairs GitHub with `gh`, GitLab with `glab`, Gitea with `tea`, and
-Forgejo with one safe executable selected by the operator. The CLI must already be
-installed and authenticated, and must resolve the intended repository from its own
-configuration or current directory. harnessctl will store no token, password, server
-URL, owner, project slug, login state, or command arguments. Agents must confirm an
-ambiguous repository before mutation and must not fall back to filesystem or another
-provider when the selected CLI fails.
+Forgejo with `forgejo-cli`. The CLI must already be installed. Remote configuration
+identifies the provider endpoint and names the environment variable containing the
+token; the token value remains only in the environment and must never appear in YAML.
+Agents must confirm an ambiguous repository before mutation and must not fall back to
+filesystem or another provider when the selected CLI fails.
+
+| Provider | CLI           | Required URL          | Required token environment variable |
+| -------- | ------------- | --------------------- | ----------------------------------- |
+| GitHub   | `gh`          | `https://github.com`  | `GH_TOKEN`                          |
+| GitLab   | `glab`        | `https://gitlab.com`  | `GITLAB_TOKEN`                      |
+| Gitea    | `tea`         | Explicit instance URL | `GITEA_TOKEN`                       |
+| Forgejo  | `forgejo-cli` | Explicit instance URL | `FORGEJO_TOKEN`                     |
+
+### GitHub
+
+```yaml
+issues:
+  type: github
+  tools: gh
+  remote:
+    url: https://github.com
+    token_env: GH_TOKEN
+```
+
+### GitLab
+
+```yaml
+issues:
+  type: gitlab
+  tools: glab
+  remote:
+    url: https://gitlab.com
+    token_env: GITLAB_TOKEN
+```
+
+### Gitea
+
+```yaml
+issues:
+  type: gitea
+  tools: tea
+  remote:
+    url: https://gitea.example.com
+    token_env: GITEA_TOKEN
+```
+
+### Forgejo
+
+```yaml
+issues:
+  type: forgejo
+  tools: forgejo-cli
+  remote:
+    url: https://forgejo.example.com
+    token_env: FORGEJO_TOKEN
+```
+
+Replace only the example self-hosted URL. Every remote provider requires
+`issues.remote`; filesystem rejects it. `issues.root` and `issues.prefix` apply only
+to filesystem and are ignored remotely.
 
 Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
@@ -61,9 +115,9 @@ Capability references used by generated guidance are:
   view, update, note, close, and reopen capability families.
 - [Gitea `tea` project](https://gitea.com/gitea/tea): official Gitea CLI identity and
   issue/comment groups.
-- Forgejo: no official CLI or syntax was verified for the current design. Any selected
-  executable and compatibility are operator responsibilities; inspect its installed
-  help rather than inferring GitHub, GitLab, or Gitea syntax.
+- Forgejo uses configured `forgejo-cli`, but its operation syntax is help-driven.
+  Inspect the installed help before use rather than inferring GitHub, GitLab, or Gitea
+  syntax.
 
 Exact options belong to the installed CLI help because versions drift. Authentication
 or provider-channel failures must be reported directly to the user, not recursively

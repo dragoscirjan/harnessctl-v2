@@ -21,21 +21,36 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 
 ### Issue and workflow settings
 
-| Key                          | Default                     | Current meaning                                                                             |
-| ---------------------------- | --------------------------- | ------------------------------------------------------------------------------------------- |
-| `version`                    | `2`                         | Configuration contract version                                                              |
-| `issues.root`                | `.harnessctl/issues`        | Safe project-relative canonical issue root                                                  |
-| `issues.prefix`              | `hrn-`                      | Local ID prefix; ASCII letters, digits, underscores, and hyphens only                       |
-| `issues.type`                | `filesystem`                | `filesystem`, `github`, `gitlab`, `gitea`, or `forgejo`                                     |
-| `issues.tools`               | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or one safe Forgejo executable |
-| `paths.root`                 | `.harnessctl`               | General harnessctl artifact root                                                            |
-| `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                                          |
-| `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                                        |
-| `workflow.default_task_type` | `bug`                       | Default task classification                                                                 |
+| Key                          | Default                     | Current meaning                                                               |
+| ---------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `version`                    | `2`                         | Configuration contract version                                                |
+| `issues.root`                | `.harnessctl/issues`        | Filesystem-only safe project-relative canonical issue root; ignored remotely  |
+| `issues.prefix`              | `hrn-`                      | Filesystem-only local ID prefix; ignored remotely                             |
+| `issues.type`                | `filesystem`                | `filesystem`, `github`, `gitlab`, `gitea`, or `forgejo`                       |
+| `issues.tools`               | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
+| `issues.remote.url`          | None                        | Required for remote providers; rejected for filesystem                        |
+| `issues.remote.token_env`    | None                        | Required provider token environment-variable name; rejected for filesystem    |
+| `paths.root`                 | `.harnessctl`               | General harnessctl artifact root                                              |
+| `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                            |
+| `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                          |
+| `workflow.default_task_type` | `bug`                       | Default task classification                                                   |
 
 The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
 `issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
 `issue_unrelate`, `issue_link_document`, `issue_validate`, and `issue_archive`.
+
+A complete filesystem example is:
+
+```yaml
+version: 2
+issues:
+  type: filesystem
+  root: .harnessctl/issues
+  prefix: hrn-
+  tools: issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive
+```
+
+Filesystem configuration rejects `issues.remote`.
 
 ### Caveman settings
 
@@ -66,13 +81,68 @@ compatibility, but it is unused and not generated; do not configure it.
 
 Provider-aware issue configuration and OpenCode skill generation are implemented.
 Remote selections require explicit tools instead of inheriting filesystem defaults:
-GitHub uses `gh`, GitLab uses `glab`, Gitea uses `tea`, and Forgejo accepts one
-operator-selected safe executable. Known provider/tool mismatches fail validation.
+GitHub uses `gh`, GitLab uses `glab`, Gitea uses `tea`, and Forgejo uses
+`forgejo-cli`. Known provider/tool mismatches fail validation.
 
-These values are executable identifiers, not commands. The contract excludes
-arguments, URLs, assignments, repository coordinates, tokens, passwords, and login
-state. harnessctl does not install, authenticate, or invoke a configured CLI. The
-generated issue-tracking skill instructs the host agent to use the operator-managed
-CLI. Generic local issue tools fail closed in remote mode instead of mutating YAML.
+Every remote selection requires `issues.remote` with exactly `url` and `token_env`.
+GitHub requires `https://github.com` and `GH_TOKEN`; GitLab requires
+`https://gitlab.com` and `GITLAB_TOKEN`. Gitea and Forgejo require an explicit
+operator-selected instance URL and respectively `GITEA_TOKEN` and `FORGEJO_TOKEN`.
+The token environment-variable name belongs in YAML; the token value exists only in
+the process environment and must never be written to configuration, generated skills,
+issues, or logs. `issues.root` and `issues.prefix` are filesystem-only and ignored in
+remote mode.
+
+Complete remote provider examples:
+
+```yaml
+# GitHub
+version: 2
+issues:
+  type: github
+  tools: gh
+  remote:
+    url: https://github.com
+    token_env: GH_TOKEN
+```
+
+```yaml
+# GitLab
+version: 2
+issues:
+  type: gitlab
+  tools: glab
+  remote:
+    url: https://gitlab.com
+    token_env: GITLAB_TOKEN
+```
+
+```yaml
+# Gitea
+version: 2
+issues:
+  type: gitea
+  tools: tea
+  remote:
+    url: https://gitea.example.com
+    token_env: GITEA_TOKEN
+```
+
+```yaml
+# Forgejo
+version: 2
+issues:
+  type: forgejo
+  tools: forgejo-cli
+  remote:
+    url: https://forgejo.example.com
+    token_env: FORGEJO_TOKEN
+```
+
+Replace only the Gitea or Forgejo example host with the real instance URL. These tool
+values are executable identifiers, not commands. harnessctl does not install,
+authenticate, or invoke a configured CLI. The generated issue-tracking skill instructs the host agent to use
+the operator-managed CLI and configured remote endpoint. Generic local issue tools
+fail closed in remote mode instead of mutating YAML.
 See [issues](issues.md). Future memory shapes are documented separately in
 [memory](memory.md); all remain invalid today.

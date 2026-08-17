@@ -37,6 +37,28 @@ OpenCode files are installed under `.opencode/commands/`; Pi files are installed
 repository memory adds bounded entry or exit guidance only to OpenCode prompts; it
 does not establish approval, completion, verification, merge, or deployment.
 
+A complete example enabling those OpenCode memory hooks is:
+
+```yaml
+communication:
+  caveman:
+    enabled: true
+    mode: strict
+memory:
+  enabled: true
+  backend: repository
+  namespace:
+    organization_id: local
+    project_id: project
+    default_topic: general
+  retrieval:
+    limit: 8
+    max_chars: 12000
+    include_superseded: false
+  repository:
+    root: .harnessctl/memory
+```
+
 Stage contracts frame expected inputs and bounded outputs. A command must report a
 missing prerequisite rather than infer it, and must not silently cross into the next
 stage. Plans, decompositions, designs, delivery actions, deployment, and merge retain

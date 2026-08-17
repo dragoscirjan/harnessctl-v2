@@ -246,30 +246,50 @@ def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("provider", "tools", "normalized"),
+    ("provider", "tools", "url", "token_env", "normalized"),
     [
-        ("github", " gh ", "gh"),
-        ("gitlab", " glab ", "glab"),
-        ("gitea", " tea ", "tea"),
-        ("forgejo", " forgejo-cli ", "forgejo-cli"),
+        ("github", " gh ", "https://github.com", "GH_TOKEN", "gh"),
+        ("gitlab", " glab ", "https://gitlab.com", "GITLAB_TOKEN", "glab"),
+        ("gitea", " tea ", "https://gitea.example.com/api", "GITEA_TOKEN", "tea"),
+        (
+            "forgejo",
+            " forgejo-cli ",
+            "http://forgejo.example.com",
+            "FORGEJO_TOKEN",
+            "forgejo-cli",
+        ),
     ],
 )
 def test_config_accepts_and_normalizes_remote_provider_tools(
-    tmp_path: Path, provider: str, tools: str, normalized: str
+    tmp_path: Path,
+    provider: str,
+    tools: str,
+    url: str,
+    token_env: str,
+    normalized: str,
 ) -> None:
-    write_project_config(tmp_path, f'issues:\n  type: {provider}\n  tools: "{tools}"\n')
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
+        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+    )
 
     assert load_config(tmp_path)["issues"] == {
         "root": ".harnessctl/issues",
         "prefix": "hrn-",
         "type": provider,
         "tools": normalized,
+        "remote": {"url": url, "token_env": token_env},
     }
 
 
 @pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
 def test_config_requires_explicit_remote_tools(tmp_path: Path, provider: str) -> None:
-    write_project_config(tmp_path, f"issues:\n  type: {provider}\n")
+    write_project_config(
+        tmp_path,
+        f"issues:\n  type: {provider}\n"
+        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+    )
 
     with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.tools"):
         load_config(tmp_path)
@@ -285,7 +305,11 @@ def test_config_requires_explicit_remote_tools(tmp_path: Path, provider: str) ->
     ],
 )
 def test_config_rejects_provider_tool_mismatches(tmp_path: Path, provider: str, tools: str) -> None:
-    write_project_config(tmp_path, f'issues:\n  type: {provider}\n  tools: "{tools}"\n')
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
+        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+    )
 
     with pytest.raises(ConfigError, match=r"issues\.tools"):
         load_config(tmp_path)
@@ -293,9 +317,72 @@ def test_config_rejects_provider_tool_mismatches(tmp_path: Path, provider: str, 
 
 @pytest.mark.parametrize("tools", ["gh --token secret", "../gh", "TOKEN=value", "gh;rm", "gh,", ""])
 def test_config_rejects_unsafe_remote_tool_text(tmp_path: Path, tools: str) -> None:
-    write_project_config(tmp_path, f'issues:\n  type: forgejo\n  tools: "{tools}"\n')
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: forgejo\n  tools: "{tools}"\n'
+        "  remote:\n    url: https://forgejo.example.com\n    token_env: FORGEJO_TOKEN\n",
+    )
 
     with pytest.raises(ConfigError, match=r"issues\.tools"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_config_requires_remote_connection(tmp_path: Path, provider: str) -> None:
+    tools = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}
+    write_project_config(tmp_path, f"issues:\n  type: {provider}\n  tools: {tools[provider]}\n")
+
+    with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.remote"):
+        load_config(tmp_path)
+
+
+def test_config_rejects_remote_connection_for_filesystem(tmp_path: Path) -> None:
+    write_project_config(
+        tmp_path,
+        "issues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match="not allowed"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("provider", "url", "token_env", "error"),
+    [
+        ("github", "https://github.example.com", "GH_TOKEN", r"remote\.url"),
+        ("gitlab", "https://gitlab.com", "GH_TOKEN", r"remote\.token_env"),
+        ("gitea", "gitea.example.com", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://gitea.example.com:abc", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://[bad", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://user:secret@gitea.example.com", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://gitea.example.com/`injected`", "GITEA_TOKEN", r"remote\.url"),
+        ("forgejo", "ssh://forgejo.example.com", "FORGEJO_TOKEN", r"remote\.url"),
+        ("forgejo", "https://forgejo.example.com", "TOKEN=value", r"remote\.token_env"),
+    ],
+)
+def test_config_rejects_invalid_remote_connection(
+    tmp_path: Path, provider: str, url: str, token_env: str, error: str
+) -> None:
+    tool = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}[provider]
+    write_project_config(
+        tmp_path,
+        f"issues:\n  type: {provider}\n  tools: {tool}\n"
+        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+    )
+
+    with pytest.raises(ConfigError, match=error):
+        load_config(tmp_path)
+
+
+def test_config_rejects_remote_url_with_embedded_line_break(tmp_path: Path) -> None:
+    write_project_config(
+        tmp_path,
+        "issues:\n  type: gitea\n  tools: tea\n  remote:\n"
+        '    url: "https://gitea.example.com/path\\ninjected"\n'
+        "    token_env: GITEA_TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"remote\.url"):
         load_config(tmp_path)
 
 

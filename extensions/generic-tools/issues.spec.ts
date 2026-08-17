@@ -61,9 +61,16 @@ function remoteRepository(type: string, tools: string): string {
   const root = mkdtempSync(join(tmpdir(), 'harnessctl-remote-issues-'));
   roots.push(root);
   mkdirSync(join(root, '.harnessctl'));
+  const remote = {
+    github: { url: 'https://github.com', token_env: 'GH_TOKEN' },
+    gitlab: { url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' },
+    gitea: { url: 'https://gitea.example.test', token_env: 'GITEA_TOKEN' },
+    forgejo: { url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' },
+  }[type];
+  if (remote === undefined) throw new Error(`Unsupported test issue provider: ${type}`);
   writeFileSync(
     join(root, '.harnessctl/config.yaml'),
-    `version: 2\nissues:\n  root: dormant/issues\n  prefix: hrn-\n  type: ${type}\n  tools: ${tools}\n`,
+    `version: 2\nissues:\n  root: dormant/issues\n  prefix: hrn-\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${remote.url}\n    token_env: ${remote.token_env}\n`,
     'utf8',
   );
   return root;

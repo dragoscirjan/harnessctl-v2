@@ -65,6 +65,11 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
         }
         if issues["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
+        else:
+            issue_context.update(
+                remote_url=issues["remote"]["url"],
+                token_env=issues["remote"]["token_env"],
+            )
         rendered_targets.append(
             (
                 _target(root, OPENCODE_SKILLS / "issue-tracking/SKILL.md"),

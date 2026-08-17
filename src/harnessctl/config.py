@@ -5,6 +5,7 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path, PurePosixPath
 from typing import Any
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -14,7 +15,12 @@ FILESYSTEM_ISSUE_TOOLS = (
     "issue_archive"
 )
 REMOTE_ISSUE_TYPES = frozenset({"github", "gitlab", "gitea", "forgejo"})
-EXPECTED_PROVIDER_TOOL = {"github": "gh", "gitlab": "glab", "gitea": "tea"}
+REMOTE_ISSUE_PROVIDERS = {
+    "github": {"tool": "gh", "url": "https://github.com", "token_env": "GH_TOKEN"},
+    "gitlab": {"tool": "glab", "url": "https://gitlab.com", "token_env": "GITLAB_TOKEN"},
+    "gitea": {"tool": "tea", "url": None, "token_env": "GITEA_TOKEN"},
+    "forgejo": {"tool": "forgejo-cli", "url": None, "token_env": "FORGEJO_TOKEN"},
+}
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
@@ -70,6 +76,7 @@ def load_config(cwd: Path) -> dict[str, Any]:
     if version not in (None, 1, 2):
         raise ConfigError(f"unsupported configuration version: {version}")
     _require_explicit_remote_tools(value)
+    _require_remote_connection(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
     _validate(config)
@@ -107,6 +114,7 @@ def _validate(config: dict[str, Any]) -> None:
     if issue_type not in {"filesystem", *REMOTE_ISSUE_TYPES}:
         raise ConfigError("issues.type must be filesystem, github, gitlab, gitea, or forgejo")
     _normalize_issue_tools(issues, issue_type)
+    _validate_issue_remote(issues, issue_type)
 
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):
@@ -146,6 +154,15 @@ def _require_explicit_remote_tools(source: dict[str, Any]) -> None:
         )
 
 
+def _require_remote_connection(source: dict[str, Any]) -> None:
+    issues = source.get("issues")
+    if not isinstance(issues, dict):
+        return
+    issue_type = issues.get("type", "filesystem")
+    if issue_type in REMOTE_ISSUE_TYPES and "remote" not in issues:
+        raise ConfigError(f"issues.type={issue_type} requires issues.remote")
+
+
 def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
     value = issues.get("tools")
     if not isinstance(value, str):
@@ -174,19 +191,64 @@ def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
             )
         issues["tools"] = FILESYSTEM_ISSUE_TOOLS
         return
-    expected = EXPECTED_PROVIDER_TOOL.get(issue_type)
-    if expected is not None:
-        if tools != [expected]:
-            raise ConfigError(
-                f"issues.tools must be exactly {expected} for issues.type={issue_type}"
-            )
-        issues["tools"] = expected
+    expected = REMOTE_ISSUE_PROVIDERS[issue_type]["tool"]
+    if tools != [expected]:
+        raise ConfigError(f"issues.tools must be exactly {expected} for issues.type={issue_type}")
+    issues["tools"] = expected
+
+
+def _validate_issue_remote(issues: dict[str, Any], issue_type: str) -> None:
+    remote = issues.get("remote")
+    if issue_type == "filesystem":
+        if remote is not None:
+            raise ConfigError("issues.remote is not allowed for issues.type=filesystem")
         return
-    if len(tools) != 1:
+    if not isinstance(remote, dict):
+        raise ConfigError("issues.remote must be a mapping")
+    if set(remote) != {"url", "token_env"}:
+        raise ConfigError("issues.remote must contain exactly url and token_env")
+
+    url = remote.get("url")
+    if (
+        not isinstance(url, str)
+        or not url.strip()
+        or not url.isprintable()
+        or any(character.isspace() for character in url)
+        or "`" in url
+    ):
+        raise ConfigError("issues.remote.url must be a non-empty absolute http(s) URL")
+    url = url.strip()
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError as error:
+        raise ConfigError("issues.remote.url must be a valid absolute http(s) URL") from error
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.netloc
+        or parsed.hostname is None
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        and not 1 <= port <= 65535
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ConfigError("issues.remote.url must be an absolute http(s) URL without credentials")
+
+    expected = REMOTE_ISSUE_PROVIDERS[issue_type]
+    expected_url = expected["url"]
+    if expected_url is not None and url != expected_url:
         raise ConfigError(
-            "issues.tools must contain exactly one safe executable for issues.type=forgejo"
+            f"issues.remote.url must be exactly {expected_url} for issues.type={issue_type}"
         )
-    issues["tools"] = tools[0]
+    token_env = remote.get("token_env")
+    if token_env != expected["token_env"]:
+        raise ConfigError(
+            f"issues.remote.token_env must be exactly {expected['token_env']} "
+            f"for issues.type={issue_type}"
+        )
+    remote["url"] = url
 
 
 def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> None:

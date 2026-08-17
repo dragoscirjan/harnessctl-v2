@@ -38,7 +38,7 @@ Use `issue_list` for discovery, `issue_comment` for append-only progress, and `i
 {% else -%}
 ## Remote Provider
 
-The operator must install and authenticate `{{ tools }}`. Harnessctl does not log in, accept credentials, install a CLI, or choose a repository. Confirm the CLI's active repository before mutation whenever repository resolution is ambiguous.
+The configured provider URL is `{{ remote_url }}`. Authentication uses the token environment variable named `{{ token_env }}`. Never print, persist, request, or pass the token value in command arguments. The operator must install and authenticate `{{ tools }}`. Harnessctl does not log in, accept credentials, install a CLI, or choose a repository. Confirm the CLI's active repository before mutation whenever repository resolution is ambiguous.
 
 Remote issue titles must use the hierarchy prefix: 🚀 Initiative, 🏔️ Epic, 📖 Story, 🛠️ Task, or 🐛 Bug. Represent hierarchy through issue links and body text. Do not require labels; use only operator-established repository conventions.
 
@@ -49,6 +49,6 @@ Official GitLab CLI `glab issue` supports create, list, view, update, note, clos
 {% elif provider == "gitea" -%}
 Gitea's official CLI is `tea`; its issue-facing command groups include `issues` or `issue` and `comment`. Consult installed `tea --help` and command-group help for exact options.
 {% elif provider == "forgejo" -%}
-No official Forgejo CLI or syntax is verified here. `{{ tools }}` is an operator-selected executable whose Forgejo compatibility and authentication are operator-verified. Inspect `{{ tools }} --help` before every planned operation. Infer no capability, subcommand, or syntax from this executable's use with another provider.
+Forgejo uses the configured `forgejo-cli` executable. Its syntax remains help-driven: inspect `forgejo-cli --help` before every planned operation. Infer no capability, subcommand, or syntax from another provider.
 {% endif -%}
 {% endif -%}

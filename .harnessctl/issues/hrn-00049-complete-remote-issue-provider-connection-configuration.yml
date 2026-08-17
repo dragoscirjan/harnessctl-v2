@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00049"
+"type": "bug"
+"title": "Complete remote issue provider connection configuration"
+"status": "done"
+"created_at": "2026-08-17T13:56:38.565Z"
+"updated_at": "2026-08-17T14:24:07.531Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00044"
+"metadata":
+  "source": "PR #23 review"
+"body": "As an operator\nI want complete provider connection configuration and examples\nSo that generated issue guidance targets the intended service safely.\n\n## Requirements\n\n- GitHub: `gh`, `https://github.com`, `GH_TOKEN`.\n- GitLab: `glab`, `https://gitlab.com`, `GITLAB_TOKEN`.\n- Gitea: `tea`, explicit URL, `GITEA_TOKEN`.\n- Forgejo: `forgejo-cli`, explicit URL, `FORGEJO_TOKEN`.\n- Store token environment-variable names only; never token values.\n- Require `issues.remote` for remote providers and reject it for filesystem.\n- Document `issues.root` and `issues.prefix` as filesystem-only.\n- Add configuration examples to every configuration-explaining document.\n\n## Acceptance\n\n- [x] TS/Python/generated schema enforce provider matrix.\n- [x] Generated skill renders URL/token-env guidance only for selected provider.\n- [x] Docs contain complete provider examples and boundaries.\n- [x] Full verification passes."
+"comments":
+  - "id": "hrn-00049-C0001"
+    "created_at": "2026-08-17T14:24:03.103Z"
+    "created_by": "lead-engineer"
+    "body": "Implemented exact provider URL/tool/token-env contracts. Added cross-runtime injection and malformed-URL parity tests, complete docs examples, generated skill checks, full quality/build/runtime verification, and final OpenCode reinstall."

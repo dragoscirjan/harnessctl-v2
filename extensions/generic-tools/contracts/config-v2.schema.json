@@ -106,9 +106,24 @@
             "tools": {
               "type": "string",
               "const": "gh"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "const": "https://github.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GH_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
             }
           },
-          "required": ["root", "prefix", "type", "tools"],
+          "required": ["root", "prefix", "type", "tools", "remote"],
           "additionalProperties": false
         },
         {
@@ -137,9 +152,24 @@
             "tools": {
               "type": "string",
               "const": "glab"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "const": "https://gitlab.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GITLAB_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
             }
           },
-          "required": ["root", "prefix", "type", "tools"],
+          "required": ["root", "prefix", "type", "tools", "remote"],
           "additionalProperties": false
         },
         {
@@ -168,9 +198,25 @@
             "tools": {
               "type": "string",
               "const": "tea"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GITEA_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
             }
           },
-          "required": ["root", "prefix", "type", "tools"],
+          "required": ["root", "prefix", "type", "tools", "remote"],
           "additionalProperties": false
         },
         {
@@ -198,10 +244,26 @@
             },
             "tools": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]+$"
+              "const": "forgejo-cli"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "FORGEJO_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
             }
           },
-          "required": ["root", "prefix", "type", "tools"],
+          "required": ["root", "prefix", "type", "tools", "remote"],
           "additionalProperties": false
         }
       ]

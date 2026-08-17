@@ -27,6 +27,30 @@ The current tools are `memory_search`, `memory_list`, `memory_get`, `memory_stor
 `memory_import`. Retrieval is bounded by configuration. Import supports preview;
 export and import are explicit migration operations rather than routine synchronization.
 
+A complete repository-memory example is:
+
+```yaml
+communication:
+  caveman:
+    enabled: true
+    mode: strict
+memory:
+  enabled: true
+  backend: repository
+  namespace:
+    organization_id: local
+    project_id: project
+    default_topic: general
+  retrieval:
+    limit: 8
+    max_chars: 12000
+    include_superseded: false
+  repository:
+    root: .harnessctl/memory
+```
+
+The example contains no credential value.
+
 OpenCode can receive the generated memory skill, SDLC memory hooks, plugin entry, and
 adapter dependency when memory is enabled. Pi registers the normalized memory tools
 when an operator loads `@harnessctl/pi-tools`, but automatic Pi extension and skill

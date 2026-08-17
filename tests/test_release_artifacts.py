@@ -44,7 +44,8 @@ def _write_remote_config(project: Path) -> None:
     config = project / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True)
     config.write_text(
-        "version: 2\nissues:\n  type: github\n  tools: gh\n",
+        "version: 2\nissues:\n  type: github\n  tools: gh\n"
+        "  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n",
         encoding="utf-8",
     )
 
@@ -190,18 +191,27 @@ providers = {
         'issue_comment,issue_relate,issue_unrelate,issue_link_document,'
         'issue_validate,issue_archive'
     ),
-    'github': 'gh',
-    'gitlab': 'glab',
-    'gitea': 'tea',
-    'forgejo': 'forgejo-client',
+    'github': ('gh', 'https://github.com', 'GH_TOKEN'),
+    'gitlab': ('glab', 'https://gitlab.com', 'GITLAB_TOKEN'),
+    'gitea': ('tea', 'https://gitea.example.com', 'GITEA_TOKEN'),
+    'forgejo': ('forgejo-cli', 'https://forgejo.example.com', 'FORGEJO_TOKEN'),
 }
-for provider, tools in providers.items():
+for provider, connection in providers.items():
+    if provider == 'filesystem':
+        tools = connection
+    else:
+        tools, remote_url, token_env = connection
     context = {'provider': provider, 'tools': tools}
     if provider == 'filesystem':
         context.update(issue_root='.harnessctl/issues', issue_prefix='hrn-')
+    else:
+        context.update(remote_url=remote_url, token_env=token_env)
     rendered = render_skill('issue-tracking', **context)
     assert f'the configured {provider} issue authority' in rendered
     assert tools in rendered
+    if provider != 'filesystem':
+        assert remote_url in rendered
+        assert token_env in rendered
     assert '{{' not in rendered
 """
     isolated_environment = environment | {"HARNESSCTL_CHECKOUT": str(ROOT)}

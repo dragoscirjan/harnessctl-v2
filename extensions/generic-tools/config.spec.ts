@@ -122,20 +122,37 @@ describe('configuration tools', () => {
   });
 
   it.each([
-    ['github', ' gh ', 'gh'],
-    ['gitlab', ' glab ', 'glab'],
-    ['gitea', ' tea ', 'tea'],
-    ['forgejo', ' forgejo-cli ', 'forgejo-cli'],
-  ])('normalizes explicit %s tooling while config tools remain available', (type, tools, normalized) => {
-    const config = readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n`);
-    expect(config).toMatchObject({ issues: { type, tools: normalized } });
-  });
+    ['github', ' gh ', 'gh', 'https://github.com', 'GH_TOKEN'],
+    ['gitlab', ' glab ', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+    ['gitea', ' tea ', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+    ['forgejo', ' forgejo-cli ', 'forgejo-cli', 'http://forgejo.example.test:3000', 'FORGEJO_TOKEN'],
+  ])(
+    'normalizes explicit %s tooling and retains filesystem-only overlay defaults',
+    (type, tools, normalized, url, tokenEnv) => {
+      const config = readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      );
+      expect(config).toMatchObject({
+        issues: {
+          root: '.harnessctl/issues',
+          prefix: 'hrn-',
+          type,
+          tools: normalized,
+          remote: { url, token_env: tokenEnv },
+        },
+      });
+    },
+  );
 
   it('keeps create and get tools operational for remote configuration', () => {
     const cwd = temporaryDirectory();
     try {
       const path = createConfig(cwd);
-      writeFileSync(path, 'version: 2\nissues:\n  type: github\n  tools: gh\n', 'utf8');
+      writeFileSync(
+        path,
+        'version: 2\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n',
+        'utf8',
+      );
       expect(getConfigValue(cwd, 'issues.type')).toBe('github');
       expect(getConfigValue(cwd, 'issues.tools')).toBe('gh');
       createConfig(cwd);
@@ -157,6 +174,45 @@ describe('configuration tools', () => {
     expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n`)).toThrow(
       new RegExp(`issues\\.type=${type} requires issues\\.tools`, 'u'),
     );
+  });
+
+  it.each([
+    ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
+    ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+    ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
+  ])('requires remote connection configuration for %s', (type, tools, url, tokenEnv) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n`)).toThrow(/remote/u);
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects remote configuration for filesystem issues', () => {
+    expect(() =>
+      readConfigFromText('version: 2\nissues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n'),
+    ).toThrow(/remote/u);
+  });
+
+  it.each([
+    ['github', 'gh', 'https://github.example.test', 'GH_TOKEN'],
+    ['gitlab', 'glab', 'https://gitlab.com/', 'GITLAB_TOKEN'],
+    ['gitea', 'tea', 'gitea.example.test', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://user:secret@gitea.example.test', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test/`injected`', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test?owner=project', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test#project', 'GITEA_TOKEN'],
+    ['forgejo', 'forgejo-cli', 'ssh://forgejo.example.test', 'FORGEJO_TOKEN'],
+    ['github', 'gh', 'https://github.com', 'secret-value'],
+    ['gitea', 'tea', 'https://gitea.example.test', 'GH_TOKEN'],
+  ])('rejects invalid %s remote connection %s %s', (type, tools, url, tokenEnv) => {
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      ),
+    ).toThrow(/remote/u);
   });
 
   it.each([

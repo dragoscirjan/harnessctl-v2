@@ -83,7 +83,12 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
 }
 
 const REMOTE_ISSUE_TYPES = new Set(['github', 'gitlab', 'gitea', 'forgejo']);
-const EXPECTED_PROVIDER_TOOL: Readonly<Record<string, string>> = { github: 'gh', gitlab: 'glab', gitea: 'tea' };
+const EXPECTED_PROVIDER_TOOL: Readonly<Record<string, string>> = {
+  github: 'gh',
+  gitlab: 'glab',
+  gitea: 'tea',
+  forgejo: 'forgejo-cli',
+};
 
 function assertRemoteToolsExplicit(value: ConfigDocument): void {
   const issues = value.issues;
@@ -116,14 +121,6 @@ function normalizeIssueTools(config: ConfigDocument): void {
     throw new ConfigError(
       `Invalid configuration: issues.tools must be exactly ${expected} for issues.type=${issues.type}.`,
     );
-  if (issues.type === 'forgejo') {
-    if (tools.length !== 1)
-      throw new ConfigError(
-        'Invalid configuration: issues.tools must contain exactly one safe executable for issues.type=forgejo.',
-      );
-    issues.tools = tools[0];
-    return;
-  }
   if (expected !== undefined) issues.tools = expected;
 }
 

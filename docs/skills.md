@@ -34,6 +34,27 @@ documents normalized harnessctl tools and revision handling. Remote modes docume
 only the configured CLI boundary. The skill does not install a CLI, perform login,
 store credentials, invoke commands itself, or add a remote adapter.
 
+A complete example generating strict caveman and GitHub issue guidance is:
+
+```yaml
+communication:
+  caveman:
+    enabled: true
+    mode: strict
+memory:
+  enabled: false
+issues:
+  type: github
+  tools: gh
+  remote:
+    url: https://github.com
+    token_env: GH_TOKEN
+```
+
+Remote `issues.remote` is required; filesystem rejects it. The token value belongs
+only in the named environment variable, never YAML. `issues.root` and `issues.prefix`
+are filesystem-only and ignored remotely.
+
 No Pi issue-tracking skill path or discovery contract has been verified. Planned
 Pi issue-skill generation remains compiled out until that boundary is designed and
 tested. See [issues](issues.md) for filesystem support and configured routing.
