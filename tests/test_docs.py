@@ -42,3 +42,18 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     for backend in ("libsql", "mem0", "graphiti", "custom"):
         assert backend in memory.lower()
     assert "NOT IMPLEMENTED" in memory
+    assert "Repository YAML" in memory
+    assert "Shared local SQLite" in memory
+    assert "Disposable internal cache; not a backend" in memory
+    assert "Automatic Pi adapter/skill install" in memory
+    assert "Only `memory.backend: repository` is accepted today" in memory
+    for token_env in (
+        "HARNESSCTL_LIBSQL_TOKEN",
+        "MEM0_API_KEY",
+        "GRAPHITI_TOKEN",
+        "HARNESSCTL_MEMORY_TOKEN",
+    ):
+        assert token_env in memory
+    assert "enabled: false" in memory
+    assert "project_id: payments-api" in memory
+    assert "Minimal deep-merge override" in memory
