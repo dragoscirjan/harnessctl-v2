@@ -16,10 +16,11 @@ skill templates.
 | Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance     |
 | CVS            | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance      |
 
-Memory requires caveman. Enabling memory also installs the OpenCode plugin entry and
-adds `@harnessctl/opencode-tools` to `.opencode/package.json`; this is the current
-adapter-registration path. The memory skill receives only compiled retrieval limits
-and repository root, not the whole configuration.
+Memory requires caveman. Every OpenCode installation registers
+`@harnessctl/opencode-tools@latest` in `.opencode/opencode.json`; config and issue tools
+therefore remain available even when memory is disabled. Older local plugin shims are
+retired. The memory skill receives only compiled retrieval limits and repository root,
+not the whole configuration.
 
 All 18 SDLC prompts are configuration-rendered under `.opencode/commands/` or the
 official Pi `.pi/prompts/` path. Both harnesses receive memory hooks when

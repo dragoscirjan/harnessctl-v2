@@ -13,7 +13,6 @@ import sys
 import tempfile
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
@@ -34,9 +33,9 @@ TARGETS = {
 }
 COMMANDS = tuple(TEMPLATES.keys())
 OPENCODE_SKILLS = Path(".opencode/skills")
-OPENCODE_PACKAGE = Path(".opencode/package.json")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
-PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
+LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
+OPENCODE_TOOLS_PLUGIN = "@harnessctl/opencode-tools@latest"
 LOCAL_CACHE = Path(".harnessctl/cache/harnessctl.sqlite")
 OPENCODE_CONFIG = Path(".opencode/opencode.json")
 PI_MCP_CONFIG = Path(".pi/mcp.json")
@@ -145,8 +144,6 @@ def install(
                             repository_root=repository["root"],
                         ),
                     ),
-                    (_target(root, OPENCODE_PLUGIN), PLUGIN_CONTENT),
-                    (_target(root, OPENCODE_PACKAGE), _merge_package(root, force)),
                 ]
             )
     if harness in ("pi", "all"):
@@ -208,10 +205,9 @@ def install(
         )
     if harness in ("opencode", "all"):
         opencode_path = _target(root, OPENCODE_CONFIG)
-        opencode_content = _merge_host_json(
+        opencode_content = _merge_opencode_json(
             opencode_path,
-            "mcp",
-            {intent.server_id: render_opencode_mcp(intent) for intent in intents},
+            intents,
             force=force,
         )
         if opencode_content is not None:
@@ -232,7 +228,6 @@ def install(
             pi_executable = _preflight_pi_launcher()
 
     mergeable_targets = {
-        _target(root, OPENCODE_PACKAGE),
         _target(root, Path(".gitignore")),
         _target(root, OPENCODE_CONFIG),
         _target(root, PI_MCP_CONFIG),
@@ -245,7 +240,18 @@ def install(
         raise FileExistsError(f"refusing to overwrite existing files:\n{joined}")
     _validate_plan(root, rendered_targets, config, harness)
 
-    previous = _capture_before_images(target for target, _ in rendered_targets)
+    legacy_targets: list[Path] = []
+    if harness in ("opencode", "all"):
+        legacy_plugin = _target(root, OPENCODE_PLUGIN)
+        if legacy_plugin.exists():
+            if not legacy_plugin.is_file():
+                raise ValueError(f"legacy OpenCode plugin must be a regular file: {legacy_plugin}")
+            if legacy_plugin.read_text(encoding="utf-8") == LEGACY_PLUGIN_CONTENT:
+                legacy_targets.append(legacy_plugin)
+
+    previous = _capture_before_images(
+        [*(target for target, _ in rendered_targets), *legacy_targets]
+    )
     created_directories: list[Path] = []
     installed_pi_packages: list[str] = []
     pi_package_install_attempted = False
@@ -282,6 +288,8 @@ def install(
             _target(root, target.relative_to(root))
             _ensure_directory(target.parent, root, created_directories)
             write_atomic(target, content)
+        for target in legacy_targets:
+            target.unlink()
         if config["memory"]["enabled"]:
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
         if harness in ("opencode", "all"):
@@ -387,6 +395,61 @@ def _merge_host_json(
             raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
         container[server_id] = dict(expected)
         changed = True
+    if not changed:
+        return None
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+def _merge_opencode_json(
+    path: Path,
+    intents: list[ServerIntent],
+    *,
+    force: bool,
+) -> str | None:
+    """Register harnessctl tools and merge owned MCP IDs into OpenCode config."""
+    document, original = _load_json_object(path, "OpenCode configuration")
+    plugins = document.get("plugin")
+    if plugins is None:
+        plugins = []
+        document["plugin"] = plugins
+    if not isinstance(plugins, list) or not all(isinstance(item, str) for item in plugins):
+        raise ValueError(f"plugin must be an array of strings in {path}")
+
+    changed = original is None
+    managed = [
+        item
+        for item in plugins
+        if item == "@harnessctl/opencode-tools" or item.startswith("@harnessctl/opencode-tools@")
+    ]
+    if managed != [OPENCODE_TOOLS_PLUGIN]:
+        if managed and not force:
+            raise FileExistsError(f"conflicting harnessctl OpenCode plugin in {path}: {managed}")
+        plugins[:] = [
+            item
+            for item in plugins
+            if item != "@harnessctl/opencode-tools"
+            and not item.startswith("@harnessctl/opencode-tools@")
+        ]
+        plugins.append(OPENCODE_TOOLS_PLUGIN)
+        changed = True
+
+    required = {intent.server_id: render_opencode_mcp(intent) for intent in intents}
+    if required:
+        container = document.get("mcp")
+        if container is None:
+            container = {}
+            document["mcp"] = container
+        if not isinstance(container, dict):
+            raise ValueError(f"mcp must be a JSON object in {path}")
+        for server_id, expected in required.items():
+            current = container.get(server_id)
+            if current == expected:
+                continue
+            if current is not None and not force:
+                raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
+            container[server_id] = dict(expected)
+            changed = True
+
     if not changed:
         return None
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
@@ -690,38 +753,6 @@ def _target(root: Path, relative: Path) -> Path:
     return target
 
 
-def _package_version() -> str:
-    try:
-        return version("harnessctl")
-    except PackageNotFoundError:
-        return "0.1.0"
-
-
-def _merge_package(root: Path, force: bool) -> str:
-    path = _target(root, OPENCODE_PACKAGE)
-    package: dict[str, object] = {}
-    if path.exists():
-        try:
-            loaded = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
-            raise ValueError(f"invalid OpenCode package file {path}: {error}") from error
-        if not isinstance(loaded, dict):
-            raise ValueError(f"OpenCode package file must contain an object: {path}")
-        package = loaded
-    dependencies = package.setdefault("dependencies", {})
-    if not isinstance(dependencies, dict):
-        raise ValueError(f"dependencies must be an object in {path}")
-    expected = _package_version()
-    current = dependencies.get("@harnessctl/opencode-tools")
-    if current not in (None, expected) and not force:
-        raise FileExistsError(
-            "incompatible @harnessctl/opencode-tools version "
-            f"in {path}: {current}; expected {expected}"
-        )
-    dependencies["@harnessctl/opencode-tools"] = expected
-    return json.dumps(package, indent=2, sort_keys=False) + "\n"
-
-
 def _ensure_directory(directory: Path, root: Path, created: list[Path]) -> None:
     """Create a directory path while recording only directories created by this call."""
     missing: list[Path] = []
@@ -828,24 +859,17 @@ def _smoke_check(root: Path, *, check_memory: bool) -> None:
     if not issue_skill.is_file():
         raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
 
+    config, _ = _load_json_object(root / OPENCODE_CONFIG, "OpenCode configuration")
+    plugins = config.get("plugin")
+    if not isinstance(plugins, list) or OPENCODE_TOOLS_PLUGIN not in plugins:
+        raise RuntimeError("OpenCode tools plugin registration smoke check failed")
+
     if not check_memory:
         return
 
-    package_path = root / OPENCODE_PACKAGE
     memory_skill = root / OPENCODE_SKILLS / "memory/SKILL.md"
-    memory_artifacts_present = (root / OPENCODE_PLUGIN).exists() or memory_skill.exists()
-    if package_path.exists():
-        package = json.loads(package_path.read_text(encoding="utf-8"))
-        dependency = package.get("dependencies", {}).get("@harnessctl/opencode-tools")
-        memory_artifacts_present = memory_artifacts_present or dependency is not None
-    else:
-        dependency = None
-    if not memory_artifacts_present:
-        return
-
-    plugin_valid = (root / OPENCODE_PLUGIN).read_text(encoding="utf-8") == PLUGIN_CONTENT
-    if dependency != _package_version() or not plugin_valid or not memory_skill.is_file():
-        raise RuntimeError("OpenCode memory adapter registration smoke check failed")
+    if not memory_skill.is_file():
+        raise RuntimeError("OpenCode memory skill smoke check failed")
 
 
 def render_command(

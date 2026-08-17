@@ -286,9 +286,11 @@ for provider, connection in providers.items():
         encoding="utf-8"
     )
     assert "Use only GitLab CLI" not in remote_skill.read_text(encoding="utf-8")
-    assert (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").is_file()
-    package = json.loads((enabled_opencode / ".opencode/package.json").read_text(encoding="utf-8"))
-    assert package["dependencies"]["@harnessctl/opencode-tools"] == "0.1.0"
+    opencode = json.loads(
+        (enabled_opencode / ".opencode/opencode.json").read_text(encoding="utf-8")
+    )
+    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert not (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").exists()
     assert not (enabled_opencode / ".harnessctl/cache/harnessctl.sqlite").exists()
 
     conflict = _run(

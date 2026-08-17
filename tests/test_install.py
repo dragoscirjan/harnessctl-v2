@@ -689,8 +689,9 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
         assert rendered.count("## Project memory exit") == 1
     assert tmp_path / ".opencode/skills/caveman/SKILL.md" in installed
     assert tmp_path / ".opencode/skills/memory/SKILL.md" in installed
-    assert "@harnessctl/opencode-tools" in (tmp_path / ".opencode/package.json").read_text()
-    assert (tmp_path / ".opencode/plugins/harnessctl-memory.js").exists()
+    opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert not (tmp_path / ".opencode/plugins/harnessctl-memory.js").exists()
     assert (tmp_path / ".harnessctl/memory/facts").is_dir()
     assert "/.harnessctl/cache/" in (tmp_path / ".gitignore").read_text()
     assert not (tmp_path / ".harnessctl/cache/harnessctl.sqlite").exists()
@@ -705,6 +706,8 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
         assert "memory_" not in rendered
         assert "Project memory" not in rendered
     assert (tmp_path / ".opencode/skills/caveman/SKILL.md").is_file()
+    opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
     assert not (tmp_path / ".opencode/skills/memory").exists()
     assert not (tmp_path / ".opencode/plugins").exists()
     assert not (tmp_path / ".opencode/package.json").exists()
@@ -795,7 +798,7 @@ def test_install_failure_restores_exact_tree_and_preserves_existing_paths(
     assert not (tmp_path / ".harnessctl/cache/harnessctl.sqlite").exists()
 
 
-def test_install_preserves_unrelated_opencode_package_fields(tmp_path: Path) -> None:
+def test_install_does_not_modify_unrelated_opencode_package_fields(tmp_path: Path) -> None:
     package = tmp_path / ".opencode/package.json"
     package.parent.mkdir(parents=True)
     package.write_text('{"name":"fixture","dependencies":{"other":"1.0.0"}}\n', encoding="utf-8")
@@ -813,9 +816,9 @@ def test_install_preserves_unrelated_opencode_package_fields(tmp_path: Path) -> 
 
     install(tmp_path, "opencode")
 
-    content = package.read_text(encoding="utf-8")
-    assert '"name": "fixture"' in content
-    assert '"other": "1.0.0"' in content
+    assert package.read_text(encoding="utf-8") == (
+        '{"name":"fixture","dependencies":{"other":"1.0.0"}}\n'
+    )
 
 
 def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> None:
@@ -830,9 +833,57 @@ def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> 
 
     document = json.loads(host.read_text(encoding="utf-8"))
     assert document["$schema"] == "schema"
-    assert document["plugin"] == ["operator"]
+    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@latest"]
     assert document["mcp"]["operator"] == {"x": 1}
     assert document["mcp"]["cvs_github"]["headers"]["Authorization"] == ("Bearer {env:GH_TOKEN}")
+
+
+def test_opencode_plugin_version_conflicts_unless_forced(tmp_path: Path) -> None:
+    host = tmp_path / ".opencode/opencode.json"
+    host.parent.mkdir(parents=True)
+    host.write_text('{"plugin":["operator","@harnessctl/opencode-tools@0.1.4"]}\n')
+
+    with pytest.raises(FileExistsError, match="conflicting harnessctl OpenCode plugin"):
+        install(tmp_path, "opencode")
+
+    install(tmp_path, "opencode", force=True)
+    document = json.loads(host.read_text(encoding="utf-8"))
+    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@latest"]
+
+
+def test_opencode_install_removes_exact_legacy_plugin_shim(tmp_path: Path) -> None:
+    shim = tmp_path / ".opencode/plugins/harnessctl-memory.js"
+    shim.parent.mkdir(parents=True)
+    shim.write_text(
+        "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n",
+        encoding="utf-8",
+    )
+
+    install(tmp_path, "opencode")
+
+    assert not shim.exists()
+    document = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
+
+
+def test_opencode_legacy_plugin_cleanup_rolls_back_on_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shim = tmp_path / ".opencode/plugins/harnessctl-memory.js"
+    shim.parent.mkdir(parents=True)
+    legacy = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
+    shim.write_text(legacy, encoding="utf-8")
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda _root, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected smoke failure"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
 
 
 def test_opencode_host_symlink_is_rejected_without_overwriting_referent(
@@ -882,8 +933,11 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
 
     installed = install(tmp_path, "opencode")
 
-    assert tmp_path / ".opencode/opencode.json" not in installed
-    assert not (tmp_path / ".opencode/opencode.json").exists()
+    host = tmp_path / ".opencode/opencode.json"
+    assert host in installed
+    document = json.loads(host.read_text(encoding="utf-8"))
+    assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
+    assert "mcp" not in document
 
 
 def test_local_mcp_missing_binary_still_installs_cli_skill(

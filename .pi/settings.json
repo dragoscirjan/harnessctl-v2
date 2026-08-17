@@ -1,0 +1,6 @@
+{
+  "packages": [
+    "npm:@harnessctl/pi-tools@latest",
+    "npm:pi-mcp-adapter@2.26.0"
+  ]
+}
