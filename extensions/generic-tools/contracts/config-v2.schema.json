@@ -48,36 +48,225 @@
       "const": 2
     },
     "issues": {
-      "type": "object",
-      "properties": {
-        "root": {
-          "type": "string",
-          "minLength": 1,
-          "allOf": [
-            {
-              "pattern": "\\S"
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
             },
-            {
-              "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "type": {
+              "type": "string",
+              "const": "filesystem"
+            },
+            "tools": {
+              "type": "string",
+              "const": "issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive"
             }
-          ]
+          },
+          "required": ["root", "prefix", "type", "tools"],
+          "additionalProperties": false
         },
-        "prefix": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9_-]*$"
+        {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "type": {
+              "type": "string",
+              "const": "github"
+            },
+            "tools": {
+              "type": "string",
+              "const": "gh"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "const": "https://github.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GH_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["root", "prefix", "type", "tools", "remote"],
+          "additionalProperties": false
         },
-        "type": {
-          "type": "string",
-          "const": "filesystem"
+        {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "type": {
+              "type": "string",
+              "const": "gitlab"
+            },
+            "tools": {
+              "type": "string",
+              "const": "glab"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "const": "https://gitlab.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GITLAB_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["root", "prefix", "type", "tools", "remote"],
+          "additionalProperties": false
         },
-        "tools": {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "\\S"
+        {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "type": {
+              "type": "string",
+              "const": "gitea"
+            },
+            "tools": {
+              "type": "string",
+              "const": "tea"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "GITEA_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["root", "prefix", "type", "tools", "remote"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "type": {
+              "type": "string",
+              "const": "forgejo"
+            },
+            "tools": {
+              "type": "string",
+              "const": "forgejo-cli"
+            },
+            "remote": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "const": "FORGEJO_TOKEN"
+                }
+              },
+              "required": ["url", "token_env"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["root", "prefix", "type", "tools", "remote"],
+          "additionalProperties": false
         }
-      },
-      "required": ["root", "prefix", "type", "tools"],
-      "additionalProperties": false
+      ]
     },
     "communication": {
       "type": "object",
@@ -163,7 +352,7 @@
                   "pattern": "\\S"
                 },
                 {
-                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
                 }
               ]
             }

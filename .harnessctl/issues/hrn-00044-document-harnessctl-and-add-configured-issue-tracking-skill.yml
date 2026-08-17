@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00044"
+"type": "story"
+"title": "Document harnessctl and add configured issue-tracking skill"
+"status": "done"
+"created_at": "2026-08-16T21:52:25.853Z"
+"updated_at": "2026-08-16T22:26:31.649Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00001"
+"metadata":
+  "spec": ".specs/lld-00007-documentation-set-and-configured-issue-tracking-skill-v1.md"
+"body": "As a harnessctl user\nI want clear product documentation and a configuration-driven issue-tracking skill\nSo that I can understand the SDLC and use local or hosted issue providers safely.\n\n## Scope\n\n- Publish the approved six-file documentation set.\n- Extend issue provider configuration without adding remote adapters.\n- Generate an OpenCode issue-tracking skill from project configuration.\n- Preserve filesystem issue behavior and fail closed for remote local-tool calls.\n- Verify installer rollback and packaged artifacts.\n\n## Design\n\n`.specs/lld-00007-documentation-set-and-configured-issue-tracking-skill-v1.md`\n\n## Acceptance Criteria\n\n- [x] Documentation distinguishes current features from planned backends.\n- [x] Filesystem, GitHub, GitLab, Gitea, and Forgejo provider configuration is documented and validated.\n- [x] Generated issue skill contains only provider-appropriate instructions.\n- [x] No remote adapter or credential storage is introduced.\n- [x] Full quality, package, and release-artifact checks pass."
+"comments": []

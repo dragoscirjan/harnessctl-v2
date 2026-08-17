@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00045"
+"type": "task"
+"title": "Extend issue provider configuration contract"
+"status": "done"
+"created_at": "2026-08-16T21:52:33.397Z"
+"updated_at": "2026-08-16T22:04:12.290Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00044"
+"body": "Given config v2\nWhen `issues.type` selects filesystem, GitHub, GitLab, Gitea, or Forgejo\nThen TypeScript and Python validators accept only provider-compatible safe tooling\nAnd filesystem defaults remain unchanged.\n\n## Technical Requirements\n\n- Extend Zod, generated JSON Schema, Python validation, and defaults/migration tests.\n- Reject known provider/tool mismatches.\n- Keep credentials and tokens outside project config.\n- Make local filesystem issue operations fail clearly in remote mode.\n\n## Acceptance Criteria\n\n- [x] All five provider types validate correctly.\n- [x] Mismatched known CLIs are rejected.\n- [x] Filesystem behavior remains compatible.\n- [x] Remote mode cannot mutate local issue YAML."
+"comments": []

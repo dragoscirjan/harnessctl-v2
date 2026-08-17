@@ -2,23 +2,75 @@ import * as z from 'zod';
 
 const nonemptyString = z.string().min(1).regex(/\S/, 'must not be blank');
 const safeProjectPath = nonemptyString.regex(
-  /^(?!\/)(?![A-Za-z]:)(?!.*\\)(?!.*\/\/)(?!.*\/$)(?!.*(?:^|\/)\.{1,2}(?:\/|$)).+$/,
+  // eslint-disable-next-line no-control-regex -- config paths must reject control characters before prompt rendering
+  /^(?!\/)(?![A-Za-z]:)(?!.*[\u0000-\u001F\u007F-\u009F\u2028\u2029])(?!.*\\)(?!.*`)(?!.*\/\/)(?!.*\/$)(?!.*(?:^|\/)\.{1,2}(?:\/|$)).+$/,
   'must stay inside project root',
 );
+
+export const FILESYSTEM_ISSUE_TOOLS =
+  'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive';
+const safeTokenEnvironmentName = z
+  .string()
+  .regex(/^[A-Z][A-Z0-9_]*$/, 'must be an uppercase environment variable name, not a token value');
+const explicitRemoteUrl = z
+  .url()
+  .regex(
+    // eslint-disable-next-line no-control-regex -- remote URLs enter generated Markdown and must reject every control range
+    /^https?:\/\/(?![^/\s]*@)(?!.*[\u0000-\u001F\u007F-\u009F\u2028\u2029`])[^\s/?#]+(?:\/[^\s?#]*)?$/,
+    'must be an absolute HTTP(S) URL without credentials, whitespace, backticks, query, or fragment',
+  )
+  .meta({ format: 'uri' });
+const remoteConnection = <UrlSchema extends z.ZodType<string>, TokenSchema extends z.ZodType<string>>(
+  url: UrlSchema,
+  token_env: TokenSchema,
+) => z.object({ url, token_env }).strict();
+const issueBase = {
+  root: safeProjectPath,
+  prefix: z.string().regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
+};
+const issuesSchema = z.discriminatedUnion('type', [
+  z.object({ ...issueBase, type: z.literal('filesystem'), tools: z.literal(FILESYSTEM_ISSUE_TOOLS) }).strict(),
+  z
+    .object({
+      ...issueBase,
+      type: z.literal('github'),
+      tools: z.literal('gh'),
+      remote: remoteConnection(z.literal('https://github.com'), safeTokenEnvironmentName.pipe(z.literal('GH_TOKEN'))),
+    })
+    .strict(),
+  z
+    .object({
+      ...issueBase,
+      type: z.literal('gitlab'),
+      tools: z.literal('glab'),
+      remote: remoteConnection(
+        z.literal('https://gitlab.com'),
+        safeTokenEnvironmentName.pipe(z.literal('GITLAB_TOKEN')),
+      ),
+    })
+    .strict(),
+  z
+    .object({
+      ...issueBase,
+      type: z.literal('gitea'),
+      tools: z.literal('tea'),
+      remote: remoteConnection(explicitRemoteUrl, safeTokenEnvironmentName.pipe(z.literal('GITEA_TOKEN'))),
+    })
+    .strict(),
+  z
+    .object({
+      ...issueBase,
+      type: z.literal('forgejo'),
+      tools: z.literal('forgejo-cli'),
+      remote: remoteConnection(explicitRemoteUrl, safeTokenEnvironmentName.pipe(z.literal('FORGEJO_TOKEN'))),
+    })
+    .strict(),
+]);
 
 export const configV2Schema = z
   .object({
     version: z.literal(2),
-    issues: z
-      .object({
-        root: safeProjectPath,
-        prefix: z
-          .string()
-          .regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
-        type: z.literal('filesystem'),
-        tools: nonemptyString,
-      })
-      .strict(),
+    issues: issuesSchema,
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),

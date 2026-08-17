@@ -45,6 +45,12 @@ memory:
     )
 
 
+def write_project_config(root: Path, content: str) -> None:
+    config = root / ".harnessctl/config.yaml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text(f"version: 2\n{content}", encoding="utf-8")
+
+
 def test_rendered_prompts_share_the_canonical_body() -> None:
     opencode = render_work_new("opencode")
     pi = render_work_new("pi")
@@ -84,7 +90,7 @@ def test_memory_entry_prefers_entity_topic_before_default() -> None:
 def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     installed = install(tmp_path, "all")
 
-    assert len(installed) == len(TEMPLATES) * 2 + 1
+    assert len(installed) == len(TEMPLATES) * 2 + 2
     for command in TEMPLATES:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
         assert (tmp_path / f".pi/commands/{command}.md").exists()
@@ -181,13 +187,34 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "unsafe_root",
-    ["../issues", "/tmp/issues", r"C:\issues", ".", "nested//issues", ".harnessctl/issues/"],
+    [
+        "../issues",
+        "/tmp/issues",
+        r"C:\issues",
+        ".",
+        "nested//issues",
+        ".harnessctl/issues/",
+        ".harnessctl/`issues",
+    ],
 )
 def test_config_rejects_unsafe_issue_roots(tmp_path: Path, unsafe_root: str) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
         f"version: 2\nissues:\n  root: '{unsafe_root}'\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="issues.root must stay inside project root"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("escaped_root", [r".harnessctl/\0issues", r".harnessctl/\nissues"])
+def test_config_rejects_control_characters_in_issue_root(tmp_path: Path, escaped_root: str) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        f'version: 2\nissues:\n  root: "{escaped_root}"\n',
         encoding="utf-8",
     )
 
@@ -216,6 +243,164 @@ def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
         "enabled": True,
         "mode": "strict",
     }
+
+
+@pytest.mark.parametrize(
+    ("provider", "tools", "url", "token_env", "normalized"),
+    [
+        ("github", " gh ", "https://github.com", "GH_TOKEN", "gh"),
+        ("gitlab", " glab ", "https://gitlab.com", "GITLAB_TOKEN", "glab"),
+        ("gitea", " tea ", "https://gitea.example.com/api", "GITEA_TOKEN", "tea"),
+        (
+            "forgejo",
+            " forgejo-cli ",
+            "http://forgejo.example.com",
+            "FORGEJO_TOKEN",
+            "forgejo-cli",
+        ),
+    ],
+)
+def test_config_accepts_and_normalizes_remote_provider_tools(
+    tmp_path: Path,
+    provider: str,
+    tools: str,
+    url: str,
+    token_env: str,
+    normalized: str,
+) -> None:
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
+        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+    )
+
+    assert load_config(tmp_path)["issues"] == {
+        "root": ".harnessctl/issues",
+        "prefix": "hrn-",
+        "type": provider,
+        "tools": normalized,
+        "remote": {"url": url, "token_env": token_env},
+    }
+
+
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_config_requires_explicit_remote_tools(tmp_path: Path, provider: str) -> None:
+    write_project_config(
+        tmp_path,
+        f"issues:\n  type: {provider}\n"
+        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.tools"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("provider", "tools"),
+    [
+        ("github", "glab"),
+        ("gitlab", "gh"),
+        ("gitea", "gh"),
+        ("forgejo", "tea,gh"),
+    ],
+)
+def test_config_rejects_provider_tool_mismatches(tmp_path: Path, provider: str, tools: str) -> None:
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
+        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"issues\.tools"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("tools", ["gh --token secret", "../gh", "TOKEN=value", "gh;rm", "gh,", ""])
+def test_config_rejects_unsafe_remote_tool_text(tmp_path: Path, tools: str) -> None:
+    write_project_config(
+        tmp_path,
+        f'issues:\n  type: forgejo\n  tools: "{tools}"\n'
+        "  remote:\n    url: https://forgejo.example.com\n    token_env: FORGEJO_TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"issues\.tools"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_config_requires_remote_connection(tmp_path: Path, provider: str) -> None:
+    tools = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}
+    write_project_config(tmp_path, f"issues:\n  type: {provider}\n  tools: {tools[provider]}\n")
+
+    with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.remote"):
+        load_config(tmp_path)
+
+
+def test_config_rejects_remote_connection_for_filesystem(tmp_path: Path) -> None:
+    write_project_config(
+        tmp_path,
+        "issues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match="not allowed"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("provider", "url", "token_env", "error"),
+    [
+        ("github", "https://github.example.com", "GH_TOKEN", r"remote\.url"),
+        ("gitlab", "https://gitlab.com", "GH_TOKEN", r"remote\.token_env"),
+        ("gitea", "gitea.example.com", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://gitea.example.com:abc", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://[bad", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://user:secret@gitea.example.com", "GITEA_TOKEN", r"remote\.url"),
+        ("gitea", "https://gitea.example.com/`injected`", "GITEA_TOKEN", r"remote\.url"),
+        ("forgejo", "ssh://forgejo.example.com", "FORGEJO_TOKEN", r"remote\.url"),
+        ("forgejo", "https://forgejo.example.com", "TOKEN=value", r"remote\.token_env"),
+    ],
+)
+def test_config_rejects_invalid_remote_connection(
+    tmp_path: Path, provider: str, url: str, token_env: str, error: str
+) -> None:
+    tool = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}[provider]
+    write_project_config(
+        tmp_path,
+        f"issues:\n  type: {provider}\n  tools: {tool}\n"
+        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+    )
+
+    with pytest.raises(ConfigError, match=error):
+        load_config(tmp_path)
+
+
+def test_config_rejects_remote_url_with_embedded_line_break(tmp_path: Path) -> None:
+    write_project_config(
+        tmp_path,
+        "issues:\n  type: gitea\n  tools: tea\n  remote:\n"
+        '    url: "https://gitea.example.com/path\\ninjected"\n'
+        "    token_env: GITEA_TOKEN\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"remote\.url"):
+        load_config(tmp_path)
+
+
+def test_config_normalizes_exact_filesystem_tool_set(tmp_path: Path) -> None:
+    canonical = DEFAULT_CONFIG["issues"]["tools"]
+    reordered = " , ".join(reversed(canonical.split(",")))
+    write_project_config(tmp_path, f'issues:\n  tools: "{reordered}"\n')
+
+    assert load_config(tmp_path)["issues"]["tools"] == canonical
+
+    for invalid in (
+        ",".join(canonical.split(",")[1:]),
+        f"{canonical},extra",
+        f"{canonical},issue_id",
+    ):
+        write_project_config(tmp_path, f'issues:\n  tools: "{invalid}"\n')
+        with pytest.raises(ConfigError, match="must be exactly"):
+            load_config(tmp_path)
 
 
 def test_config_requires_caveman_when_memory_is_enabled(tmp_path: Path) -> None:
@@ -355,7 +540,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
     installed = install(tmp_path, "opencode")
 
-    assert len(installed) == 19
+    assert len(installed) == 20
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
@@ -445,7 +630,7 @@ def test_install_failure_restores_exact_tree_and_preserves_existing_paths(
         monkeypatch.setattr(
             install_module,
             "_smoke_check",
-            lambda root: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+            lambda _root, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
         )
 
     with pytest.raises((OSError, RuntimeError), match="injected"):

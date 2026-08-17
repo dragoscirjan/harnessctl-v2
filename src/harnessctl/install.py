@@ -58,6 +58,24 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
                 (target, render_command(selected_harness, command, config=config))
             )
     if harness in ("opencode", "all"):
+        issues = config["issues"]
+        issue_context: dict[str, object] = {
+            "provider": issues["type"],
+            "tools": issues["tools"],
+        }
+        if issues["type"] == "filesystem":
+            issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
+        else:
+            issue_context.update(
+                remote_url=issues["remote"]["url"],
+                token_env=issues["remote"]["token_env"],
+            )
+        rendered_targets.append(
+            (
+                _target(root, OPENCODE_SKILLS / "issue-tracking/SKILL.md"),
+                render_skill("issue-tracking", **issue_context),
+            )
+        )
         communication = config["communication"]["caveman"]
         if communication["enabled"]:
             rendered_targets.append(
@@ -107,9 +125,10 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
                 raise IsADirectoryError(f"target is not a regular file: {target}")
             previous.append((target, existed, target.read_bytes() if existed else b""))
             write_atomic(target, content)
-        if config["memory"]["enabled"] and harness in ("opencode", "all"):
-            _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
-            _smoke_check(root)
+        if harness in ("opencode", "all"):
+            if config["memory"]["enabled"]:
+                _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
+            _smoke_check(root, check_memory=config["memory"]["enabled"])
     except BaseException as error:
         rollback_errors = _rollback(previous, created_directories)
         if rollback_errors:
@@ -286,14 +305,28 @@ def _memory_ignore(root: Path, repository: dict[str, object]) -> str:
     return existing + ("" if not existing or existing.endswith("\n") else "\n") + entry + "\n"
 
 
-def _smoke_check(root: Path) -> None:
-    package = json.loads((root / OPENCODE_PACKAGE).read_text(encoding="utf-8"))
-    dependency = package.get("dependencies", {}).get("@harnessctl/opencode-tools")
+def _smoke_check(root: Path, *, check_memory: bool) -> None:
+    issue_skill = root / OPENCODE_SKILLS / "issue-tracking/SKILL.md"
+    if not issue_skill.is_file():
+        raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
+
+    if not check_memory:
+        return
+
+    package_path = root / OPENCODE_PACKAGE
+    memory_skill = root / OPENCODE_SKILLS / "memory/SKILL.md"
+    memory_artifacts_present = (root / OPENCODE_PLUGIN).exists() or memory_skill.exists()
+    if package_path.exists():
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+        dependency = package.get("dependencies", {}).get("@harnessctl/opencode-tools")
+        memory_artifacts_present = memory_artifacts_present or dependency is not None
+    else:
+        dependency = None
+    if not memory_artifacts_present:
+        return
+
     plugin_valid = (root / OPENCODE_PLUGIN).read_text(encoding="utf-8") == PLUGIN_CONTENT
-    skills_valid = all(
-        (root / OPENCODE_SKILLS / skill / "SKILL.md").is_file() for skill in ("caveman", "memory")
-    )
-    if dependency != _package_version() or not plugin_valid or not skills_valid:
+    if dependency != _package_version() or not plugin_valid or not memory_skill.is_file():
         raise RuntimeError("OpenCode memory adapter registration smoke check failed")
 
 

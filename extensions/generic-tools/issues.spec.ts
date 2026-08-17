@@ -1,4 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +28,7 @@ import {
   transitionIssue,
   unrelateIssue,
   updateIssue,
+  validateCanonicalIssueGraph,
   validateIssues,
 } from './issues.js';
 
@@ -47,11 +57,86 @@ function repository(prefix = ''): string {
   return root;
 }
 
+function remoteRepository(type: string, tools: string): string {
+  const root = mkdtempSync(join(tmpdir(), 'harnessctl-remote-issues-'));
+  roots.push(root);
+  mkdirSync(join(root, '.harnessctl'));
+  const remote = {
+    github: { url: 'https://github.com', token_env: 'GH_TOKEN' },
+    gitlab: { url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' },
+    gitea: { url: 'https://gitea.example.test', token_env: 'GITEA_TOKEN' },
+    forgejo: { url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' },
+  }[type];
+  if (remote === undefined) throw new Error(`Unsupported test issue provider: ${type}`);
+  writeFileSync(
+    join(root, '.harnessctl/config.yaml'),
+    `version: 2\nissues:\n  root: dormant/issues\n  prefix: hrn-\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${remote.url}\n    token_env: ${remote.token_env}\n`,
+    'utf8',
+  );
+  return root;
+}
+
+function treeManifest(root: string): Record<string, string> {
+  return Object.fromEntries(
+    readdirSync(root, { recursive: true, encoding: 'utf8' })
+      .sort()
+      .map((path) => {
+        const absolute = join(root, path);
+        return [path, lstatSync(absolute).isDirectory() ? 'directory' : readFileSync(absolute).toString('base64')];
+      }),
+  );
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 describe('issue public operations', () => {
+  it.each([
+    ['github', 'gh'],
+    ['gitlab', 'glab'],
+    ['gitea', 'tea'],
+    ['forgejo', 'forgejo-cli'],
+  ])('rejects every local operation without state mutation for remote %s', (type, tools) => {
+    const root = remoteRepository(type, tools);
+    const before = treeManifest(root);
+    const operations: Array<[string, () => unknown]> = [
+      ['parseIssueIds', () => parseIssueIds('hrn-00001', root)],
+      ['parseIssueId', () => parseIssueId('hrn-00001', root)],
+      ['createFilesystemIssueProvider', () => createFilesystemIssueProvider(root)],
+      ['createIssueRecord', () => createIssueRecord(root, { type: 'task', title: 'No write' })],
+      ['getIssue', () => getIssue(root, 'hrn-00001')],
+      ['listIssueSummaries', () => listIssueSummaries(root)],
+      ['updateIssue', () => updateIssue(root, 'hrn-00001', { title: 'No write', expectedRevision: 'revision' })],
+      ['transitionIssue', () => transitionIssue(root, 'hrn-00001', 'done', 'revision')],
+      ['commentIssue', () => commentIssue(root, 'hrn-00001', 'No write', 'tester')],
+      ['relateIssue', () => relateIssue(root, 'hrn-00001', 'depends_on', 'hrn-00002')],
+      ['unrelateIssue', () => unrelateIssue(root, 'hrn-00001', 'depends_on', 'hrn-00002')],
+      ['linkDocument', () => linkDocument(root, 'hrn-00001', '.specs/design.md')],
+      ['archiveIssueReport', () => archiveIssueReport(root, 'hrn-00001')],
+    ];
+    for (const [name, operation] of operations) {
+      expect(operation).toThrow(new RegExp(`${name}.*issues\\.type=${type}.*${tools}.*issues\\.type=filesystem`, 'u'));
+      expect(treeManifest(root)).toEqual(before);
+    }
+    expect(validateIssues(root)).toEqual({
+      valid: false,
+      findings: [
+        expect.objectContaining({
+          severity: 'error',
+          category: 'configuration',
+          message: expect.stringMatching(
+            new RegExp(`validateIssues.*issues\\.type=${type}.*${tools}.*issues\\.type=filesystem`, 'u'),
+          ),
+        }),
+      ],
+    });
+    expect(validateCanonicalIssueGraph(root)).toEqual({ valid: true, findings: [] });
+    expect(treeManifest(root)).toEqual(before);
+    expect(existsSync(join(root, 'dormant/issues'))).toBe(false);
+    expect(existsSync(join(root, '.harnessctl/cache'))).toBe(false);
+  });
+
   it('preserves configured IDs, filenames, summaries, and provider config snapshot', () => {
     const root = repository('TASK-');
     const provider = createFilesystemIssueProvider(root);

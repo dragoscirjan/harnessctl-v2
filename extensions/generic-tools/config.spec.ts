@@ -121,6 +121,123 @@ describe('configuration tools', () => {
     }
   });
 
+  it.each([
+    ['github', ' gh ', 'gh', 'https://github.com', 'GH_TOKEN'],
+    ['gitlab', ' glab ', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+    ['gitea', ' tea ', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+    ['forgejo', ' forgejo-cli ', 'forgejo-cli', 'http://forgejo.example.test:3000', 'FORGEJO_TOKEN'],
+  ])(
+    'normalizes explicit %s tooling and retains filesystem-only overlay defaults',
+    (type, tools, normalized, url, tokenEnv) => {
+      const config = readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      );
+      expect(config).toMatchObject({
+        issues: {
+          root: '.harnessctl/issues',
+          prefix: 'hrn-',
+          type,
+          tools: normalized,
+          remote: { url, token_env: tokenEnv },
+        },
+      });
+    },
+  );
+
+  it('keeps create and get tools operational for remote configuration', () => {
+    const cwd = temporaryDirectory();
+    try {
+      const path = createConfig(cwd);
+      writeFileSync(
+        path,
+        'version: 2\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n',
+        'utf8',
+      );
+      expect(getConfigValue(cwd, 'issues.type')).toBe('github');
+      expect(getConfigValue(cwd, 'issues.tools')).toBe('gh');
+      createConfig(cwd);
+      expect(readFileSync(path, 'utf8')).toContain('type: github');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('normalizes the complete filesystem tool set to canonical order', () => {
+    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
+    const reordered = canonical.split(',').reverse().join(' , ');
+    expect(readConfigFromText(`version: 2\nissues:\n  tools: "${reordered}"\n`)).toMatchObject({
+      issues: { type: 'filesystem', tools: canonical },
+    });
+  });
+
+  it.each(['github', 'gitlab', 'gitea', 'forgejo'])('requires explicit tools for remote type %s', (type) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n`)).toThrow(
+      new RegExp(`issues\\.type=${type} requires issues\\.tools`, 'u'),
+    );
+  });
+
+  it.each([
+    ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
+    ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+    ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
+  ])('requires remote connection configuration for %s', (type, tools, url, tokenEnv) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n`)).toThrow(/remote/u);
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects remote configuration for filesystem issues', () => {
+    expect(() =>
+      readConfigFromText('version: 2\nissues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n'),
+    ).toThrow(/remote/u);
+  });
+
+  it.each([
+    ['github', 'gh', 'https://github.example.test', 'GH_TOKEN'],
+    ['gitlab', 'glab', 'https://gitlab.com/', 'GITLAB_TOKEN'],
+    ['gitea', 'tea', 'gitea.example.test', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://user:secret@gitea.example.test', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test/`injected`', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test?owner=project', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test#project', 'GITEA_TOKEN'],
+    ['forgejo', 'forgejo-cli', 'ssh://forgejo.example.test', 'FORGEJO_TOKEN'],
+    ['github', 'gh', 'https://github.com', 'secret-value'],
+    ['gitea', 'tea', 'https://gitea.example.test', 'GH_TOKEN'],
+  ])('rejects invalid %s remote connection %s %s', (type, tools, url, tokenEnv) => {
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      ),
+    ).toThrow(/remote/u);
+  });
+
+  it.each([
+    ['github', 'glab'],
+    ['gitlab', 'gh'],
+    ['gitea', 'gh'],
+    ['forgejo', 'tea,gh'],
+  ])('rejects provider/tool mismatch %s with %s', (type, tools) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n`)).toThrow(
+      /issues\.tools/u,
+    );
+  });
+
+  it.each(['gh --token secret', '../gh', 'TOKEN=value', 'gh;rm', 'gh,', ''])('rejects unsafe tool text %j', (tools) => {
+    expect(() => readConfigFromText(`version: 2\nissues:\n  type: forgejo\n  tools: "${tools}"\n`)).toThrow(
+      /issues\.tools/u,
+    );
+  });
+
+  it('rejects incomplete, extended, and duplicate filesystem tool sets', () => {
+    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
+    for (const tools of [canonical.split(',').slice(1).join(','), `${canonical},extra`, `${canonical},issue_id`])
+      expect(() => readConfigFromText(`version: 2\nissues:\n  tools: "${tools}"\n`)).toThrow(/must be exactly/u);
+  });
+
   it('requires caveman communication when memory is enabled', () => {
     expect(() =>
       readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: true\n'),
@@ -173,7 +290,15 @@ describe('configuration tools', () => {
   it('rejects unsafe issue roots and prefixes', () => {
     const base = readConfigFromText('version: 2\n');
     const issues = base.issues as Record<string, unknown>;
-    for (const root of ['../issues', '.', 'nested//issues', '.harnessctl/issues/']) {
+    for (const root of [
+      '../issues',
+      '.',
+      'nested//issues',
+      '.harnessctl/issues/',
+      '.harnessctl/`issues',
+      '.harnessctl/\0issues',
+      '.harnessctl/\nissues',
+    ]) {
       issues.root = root;
       expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
     }

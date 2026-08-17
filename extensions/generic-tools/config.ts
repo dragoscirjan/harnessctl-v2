@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
-import { configV2Schema, formatSchemaError } from './schemas.js';
+import { configV2Schema, FILESYSTEM_ISSUE_TOOLS, formatSchemaError } from './schemas.js';
 
 export type ConfigDocument = Record<string, unknown>;
 
@@ -19,8 +19,7 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     root: '.harnessctl/issues',
     prefix: 'hrn-',
     type: 'filesystem',
-    tools:
-      'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
+    tools: FILESYSTEM_ISSUE_TOOLS,
   },
   paths: {
     root: '.harnessctl',
@@ -74,11 +73,64 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
   if (version !== undefined && version !== 1 && version !== 2)
     throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
 
+  assertRemoteToolsExplicit(value);
   const config = deepMerge(DEFAULT_CONFIG, value);
   config.version = 2;
+  normalizeIssueTools(config);
   const result = configV2Schema.safeParse(config);
   if (!result.success) throw new ConfigError(`Invalid configuration:\n${formatSchemaError(result.error)}`);
   return result.data;
+}
+
+const REMOTE_ISSUE_TYPES = new Set(['github', 'gitlab', 'gitea', 'forgejo']);
+const EXPECTED_PROVIDER_TOOL: Readonly<Record<string, string>> = {
+  github: 'gh',
+  gitlab: 'glab',
+  gitea: 'tea',
+  forgejo: 'forgejo-cli',
+};
+
+function assertRemoteToolsExplicit(value: ConfigDocument): void {
+  const issues = value.issues;
+  if (!isMapping(issues) || !REMOTE_ISSUE_TYPES.has(String(issues.type))) return;
+  if (!Object.prototype.hasOwnProperty.call(issues, 'tools'))
+    throw new ConfigError(
+      `Invalid configuration: issues.type=${String(issues.type)} requires issues.tools to be selected explicitly.`,
+    );
+}
+
+function normalizeIssueTools(config: ConfigDocument): void {
+  const issues = config.issues;
+  if (!isMapping(issues) || typeof issues.type !== 'string' || typeof issues.tools !== 'string') return;
+  const tools = parseToolIdentifiers(issues.tools);
+  if (issues.type === 'filesystem') {
+    const required = FILESYSTEM_ISSUE_TOOLS.split(',');
+    if (
+      tools.length !== required.length ||
+      new Set(tools).size !== tools.length ||
+      tools.some((tool) => !required.includes(tool))
+    )
+      throw new ConfigError(
+        `Invalid configuration: issues.tools must be exactly ${FILESYSTEM_ISSUE_TOOLS} for issues.type=filesystem.`,
+      );
+    issues.tools = FILESYSTEM_ISSUE_TOOLS;
+    return;
+  }
+  const expected = EXPECTED_PROVIDER_TOOL[issues.type];
+  if (expected !== undefined && (tools.length !== 1 || tools[0] !== expected))
+    throw new ConfigError(
+      `Invalid configuration: issues.tools must be exactly ${expected} for issues.type=${issues.type}.`,
+    );
+  if (expected !== undefined) issues.tools = expected;
+}
+
+function parseToolIdentifiers(value: string): string[] {
+  const tools = value.split(',').map((tool) => tool.trim());
+  if (tools.some((tool) => !/^[A-Za-z0-9_-]+$/u.test(tool)))
+    throw new ConfigError(
+      'Invalid configuration: issues.tools entries must be safe executable identifiers without arguments, paths, assignments, or shell operators.',
+    );
+  return tools;
 }
 
 function deepMerge(base: ConfigDocument, override: ConfigDocument): ConfigDocument {
