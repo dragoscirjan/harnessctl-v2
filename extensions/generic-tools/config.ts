@@ -25,7 +25,6 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     local: 'git',
     remote: {
       provider: 'github',
-      transport: 'auto',
       tools: 'gh',
       url: 'https://github.com',
       token_env: 'GH_TOKEN',
@@ -87,7 +86,6 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
   assertRemoteConfigurationExplicit(value);
   const config = deepMerge(DEFAULT_CONFIG, value);
   config.version = 2;
-  addRemoteIssueTransportDefault(config);
   normalizeIssueTools(config);
   normalizeCvsTools(config);
   const result = configV2Schema.safeParse(config);
@@ -124,12 +122,6 @@ function assertRemoteConfigurationExplicit(value: ConfigDocument): void {
         `Invalid configuration: cvs.remote.provider=${String(provider)} requires cvs.remote.${key} to be selected explicitly.`,
       );
   }
-}
-
-function addRemoteIssueTransportDefault(config: ConfigDocument): void {
-  const issues = config.issues;
-  if (!isMapping(issues) || !REMOTE_ISSUE_TYPES.has(String(issues.type)) || !isMapping(issues.remote)) return;
-  if (!Object.prototype.hasOwnProperty.call(issues.remote, 'transport')) issues.remote.transport = 'auto';
 }
 
 function normalizeCvsTools(config: ConfigDocument): void {

@@ -217,8 +217,8 @@ for provider, connection in providers.items():
         context.update(issue_root='.harnessctl/issues', issue_prefix='hrn-')
     else:
         context.update(
-            transport='auto', remote_url=remote_url, token_env=token_env,
-            mcp_id=f'cvs_{provider}',
+            remote_url=remote_url, token_env=token_env,
+            mcp_id=f'cvs_{provider}', mcp_available=True,
         )
     rendered = render_skill('issue-tracking', **context)
     assert f'the configured {provider} issue authority' in rendered
@@ -275,7 +275,9 @@ for provider, connection in providers.items():
     for skill in ("caveman", "cvs", "memory", "issue-tracking"):
         assert (enabled_opencode / f".opencode/skills/{skill}/SKILL.md").is_file()
     remote_skill = remote_opencode / ".opencode/skills/issue-tracking/SKILL.md"
-    assert "Use only GitHub CLI `gh`" in remote_skill.read_text(encoding="utf-8")
+    assert "Use GitHub CLI `gh` or live tools under `cvs_github`" in remote_skill.read_text(
+        encoding="utf-8"
+    )
     assert "Use only GitLab CLI" not in remote_skill.read_text(encoding="utf-8")
     assert (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").is_file()
     package = json.loads((enabled_opencode / ".opencode/package.json").read_text(encoding="utf-8"))

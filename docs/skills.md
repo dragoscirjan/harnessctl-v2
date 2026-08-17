@@ -14,7 +14,7 @@ skill templates.
 | Caveman        | `communication.caveman.enabled` and `mode`              | Generated at `.opencode/skills/caveman/SKILL.md` when enabled  | Concise communication without losing exact technical substance |
 | Memory         | `memory.enabled`, retrieval bounds, and repository root | Generated at `.opencode/skills/memory/SKILL.md` when enabled   | Safe retrieval and persistence of curated repository knowledge |
 | Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always generated at `.opencode/skills/issue-tracking/SKILL.md` | Provider-exclusive local or remote issue workflow guidance     |
-| CVS            | `cvs.local` and validated remote provider policy        | Always generated at `.opencode/skills/cvs/SKILL.md`            | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance      |
+| CVS            | `cvs.local` and validated remote provider               | Always generated at `.opencode/skills/cvs/SKILL.md`            | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance      |
 
 Memory requires caveman. Enabling memory also installs the OpenCode plugin entry and
 adds `@harnessctl/opencode-tools` to `.opencode/package.json`; this is the current
@@ -32,16 +32,16 @@ writes; operators must register the Pi package themselves.
 
 The issue-tracking skill is self-contained and provider-specific. Filesystem mode
 documents normalized harnessctl tools and revision handling. Remote modes document
-only the configured CLI/MCP policy. The skill does not install a CLI, perform login,
+the configured provider's valid CLI and MCP capabilities. The skill does not install a CLI, perform login,
 store credentials, invoke commands itself, or add a remote adapter.
 
-The CVS skill receives only validated local authority, provider, transport, CLI, URL,
-environment-variable name, and fixed MCP ID. It keeps Git or Jujutsu local, applies
-`auto`, `cli`, or `mcp` remote routing, checks repository context and live capability,
-and requires fresh consent immediately before merge. It never receives an environment
-value or the complete configuration. The CVS and remote Issues skills share trust,
-bounded-read, no-upload, and no-cross-transport-retry guidance while remaining
-independent policy owners.
+The CVS skill receives only validated local authority, provider, CLI, URL,
+environment-variable name, fixed MCP ID, and the valid capabilities exposed by each
+route. It keeps Git or Jujutsu local and lets the agent choose CLI or MCP for each remote
+operation after checking repository context and live capability. The choice must be made
+before mutation and cannot change after mutation begins. It requires fresh consent
+immediately before merge and never receives an environment value or the complete
+configuration. CVS and remote Issues remain independent policy owners.
 
 A complete example generating strict caveman and GitHub issue guidance is:
 
@@ -56,7 +56,6 @@ issues:
   type: github
   tools: gh
   remote:
-    transport: auto
     url: https://github.com
     token_env: GH_TOKEN
 ```

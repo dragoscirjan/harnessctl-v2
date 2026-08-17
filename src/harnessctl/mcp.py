@@ -29,7 +29,7 @@ class ServerIntent:
     oauth: bool
     compatibility_version: str | None
     toolsets: str | None
-    requesting_policies: tuple[str, ...]
+    requesting_routes: tuple[str, ...]
 
     def definition(self) -> tuple[object, ...]:
         """Return every field that determines host server behavior."""
@@ -64,12 +64,11 @@ def required_server_intents(config: Mapping[str, Any], harness: str) -> list[Ser
                 },
             )
         )
-    return [_intent(service, route) for route, service in services if service["transport"] != "cli"]
+    return [_intent(service, route) for route, service in services]
 
 
 def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
     provider = str(service["provider"])
-    policy = str(service["transport"])
     if provider == "github":
         return ServerIntent(
             "cvs_github",
@@ -82,7 +81,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
             False,
             None,
             GITHUB_TOOLSETS,
-            (f"{route}:{policy}",),
+            (route,),
         )
     if provider == "gitlab":
         return ServerIntent(
@@ -96,7 +95,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
             True,
             None,
             None,
-            (f"{route}:{policy}",),
+            (route,),
         )
     url = str(service["url"])
     return ServerIntent(
@@ -110,7 +109,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         False,
         FORGEJO_MCP_VERSION,
         None,
-        (f"{route}:{policy}",),
+        (route,),
     )
 
 
@@ -124,8 +123,8 @@ def deduplicate_server_intents(intents: list[ServerIntent]) -> list[ServerIntent
             continue
         if current.definition() != intent.definition():
             raise ConfigError(f"conflicting MCP definitions for fixed ID {intent.server_id}")
-        policies = tuple(dict.fromkeys((*current.requesting_policies, *intent.requesting_policies)))
-        deduplicated[intent.server_id] = replace(current, requesting_policies=policies)
+        routes = tuple(dict.fromkeys((*current.requesting_routes, *intent.requesting_routes)))
+        deduplicated[intent.server_id] = replace(current, requesting_routes=routes)
     return list(deduplicated.values())
 
 

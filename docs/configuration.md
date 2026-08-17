@@ -30,7 +30,6 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 | `issues.tools`               | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
 | `issues.remote.url`          | None                        | Required for remote providers; rejected for filesystem                        |
 | `issues.remote.token_env`    | None                        | Required provider token environment-variable name; rejected for filesystem    |
-| `issues.remote.transport`    | `auto` remotely             | Independent remote Issues policy: `auto`, `cli`, or `mcp`; rejected locally   |
 | `paths.root`                 | `.harnessctl`               | General harnessctl artifact root                                              |
 | `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                            |
 | `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                          |
@@ -53,7 +52,6 @@ cvs:
   local: git
   remote:
     provider: github
-    transport: auto
     tools: gh
     url: https://github.com
     token_env: GH_TOKEN
@@ -117,7 +115,6 @@ compatibility, but it is unused and not generated; do not configure it.
 | ---------------------- | ------------------ | --------------- |
 | `cvs.local`            | `git`              | Direct local authority: `git` or `jj`; never routed through MCP |
 | `cvs.remote.provider`  | `github`           | Independent remote CVS authority: `github`, `gitlab`, `gitea`, or `forgejo` |
-| `cvs.remote.transport` | `auto`             | Remote CVS policy: `auto`, `cli`, or `mcp` |
 | `cvs.remote.tools`     | `gh`               | Exact provider CLI identifier; no arguments or paths |
 | `cvs.remote.url`       | `https://github.com` | Validated collaboration URL |
 | `cvs.remote.token_env` | `GH_TOKEN`         | Environment-variable name only, never a value |
@@ -131,20 +128,22 @@ remote branch rather than inherit GitHub fields. The complete provider and host-
 examples are in [CVS and MCP providers](cvs.md).
 
 CVS and Issues are validated independently. Identical MCP definitions may share a fixed
-server registration, but neither domain inherits the other's provider, transport, CLI,
+server registration, but neither domain inherits the other's provider, CLI,
 URL, token environment name, or authority. Fixed IDs are generated and cannot be
 configured.
 
 ## Remote issue routing
 
-Provider-aware issue configuration, transport routing, MCP projection, and OpenCode
+Provider-aware issue configuration, CLI/MCP capability guidance, MCP projection, and OpenCode
 skill generation are implemented. Remote selections require explicit tools instead of
 inheriting filesystem defaults:
 GitHub uses `gh`, GitLab uses `glab`, Gitea uses `tea`, and Forgejo uses
 `forgejo-cli`. Known provider/tool mismatches fail validation.
 
-Every remote selection requires `issues.remote` with `url`, `token_env`, and optionally
-`transport`; old valid remote configurations migrate in memory to `transport: auto`.
+Every remote selection requires `issues.remote` with `url` and `token_env`. Both the
+valid provider CLI capabilities and fixed-ID MCP capabilities are enumerated for the
+agent. The agent chooses per operation before mutation and never switches routes after
+mutation begins. No configuration selector or MCP-first precedence applies.
 GitHub requires `https://github.com` and `GH_TOKEN`; GitLab requires
 `https://gitlab.com` and `GITLAB_TOKEN`. Gitea and Forgejo require an explicit
 operator-selected instance URL and respectively `GITEA_TOKEN` and `FORGEJO_TOKEN`.
@@ -162,7 +161,6 @@ issues:
   type: github
   tools: gh
   remote:
-    transport: auto
     url: https://github.com
     token_env: GH_TOKEN
 ```
@@ -174,7 +172,6 @@ issues:
   type: gitlab
   tools: glab
   remote:
-    transport: auto
     url: https://gitlab.com
     token_env: GITLAB_TOKEN
 ```
@@ -186,7 +183,6 @@ issues:
   type: gitea
   tools: tea
   remote:
-    transport: auto
     url: https://gitea.example.com
     token_env: GITEA_TOKEN
 ```
@@ -198,7 +194,6 @@ issues:
   type: forgejo
   tools: forgejo-cli
   remote:
-    transport: auto
     url: https://forgejo.example.com
     token_env: FORGEJO_TOKEN
 ```
@@ -206,8 +201,10 @@ issues:
 Replace only the Gitea or Forgejo example host with the real instance URL. These tool
 values are executable identifiers, not commands. harnessctl does not install,
 authenticate, or invoke a configured CLI. The generated issue-tracking skill instructs the host agent to use
-the configured CLI/MCP policy and remote endpoint. Generic local issue tools fail closed
-in remote mode instead of mutating YAML. See [CVS and MCP providers](cvs.md) for exact
-`auto`, `cli`, and `mcp` selection, host files, consent, and security boundaries.
+the configured provider's valid CLI/MCP capabilities and remote endpoint. Generic local issue tools fail closed
+in remote mode instead of mutating YAML. For Gitea and Forgejo, MCP capability depends
+on `forgejo-mcp` executable availability; CLI capability independently depends on `tea`
+or `forgejo-cli`. See [CVS and MCP providers](cvs.md) for host files, consent, and
+security boundaries.
 See [issues](issues.md). Future memory shapes are documented separately in
 [memory](memory.md); all remain invalid today.

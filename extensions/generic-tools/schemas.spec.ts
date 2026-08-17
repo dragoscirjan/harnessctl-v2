@@ -25,7 +25,6 @@ const validConfig = {
     local: 'git',
     remote: {
       provider: 'github',
-      transport: 'auto',
       tools: 'gh',
       url: 'https://github.com',
       token_env: 'GH_TOKEN',
@@ -213,10 +212,10 @@ describe('canonical Zod schemas', () => {
 
   it.each([
     ['filesystem', FILESYSTEM_ISSUE_TOOLS, undefined],
-    ['github', 'gh', { transport: 'auto', url: 'https://github.com', token_env: 'GH_TOKEN' }],
-    ['gitlab', 'glab', { transport: 'cli', url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' }],
-    ['gitea', 'tea', { transport: 'mcp', url: 'https://gitea.example.test:3000', token_env: 'GITEA_TOKEN' }],
-    ['forgejo', 'forgejo-cli', { transport: 'auto', url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
+    ['github', 'gh', { url: 'https://github.com', token_env: 'GH_TOKEN' }],
+    ['gitlab', 'glab', { url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' }],
+    ['gitea', 'tea', { url: 'https://gitea.example.test:3000', token_env: 'GITEA_TOKEN' }],
+    ['forgejo', 'forgejo-cli', { url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
   ])('accepts exact %s provider contract in runtime and portable schemas', (type, tools, remote) => {
     const document = { ...validConfig, issues: { ...validConfig.issues, type, tools, ...(remote && { remote }) } };
     expect(configV2Schema.safeParse(document).success).toBe(true);
@@ -238,18 +237,18 @@ describe('canonical Zod schemas', () => {
   });
 
   it.each([
-    ['filesystem', { transport: 'auto', url: 'https://github.com', token_env: 'GH_TOKEN' }],
+    ['filesystem', { url: 'https://github.com', token_env: 'GH_TOKEN' }],
     ['github', undefined],
-    ['github', { transport: 'auto', url: 'https://github.example.test', token_env: 'GH_TOKEN' }],
-    ['gitlab', { transport: 'auto', url: 'https://gitlab.com', token_env: 'token-value' }],
-    ['gitea', { transport: 'auto', url: 'gitea.example.test', token_env: 'GITEA_TOKEN' }],
-    ['gitea', { transport: 'auto', url: 'https://', token_env: 'GITEA_TOKEN' }],
-    ['gitea', { transport: 'auto', url: 'https://gitea.example.test/\u0007injected', token_env: 'GITEA_TOKEN' }],
-    ['gitea', { transport: 'auto', url: 'https://gitea.example.test/\u001binjected', token_env: 'GITEA_TOKEN' }],
-    ['gitea', { transport: 'auto', url: 'https://gitea.example.test/\u0085injected', token_env: 'GITEA_TOKEN' }],
-    ['gitea', { transport: 'auto', url: 'https://gitea.example.test/${TOKEN}', token_env: 'GITEA_TOKEN' }],
-    ['forgejo', { transport: 'auto', url: 'ftp://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
-    ['forgejo', { transport: 'auto', url: 'https://forgejo.example.test', token_env: 'token-value' }],
+    ['github', { url: 'https://github.example.test', token_env: 'GH_TOKEN' }],
+    ['gitlab', { url: 'https://gitlab.com', token_env: 'token-value' }],
+    ['gitea', { url: 'gitea.example.test', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://gitea.example.test/\u0007injected', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://gitea.example.test/\u001binjected', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://gitea.example.test/\u0085injected', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://gitea.example.test/${TOKEN}', token_env: 'GITEA_TOKEN' }],
+    ['forgejo', { url: 'ftp://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
+    ['forgejo', { url: 'https://forgejo.example.test', token_env: 'token-value' }],
   ])('rejects invalid %s remote contract in runtime and portable schemas', (type, remote) => {
     const document = {
       ...validConfig,
@@ -264,17 +263,15 @@ describe('canonical Zod schemas', () => {
     expect(configContractValidator()(document)).toBe(false);
   });
 
-  it('keeps Zod and JSON Schema aligned for every CVS provider and transport', () => {
+  it('keeps Zod and JSON Schema aligned with CLI and MCP data for every CVS provider', () => {
     for (const [provider, tools, url, tokenEnv] of PROVIDERS) {
       for (const local of ['git', 'jj']) {
-        for (const transport of ['auto', 'cli', 'mcp']) {
-          const document = {
-            ...validConfig,
-            cvs: { local, remote: { provider, transport, tools, url, token_env: tokenEnv } },
-          };
-          expect(configV2Schema.safeParse(document).success).toBe(true);
-          expect(configContractValidator()(document)).toBe(true);
-        }
+        const document = {
+          ...validConfig,
+          cvs: { local, remote: { provider, tools, url, token_env: tokenEnv } },
+        };
+        expect(configV2Schema.safeParse(document).success).toBe(true);
+        expect(configContractValidator()(document)).toBe(true);
       }
     }
   });
@@ -290,7 +287,7 @@ describe('canonical Zod schemas', () => {
         ...validConfig.issues,
         type: 'github',
         tools: 'gh',
-        remote: { transport: 'auto', url: 'https://github.com', token_env: 'GH_TOKEN', extra: true },
+        remote: { url: 'https://github.com', token_env: 'GH_TOKEN', extra: true },
       },
     },
   ])('rejects unknown strict configuration keys in runtime and portable schemas', (document) => {
@@ -300,7 +297,16 @@ describe('canonical Zod schemas', () => {
 
   it.each([
     { ...validConfig, cvs: { ...validConfig.cvs, local: 'svn' } },
-    { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, transport: 'fallback' } } },
+    { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, transport: 'auto' } } },
+    {
+      ...validConfig,
+      issues: {
+        ...validConfig.issues,
+        type: 'github',
+        tools: 'gh',
+        remote: { url: 'https://github.com', token_env: 'GH_TOKEN', transport: 'auto' },
+      },
+    },
     { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, tools: 'glab' } } },
     {
       ...validConfig,
@@ -338,12 +344,12 @@ function providerTool(type: string): string {
   return { github: 'gh', gitlab: 'glab', gitea: 'tea', forgejo: 'forgejo-cli' }[type] ?? '';
 }
 
-function providerRemote(type: string): { transport: string; url: string; token_env: string } | undefined {
+function providerRemote(type: string): { url: string; token_env: string } | undefined {
   const remote = {
-    github: { transport: 'auto', url: 'https://github.com', token_env: 'GH_TOKEN' },
-    gitlab: { transport: 'auto', url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' },
-    gitea: { transport: 'auto', url: 'https://gitea.example.test', token_env: 'GITEA_TOKEN' },
-    forgejo: { transport: 'auto', url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' },
+    github: { url: 'https://github.com', token_env: 'GH_TOKEN' },
+    gitlab: { url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' },
+    gitea: { url: 'https://gitea.example.test', token_env: 'GITEA_TOKEN' },
+    forgejo: { url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' },
   } as const;
   return remote[type as keyof typeof remote];
 }

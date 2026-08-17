@@ -77,7 +77,7 @@ def install(
         raise ConfigError("mcp.output_limit_mode=hard is supported only by Pi")
 
     intents = deduplicate_server_intents(required_server_intents(config, harness))
-    intents = _preflight_server_executables(intents)
+    intents = _available_server_intents(intents)
     rendered_targets: list[tuple[Path, str]] = []
     conflicts: list[Path] = []
     for selected_harness in harnesses:
@@ -98,11 +98,11 @@ def install(
                     "cvs",
                     local=cvs["local"],
                     provider=cvs_remote["provider"],
-                    transport=cvs_remote["transport"],
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
                     token_env=cvs_remote["token_env"],
                     mcp_id=f"cvs_{cvs_remote['provider']}",
+                    mcp_available=_has_mcp(intents, cvs_remote["provider"]),
                 ),
             )
         )
@@ -115,10 +115,10 @@ def install(
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
             issue_context.update(
-                transport=issues["remote"]["transport"],
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
                 mcp_id=f"cvs_{issues['type']}",
+                mcp_available=_has_mcp(intents, issues["type"]),
             )
         rendered_targets.append(
             (
@@ -259,20 +259,17 @@ class _PiAdapterState:
     configured: bool
 
 
-def _preflight_server_executables(intents: list[ServerIntent]) -> list[ServerIntent]:
-    """Apply explicit-local failure and auto-local omission before host rendering."""
-    retained: list[ServerIntent] = []
-    forgejo_mcp = shutil.which("forgejo-mcp")
-    for intent in intents:
-        if intent.command != "forgejo-mcp":
-            retained.append(intent)
-            continue
-        explicit = any(policy.endswith(":mcp") for policy in intent.requesting_policies)
-        if forgejo_mcp is None and explicit:
-            raise RuntimeError(f"{intent.server_id} explicitly requires forgejo-mcp on PATH")
-        if forgejo_mcp is not None:
-            retained.append(intent)
-    return retained
+def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]:
+    """Omit local MCP servers whose operator-installed executable is unavailable."""
+    forgejo_mcp_available = shutil.which("forgejo-mcp") is not None
+    return [
+        intent for intent in intents if intent.command != "forgejo-mcp" or forgejo_mcp_available
+    ]
+
+
+def _has_mcp(intents: list[ServerIntent], provider: str) -> bool:
+    """Return whether the configured provider has a projected MCP server."""
+    return any(intent.server_id == f"cvs_{provider}" for intent in intents)
 
 
 def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:

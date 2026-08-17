@@ -12,11 +12,15 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
 - [Configuration](configuration.md): defaults, overlay behavior, and every current
   setting.
 - [Memory](memory.md): canonical YAML, immutable records, security, and cache limits.
-- [Issues](issues.md): canonical filesystem workflow and configured remote CLI routing.
-- [CVS and MCP providers](cvs.md): Git/Jujutsu, remote transport routing, generated
+- [Issues](issues.md): canonical filesystem workflow and remote CLI/MCP capabilities.
+- [CVS and MCP providers](cvs.md): Git/Jujutsu, per-operation remote capability selection, generated
   OpenCode/Pi configuration, consent, and security boundaries.
 
 ## Authority and status
+
+The prior configurable transport-selector and deterministic MCP-first/fallback policy is
+superseded. Current guidance enumerates valid CLI and MCP capabilities; the agent chooses
+per operation before mutation and never switches routes after mutation begins.
 
 For exact behavior, source and current approved designs take precedence over these
 guides. Tests define verified compatibility. Topic guides provide user-facing

@@ -4,8 +4,9 @@
 
 Configuration version 2 independently selects a local version-control system and a
 remote collaboration provider. Local operations use `git` or `jj` directly and never
-use MCP. Remote operations use one configured provider and one `auto`, `cli`, or `mcp`
-policy. The generated OpenCode CVS skill applies routing, context, consent, and output
+use MCP. Remote operations use one configured provider whose valid CLI and MCP
+capabilities are both enumerated. The generated OpenCode CVS skill applies per-operation
+selection, context, consent, and output
 guidance. Harnessctl does not implement Git, Jujutsu, provider APIs, provider CLIs, MCP
 servers, authentication, or merge authorization.
 
@@ -34,7 +35,6 @@ cvs:
   local: git
   remote:
     provider: github
-    transport: auto
     tools: gh
     url: https://github.com
     token_env: GH_TOKEN
@@ -42,7 +42,7 @@ mcp:
   output_limit_mode: bounded-guidance
 ```
 
-Use `local: jj` to select Jujutsu without changing the remote provider or transport:
+Use `local: jj` to select Jujutsu without changing the remote provider:
 
 ```yaml
 version: 2
@@ -50,7 +50,6 @@ cvs:
   local: jj
   remote:
     provider: github
-    transport: auto
     tools: gh
     url: https://github.com
     token_env: GH_TOKEN
@@ -58,22 +57,18 @@ mcp:
   output_limit_mode: bounded-guidance
 ```
 
-Every remote provider supports every listed transport. `tools`, URL, and token name
-must match the selected provider; changing provider requires a complete explicit remote
-mapping.
+Every remote provider exposes its valid CLI and MCP capabilities. `tools`, URL, and token
+name must match the selected provider; changing provider requires a complete explicit
+remote mapping.
 
-| Provider | Valid transport         | Exact CLI       | Collaboration URL              | Environment-variable name |
-| -------- | ----------------------- | --------------- | ------------------------------ | ------------------------- |
-| GitHub   | `auto`, `cli`, or `mcp` | `gh`            | `https://github.com`           | `GH_TOKEN`                |
-| GitLab   | `auto`, `cli`, or `mcp` | `glab`          | `https://gitlab.com`           | `GITLAB_TOKEN`            |
-| Gitea    | `auto`, `cli`, or `mcp` | `tea`           | Explicit HTTPS instance URL    | `GITEA_TOKEN`             |
-| Forgejo  | `auto`, `cli`, or `mcp` | `forgejo-cli`   | Explicit HTTPS instance URL    | `FORGEJO_TOKEN`           |
+| Provider | Exact CLI       | MCP capability | Collaboration URL              | Environment-variable name |
+| -------- | --------------- | -------------- | ------------------------------ | ------------------------- |
+| GitHub   | `gh`            | `cvs_github`   | `https://github.com`           | `GH_TOKEN`                |
+| GitLab   | `glab`          | `cvs_gitlab`   | `https://gitlab.com`           | `GITLAB_TOKEN`            |
+| Gitea    | `tea`           | `cvs_gitea`    | Explicit HTTPS instance URL    | `GITEA_TOKEN`             |
+| Forgejo  | `forgejo-cli`   | `cvs_forgejo`  | Explicit HTTPS instance URL    | `FORGEJO_TOKEN`           |
 
-These complete provider examples deliberately exercise all three policies. Any example
-may instead use another value from `auto`, `cli`, or `mcp` without changing its other
-provider fields.
-
-### GitHub with `auto`
+### GitHub
 
 ```yaml
 version: 2
@@ -81,7 +76,6 @@ cvs:
   local: git
   remote:
     provider: github
-    transport: auto
     tools: gh
     url: https://github.com
     token_env: GH_TOKEN
@@ -89,7 +83,7 @@ mcp:
   output_limit_mode: bounded-guidance
 ```
 
-### GitLab with `cli`
+### GitLab
 
 ```yaml
 version: 2
@@ -97,7 +91,6 @@ cvs:
   local: git
   remote:
     provider: gitlab
-    transport: cli
     tools: glab
     url: https://gitlab.com
     token_env: GITLAB_TOKEN
@@ -105,7 +98,7 @@ mcp:
   output_limit_mode: bounded-guidance
 ```
 
-### Gitea with `mcp`
+### Gitea
 
 ```yaml
 version: 2
@@ -113,7 +106,6 @@ cvs:
   local: jj
   remote:
     provider: gitea
-    transport: mcp
     tools: tea
     url: https://gitea.example.com
     token_env: GITEA_TOKEN
@@ -121,7 +113,7 @@ mcp:
   output_limit_mode: bounded-guidance
 ```
 
-### Forgejo with `auto`
+### Forgejo
 
 ```yaml
 version: 2
@@ -129,7 +121,6 @@ cvs:
   local: git
   remote:
     provider: forgejo
-    transport: auto
     tools: forgejo-cli
     url: https://forgejo.example.com
     token_env: FORGEJO_TOKEN
@@ -146,24 +137,24 @@ put a token value, assignment, command, path, or interpolation expression in YAM
 configuration schema but supported only for a Pi-only installation with the verified
 adapter output guard. OpenCode and `all` reject `hard`.
 
-## Transport choice and fallback
+## Per-operation capability choice
 
-| Policy | Runtime behavior |
-| ------ | ---------------- |
-| `cli`  | Use only the exact configured provider CLI. Missing executable, authentication, repository context, or capability stops. No MCP registration is generated for that route. |
-| `mcp`  | Use only the provider's exact fixed-ID MCP service. Missing server, adapter, authentication, context, capability, or compatibility stops. CLI fallback is forbidden. |
-| `auto` | Preflight the exact MCP route first, then the exact provider CLI. Select CLI only before invoking the operation when MCP preflight proves unusable. |
+The generated guidance enumerates both valid routes: the exact configured provider CLI
+and the provider's fixed-ID MCP service. The agent chooses the suitable available route
+for each operation after checking authentication, repository context, compatibility,
+and required capability. There is no configured selector and no mandatory MCP-first or
+CLI-first order.
 
-After any mutation is invoked, success, error, timeout, cancellation, or ambiguity is
-terminal for automatic routing. Never retry the mutation through another transport.
-Reads may repeat only when known idempotent and bounded. There is no fallback to another
-provider, direct provider APIs, guessed syntax, or filesystem Issues.
+The agent must choose before invoking a mutation. After mutation begins, success, error,
+timeout, cancellation, or ambiguity is terminal for that route; it must never switch
+routes for the same mutation. Reads may repeat only when known idempotent and bounded.
+The agent never substitutes another provider, direct provider APIs, guessed syntax, or
+filesystem Issues.
 
-For Gitea and Forgejo, explicit `mcp` installation requires `forgejo-mcp` on `PATH`.
-With `auto`, an absent executable omits that MCP registration without failing the
-installation; runtime may still preflight `tea` or `forgejo-cli`. Presence at install
-time does not prove runtime authentication or capability. `forgejo-mcp` is never a CLI
-and is never a CLI fallback.
+For Gitea and Forgejo, MCP capability is projected only when `forgejo-mcp` is present on
+`PATH`. Its presence does not prove runtime authentication, compatibility, or operation
+capability. CLI capability is independently available only when `tea` or `forgejo-cli`,
+respectively, is present. `forgejo-mcp` is never a CLI.
 
 ## Fixed MCP services and support boundary
 
@@ -243,7 +234,7 @@ provider tool restrictions are generated guidance, not host-enforced filtering.
 
 ## Generated Pi format and adapter consent
 
-For non-CLI routes, the installer merges required entries under `mcpServers` and the
+For MCP-capable providers, the installer merges required entries under `mcpServers` and the
 owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references use
 `${NAME}` and contain no environment value. The supported catalog shapes are:
 
@@ -360,6 +351,6 @@ skill distribution; and guarantees that an installed server remains available,
 authenticated, compatible, or authorized at runtime.
 
 CVS and Issues are independent policy domains. They may deduplicate an identical MCP
-server registration, but neither inherits the other's provider, transport, CLI, URL,
+server registration, but neither inherits the other's provider, CLI, URL,
 environment name, authority, or runtime success. See [Issues](issues.md) and
 [configuration](configuration.md).

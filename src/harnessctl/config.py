@@ -22,7 +22,6 @@ REMOTE_ISSUE_PROVIDERS = {
     "gitea": {"tool": "tea", "url": None, "token_env": "GITEA_TOKEN"},
     "forgejo": {"tool": "forgejo-cli", "url": None, "token_env": "FORGEJO_TOKEN"},
 }
-REMOTE_TRANSPORTS = frozenset({"auto", "cli", "mcp"})
 CVS_LOCALS = frozenset({"git", "jj"})
 MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
 
@@ -38,7 +37,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "local": "git",
         "remote": {
             "provider": "github",
-            "transport": "auto",
             "tools": "gh",
             "url": "https://github.com",
             "token_env": "GH_TOKEN",
@@ -93,7 +91,6 @@ def load_config(cwd: Path) -> dict[str, Any]:
     _require_explicit_remote_configuration(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
-    _add_remote_issue_transport_default(config)
     _validate(config)
     return config
 
@@ -139,7 +136,7 @@ def _validate(config: dict[str, Any]) -> None:
     remote = _mapping(cvs, "remote")
     _allowed_keys(
         remote,
-        {"provider", "transport", "tools", "url", "token_env"},
+        {"provider", "tools", "url", "token_env"},
         "cvs.remote",
     )
     _validate_remote_service(remote, "cvs.remote", "provider")
@@ -207,15 +204,6 @@ def _require_explicit_remote_configuration(source: dict[str, Any]) -> None:
             )
 
 
-def _add_remote_issue_transport_default(config: dict[str, Any]) -> None:
-    issues = config.get("issues")
-    if not isinstance(issues, dict) or issues.get("type") not in REMOTE_ISSUE_TYPES:
-        return
-    remote = issues.get("remote")
-    if isinstance(remote, dict):
-        remote.setdefault("transport", "auto")
-
-
 def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
     value = issues.get("tools")
     if not isinstance(value, str):
@@ -258,9 +246,9 @@ def _validate_issue_remote(issues: dict[str, Any], issue_type: str) -> None:
         return
     if not isinstance(remote, dict):
         raise ConfigError("issues.remote must be a mapping")
-    _allowed_keys(remote, {"transport", "url", "token_env"}, "issues.remote")
-    if set(remote) != {"transport", "url", "token_env"}:
-        raise ConfigError("issues.remote must contain exactly transport, url, and token_env")
+    _allowed_keys(remote, {"url", "token_env"}, "issues.remote")
+    if set(remote) != {"url", "token_env"}:
+        raise ConfigError("issues.remote must contain exactly url and token_env")
     service = {"provider": issue_type, **remote, "tools": issues["tools"]}
     _validate_remote_service(service, "issues.remote", "provider")
     remote["url"] = service["url"]
@@ -270,8 +258,6 @@ def _validate_remote_service(remote: dict[str, Any], namespace: str, provider_ke
     provider = remote.get(provider_key)
     if provider not in REMOTE_ISSUE_TYPES:
         raise ConfigError(f"{namespace}.{provider_key} must be github, gitlab, gitea, or forgejo")
-    if remote.get("transport") not in REMOTE_TRANSPORTS:
-        raise ConfigError(f"{namespace}.transport must be auto, cli, or mcp")
     expected = REMOTE_ISSUE_PROVIDERS[provider]
     tools = remote.get("tools")
     if not isinstance(tools, str):

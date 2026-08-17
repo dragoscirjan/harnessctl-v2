@@ -4,11 +4,11 @@
 "title": "Document CVS and MCP provider configuration"
 "status": "done"
 "created_at": "2026-08-17T20:51:23.042Z"
-"updated_at": "2026-08-17T21:41:24.981Z"
+"updated_at": "2026-08-17T22:01:44.410Z"
 "created_by": "lead-engineer"
 "assigned_to": "lead-engineer"
 "parent": "hrn-00050"
 "depends_on":
   - "hrn-00053"
-"body": "Given the implemented CVS/MCP contracts\nWhen operators read project documentation\nThen they receive complete configuration examples, support status, transport boundaries, security guidance, and installation requirements.\n\n## Acceptance\n\n- [x] Add CVS documentation and index links.\n- [x] Update configuration, Issues, skills, and host setup docs.\n- [x] Clearly mark official/community/external components.\n- [x] Documentation tests pass."
+"body": "Given the implemented CVS/MCP contracts\nWhen operators read project documentation\nThen they receive complete configuration examples, support status, available CLI and MCP capability boundaries, security guidance, and installation requirements without prescribed transport priority.\n\n## Acceptance\n\n- [x] Add CVS documentation and index links.\n- [x] Update configuration, Issues, skills, and host setup docs.\n- [x] Clearly mark official/community/external components and agent choice.\n- [x] Documentation tests pass."
 "comments": []

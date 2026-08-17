@@ -4,11 +4,11 @@
 "title": "Configure CVS and MCP-aware issue workflows"
 "status": "done"
 "created_at": "2026-08-17T20:51:14.844Z"
-"updated_at": "2026-08-17T21:42:22.420Z"
+"updated_at": "2026-08-17T22:01:44.009Z"
 "created_by": "lead-engineer"
 "assigned_to": "lead-engineer"
 "parent": "hrn-00001"
 "metadata":
   "spec": ".specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md"
-"body": "As a project operator\nI want configurable CVS and MCP-aware issue workflows\nSo that agents can use verified CLI or MCP transports across supported hosts.\n\n## Acceptance\n\n- [x] CVS config supports git/jj and GitHub/GitLab/Gitea/Forgejo.\n- [x] Issues and CVS skills select valid CLI/MCP transports deterministically.\n- [x] OpenCode and Pi MCP configuration installs safely without secrets.\n- [x] Documentation, artifacts, rollback, and cross-platform tests pass.\n\n## Design\n\n- `.specs/hld-00008-configurable-cvs-mcp-aware-issues-and-generated-host-mcp-configuration-v1.md`\n- `.specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md`"
+"body": "As a project operator\nI want configurable CVS and MCP-aware issue workflows\nSo that agents can choose any verified CLI or MCP capability available for supported hosts.\n\n## Acceptance\n\n- [x] CVS config supports git/jj and GitHub/GitLab/Gitea/Forgejo.\n- [x] Issues and CVS skills enumerate valid CLI and MCP capabilities without prescribing transport priority.\n- [x] OpenCode and Pi MCP configuration installs safely without secrets.\n- [x] Documentation, artifacts, rollback, and cross-platform tests pass.\n\n## Design\n\n- `.specs/hld-00008-configurable-cvs-mcp-aware-issues-and-generated-host-mcp-configuration-v1.md`\n- `.specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md`"
 "comments": []

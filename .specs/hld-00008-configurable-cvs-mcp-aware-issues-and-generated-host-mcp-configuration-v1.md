@@ -17,6 +17,11 @@ lineage only where its supersession notice applies; current canonical issue beha
 remains governed by its successor designs. This HLD extends provider routing and host
 configuration. It does not replace canonical issue storage, memory, or cache contracts.
 
+The earlier configurable transport-selector and deterministic MCP-first/fallback policy
+is superseded. This revision enumerates valid CLI and MCP capabilities and delegates the
+choice for each operation to the agent. The agent must choose before mutation and must
+never switch routes after mutation begins.
+
 ## Purpose
 
 Harnessctl will provide separately configurable version-control-system (CVS) and issue
@@ -36,9 +41,10 @@ The architecture keeps three concerns distinct:
 - Make local Git the default CVS and allow Jujutsu as an explicit alternative.
 - Make GitHub the default remote CVS service and support GitLab, Gitea, and Forgejo.
 - Preserve filesystem issues while making remote issues CLI- and MCP-aware.
-- Give each remote service an independent `auto`, `cli`, or `mcp` transport policy.
-- Let `auto` select a valid available route at execution time rather than installation
-  time.
+- Enumerate each remote service's valid CLI and MCP capabilities independently for CVS
+  and Issues.
+- Let the agent choose an available capability for each operation without prescribed
+  route precedence.
 - Generate deterministic, deduplicated OpenCode and Pi MCP server registrations.
 - Preserve unrelated host settings, provide exact rollback for harnessctl-owned project
   files and captured Pi settings bytes, and disclose residual external installer effects.
@@ -111,16 +117,15 @@ CVS configuration has two independent selections:
 - A remote collaboration service: `github` by default, or `gitlab`, `gitea`, or
   `forgejo`.
 
-Each remote selection includes a transport policy of `auto`, `cli`, or `mcp`. Gitea and
-Forgejo additionally require an instance URL. Any token setting stores only the exact
+Each remote selection identifies both its valid provider CLI and fixed-ID MCP service.
+Gitea and Forgejo additionally require an instance URL. Any token setting stores only the exact
 environment-variable name designated by the operator, never its value.
 
 A generated GitHub MCP registration requires the validated environment-variable name
 that supplies its hosted-server PAT. GitLab MCP requires no token variable because its
 host-native OAuth flow owns credentials. Gitea and Forgejo MCP require their validated
-token-variable name and instance URL. A missing requirement makes that MCP route
-unavailable; `mcp` fails closed, while `auto` may consider CLI only under the routing
-preflight rules below.
+token-variable name and instance URL. A missing requirement makes that MCP capability
+unavailable without disabling an independently available CLI capability.
 
 Local operations remain local even when the remote service uses MCP. Jujutsu selection
 does not imply a different remote provider and does not permit Git command assumptions
@@ -129,9 +134,9 @@ where Jujutsu behavior has not been verified.
 ### Issues domain
 
 Issues retain a separate configuration branch and do not inherit the CVS provider,
-transport, endpoint, token environment-variable name, or tool choice. Filesystem issues
+endpoint, token environment-variable name, or tool choice. Filesystem issues
 continue using harnessctl's canonical local tools. Remote issues independently select
-GitHub, GitLab, Gitea, or Forgejo and their own `auto`, `cli`, or `mcp` policy.
+GitHub, GitLab, Gitea, or Forgejo and enumerate their own valid CLI and MCP capabilities.
 
 Matching CVS and issue selections may share one generated MCP server registration, but
 they remain distinct policy owners. Changing CVS must not silently move issue authority;
@@ -139,18 +144,17 @@ changing issues must not alter local or remote CVS behavior.
 
 ### Validation invariants
 
-- Unknown local systems, providers, transports, settings, server IDs, and unsafe URLs
+- Unknown local systems, providers, settings, server IDs, and unsafe URLs
   fail closed.
 - Remote-provider settings are explicit where defaults cannot safely supply instance or
   token context.
 - Only environment-variable names are accepted. Secret values, assignments, command
   fragments, and token-shaped configuration are rejected.
-- Provider, endpoint, transport, and credential-name combinations must be internally
+- Provider, endpoint, CLI, MCP, and credential-name combinations must be internally
   consistent.
-- A requested MCP route must have a supported server definition for its provider.
-- A requested CLI route must name the provider-specific supported CLI; harnessctl does
+- An MCP capability must have a supported server definition for its provider.
+- A CLI capability must name the provider-specific supported CLI; harnessctl does
   not generalize syntax between providers.
-- `auto` is a runtime policy, not a request for the installer to probe tools or services.
 - MCP output-limit mode accepts `bounded-guidance` or `hard` and defaults to
   `bounded-guidance`. `hard` is valid only when every selected host has a verified
   runtime control for the requested output limit. OpenCode therefore rejects `hard`;
@@ -158,30 +162,27 @@ changing issues must not alter local or remote CVS behavior.
   aggregation and remote body size are never represented as hard limits.
 
 Existing version migration and deep-overlay behavior remain compatible where an old
-configuration omitted the new CVS and transport settings. Such projects receive local
+configuration omitted the new CVS settings. Such projects receive local
 Git, GitHub remote CVS, and the established issue defaults. Migration must not couple an
 existing issue provider to the new CVS default.
 
 ## Runtime routing policy
 
-`cli` restricts a workflow to the configured provider CLI. `mcp` restricts it to the
-configured MCP service and fails clearly when the required server or capability is not
-available. `auto` applies one deterministic order: first the valid configured or
-host-discovered MCP route, but only when the host adapter, exact server, required
-capability, and permitted tool surface are available and authentication can be
-established without rendering, logging, or otherwise exposing a secret; otherwise the
-validated provider CLI. Local Git and Jujutsu operations always remain direct and never
-route through remote MCP services.
+Generated guidance enumerates the configured provider CLI and fixed-ID MCP service with
+their valid capabilities. The agent chooses the suitable available route for each
+operation after checking adapter or executable availability, authentication, context,
+compatibility, and required capability. No MCP-first or CLI-first precedence applies.
+Local Git and Jujutsu operations always remain direct and never route through remote MCP
+services.
 
 A route is valid only when it matches the configured domain and provider, is available
 in the current host, is authenticated by the host or operator, resolves the intended
 repository or project, and exposes the capability required by the requested operation.
 Availability alone is insufficient.
 
-Fallback is allowed only before execution, when capability or authentication preflight
-proves the preferred route unusable. Once any mutating tool or command has been invoked,
-its success, timeout, ambiguous result, or failure is terminal for automatic routing:
-the skill must not retry the mutation through another transport. It reports the outcome
+Route choice must occur before execution. Once any mutating tool or command has been
+invoked, its success, timeout, ambiguous result, or failure is terminal for that route:
+the skill must not retry the mutation through another route. It reports the outcome
 and requires explicit user-directed recovery after state is reconciled. Reads may be
 repeated only when their idempotence and bounds are known. Routing never falls back to
 another provider, filesystem issues, direct canonical edits, or guessed command syntax.
@@ -193,7 +194,7 @@ only when necessary for discovery and remains bounded to avoid accidental cross-
 actions or excessive disclosure.
 
 All merge operations require explicit user consent immediately before merge, regardless
-of provider, transport, prior approval, automation level, or successful checks. Skills
+of provider, chosen route, prior approval, automation level, or successful checks. Skills
 may prepare, inspect, and propose a merge without that consent, but must not complete it.
 
 ## MCP service catalog
@@ -351,8 +352,8 @@ change.
 
 ## Skill architecture
 
-The generated CVS skill describes the selected local system, remote provider, transport
-policy, runtime route checks, provider-specific fallback, change-request workflow, and
+The generated CVS skill describes the selected local system, remote provider, valid CLI
+and MCP capabilities, runtime route checks, per-operation capability choice, change-request workflow, and
 mandatory pre-merge consent. The issue-tracking skill receives the separately validated
 issue policy and preserves local expected-revision and no-direct-edit rules for
 filesystem issues.
@@ -371,7 +372,7 @@ apply bounded-call guidance and schema-exposed argument checks, and verify refer
 oversized artifacts against the expected provider, repository, object identity,
 revision, size, and digest where one is available before relying on their contents.
 
-Provider-specific CLI fallback remains supported: GitHub uses GitHub's CLI, GitLab uses
+Provider-specific CLI capability remains supported: GitHub uses GitHub's CLI, GitLab uses
 GitLab's CLI, and Gitea and Forgejo retain their separately vetted CLI guidance. A
 working CVS route does not imply a working issue route, even when both target the same
 provider or share an MCP registration.
@@ -380,8 +381,8 @@ Skills must:
 
 - Confirm provider and repository or project context before mutation.
 - Check the exact required capability before selecting or changing routes.
-- Under `auto`, apply MCP-first, validated-CLI-second precedence and only pre-execution
-  fallback; never choose by subjective convenience.
+- Choose CLI or MCP per operation based on the validated live capability needed, before
+  mutation; never switch after mutation starts.
 - Report unavailable routes and capabilities directly without recursive failure
   reporting through the broken channel.
 - Avoid echoing credentials, authentication responses, or secret-bearing environment
@@ -494,8 +495,8 @@ release-verification inputs. No unpinned adapter or server package is accepted.
 
 - Existing projects without CVS configuration retain Git locally and GitHub as the
   remote CVS default.
-- Existing issue configuration remains independently authoritative and receives only
-  compatible transport defaults.
+- Existing issue configuration remains independently authoritative and receives no route
+  selector.
 - Filesystem issue files, IDs, revisions, relationships, comments, archive behavior,
   memory records, and local SQLite behavior remain unchanged.
 - Existing OpenCode and Pi commands and skill contracts are extended rather than
@@ -511,18 +512,14 @@ release-verification inputs. No unpinned adapter or server package is accepted.
 ## Failure behavior
 
 - Invalid project configuration prevents rendering and installation.
-- A required `mcp` route unavailable at runtime produces an actionable error; it does
-  not silently use CLI.
-- A required `cli` route unavailable at runtime produces an actionable error; it does
-  not silently use MCP.
-- An `auto` route with no valid available capability stops without changing providers
-  or guessing syntax.
+- An unavailable CLI or MCP capability produces an actionable error and is not selected.
+- If neither route exposes the required valid capability, the operation stops without
+  changing providers or guessing syntax.
 - Authentication failure, DCR failure, ambiguous repository context, insufficient
   permission, missing toolset, or unsupported operation stops before mutation where the
   provider permits preflight detection.
-- `auto` falls back from MCP to CLI only for a pre-execution capability or authentication
-  failure. It never silently falls back after invoking a mutating operation, including
-  after timeout or an ambiguous response.
+- Route choice occurs before mutation. After invocation, including timeout or an
+  ambiguous response, the agent never switches routes for the same mutation.
 - Same-ID MCP mismatches fail the complete install plan.
 - Pi adapter installation requires immediate interactive confirmation, or an explicit
   dedicated noninteractive opt-in flag, after residual external effects are disclosed.
@@ -540,8 +537,8 @@ release-verification inputs. No unpinned adapter or server package is accepted.
 ## Documentation and artifact obligations
 
 User documentation covers the complete CVS and Issues configuration independently,
-transport semantics, provider matrix, fixed MCP IDs, environment-name handling, host
-interpolation differences, merge consent, fallback rules, and troubleshooting. Examples
+capability-selection semantics, provider matrix, fixed MCP IDs, environment-name handling, host
+interpolation differences, merge consent, no-switch rules, and troubleshooting. Examples
 use placeholder environment-variable names and URLs only; no credential-like values.
 
 OpenCode and Pi documentation explains their project file locations, merge behavior,
@@ -560,8 +557,8 @@ archives unless already part of the established package contract.
 ### Configuration and schema
 
 - Prove defaults, migration, and deep overlay preserve CVS/Issues independence.
-- Accept every local-system, provider, and transport combination that has a defined
-  contract; reject unknown or mismatched combinations.
+- Accept every local-system and provider combination that has a defined contract; reject
+  unknown or mismatched combinations.
 - Reject secret values, unsafe URLs, provider mismatches, malformed environment names,
   and ambiguous shared server definitions.
 - Verify Python, TypeScript, and portable generated schemas agree.
@@ -602,13 +599,11 @@ archives unless already part of the established package contract.
 
 ### Skills and runtime policy
 
-- Render CVS and issue skills for every provider and transport without unrelated
-  provider prose.
-- Verify `cli`, `mcp`, and `auto` obey their route boundaries and capability checks.
-- Verify `auto` always selects a valid configured or discovered MCP route before CLI,
-  local Git/Jujutsu remain direct, and fallback occurs only for pre-execution capability
-  or authentication failure. Inject mutating failures and ambiguous timeouts to prove no
-  second transport is invoked.
+- Render CVS and issue skills for every provider with both valid capability sets and
+  without unrelated provider prose.
+- Verify valid CLI and MCP capabilities are both enumerated and the agent chooses per
+  operation before mutation. Local Git/Jujutsu remain direct. Inject mutating failures
+  and ambiguous timeouts to prove no second route is invoked.
 - Verify schema-exposed pagination and result arguments receive bounded generated
   guidance; Pi's exact per-call output guard and GitHub's exact toolset header are
   projected; OpenCode aggregate/body limits are never described as enforced. Prove
@@ -641,12 +636,11 @@ archives unless already part of the established package contract.
 
 1. CVS defaults to local Git with optional Jujutsu and independently defaults its remote
    provider to GitHub, with GitLab, Gitea, and Forgejo supported.
-2. Issues and CVS have separate validated provider and transport settings; neither
+2. Issues and CVS have separate validated provider settings; neither
    silently inherits from the other.
-3. Every remote service accepts `auto`, `cli`, or `mcp`; `auto` deterministically prefers
-   valid configured or discovered MCP over validated CLI, falls back only before
-   execution for capability or authentication failure, and never retries a mutation
-   through another route. Local Git and Jujutsu always remain direct.
+3. Every remote service enumerates valid CLI and MCP capabilities. The agent chooses per
+   operation without prescribed precedence, must choose before mutation, and never
+   switches routes after mutation begins. Local Git and Jujutsu always remain direct.
 4. Fixed IDs are `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and `cvs_forgejo`.
 5. Identical CVS/Issues server definitions deduplicate; a same-ID mismatch fails without
    silent precedence.

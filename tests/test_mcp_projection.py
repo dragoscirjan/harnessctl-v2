@@ -34,7 +34,6 @@ def _intent(
     }
     config["cvs"]["remote"] = {
         "provider": provider,
-        "transport": "mcp",
         "tools": tools[provider],
         "url": url
         or {
@@ -109,12 +108,12 @@ def test_local_forge_projection_maps_only_token_name(provider: str) -> None:
 
 def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
     intent = _intent("github", token_env="GH_TOKEN")
-    duplicate = replace(intent, requesting_policies=("issues:mcp",))
+    duplicate = replace(intent, requesting_routes=("issues",))
 
     deduplicated = deduplicate_server_intents([intent, duplicate])
 
     assert len(deduplicated) == 1
-    assert deduplicated[0].requesting_policies == ("cvs:mcp", "issues:mcp")
+    assert deduplicated[0].requesting_routes == ("cvs", "issues")
     with pytest.raises(ConfigError, match="fixed ID cvs_github"):
         deduplicate_server_intents([intent, replace(duplicate, token_env="ISSUES_TOKEN")])
 

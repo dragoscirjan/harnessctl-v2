@@ -412,8 +412,11 @@ package manually until distribution and skill discovery are verified.
 OpenCode receives a generated CVS skill at `.opencode/skills/cvs/SKILL.md`. Pi CVS and
 Issues skill distribution remains unsupported, but Pi MCP host configuration is
 implemented through the consent-gated, pinned `npm:pi-mcp-adapter@2.26.0` prerequisite.
-See the [CVS and MCP guide](docs/cvs.md) for exact formats, transport fallback, external
-license boundaries, and residual installation effects.
+Generated guidance enumerates valid CLI and MCP capabilities and lets the agent choose
+per operation. It must choose before mutation and never switch routes after mutation
+begins.
+See the [CVS and MCP guide](docs/cvs.md) for exact formats, per-operation capability
+selection, external license boundaries, and residual installation effects.
 
 Both adapters also have model-backed integration coverage for eight workflows:
 

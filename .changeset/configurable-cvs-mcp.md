@@ -2,4 +2,4 @@
 "@harnessctl/generic-tools": patch
 ---
 
-Add configurable CVS transport policy, MCP-aware issue guidance, and generated OpenCode and Pi MCP host configuration.
+Add provider-aware CVS and Issues guidance that enumerates valid CLI and MCP capabilities, requires per-operation route choice before mutation, and generates OpenCode and Pi MCP host configuration.

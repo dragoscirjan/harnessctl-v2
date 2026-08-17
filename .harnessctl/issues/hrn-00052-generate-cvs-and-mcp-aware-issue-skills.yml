@@ -4,11 +4,11 @@
 "title": "Generate CVS and MCP-aware issue skills"
 "status": "done"
 "created_at": "2026-08-17T20:51:22.851Z"
-"updated_at": "2026-08-17T21:40:23.910Z"
+"updated_at": "2026-08-17T22:01:44.214Z"
 "created_by": "lead-engineer"
 "assigned_to": "backend-dev"
 "parent": "hrn-00050"
 "depends_on":
   - "hrn-00051"
-"body": "Given validated Issues and CVS configuration\nWhen OpenCode skills are rendered\nThen CVS and Issues expose only selected provider transports, safe fallback, bounded results, prompt-injection handling, and consent rules.\n\n## Acceptance\n\n- [x] CVS skill covers git/jj and four remotes.\n- [x] Issues skill is MCP-aware without changing filesystem workflow.\n- [x] Provider guidance is isolated and no flags/tools are invented.\n- [x] Mutation safeguards and merge consent are explicit."
+"body": "Given validated Issues and CVS configuration\nWhen OpenCode skills are rendered\nThen CVS and Issues enumerate every available provider CLI and MCP capability, letting the agent choose per operation while preserving bounded results, prompt-injection handling, and consent rules.\n\n## Acceptance\n\n- [x] CVS skill covers git/jj and four remotes.\n- [x] Issues skill is MCP-aware without changing filesystem workflow.\n- [x] Neither skill prescribes CLI-first, MCP-first, or configured transport selection.\n- [x] Provider guidance, mutation safeguards, and merge consent are explicit."
 "comments": []

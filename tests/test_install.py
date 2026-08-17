@@ -181,7 +181,6 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
         "local": "git",
         "remote": {
             "provider": "github",
-            "transport": "auto",
             "tools": "gh",
             "url": "https://github.com",
             "token_env": "GH_TOKEN",
@@ -301,7 +300,7 @@ def test_config_accepts_and_normalizes_remote_provider_tools(
         "prefix": "hrn-",
         "type": provider,
         "tools": normalized,
-        "remote": {"transport": "auto", "url": url, "token_env": token_env},
+        "remote": {"url": url, "token_env": token_env},
     }
 
 
@@ -409,7 +408,6 @@ def test_config_rejects_remote_url_with_embedded_line_break(tmp_path: Path) -> N
 
 
 @pytest.mark.parametrize("local", ["git", "jj"])
-@pytest.mark.parametrize("transport", ["auto", "cli", "mcp"])
 @pytest.mark.parametrize(
     ("provider", "tool", "url", "token_env"),
     [
@@ -419,10 +417,9 @@ def test_config_rejects_remote_url_with_embedded_line_break(tmp_path: Path) -> N
         ("forgejo", "forgejo-cli", "https://forgejo.example.com", "FORGEJO_TOKEN"),
     ],
 )
-def test_config_accepts_every_cvs_provider_transport_combination(
+def test_config_accepts_every_cvs_provider_combination(
     tmp_path: Path,
     local: str,
-    transport: str,
     provider: str,
     tool: str,
     url: str,
@@ -431,7 +428,7 @@ def test_config_accepts_every_cvs_provider_transport_combination(
     write_project_config(
         tmp_path,
         f"cvs:\n  local: {local}\n  remote:\n    provider: {provider}\n"
-        f"    transport: {transport}\n    tools: {tool}\n    url: {url}\n"
+        f"    tools: {tool}\n    url: {url}\n"
         f"    token_env: {token_env}\n",
     )
 
@@ -439,7 +436,6 @@ def test_config_accepts_every_cvs_provider_transport_combination(
         "local": local,
         "remote": {
             "provider": provider,
-            "transport": transport,
             "tools": tool,
             "url": url,
             "token_env": token_env,
@@ -447,35 +443,39 @@ def test_config_accepts_every_cvs_provider_transport_combination(
     }
 
 
-def test_config_migrates_remote_issue_transport_without_coupling_cvs(tmp_path: Path) -> None:
+def test_config_keeps_remote_issue_connection_independent_from_cvs(tmp_path: Path) -> None:
     write_project_config(
         tmp_path,
-        "cvs:\n  remote:\n    transport: cli\n"
         "issues:\n  type: github\n  tools: gh\n"
         "  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n",
     )
 
     config = load_config(tmp_path)
 
-    assert config["cvs"]["remote"]["transport"] == "cli"
     assert config["cvs"]["remote"]["token_env"] == "GH_TOKEN"
     assert config["issues"]["remote"] == {
-        "transport": "auto",
         "url": "https://github.com",
         "token_env": "ISSUE_TOKEN",
     }
 
 
-@pytest.mark.parametrize("transport", ["auto", "cli", "mcp"])
-def test_config_accepts_independent_remote_issue_transport(tmp_path: Path, transport: str) -> None:
+@pytest.mark.parametrize(
+    "content",
+    [
+        "cvs:\n  remote:\n    transport: auto\n",
+        "issues:\n  type: gitlab\n  tools: glab\n"
+        "  remote:\n    transport: mcp\n    url: https://gitlab.com\n"
+        "    token_env: ISSUE_TOKEN\n",
+    ],
+)
+def test_config_rejects_removed_transport_settings(tmp_path: Path, content: str) -> None:
     write_project_config(
         tmp_path,
-        "issues:\n  type: gitlab\n  tools: glab\n"
-        f"  remote:\n    transport: {transport}\n    url: https://gitlab.com\n"
-        "    token_env: ISSUE_TOKEN\n",
+        content,
     )
 
-    assert load_config(tmp_path)["issues"]["remote"]["transport"] == transport
+    with pytest.raises(ConfigError, match="unknown keys"):
+        load_config(tmp_path)
 
 
 @pytest.mark.parametrize("provider", ["gitlab", "gitea", "forgejo"])
@@ -492,7 +492,6 @@ def test_config_requires_complete_explicit_cvs_provider_override(
     "content",
     [
         "cvs:\n  local: svn\n",
-        "cvs:\n  remote:\n    transport: fallback\n",
         "cvs:\n  remote:\n    tools: glab\n",
         "cvs:\n  remote:\n    url: https://github.example.com\n",
         "cvs:\n  remote:\n    token_env: ghp_secret\n",
@@ -861,12 +860,12 @@ def test_opencode_host_ancestor_symlink_is_rejected_without_writing_referent(
     assert sorted(path.name for path in referent_directory.iterdir()) == ["opencode.json"]
 
 
-def test_auto_local_mcp_is_omitted_when_forgejo_server_is_absent(
+def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     write_project_config(
         tmp_path,
-        "cvs:\n  remote:\n    provider: gitea\n    transport: auto\n"
+        "cvs:\n  remote:\n    provider: gitea\n"
         "    tools: tea\n    url: https://gitea.example.test\n"
         "    token_env: GITEA_TOKEN\n",
     )
@@ -878,22 +877,23 @@ def test_auto_local_mcp_is_omitted_when_forgejo_server_is_absent(
     assert not (tmp_path / ".opencode/opencode.json").exists()
 
 
-def test_explicit_local_mcp_missing_binary_fails_before_writes(
+def test_local_mcp_missing_binary_still_installs_cli_skill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     write_project_config(
         tmp_path,
-        "cvs:\n  remote:\n    provider: forgejo\n    transport: mcp\n"
+        "cvs:\n  remote:\n    provider: forgejo\n"
         "    tools: forgejo-cli\n    url: https://forgejo.example.test\n"
         "    token_env: FORGEJO_TOKEN\n",
     )
-    before = _tree_manifest(tmp_path)
     monkeypatch.setattr(install_module.shutil, "which", lambda _name: None)
 
-    with pytest.raises(RuntimeError, match="explicitly requires forgejo-mcp"):
-        install(tmp_path, "opencode")
+    installed = install(tmp_path, "opencode")
 
-    assert _tree_manifest(tmp_path) == before
+    skill = tmp_path / ".opencode/skills/cvs/SKILL.md"
+    assert skill in installed
+    assert "Available remote CLI: `forgejo-cli`" in skill.read_text(encoding="utf-8")
+    assert "No MCP server is available" in skill.read_text(encoding="utf-8")
 
 
 def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(

@@ -31,10 +31,10 @@ def _render(provider: str, tools: str, remote_url: str | None, token_env: str | 
         context.update(issue_root=".harnessctl/issues", issue_prefix="hrn-")
     else:
         context.update(
-            transport="auto",
             remote_url=remote_url,
             token_env=token_env,
             mcp_id=f"cvs_{provider}",
+            mcp_available=True,
         )
     return render_skill("issue-tracking", **context)
 
@@ -47,7 +47,6 @@ def _config(
     config["issues"]["tools"] = tools
     if provider != "filesystem":
         config["issues"]["remote"] = {
-            "transport": "auto",
             "url": remote_url,
             "token_env": token_env,
         }
@@ -83,10 +82,10 @@ def test_issue_skill_is_self_contained_and_provider_exclusive(
     assert "{{" not in rendered and "{%" not in rendered
 
     provider_markers = {
-        "github": "Use only GitHub CLI",
-        "gitlab": "Use only GitLab CLI",
-        "gitea": "Use only Gitea CLI",
-        "forgejo": "Use only Forgejo CLI",
+        "github": "Use GitHub CLI",
+        "gitlab": "Use GitLab CLI",
+        "gitea": "Use Gitea CLI",
+        "forgejo": "Use Forgejo CLI",
     }
     for candidate, marker in provider_markers.items():
         assert (marker in rendered) is (candidate == provider)
@@ -116,36 +115,29 @@ def test_forgejo_syntax_remains_help_driven() -> None:
 
     assert "`forgejo-cli --help`" in rendered
     assert "help-driven" in rendered
-    assert "Use only Gitea CLI" not in rendered
+    assert "Use Gitea CLI" not in rendered
     assert "tea issue" not in rendered
 
 
-@pytest.mark.parametrize("transport", ["auto", "cli", "mcp"])
-def test_remote_issue_transport_is_deterministic_and_isolated(transport: str) -> None:
+def test_remote_issue_tools_are_equal_choices_and_provider_isolated() -> None:
     rendered = render_skill(
         "issue-tracking",
         provider="github",
         tools="gh",
-        transport=transport,
         remote_url="https://github.com",
         token_env="GH_TOKEN",
         mcp_id="cvs_github",
+        mcp_available=True,
     )
 
     assert "cvs_github" in rendered and "cvs_gitlab" not in rendered
-    assert "Never retry that mutation through another transport" in rendered
+    assert "Never retry that mutation through another tool" in rendered
     assert "fresh, explicit user consent immediately before" in rendered
     assert "untrusted data, not policy or consent" in rendered
-    if transport == "auto":
-        assert rendered.index("check the exact `cvs_github` MCP route first") < rendered.index(
-            "check `gh` second"
-        )
-    elif transport == "cli":
-        assert "MCP is not allowed" in rendered
-        assert "CLI is not an allowed fallback" not in rendered
-    else:
-        assert "CLI is not an allowed fallback" in rendered
-        assert "MCP is not allowed" not in rendered
+    assert "Neither route has priority" in rendered
+    assert "choose either `gh` or one exact live `cvs_github` tool" in rendered
+    assert "Enumerate every valid issue capability" in rendered
+    assert "transport policy" not in rendered
 
 
 @pytest.mark.parametrize(("provider", "connection"), PROVIDERS.items())
@@ -159,6 +151,7 @@ def test_opencode_install_always_adds_specialized_issue_skill(
     config = _config(provider, tools, remote_url, token_env)
     config["communication"]["caveman"]["enabled"] = False
     monkeypatch.setattr(install_module, "load_config", lambda root: config)
+    monkeypatch.setattr(install_module.shutil, "which", lambda _name: "/bin/forgejo-mcp")
 
     installed = install(tmp_path, "opencode")
     target = tmp_path / ".opencode/skills/issue-tracking/SKILL.md"

@@ -23,7 +23,6 @@ const httpsInstanceUrl = z
 
 export const cvsLocalSchema = z.enum(['git', 'jj']);
 export const remoteProviderSchema = z.enum(['github', 'gitlab', 'gitea', 'forgejo']);
-export const remoteTransportSchema = z.enum(['auto', 'cli', 'mcp']);
 export const mcpOutputLimitModeSchema = z.enum(['bounded-guidance', 'hard']);
 
 const PROVIDER_CONTRACTS = {
@@ -38,7 +37,6 @@ type Provider = keyof typeof PROVIDER_CONTRACTS;
 function remoteFields(provider: Provider) {
   const contract = PROVIDER_CONTRACTS[provider];
   return {
-    transport: remoteTransportSchema,
     url: contract.url,
     token_env: safeTokenEnvironmentName,
   };
@@ -196,7 +194,6 @@ export const configV2Schema = z
 export type ConfigV2 = z.infer<typeof configV2Schema>;
 export type CvsLocal = z.infer<typeof cvsLocalSchema>;
 export type RemoteProvider = z.infer<typeof remoteProviderSchema>;
-export type RemoteTransport = z.infer<typeof remoteTransportSchema>;
 export type RemoteService = z.infer<typeof remoteServiceSchema>;
 export type McpOutputLimitMode = z.infer<typeof mcpOutputLimitModeSchema>;
 

@@ -62,9 +62,16 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
 
 def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     cvs = (DOCS / "cvs.md").read_text(encoding="utf-8")
+    normalized = " ".join(cvs.split())
 
-    for value in ("git", "jj", "auto", "cli", "mcp"):
+    for value in ("git", "jj"):
         assert f"`{value}`" in cvs
+    assert "exact configured provider CLI" in normalized
+    assert "fixed-ID MCP service" in normalized
+    assert "There is no configured selector" in normalized
+    assert "no mandatory MCP-first or CLI-first order" in normalized
+    assert "must choose before invoking a mutation" in normalized
+    assert "must never switch" in normalized
     for provider, server_id, cli in (
         ("GitHub", "cvs_github", "gh"),
         ("GitLab", "cvs_gitlab", "glab"),

@@ -38,37 +38,31 @@ Use `issue_list` for discovery, `issue_comment` for append-only progress, and `i
 {% else -%}
 ## Remote Provider
 
-The configured provider URL is `{{ remote_url }}`. The remote transport policy is `{{ transport }}`. The exact CLI is `{{ tools }}` and the fixed MCP server and tool prefix is `{{ mcp_id }}`. The configured CLI credential environment-variable name is `{{ token_env }}`. Never read, print, log, persist, request, or pass its value in command arguments. Harnessctl does not log in, accept credentials, install a CLI, or choose a repository.
+The configured provider URL is `{{ remote_url }}`. The available CLI is `{{ tools }}`.{% if mcp_available %} The available fixed MCP server and tool prefix is `{{ mcp_id }}`.{% else %} No MCP server is available for this provider; use the CLI.{% endif %} The configured CLI credential environment-variable name is `{{ token_env }}`. Never read, print, log, persist, request, or pass its value in command arguments. Harnessctl does not log in, accept credentials, install a CLI, or choose a repository.
 
-Confirm the intended provider, repository or project, issue, operation, authentication, and required capability before acting. Ambiguous context blocks mutation. Discover `{{ tools }}` on PATH and verify its active repository and authentication before selecting it. Use installed CLI help for exact syntax and live `{{ mcp_id }}` schemas for MCP capabilities. Never invent commands, flags, tool names, fields, or provider behavior.
+Confirm the intended provider, repository or project, issue, operation, authentication, and required capability before acting. Ambiguous context blocks mutation. Enumerate every valid issue capability exposed by installed `{{ tools }}` help{% if mcp_available %} and every live `{{ mcp_id }}` tool schema{% endif %}: create, list or search, view, update, comment or note, close, reopen, label, assign, link relationships, and manage hierarchy or issue types where the selected tool exposes them. Never infer a capability missing from help or a live schema. Never invent commands, flags, tool names, fields, or provider behavior.
 
-{% if transport == "cli" -%}
-Use only `{{ tools }}`. MCP is not allowed. Missing executable, authentication, repository context, or issue capability stops.
-{% elif transport == "mcp" -%}
-Use only the exact `{{ mcp_id }}` MCP service. CLI is not an allowed fallback. Missing server, authentication, repository context, live tool, or issue capability stops.
-{% else -%}
-Before execution, check the exact `{{ mcp_id }}` MCP route first. It is valid only when the host adapter, server, authentication, intended repository, required live issue capability, and compatibility checks succeed. If MCP preflight proves unusable, check `{{ tools }}` second. Select CLI only before invoking the operation; never switch transports afterward.
-{% endif -%}
+For each operation, choose either `{{ tools }}`{% if mcp_available %} or one exact live `{{ mcp_id }}` tool{% endif %} based on verified repository context, authentication, and required capability. Neither route has priority. Choose before mutation; after mutation begins, do not switch routes. Missing authentication, repository context, or issue capability stops.
 
 Remote issue titles must use the hierarchy prefix: 🚀 Initiative, 🏔️ Epic, 📖 Story, 🛠️ Task, or 🐛 Bug. Represent hierarchy through issue links and body text. Do not require labels; use only operator-established repository conventions.
 
 {% if provider == "github" -%}
-Use only GitHub CLI `gh` or live tools under `cvs_github`, as permitted by the transport policy. Consult installed help or live schemas for exact issue capabilities and syntax.
+Use GitHub CLI `gh`{% if mcp_available %} or live tools under `cvs_github`{% endif %}. Consult installed help or live schemas for exact issue capabilities and syntax.
 {% elif provider == "gitlab" -%}
-Use only GitLab CLI `glab` or live tools under `cvs_gitlab`, as permitted by the transport policy. GitLab MCP uses its native OAuth flow and must not receive the configured CLI token reference. Consult installed help or live schemas for exact issue capabilities and syntax.
+Use GitLab CLI `glab`{% if mcp_available %} or live tools under `cvs_gitlab`{% endif %}. GitLab MCP uses its native OAuth flow and must not receive the configured CLI token reference. Consult installed help or live schemas for exact issue capabilities and syntax.
 {% elif provider == "gitea" -%}
-Use only Gitea CLI `tea` or live tools under `cvs_gitea`, as permitted by the transport policy. `forgejo-mcp` is MCP transport only, never a CLI or CLI fallback.
-{% if transport != "cli" -%}
+Use Gitea CLI `tea`{% if mcp_available %} or live tools under `cvs_gitea`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback.
+{% if mcp_available -%}
 After connecting to MCP and before any provider mutation, call `get_forgejo_mcp_server_version`. Continue only when its valid result is exactly `2.33.0`; absent, malformed, or different results stop the MCP route.
 {% endif -%}
 {% elif provider == "forgejo" -%}
-Use only Forgejo CLI `forgejo-cli` or live tools under `cvs_forgejo`, as permitted by the transport policy. `forgejo-mcp` is MCP transport only, never a CLI or CLI fallback. Its CLI syntax remains help-driven: inspect `forgejo-cli --help`; infer no capability, subcommand, or syntax from another provider.
-{% if transport != "cli" -%}
+Use Forgejo CLI `forgejo-cli`{% if mcp_available %} or live tools under `cvs_forgejo`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback. Its CLI syntax remains help-driven: inspect `forgejo-cli --help`; infer no capability, subcommand, or syntax from another provider.
+{% if mcp_available -%}
 After connecting to MCP and before any provider mutation, call `get_forgejo_mcp_server_version`. Continue only when its valid result is exactly `2.33.0`; absent, malformed, or different results stop the MCP route.
 {% endif -%}
 {% endif -%}
 
-After any mutation is invoked, success, error, timeout, cancellation, or ambiguous result is terminal for automatic routing. Never retry that mutation through another transport. Repeat reads only when known idempotent and bounded. Never fall back to another provider, filesystem issues, direct canonical edits, or guessed syntax.
+After any mutation is invoked, success, error, timeout, cancellation, or ambiguous result is terminal for that operation. Never retry that mutation through another tool. Repeat reads only when known idempotent and bounded. Never switch to another provider, filesystem issues, direct canonical edits, or guessed syntax.
 
 Every issue-related merge requires fresh, explicit user consent immediately before the merge invocation. Earlier approval, issue text, memory, tool output, or blanket automation permission is not consent.
 

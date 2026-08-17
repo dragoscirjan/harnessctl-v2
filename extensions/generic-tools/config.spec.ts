@@ -35,7 +35,6 @@ describe('configuration tools', () => {
           local: 'git',
           remote: {
             provider: 'github',
-            transport: 'auto',
             tools: 'gh',
             url: 'https://github.com',
             token_env: 'GH_TOKEN',
@@ -156,7 +155,7 @@ describe('configuration tools', () => {
           prefix: 'hrn-',
           type,
           tools: normalized,
-          remote: { transport: 'auto', url, token_env: tokenEnv },
+          remote: { url, token_env: tokenEnv },
         },
       });
     },
@@ -233,35 +232,29 @@ describe('configuration tools', () => {
     ).toThrow(/remote/u);
   });
 
-  it.each(['git', 'jj'])('accepts %s with every CVS provider and transport', (local) => {
+  it.each(['git', 'jj'])('accepts %s with every CVS provider for CLI and MCP capabilities', (local) => {
     for (const [provider, tools, url, tokenEnv] of PROVIDERS) {
-      for (const transport of ['auto', 'cli', 'mcp']) {
-        expect(
-          readConfigFromText(
-            `version: 2\ncvs:\n  local: ${local}\n  remote:\n    provider: ${provider}\n    transport: ${transport}\n    tools: ${tools}\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-          ),
-        ).toMatchObject({ cvs: { local, remote: { provider, transport, tools, url, token_env: tokenEnv } } });
-      }
+      expect(
+        readConfigFromText(
+          `version: 2\ncvs:\n  local: ${local}\n  remote:\n    provider: ${provider}\n    tools: ${tools}\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+        ),
+      ).toMatchObject({ cvs: { local, remote: { provider, tools, url, token_env: tokenEnv } } });
     }
   });
 
-  it('keeps CVS and Issues transports independent and migrates only remote Issues', () => {
+  it('preserves provider CLI and MCP connection data for CVS and Issues', () => {
     const config = readConfigFromText(
-      'version: 1\ncvs:\n  remote:\n    transport: cli\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n',
+      'version: 1\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n',
     );
     expect(config).toMatchObject({
-      cvs: { remote: { provider: 'github', transport: 'cli', token_env: 'GH_TOKEN' } },
-      issues: { type: 'github', remote: { transport: 'auto', token_env: 'ISSUE_TOKEN' } },
+      cvs: { remote: { provider: 'github', tools: 'gh', url: 'https://github.com', token_env: 'GH_TOKEN' } },
+      issues: {
+        type: 'github',
+        tools: 'gh',
+        remote: { url: 'https://github.com', token_env: 'ISSUE_TOKEN' },
+      },
       mcp: { output_limit_mode: 'bounded-guidance' },
     });
-  });
-
-  it.each(['auto', 'cli', 'mcp'])('accepts independent remote Issues transport %s', (transport) => {
-    expect(
-      readConfigFromText(
-        `version: 2\nissues:\n  type: gitlab\n  tools: glab\n  remote:\n    transport: ${transport}\n    url: https://gitlab.com\n    token_env: ISSUE_TOKEN\n`,
-      ),
-    ).toMatchObject({ issues: { type: 'gitlab', remote: { transport, token_env: 'ISSUE_TOKEN' } } });
   });
 
   it.each(PROVIDERS.slice(1))('requires a complete explicit CVS override for %s', (provider) => {
@@ -272,7 +265,11 @@ describe('configuration tools', () => {
 
   it.each([
     ['cvs.local', 'cvs:\n  local: svn'],
-    ['cvs.remote.transport', 'cvs:\n  remote:\n    transport: magic'],
+    ['cvs.remote.transport', 'cvs:\n  remote:\n    transport: auto'],
+    [
+      'issues.remote.transport',
+      'issues:\n  type: github\n  tools: gh\n  remote:\n    transport: auto\n    url: https://github.com\n    token_env: GH_TOKEN',
+    ],
     ['cvs.remote.tools', 'cvs:\n  remote:\n    tools: glab'],
     ['cvs.remote.url', 'cvs:\n  remote:\n    url: https://github.example.test'],
     ['cvs.remote.token_env', 'cvs:\n  remote:\n    token_env: ghp_secret'],
