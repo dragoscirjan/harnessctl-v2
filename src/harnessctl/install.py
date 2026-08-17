@@ -30,7 +30,7 @@ from .templates import TEMPLATES, render_prompt, render_skill
 
 TARGETS = {
     "opencode": Path(".opencode/commands"),
-    "pi": Path(".pi/commands"),
+    "pi": Path(".pi/prompts"),
 }
 COMMANDS = tuple(TEMPLATES.keys())
 OPENCODE_SKILLS = Path(".opencode/skills")
@@ -42,6 +42,7 @@ OPENCODE_CONFIG = Path(".opencode/opencode.json")
 PI_MCP_CONFIG = Path(".pi/mcp.json")
 PI_SETTINGS = Path(".pi/settings.json")
 PI_ADAPTER = "npm:pi-mcp-adapter@2.26.0"
+PI_TOOLS = "npm:@harnessctl/pi-tools@latest"
 PI_TIMEOUT_SECONDS = 120
 PI_RESIDUAL_EFFECTS = (
     "project-local .pi/npm, package-manager metadata, downloads, caches, "
@@ -54,6 +55,7 @@ def install(
     harness: str,
     force: bool = False,
     *,
+    allow_pi_package_install: bool = False,
     allow_pi_mcp_adapter_install: bool = False,
     confirm_pi_mcp_adapter_install: Callable[[str], bool] | None = None,
 ) -> list[Path]:
@@ -67,12 +69,6 @@ def install(
 
     root = cwd.resolve()
     config = load_config(root)
-    if config["memory"]["enabled"] and harness in ("pi", "all"):
-        raise RuntimeError(
-            "Pi memory tools are implemented, but automatic Pi extension and skill "
-            "installation is not yet verified; install with --harness opencode or "
-            "register @harnessctl/pi-tools manually."
-        )
     if harness in ("opencode", "all") and config["mcp"]["output_limit_mode"] == "hard":
         raise ConfigError("mcp.output_limit_mode=hard is supported only by Pi")
 
@@ -153,9 +149,63 @@ def install(
                     (_target(root, OPENCODE_PACKAGE), _merge_package(root, force)),
                 ]
             )
-            rendered_targets.append(
-                (_target(root, Path(".gitignore")), _memory_ignore(root, repository))
+    if harness in ("pi", "all"):
+        cvs = config["cvs"]
+        cvs_remote = cvs["remote"]
+        rendered_targets.append(
+            (
+                _target(root, Path(".pi/skills/cvs/SKILL.md")),
+                render_skill(
+                    "cvs",
+                    local=cvs["local"],
+                    provider=cvs_remote["provider"],
+                    tools=cvs_remote["tools"],
+                    remote_url=cvs_remote["url"],
+                    token_env=cvs_remote["token_env"],
+                    mcp_id=f"cvs_{cvs_remote['provider']}",
+                    mcp_available=_has_mcp(intents, cvs_remote["provider"]),
+                ),
             )
+        )
+        issues = config["issues"]
+        issue_context = {"provider": issues["type"], "tools": issues["tools"]}
+        if issues["type"] == "filesystem":
+            issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
+        else:
+            issue_context.update(
+                remote_url=issues["remote"]["url"],
+                token_env=issues["remote"]["token_env"],
+                mcp_id=f"cvs_{issues['type']}",
+                mcp_available=_has_mcp(intents, issues["type"]),
+            )
+        rendered_targets.extend(
+            [
+                (
+                    _target(root, Path(".pi/skills/issue-tracking/SKILL.md")),
+                    render_skill("issue-tracking", **issue_context),
+                ),
+                (
+                    _target(root, Path(".pi/skills/caveman/SKILL.md")),
+                    render_skill("caveman", mode=config["communication"]["caveman"]["mode"]),
+                ),
+                (
+                    _target(root, Path(".pi/skills/memory/SKILL.md")),
+                    render_skill(
+                        "memory",
+                        retrieval_limit=config["memory"]["retrieval"]["limit"],
+                        max_chars=config["memory"]["retrieval"]["max_chars"],
+                        repository_root=config["memory"]["repository"]["root"],
+                    ),
+                ),
+            ]
+        )
+    if config["memory"]["enabled"]:
+        rendered_targets.append(
+            (
+                _target(root, Path(".gitignore")),
+                _memory_ignore(root, config["memory"]["repository"]),
+            )
+        )
     if harness in ("opencode", "all"):
         opencode_path = _target(root, OPENCODE_CONFIG)
         opencode_content = _merge_host_json(
@@ -167,15 +217,18 @@ def install(
         if opencode_content is not None:
             rendered_targets.append((opencode_path, opencode_content))
 
-    pi_state: _PiAdapterState | None = None
+    pi_state: _PiPackageState | None = None
     pi_executable: str | None = None
-    if harness in ("pi", "all") and intents:
-        pi_mcp_path = _target(root, PI_MCP_CONFIG)
-        pi_content = _merge_pi_json(pi_mcp_path, intents, force=force)
-        if pi_content is not None:
-            rendered_targets.append((pi_mcp_path, pi_content))
-        pi_state = _inspect_pi_adapter(root)
-        if not pi_state.configured:
+    required_pi_packages: tuple[str, ...] = ()
+    if harness in ("pi", "all"):
+        if intents:
+            pi_mcp_path = _target(root, PI_MCP_CONFIG)
+            pi_content = _merge_pi_json(pi_mcp_path, intents, force=force)
+            if pi_content is not None:
+                rendered_targets.append((pi_mcp_path, pi_content))
+        required_pi_packages = (PI_TOOLS, *((PI_ADAPTER,) if intents else ()))
+        pi_state = _inspect_pi_packages(root)
+        if any(source not in pi_state.configured for source in required_pi_packages):
             pi_executable = _preflight_pi_launcher()
 
     mergeable_targets = {
@@ -194,56 +247,66 @@ def install(
 
     previous = _capture_before_images(target for target, _ in rendered_targets)
     created_directories: list[Path] = []
-    adapter_installed = False
-    adapter_install_attempted = False
+    installed_pi_packages: list[str] = []
+    pi_package_install_attempted = False
     settings_path = _target(root, PI_SETTINGS) if pi_state is not None else None
     settings_before = _capture_before_image(settings_path) if settings_path is not None else None
     mutation_started = False
     try:
-        if pi_state is not None and not pi_state.configured:
-            _authorize_pi_adapter_install(
-                allow_pi_mcp_adapter_install,
-                confirm_pi_mcp_adapter_install,
-            )
-            adapter_install_attempted = True
-            mutation_started = True
-            try:
-                _run_pi_package_action(root, "install", pi_executable=pi_executable)
-            except BaseException:
+        if pi_state is not None:
+            for source in required_pi_packages:
+                if source in pi_state.configured:
+                    continue
+                _authorize_pi_package_install(
+                    source,
+                    allow_pi_package_install or allow_pi_mcp_adapter_install,
+                    confirm_pi_mcp_adapter_install,
+                )
+                pi_package_install_attempted = True
+                mutation_started = True
                 try:
-                    adapter_installed = _inspect_pi_adapter(root).configured
+                    _run_pi_package_action(root, "install", source, pi_executable=pi_executable)
                 except BaseException:
-                    # The absent before-image plus newly malformed package settings
-                    # means the transaction may have added external state.
-                    adapter_installed = True
-                raise
-            adapter_installed = True
-            if not _inspect_pi_adapter(root).configured:
-                raise RuntimeError(f"Pi did not register exact project-local package {PI_ADAPTER}")
+                    try:
+                        if source in _inspect_pi_packages(root).configured:
+                            installed_pi_packages.append(source)
+                    except BaseException:
+                        # A newly malformed settings file leaves package state ambiguous.
+                        installed_pi_packages.append(source)
+                    raise
+                installed_pi_packages.append(source)
+                if source not in _inspect_pi_packages(root).configured:
+                    raise RuntimeError(f"Pi did not register exact project-local package {source}")
         for target, content in rendered_targets:
             mutation_started = True
             _target(root, target.relative_to(root))
             _ensure_directory(target.parent, root, created_directories)
             write_atomic(target, content)
+        if config["memory"]["enabled"]:
+            _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
         if harness in ("opencode", "all"):
-            if config["memory"]["enabled"]:
-                _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
             _smoke_check(root, check_memory=config["memory"]["enabled"])
+        if harness in ("pi", "all"):
+            _smoke_check_pi(root, required_pi_packages, rendered_targets)
         _smoke_check_mcp(root, harness, intents)
     except BaseException as error:
         rollback_errors: list[BaseException] = []
-        if adapter_installed:
+        for source in reversed(installed_pi_packages):
             try:
-                _run_pi_package_action(root, "remove")
+                _run_pi_package_action(root, "remove", source)
             except BaseException as cleanup_error:
                 rollback_errors.append(cleanup_error)
         if mutation_started:
             rollback_errors.extend(_rollback(root, previous, created_directories))
-        if adapter_install_attempted and settings_path is not None and settings_before is not None:
+        if (
+            pi_package_install_attempted
+            and settings_path is not None
+            and settings_before is not None
+        ):
             rollback_errors.extend(_restore_before_image(root, settings_path, settings_before))
-        if adapter_install_attempted:
+        if pi_package_install_attempted:
             rollback_errors.append(
-                RuntimeError(f"Pi adapter cleanup is best effort: {PI_RESIDUAL_EFFECTS}")
+                RuntimeError(f"Pi package cleanup is best effort: {PI_RESIDUAL_EFFECTS}")
             )
         if rollback_errors:
             raise BaseExceptionGroup(
@@ -255,8 +318,8 @@ def install(
 
 
 @dataclass(frozen=True)
-class _PiAdapterState:
-    configured: bool
+class _PiPackageState:
+    configured: frozenset[str]
 
 
 def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]:
@@ -369,56 +432,74 @@ def _merge_pi_json(path: Path, intents: list[ServerIntent], *, force: bool) -> s
     return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
 
 
-def _inspect_pi_adapter(root: Path) -> _PiAdapterState:
+def _inspect_pi_packages(root: Path) -> _PiPackageState:
     settings_path = _target(root, PI_SETTINGS)
     settings, _ = _load_json_object(settings_path, "Pi project settings")
     packages = settings.get("packages", [])
     if not isinstance(packages, list):
         raise ValueError(f"packages must be an array in {settings_path}")
     sources: list[str] = []
+    extension_filtered_sources: set[str] = set()
     for entry in packages:
         if isinstance(entry, str):
             source = entry
         elif isinstance(entry, dict) and isinstance(entry.get("source"), str):
             source = entry["source"]
+            if entry.get("autoload") is False or "extensions" in entry:
+                extension_filtered_sources.add(source)
         else:
             raise ValueError(f"malformed package entry in {settings_path}")
         sources.append(source)
-    exact_count = sources.count(PI_ADAPTER)
-    adapter_sources = [source for source in sources if "pi-mcp-adapter" in source]
-    if exact_count > 1:
-        raise ValueError(f"duplicate exact Pi adapter entries in {settings_path}")
-    if adapter_sources and adapter_sources != [PI_ADAPTER]:
-        raise ValueError(
-            f"unpinned or wrong-version Pi adapter in {settings_path}; expected {PI_ADAPTER}"
-        )
-    return _PiAdapterState(configured=exact_count == 1)
+    configured: set[str] = set()
+    for required, identifying_fragment in (
+        (PI_ADAPTER, "pi-mcp-adapter"),
+        (PI_TOOLS, "@harnessctl/pi-tools"),
+    ):
+        exact_count = sources.count(required)
+        related_sources = [source for source in sources if identifying_fragment in source]
+        if exact_count > 1:
+            raise ValueError(
+                f"duplicate exact Pi package entries for {required} in {settings_path}"
+            )
+        if related_sources and related_sources != [required]:
+            raise ValueError(
+                f"wrong Pi package source in {settings_path}; expected exactly {required}"
+            )
+        if required in extension_filtered_sources:
+            raise ValueError(f"Pi package {required} must load all extensions in {settings_path}")
+        if exact_count == 1:
+            configured.add(required)
+    return _PiPackageState(configured=frozenset(configured))
 
 
-def _authorize_pi_adapter_install(
+def _authorize_pi_package_install(
+    source: str,
     noninteractive_opt_in: bool,
     confirmation: Callable[[str], bool] | None,
 ) -> None:
     disclosure = (
-        f"Harnessctl must run `pi install -l {PI_ADAPTER} --no-approve`, modifying "
+        f"Harnessctl must run `pi install -l {source} --approve`, modifying "
         f".pi/settings.json and project-local .pi/npm; {PI_RESIDUAL_EFFECTS}."
     )
     print(disclosure, file=sys.stderr)
     if confirmation is not None:
         if not confirmation(disclosure):
-            raise RuntimeError("Pi MCP adapter installation was not approved")
+            raise RuntimeError(f"Pi package installation was not approved: {source}")
         return
     if not noninteractive_opt_in:
         raise RuntimeError(
-            f"Pi requires {PI_ADAPTER}; install it manually or pass "
-            "--allow-pi-mcp-adapter-install in noninteractive operation"
+            f"Pi requires {source}; install it manually or pass "
+            "--allow-pi-package-install in noninteractive operation "
+            "(--allow-pi-mcp-adapter-install remains a compatible alias)"
         )
 
 
 def _pi_invocation(
-    pi_path: str, action: str, *, windows: bool | None = None
+    pi_path: str, action: str, source: str = PI_ADAPTER, *, windows: bool | None = None
 ) -> tuple[list[str], bool]:
-    package_args = [action, "-l", PI_ADAPTER, "--no-approve"]
+    if source not in {PI_ADAPTER, PI_TOOLS}:
+        raise ValueError(f"unsupported Pi package source: {source}")
+    package_args = [action, "-l", source, "--approve"]
     suffix = Path(pi_path).suffix.lower()
     is_windows = os.name == "nt" if windows is None else windows
     if not is_windows:
@@ -440,16 +521,22 @@ def _pi_invocation(
 def _preflight_pi_launcher() -> str:
     pi_path = shutil.which("pi")
     if pi_path is None:
-        raise RuntimeError("Pi MCP adapter installation requires pi on PATH")
+        raise RuntimeError("Pi package installation requires pi on PATH")
     _pi_invocation(pi_path, "install")
     return pi_path
 
 
-def _run_pi_package_action(root: Path, action: str, *, pi_executable: str | None = None) -> None:
+def _run_pi_package_action(
+    root: Path,
+    action: str,
+    source: str,
+    *,
+    pi_executable: str | None = None,
+) -> None:
     pi_path = pi_executable or shutil.which("pi")
     if pi_path is None:
-        raise RuntimeError("Pi MCP adapter cleanup requires pi on PATH")
-    invocation, use_shell = _pi_invocation(pi_path, action)
+        raise RuntimeError("Pi package action requires pi on PATH")
+    invocation, use_shell = _pi_invocation(pi_path, action, source)
     try:
         result = subprocess.run(
             invocation,
@@ -528,8 +615,33 @@ def _smoke_check_mcp(root: Path, harness: str, intents: list[ServerIntent]) -> N
                 raise RuntimeError(f"Pi MCP smoke check failed for {intent.server_id}")
         if document.get("settings", {}).get("outputGuard") != OUTPUT_GUARD:
             raise RuntimeError("Pi settings.outputGuard smoke check failed")
-        if not _inspect_pi_adapter(root).configured:
+        if PI_ADAPTER not in _inspect_pi_packages(root).configured:
             raise RuntimeError("Pi adapter package smoke check failed")
+
+
+def _smoke_check_pi(
+    root: Path,
+    required_packages: tuple[str, ...],
+    rendered_targets: list[tuple[Path, str]],
+) -> None:
+    """Verify Pi discovery paths and exact package registrations."""
+    command_directory = _target(root, TARGETS["pi"])
+    actual_commands = {path.stem for path in command_directory.glob("*.md") if path.is_file()}
+    if not set(COMMANDS) <= actual_commands:
+        raise RuntimeError("Pi command smoke check failed")
+    for skill in ("cvs", "issue-tracking", "caveman", "memory"):
+        skill_path = _target(root, Path(f".pi/skills/{skill}/SKILL.md"))
+        if not skill_path.is_file():
+            raise RuntimeError(f"Pi {skill} skill smoke check failed")
+    for target, expected in rendered_targets:
+        if target == root / ".pi" or root / ".pi" not in target.parents:
+            continue
+        if target.read_text(encoding="utf-8") != expected:
+            raise RuntimeError(f"Pi owned-file smoke check failed for {target}")
+    configured = _inspect_pi_packages(root).configured
+    missing = [source for source in required_packages if source not in configured]
+    if missing:
+        raise RuntimeError(f"Pi package smoke check failed; missing {', '.join(missing)}")
 
 
 def write_atomic(target: Path, content: str) -> None:
@@ -645,7 +757,7 @@ def _validate_plan(
     for target, _ in rendered_targets:
         if target.exists() and not target.is_file():
             raise IsADirectoryError(f"target is not a regular file: {target}")
-    if config["memory"]["enabled"] and harness in ("opencode", "all"):
+    if config["memory"]["enabled"]:
         memory_root = _target(root, Path(str(config["memory"]["repository"]["root"])))
         directories.update(
             memory_root / folder
@@ -755,13 +867,19 @@ def main() -> int:
     parser.add_argument("--cwd", type=Path, default=Path.cwd())
     parser.add_argument("--harness", choices=["opencode", "pi", "all"], default="all")
     parser.add_argument("--force", action="store_true")
-    parser.add_argument("--allow-pi-mcp-adapter-install", action="store_true")
+    parser.add_argument(
+        "--allow-pi-package-install",
+        "--allow-pi-mcp-adapter-install",
+        dest="allow_pi_package_install",
+        action="store_true",
+        help="allow required project-local Pi package installs without an interactive prompt",
+    )
     args = parser.parse_args()
     confirmation: Callable[[str], bool] | None = None
     if sys.stdin.isatty():
 
         def confirm_install(_disclosure: str) -> bool:
-            answer = input("Install pinned Pi MCP adapter? [y/N] ")
+            answer = input("Install disclosed project-local Pi package? [y/N] ")
             return answer.strip().lower() in {"y", "yes"}
 
         confirmation = confirm_install
@@ -770,7 +888,7 @@ def main() -> int:
             args.cwd,
             args.harness,
             args.force,
-            allow_pi_mcp_adapter_install=args.allow_pi_mcp_adapter_install,
+            allow_pi_package_install=args.allow_pi_package_install,
             confirm_pi_mcp_adapter_install=confirmation,
         ):
             print(f"Installed {target}")

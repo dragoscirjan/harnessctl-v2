@@ -38,7 +38,7 @@ It does not add provider API clients, execute remote work during installation, i
 - `.opencode/opencode.json` currently contains operator-owned OpenCode configuration and has no `mcp` member.
 - `.pi/mcp.json` does not currently exist.
 - `extensions/generic-tools/issues.ts` remains the local filesystem issue façade. Its existing remote-provider rejection and all canonical YAML, revision, comment, relationship, archive, barrier, and cache behavior remain unchanged.
-- Memory-enabled Pi and `all` installation currently fail before writes. That safeguard remains first in installer preflight and also precedes executable discovery, adapter inspection, consent, or package mutation.
+- Pi and `all` installation plan prompts, all four skills, `@harnessctl/pi-tools`, and the pinned MCP adapter. Missing package installation requires explicit consent before mutation.
 
 ## Exact project configuration contract
 
@@ -166,7 +166,7 @@ Regenerate this artifact through `generate-contracts.ts`. It must express enums,
 
 `forgejo-mcp` is operator-installed and remains an external GPL process. Harnessctl does not distribute, vendor, import, link, or install it. `MushroomFleet/gitea-mcp` is neither a fallback nor generated guidance.
 
-The Pi adapter identity is exactly `npm:pi-mcp-adapter@2.26.0`, licensed MIT. The only approved automatic package commands are `pi install -l npm:pi-mcp-adapter@2.26.0 --no-approve` and the transaction-owned rollback command `pi remove -l npm:pi-mcp-adapter@2.26.0 --no-approve`. No unpinned package reference is allowed.
+The Pi adapter identity is exactly `npm:pi-mcp-adapter@2.26.0`, licensed MIT. The only approved automatic package commands are `pi install -l npm:pi-mcp-adapter@2.26.0 --approve` and the transaction-owned rollback command `pi remove -l npm:pi-mcp-adapter@2.26.0 --approve`. No unpinned package reference is allowed.
 
 Pi uses the adapter’s default proxy-only mode. No provider `includeTools`, `excludeTools`, or direct-tool catalogs are generated because exact provider tool names are not stably verified. GitHub’s server-level toolset header remains exactly the five approved toolsets; it is not represented as a per-tool catalog.
 
@@ -218,7 +218,7 @@ Malformed JSON, duplicate JSON members detectable by the selected parser, non-ob
 
 ## Generated CVS skill
 
-Add `src/harnessctl/templates/skills/cvs/SKILL.md.j2` and register `cvs` in `SKILL_TEMPLATES`. Install it at `.opencode/skills/cvs/SKILL.md`. Pi skill distribution remains unsupported; Pi receives host MCP configuration only when its existing safety gates permit installation.
+Add `src/harnessctl/templates/skills/cvs/SKILL.md.j2` and register `cvs` in `SKILL_TEMPLATES`. Install it for both harnesses at `.opencode/skills/cvs/SKILL.md` and `.pi/skills/cvs/SKILL.md`. Pi also receives issue-tracking, caveman, and memory skills.
 
 The render context contains only validated local CVS, remote provider, CLI identifier,
 remote URL, token environment-variable name, fixed MCP ID, bounded-call policy, and host
@@ -290,7 +290,7 @@ MCP prompts, server instructions, tool descriptions and results, CLI output, iss
 
 ### Phase 1: validate and plan
 
-1. Apply the existing memory-enabled Pi and `all` fail-closed safeguard before any Pi package-settings inspection or consent.
+1. Plan Pi prompts, skills, required packages, and host configuration before any package mutation or project write.
 2. Load and validate configuration without resolving secrets.
 3. Render every selected command and supported skill in memory.
 4. Build, deduplicate, and validate server intents for each configured provider.
@@ -304,7 +304,7 @@ MCP prompts, server instructions, tool descriptions and results, CLI output, iss
    guidance never invoke `forgejo-mcp --cli`.
 7. Capture exact bytes and presence for every harnessctl-owned project file that could change.
 8. For Pi, capture exact bytes and presence of project-local `.pi/settings.json` before package mutation.
-9. Parse `.pi/settings.json` as an object and inspect only its top-level `packages` array. Each entry may be a source string or an object with a string `source`. The adapter is configured only when an entry’s source equals `npm:pi-mcp-adapter@2.26.0` exactly. Do not parse or depend on `pi list` output.
+9. Parse `.pi/settings.json` as an object and inspect only its top-level `packages` array. Each entry may be a source string or an object with a string `source`. The adapter is configured only when an entry’s source equals `npm:pi-mcp-adapter@2.26.0` exactly and the object contains no `extensions` filter capable of disabling its extension. Do not parse or depend on `pi list` output.
 
 Malformed settings, malformed package entries, duplicate exact entries, or unpinned/wrong-version entries for the adapter stop before project writes and package installation. The diagnosis directs operator repair; force does not override it.
 
@@ -314,13 +314,13 @@ If the exact pinned source is already configured, preserve it and `.pi/settings.
 
 If absent, automatic installation is available only with fresh interactive consent or the dedicated noninteractive opt-in. Otherwise stop before mutation and instruct the operator to install the exact project-local source manually, then rerun harnessctl.
 
-Immediately before automatic installation, disclose the exact pinned command `pi install -l npm:pi-mcp-adapter@2.26.0 --no-approve`, `.pi/settings.json`, project-local `.pi/npm/`, and residual package-manager metadata, package-directory, lifecycle-script, download, cache, and other external effects that cannot be exactly reversed.
+Immediately before automatic installation, disclose the exact pinned command `pi install -l npm:pi-mcp-adapter@2.26.0 --approve`, `.pi/settings.json`, project-local `.pi/npm/`, and residual package-manager metadata, package-directory, lifecycle-script, download, cache, and other external effects that cannot be exactly reversed.
 
 - Interactive operation requires fresh explicit confirmation after disclosure. Confirmation is the final action before invoking the package command.
 - Noninteractive operation requires `--allow-pi-mcp-adapter-install`. Emit the same disclosure immediately before honoring it. Without the flag, stop before mutation and provide the manual path.
 - `--force`, earlier approval, or general package consent never substitutes for this confirmation.
 
-Invoke install and removal through the Pi launcher contract above. POSIX and Windows `.exe` paths use direct argument vectors with `shell=False`; Windows `.cmd` and `.bat` shims use only the fixed `cmd.exe /d /s /c` form. Re-read `.pi/settings.json` and require exactly one configured source equal to `npm:pi-mcp-adapter@2.26.0` before writing project files. On failure, attempt `pi remove -l npm:pi-mcp-adapter@2.26.0 --no-approve` only when this transaction added it, then restore exact pre-install `.pi/settings.json` bytes or absence. Report every cleanup failure and non-reversible package-directory, cache, download, lifecycle, or package-manager effect.
+Invoke install and removal through the Pi launcher contract above. POSIX and Windows `.exe` paths use direct argument vectors with `shell=False`; Windows `.cmd` and `.bat` shims use only the fixed `cmd.exe /d /s /c` form. Re-read `.pi/settings.json` and require exactly one configured source equal to `npm:pi-mcp-adapter@2.26.0` before writing project files. On failure, attempt `pi remove -l npm:pi-mcp-adapter@2.26.0 --approve` only when this transaction added it, then restore exact pre-install `.pi/settings.json` bytes or absence. Report every cleanup failure and non-reversible package-directory, cache, download, lifecycle, or package-manager effect.
 
 ### Phase 3: project commit and smoke check
 
@@ -376,9 +376,9 @@ External package installation is not exactly reversible. Never remove a pre-exis
 | `docs/README.md`, `README.md` | Documentation routing and concise current capability summary. |
 | `tests/test_docs.py`, `tests/test_release_artifacts.py` | Link, example, pin, artifact, isolated install, and current-versus-future checks. |
 | New `.changeset/*.md` | Patch release for `@harnessctl/generic-tools`; package versions remain Changesets-owned. |
-| `.opencode/opencode.json`, `.opencode/skills/cvs/SKILL.md`, `.opencode/skills/issue-tracking/SKILL.md` | Reinstalled generated repository artifacts after all checks. |
+| `.opencode/opencode.json`, `.opencode/skills/*`, `.pi/mcp.json`, `.pi/prompts/*`, `.pi/skills/*` | Reinstalled generated repository artifacts after all checks. |
 
-Do not add generated `.pi/mcp.json` to this repository during reinstall because current memory-enabled Pi and `all` installation remain fail closed. Do not hand-edit generated schemas, package versions, or generated skills.
+Install Pi project artifacts only after explicit package consent. Do not hand-edit generated schemas, package versions, prompts, skills, or MCP configuration.
 
 ## Test matrix
 
@@ -425,16 +425,16 @@ Do not add generated `.pi/mcp.json` to this repository during reinstall because 
 
 ### Installer transaction
 
-- Cover absent `.pi/settings.json`; absent `packages`; exact string entry; exact object `source`; malformed entries; duplicate exact entries; unpinned, wrong-version, and unrelated packages.
+- Cover absent `.pi/settings.json`; absent `packages`; exact string entry; exact unfiltered object `source`; extension-filtered required entries; malformed entries; duplicate exact entries; unpinned, wrong-version, and unrelated packages.
 - Cover interactive approval, interactive refusal, noninteractive opt-in, missing opt-in, and force without opt-in.
 - Assert disclosure and confirmation are immediately adjacent to the pinned install invocation with no intervening operation.
 - Inject package install failure, missing or malformed post-install settings, wrong-version result, merge failure, each file-write position, smoke-check failure, adapter remove failure, settings restore failure, and byte-verification failure.
 - Prove no project write precedes adapter verification and no package mutation occurs after any planning conflict.
 - Prove all cleanup actions run and errors aggregate.
 - Compare only harnessctl-owned project files and exact `.pi/settings.json` bytes or absence before and after rollback. Do not assert exact restoration of `.pi/npm`, package-manager caches, downloads, lifecycle effects, or other external state.
-- When transaction-owned adapter installation must be cleaned up, assert that the exact pinned `pi remove -l npm:pi-mcp-adapter@2.26.0 --no-approve` action is attempted; do not equate that attempt with exact external-tree restoration.
+- When transaction-owned adapter installation must be cleaned up, assert that the exact pinned `pi remove -l npm:pi-mcp-adapter@2.26.0 --approve` action is attempted; do not equate that attempt with exact external-tree restoration.
 - Prove pre-existing adapters and external state are never removed.
-- Prove memory-enabled Pi and `all` stop before adapter inspection, consent, package mutation, or project writes.
+- Prove memory-enabled Pi and `all` render hooked prompts and all four skills, then require package consent before package mutation or project writes.
 - Add exact Pi launcher unit cases for POSIX direct invocation, Windows `.exe` direct invocation, Windows `.cmd` and `.bat` invocation through resolved `cmd.exe /d /s /c`, rejection of each prohibited unsafe-path class, timeout, and non-zero exit. Assert direct cases use argument vectors with `shell=False`; batch cases contain only the safely quoted discovered Pi path and pinned constant package arguments. Assert resolved-root working directory, bounded timeout, captured output, and no user or configuration string in the batch command.
 - Cover Gitea and Forgejo with `forgejo-mcp` present and absent. Assert presence emits the
   exact local MCP entry; absence succeeds without that entry and independently preserves
@@ -479,7 +479,7 @@ Each subtask changes one to three files and depends on the preceding contract wo
 13. Extend `tests/test_docs.py` and `tests/test_release_artifacts.py` for examples, pins, links, resources, isolated installation, and freshness.
 14. Add one patch Changeset for `@harnessctl/generic-tools`; do not manually change npm or Python versions.
 15. Run the complete quality and release gates. Resolve source-pin, package-settings, host-projection, and forgejo-mcp compatibility-contract checks before enabling automatic installation.
-16. Reinstall with the repository’s validated current configuration using the OpenCode-only path. Regenerate `.opencode/opencode.json`, `.opencode/skills/cvs/SKILL.md`, and `.opencode/skills/issue-tracking/SKILL.md`; verify commands, memory, canonical issues, and other generated artifacts did not change unexpectedly.
+16. Reinstall both harnesses with the repository's validated current configuration. Regenerate host MCP configuration, commands or prompts, and all supported skills; verify canonical memory and issues do not change unexpectedly.
 
 ## Acceptance criteria
 
@@ -497,7 +497,7 @@ Each subtask changes one to three files and depends on the preceding contract wo
 8. `.opencode/opencode.json` and `.pi/mcp.json` contain only documented host fields, correct interpolation, exact endpoints, exact OAuth behavior, exact process shapes, and preserved unrelated settings.
 9. Pi uses top-level `mcpServers` and top-level `settings.outputGuard` with bounds 51200 bytes, 2000 lines, and 16384 details bytes. It remains proxy-only by omitting direct-tool and provider tool-catalog fields; lazy lifecycle is per server only.
 10. Host configuration references operator-installed `forgejo-mcp`, tested at 2.33.0, but the installer neither probes with `--version` nor contacts a provider. Generated runtime guidance calls `get_forgejo_mcp_server_version` after connection and refuses mutation unless it reports 2.33.0. The rejected MushroomFleet server is never selected.
-11. Pi MCP is operational only when `.pi/settings.json` contains exactly configured source `npm:pi-mcp-adapter@2.26.0` as a string entry or object `source`. Manual preinstallation works without reinstalling or changing prior adapter state; `pi list` output is never parsed.
+11. Pi MCP is operational only when `.pi/settings.json` contains exactly configured source `npm:pi-mcp-adapter@2.26.0` as a string entry or unfiltered object `source`. Required package object entries containing `extensions` filters are rejected because they can disable loading. Manual preinstallation works without reinstalling or changing prior adapter state; `pi list` output is never parsed.
 12. Automatic Pi adapter installation requires immediate interactive consent or the dedicated noninteractive opt-in after disclosure and uses the exact pinned package invocation through the platform-specific Pi launcher. Force is insufficient.
 13. Every project artifact and required local executable is validated before project-file
     mutation. Gitea and Forgejo MCP entries are emitted only when `forgejo-mcp` is
@@ -510,9 +510,9 @@ Each subtask changes one to three files and depends on the preceding contract wo
 17. Generated CVS and Issues skills are provider-exclusive, capability-aware, bounded, injection-resistant, prohibit file uploads, do not claim OpenCode hard filtering, and require fresh consent immediately before merge.
 18. Hard controls are limited to verified GitHub toolsets and Pi adapter settings. OpenCode body, text, tool filtering, and workflow targets remain guidance with residual risk.
 19. Configuration and generated artifacts contain environment-variable names only; harnessctl never resolves or logs values.
-20. Existing filesystem issue semantics, repository memory authority, disposable SQLite cache behavior, memory-enabled Pi safeguard, and `all` safeguard remain unchanged.
+20. Existing filesystem issue semantics, repository memory authority, and disposable SQLite cache behavior remain unchanged. Pi memory hooks use the same tools through `@harnessctl/pi-tools`.
 21. Documentation, tests, Changeset, generated schema, wheel, source distribution, and npm package artifacts remain mutually consistent.
-22. OpenCode-only reinstall updates the intended generated CVS, Issues, and MCP artifacts without bypassing the repository’s Pi safeguards.
+22. OpenCode and consented Pi reinstall update intended generated skills, prompts, tools, and MCP artifacts without weakening rollback or secret safeguards.
 
 ## Residual risks
 

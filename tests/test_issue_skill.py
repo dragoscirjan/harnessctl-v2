@@ -163,7 +163,7 @@ def test_opencode_install_always_adds_specialized_issue_skill(
 
 
 @pytest.mark.parametrize("harness", ["pi"])
-def test_pi_install_compiles_issue_skill_out(
+def test_pi_install_adds_specialized_issue_skill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
 ) -> None:
     monkeypatch.setattr(
@@ -173,13 +173,20 @@ def test_pi_install_compiles_issue_skill_out(
     )
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
-    settings.write_text('{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n', encoding="utf-8")
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
 
     installed = install(tmp_path, harness)
 
-    assert all("issue-tracking" not in path.as_posix() for path in installed)
+    target = tmp_path / ".pi/skills/issue-tracking/SKILL.md"
+    assert target in installed
+    assert target.read_text(encoding="utf-8") == _render(
+        "github", "gh", "https://github.com", "GH_TOKEN"
+    )
     assert not (tmp_path / ".opencode").exists()
-    assert not list(tmp_path.rglob("SKILL.md"))
+    assert len(list(tmp_path.rglob("SKILL.md"))) == 4
 
 
 def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> None:

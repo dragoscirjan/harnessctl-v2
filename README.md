@@ -403,15 +403,12 @@ OpenCode and Pi adapters currently register the generic issue/configuration tool
 the normalized repository-memory tools. Adapter tests cover Pi memory registration,
 store, search, and validation delegation.
 
-Automatic memory installation currently targets OpenCode only. Pi 0.81's extension
-API is supported by `@harnessctl/pi-tools`, but harnessctl does not yet invent an
-unverified Pi skill path or extension-distribution mechanism. When repository memory
-is enabled, `--harness pi` and `--harness all` fail before writing; register the Pi
-package manually until distribution and skill discovery are verified.
+Automatic memory installation supports OpenCode and Pi. Pi receives all 18 commands,
+all four skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
+`pi.extensions` package manifest loads the tool extension.
 
-OpenCode receives a generated CVS skill at `.opencode/skills/cvs/SKILL.md`. Pi CVS and
-Issues skill distribution remains unsupported, but Pi MCP host configuration is
-implemented through the consent-gated, pinned `npm:pi-mcp-adapter@2.26.0` prerequisite.
+OpenCode and Pi receive generated CVS and Issues skills. Pi MCP host configuration uses
+the consent-gated, pinned `npm:pi-mcp-adapter@2.26.0` prerequisite.
 Generated guidance enumerates valid CLI and MCP capabilities and lets the agent choose
 per operation. It must choose before mutation and never switch routes after mutation
 begins.
@@ -496,9 +493,13 @@ Supported targets:
 ```bash
 uv run python -m harnessctl.install --cwd . --harness opencode
 uv run python -m harnessctl.install --cwd . --harness pi
+uv run python -m harnessctl.install --cwd . --harness pi --allow-pi-package-install
 uv run python -m harnessctl.install --cwd . --harness all
 uv run python -m harnessctl.install --cwd . --harness all --force
 ```
+
+Pi installs require per-package interactive consent. Noninteractive automation must use
+`--allow-pi-package-install`; the legacy adapter-only flag remains an alias.
 
 ## Development commands
 

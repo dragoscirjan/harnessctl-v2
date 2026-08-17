@@ -110,10 +110,9 @@ to filesystem and are ignored remotely.
 
 Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
-OpenCode issue-tracking skill contains only the selected provider's valid CLI and MCP
-capability guidance. It does not install tools or grant access. Pi issue-skill installation remains
-unsupported because no skill discovery path is verified. Pi MCP host configuration is
-separately implemented through the pinned adapter prerequisite.
+OpenCode and Pi issue-tracking skills contain only the selected provider's valid CLI and
+MCP capability guidance. They do not install provider tools or grant access. Pi uses
+`.pi/skills/issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
 
 Remote Issues use fixed IDs `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and
 `cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,

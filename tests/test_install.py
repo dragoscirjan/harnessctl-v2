@@ -56,7 +56,10 @@ def write_project_config(root: Path, content: str) -> None:
 def write_pinned_pi_adapter(root: Path) -> None:
     settings = root / ".pi/settings.json"
     settings.parent.mkdir(parents=True, exist_ok=True)
-    settings.write_text('{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n', encoding="utf-8")
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
 
 
 def test_rendered_prompts_share_the_canonical_body() -> None:
@@ -99,13 +102,15 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     write_pinned_pi_adapter(tmp_path)
     installed = install(tmp_path, "all")
 
-    assert len(installed) == len(TEMPLATES) * 2 + 5
+    assert len(installed) == len(TEMPLATES) * 2 + 9
     for command in TEMPLATES:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
-        assert (tmp_path / f".pi/commands/{command}.md").exists()
+        assert (tmp_path / f".pi/prompts/{command}.md").exists()
     assert not (tmp_path / ".harnessctl").exists()
     assert (tmp_path / ".opencode/skills/caveman/SKILL.md").exists()
     assert (tmp_path / ".opencode/skills/cvs/SKILL.md").exists()
+    for skill in ("caveman", "cvs", "issue-tracking", "memory"):
+        assert (tmp_path / f".pi/skills/{skill}/SKILL.md").exists()
 
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
@@ -130,7 +135,7 @@ def test_install_all_reports_all_conflicts(tmp_path: Path) -> None:
 
     normalized_error = str(error.value).replace("\\", "/")
     assert ".opencode/commands/work-new.md" in normalized_error
-    assert ".pi/commands/work-new.md" in normalized_error
+    assert ".pi/prompts/work-new.md" in normalized_error
     assert ".opencode/commands/work-plan.md" in normalized_error
 
 
@@ -583,17 +588,25 @@ def test_command_metadata_exactly_covers_templates() -> None:
     assert COMMAND_METADATA.keys() == TEMPLATES.keys()
 
 
-def test_memory_disabled_and_pi_prompts_compile_memory_out() -> None:
+def test_memory_disabled_prompts_compile_memory_out() -> None:
     enabled_config = deepcopy(DEFAULT_CONFIG)
     enabled_config["memory"]["enabled"] = True
 
     for command in TEMPLATES:
         disabled = render_prompt(command, "opencode")
-        pi = render_prompt(command, "pi", config=enabled_config)
-        for rendered in (disabled, pi):
-            assert "memory" not in rendered.lower()
-            assert "{{" not in rendered
-            assert "{%" not in rendered
+        assert "memory" not in disabled.lower()
+        assert "{{" not in disabled
+        assert "{%" not in disabled
+
+
+def test_enabled_pi_prompts_have_memory_hooks() -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["memory"]["enabled"] = True
+
+    for command in TEMPLATES:
+        rendered = render_prompt(command, "pi", config=config)
+        assert rendered.count("## Project memory boundary") == 1
+        assert rendered.count("## Project memory exit") == 1
 
 
 def test_enabled_opencode_prompts_have_bounded_shared_memory_hooks() -> None:
@@ -698,22 +711,18 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
 
 
 @pytest.mark.parametrize("harness", ["pi", "all"])
-def test_install_rejects_unverified_pi_memory_distribution(tmp_path: Path, harness: str) -> None:
+def test_install_supports_pi_memory_distribution(tmp_path: Path, harness: str) -> None:
     _write_enabled_memory_config(tmp_path)
-    marker = tmp_path / ".pi/existing.txt"
-    marker.parent.mkdir(parents=True)
-    marker.write_text("preserve", encoding="utf-8")
-    before = _tree_manifest(tmp_path)
+    write_pinned_pi_adapter(tmp_path)
 
-    with pytest.raises(
-        RuntimeError,
-        match="automatic Pi extension and skill installation is not yet verified",
-    ):
-        install(tmp_path, harness)
+    installed = install(tmp_path, harness)
 
-    assert _tree_manifest(tmp_path) == before
-    assert marker.read_text(encoding="utf-8") == "preserve"
-    assert not (tmp_path / ".opencode").exists()
+    assert tmp_path / ".pi/skills/memory/SKILL.md" in installed
+    assert all(
+        "## Project memory exit" in path.read_text(encoding="utf-8")
+        for path in (tmp_path / ".pi/prompts").glob("*.md")
+    )
+    assert (tmp_path / ".harnessctl/memory/facts").is_dir()
 
 
 def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Path) -> None:
@@ -901,7 +910,10 @@ def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
 ) -> None:
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
-    settings_before = b'{"operator":true,"packages":[{"source":"npm:pi-mcp-adapter@2.26.0"}]}\n'
+    settings_before = (
+        b'{"operator":true,"packages":["npm:@harnessctl/pi-tools@latest",'
+        b'{"source":"npm:pi-mcp-adapter@2.26.0"}]}\n'
+    )
     settings.write_bytes(settings_before)
     host = tmp_path / ".pi/mcp.json"
     host.write_text(
@@ -923,6 +935,37 @@ def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
     }
 
 
+@pytest.mark.parametrize(
+    ("filtered_source", "package_filter"),
+    [
+        ("npm:@harnessctl/pi-tools@latest", {"extensions": []}),
+        ("npm:@harnessctl/pi-tools@latest", {"autoload": False}),
+        ("npm:pi-mcp-adapter@2.26.0", {"extensions": []}),
+        ("npm:pi-mcp-adapter@2.26.0", {"autoload": False}),
+    ],
+)
+def test_pi_rejects_disabled_required_package_extensions_before_mutation(
+    tmp_path: Path, filtered_source: str, package_filter: dict[str, object]
+) -> None:
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    packages: list[object] = [
+        "npm:@harnessctl/pi-tools@latest",
+        "npm:pi-mcp-adapter@2.26.0",
+    ]
+    packages[packages.index(filtered_source)] = {
+        "source": filtered_source,
+        **package_filter,
+    }
+    settings.write_text(json.dumps({"packages": packages}) + "\n", encoding="utf-8")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="must load all extensions"):
+        install(tmp_path, "pi")
+
+    assert _tree_manifest(tmp_path) == before
+
+
 def test_pi_missing_adapter_without_opt_in_has_no_project_mutation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -933,7 +976,7 @@ def test_pi_missing_adapter_without_opt_in_has_no_project_mutation(
         lambda name: "/usr/bin/pi" if name == "pi" else None,
     )
 
-    with pytest.raises(RuntimeError, match="allow-pi-mcp-adapter-install"):
+    with pytest.raises(RuntimeError, match="allow-pi-package-install"):
         install(tmp_path, "pi")
 
     assert _tree_manifest(tmp_path) == before
@@ -969,7 +1012,7 @@ def test_pi_host_symlink_fails_before_package_mutation(
 def test_pi_owned_file_conflict_fails_before_package_mutation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    command = tmp_path / ".pi/commands/work-new.md"
+    command = tmp_path / ".pi/prompts/work-new.md"
     command.parent.mkdir(parents=True)
     command.write_bytes(b"operator command")
     before = _tree_manifest(tmp_path)
@@ -1005,23 +1048,34 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
         assert not (tmp_path / ".pi/mcp.json").exists()
         settings = tmp_path / ".pi/settings.json"
         settings.parent.mkdir(parents=True, exist_ok=True)
-        settings.write_text('{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n', encoding="utf-8")
+        packages = [
+            "npm:@harnessctl/pi-tools@latest",
+            *(["npm:pi-mcp-adapter@2.26.0"] if "pi-mcp-adapter" in args[3] else []),
+        ]
+        settings.write_text(json.dumps({"packages": packages}) + "\n", encoding="utf-8")
         assert kwargs["cwd"] == tmp_path.resolve()
         assert kwargs["shell"] is False
         return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
 
     monkeypatch.setattr(install_module.subprocess, "run", fake_run)
 
-    install(tmp_path, "pi", allow_pi_mcp_adapter_install=True)
+    install(tmp_path, "pi", allow_pi_package_install=True)
 
     assert calls == [
         [
             "/usr/bin/pi",
             "install",
             "-l",
+            "npm:@harnessctl/pi-tools@latest",
+            "--approve",
+        ],
+        [
+            "/usr/bin/pi",
+            "install",
+            "-l",
             "npm:pi-mcp-adapter@2.26.0",
-            "--no-approve",
-        ]
+            "--approve",
+        ],
     ]
     assert (tmp_path / ".pi/mcp.json").is_file()
 
@@ -1043,13 +1097,13 @@ def test_pi_failure_removes_transaction_adapter_and_restores_exact_tree(
     def fake_run(args: list[str], **_kwargs: object) -> SimpleNamespace:
         action = args[1]
         actions.append(action)
-        if action == "install":
-            marker.write_text(
-                '{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n',
-                encoding="utf-8",
-            )
-        else:
-            marker.write_text('{"packages":[]}\n', encoding="utf-8")
+        source = args[3]
+        current = json.loads(marker.read_text(encoding="utf-8")).get("packages", [])
+        if action == "install" and source not in current:
+            current.append(source)
+        elif action == "remove" and source in current:
+            current.remove(source)
+        marker.write_text(json.dumps({"packages": current}) + "\n", encoding="utf-8")
         return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
 
     monkeypatch.setattr(install_module.subprocess, "run", fake_run)
@@ -1062,7 +1116,7 @@ def test_pi_failure_removes_transaction_adapter_and_restores_exact_tree(
     with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
         install(tmp_path, "pi", allow_pi_mcp_adapter_install=True)
 
-    assert actions == ["install", "remove"]
+    assert actions == ["install", "install", "remove", "remove"]
     assert _tree_manifest(tmp_path) == before
 
 
@@ -1072,7 +1126,7 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_bytes(b'{"operator":true}\n')
-    owned_command = tmp_path / ".pi/commands/work-new.md"
+    owned_command = tmp_path / ".pi/prompts/work-new.md"
     owned_command.parent.mkdir(parents=True)
     owned_command.write_bytes(b"operator command\x00")
     before = _tree_manifest(tmp_path)
@@ -1087,7 +1141,13 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
         action = args[1]
         actions.append(action)
         owned_command.write_text(f"package {action}", encoding="utf-8")
-        packages = ["npm:pi-mcp-adapter@2.26.0"] if action == "install" else []
+        source = args[3]
+        current = json.loads(settings.read_text(encoding="utf-8")).get("packages", [])
+        if action == "install" and source not in current:
+            current.append(source)
+        elif action == "remove" and source in current:
+            current.remove(source)
+        packages = current
         settings.write_text(json.dumps({"packages": packages}), encoding="utf-8")
         return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
 
@@ -1101,7 +1161,7 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
     with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
         install(tmp_path, "pi", force=True, allow_pi_mcp_adapter_install=True)
 
-    assert actions == ["install", "remove"]
+    assert actions == ["install", "install", "remove", "remove"]
     assert _tree_manifest(tmp_path) == before
 
 
@@ -1114,11 +1174,18 @@ def test_pi_launcher_uses_direct_vectors_and_safe_windows_cmd(
         "install",
         "-l",
         "npm:pi-mcp-adapter@2.26.0",
-        "--no-approve",
+        "--approve",
     ]
     assert shell is False
     exe, shell = install_module._pi_invocation("C:/Pi/pi.exe", "remove", windows=True)
-    assert exe[0] == "C:/Pi/pi.exe" and shell is False
+    assert exe == [
+        "C:/Pi/pi.exe",
+        "remove",
+        "-l",
+        "npm:pi-mcp-adapter@2.26.0",
+        "--approve",
+    ]
+    assert shell is False
     monkeypatch.setattr(
         install_module.shutil,
         "which",
@@ -1126,7 +1193,7 @@ def test_pi_launcher_uses_direct_vectors_and_safe_windows_cmd(
     )
     shim, shell = install_module._pi_invocation("C:/Pi/pi.cmd", "install", windows=True)
     assert shim[:4] == ["C:/Windows/System32/cmd.exe", "/d", "/s", "/c"]
-    assert shim[4] == '"C:/Pi/pi.cmd" install -l npm:pi-mcp-adapter@2.26.0 --no-approve'
+    assert shim[4] == '"C:/Pi/pi.cmd" install -l npm:pi-mcp-adapter@2.26.0 --approve'
     assert shell is False
 
 

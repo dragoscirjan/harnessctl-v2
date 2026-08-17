@@ -78,8 +78,8 @@ The architecture keeps three concerns distinct:
   OAuth, and capability claims are verified against official documentation at release.
 - Gitea and Forgejo operators provide an HTTPS instance URL and the name of an
   environment variable containing the provider token.
-- Existing memory-enabled Pi and all-harness safeguards remain authoritative unless a
-  separately approved design replaces them.
+- Pi project installation writes prompts and skills and consent-installs required tool and
+  MCP packages before claiming operational support.
 
 ## System context
 
@@ -322,10 +322,9 @@ GitLab OAuth, DCR fallback, URL binding, refresh, and credential persistence are
 delegated to pi-mcp-adapter's operating-system credential store and fail closed when it
 is unavailable. Host-config discovery cannot broaden this generated surface.
 
-If adapter installation does not succeed, Pi MCP configuration remains absent or inert
-and the installer reports the prerequisite failure. It must not leave a configuration
-that claims working MCP support. This addition does not weaken the existing fail-closed
-memory-enabled Pi or all-harness safeguard.
+If required package installation does not succeed, Pi MCP configuration remains absent
+or inert and the installer reports the prerequisite failure. It must not leave prompts,
+skills, tools, or configuration that claim operational support.
 
 Projection and lifecycle shapes are release-verified against the
 [OpenCode MCP configuration documentation](https://opencode.ai/docs/mcp-servers/),
@@ -588,14 +587,14 @@ archives unless already part of the established package contract.
   fails before mutation. Prove a newly installed adapter is listed and active before
   project mutation; each later failure attempts removal, exactly restores owned project
   and captured Pi settings bytes, verifies observable adapter state, and reports all
-  rollback errors and residual external effects.
+  rollback errors and residual external effects. Apply the same checks to the harnessctl
+  Pi tools package.
 - Prove unavailable removal, listing, active-state verification, consent, or exact
   settings restoration stops before mutation with manual-preinstallation guidance.
 - Prove installation performs no provider, OAuth, CLI-authentication, or secret-resolution
-  activity; the only permitted package-manager mutations are pinned adapter installation
-  and its transaction-owned rollback removal.
-- Prove Pi MCP output is inert or absent unless the pinned adapter installation succeeds,
-  while memory-enabled Pi and all safeguards remain unchanged.
+  activity; permitted package-manager mutations are the required Pi tools and pinned MCP
+  adapter installations plus transaction-owned rollback removals.
+- Prove Pi output is written only after required packages are registered and unfiltered.
 
 ### Skills and runtime policy
 
@@ -668,7 +667,8 @@ archives unless already part of the established package contract.
     identifiable new external effects, and surfaces every cleanup failure and residual
     package-manager, lifecycle, global-state, download, or cache effect. External package
     installation is never described as exactly reversible.
-12. Existing memory-enabled Pi and all-harness safeguards remain fail closed.
+12. Memory-enabled Pi and all-harness installs write hooked prompts and all four skills
+    only after required project-local packages pass consent and registration checks.
 13. Generated skills validate schema-exposed pagination and result arguments and provide
     bounded-call guidance without claiming host enforcement. GitHub's toolset header and
     Pi's exact per-call output guard are hard controls; OpenCode body and aggregate limits

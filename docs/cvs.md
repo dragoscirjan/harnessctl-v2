@@ -12,18 +12,17 @@ servers, authentication, or merge authorization.
 
 The installer currently:
 
-- generates `.opencode/skills/cvs/SKILL.md` for OpenCode;
+- generates `.opencode/skills/cvs/SKILL.md` and `.pi/skills/cvs/SKILL.md`;
 - merges required fixed IDs into `.opencode/opencode.json` and `.pi/mcp.json`;
 - preserves unrelated host settings and rejects conflicting owned values unless narrow
   `--force` replacement is requested;
 - deduplicates identical CVS and Issues server definitions and rejects same-ID
   differences;
 - installs neither provider CLIs nor `forgejo-mcp`; and
-- can consentfully install the exact Pi adapter prerequisite described below.
+- can consentfully install Pi tools and the exact adapter prerequisite described below.
 
-Pi CVS skill generation is **unsupported**. Pi receives commands and MCP host
-configuration, not `.pi/skills/cvs/SKILL.md`. Memory-enabled Pi or `all` installation is
-also still unsupported and fails before adapter inspection or project writes.
+Pi receives all 18 commands, all four generated skills, the Pi tools extension, and MCP
+host configuration through verified project-local discovery paths.
 
 ## Configuration
 
@@ -293,22 +292,26 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
 }
 ```
 
-The required adapter source is exactly `npm:pi-mcp-adapter@2.26.0`, an external
+The required tools source is `npm:@harnessctl/pi-tools@latest`; the required MCP adapter
+source is exactly `npm:pi-mcp-adapter@2.26.0`, an external
 MIT-licensed package. An existing exact project-local entry in `.pi/settings.json` is
 preserved. Wrong-version, unpinned, duplicate, or malformed entries fail before project
-writes. If absent, automatic installation requires fresh interactive confirmation or
-the dedicated noninteractive `--allow-pi-mcp-adapter-install` flag; `--force`, earlier
+writes. Required package object entries with an `extensions` filter also fail because
+the filter can disable extension loading. If absent, automatic installation requires fresh interactive confirmation or
+the noninteractive `--allow-pi-package-install` flag. The former
+`--allow-pi-mcp-adapter-install` spelling remains an alias; `--force`, earlier
 approval, or general package consent is insufficient.
 
 The disclosed command is:
 
 ```text
-pi install -l npm:pi-mcp-adapter@2.26.0 --no-approve
+pi install -l npm:@harnessctl/pi-tools@latest --approve
+pi install -l npm:pi-mcp-adapter@2.26.0 --approve
 ```
 
 Installation modifies `.pi/settings.json` and project-local `.pi/npm/`. On a later
-transaction failure, harnessctl attempts the pinned remove command only when that
-transaction installed the adapter and restores the captured settings bytes. Exact
+transaction failure, harnessctl attempts removal only for packages installed by that
+transaction and restores the captured settings bytes. Exact
 rollback cannot remove every package-manager metadata, package-directory, download,
 cache, lifecycle-script, or other external effect. These residuals are always possible
 and are reported. Pre-existing adapters and unrelated external state are never removed.

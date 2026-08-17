@@ -34,8 +34,8 @@ export and import are explicit migration operations rather than routine synchron
 | Repository YAML                      | Implemented     | Canonical shared memory backend                  |
 | Shared local SQLite                  | Implemented     | Disposable internal cache; not a backend         |
 | OpenCode adapter and generated skill | Implemented     | Exposes tools and SDLC memory guidance           |
-| Pi adapter                           | Implemented     | Exposes tools when manually loaded               |
-| Automatic Pi adapter/skill install   | Not implemented | Installer rejects memory-enabled Pi/all requests |
+| Pi adapter and generated skill       | Implemented     | Exposes tools and SDLC memory guidance           |
+| Automatic Pi package/skill install   | Implemented     | Consent-gated project-local package installation |
 | Remote libSQL                        | Not implemented | Future shared service backend                    |
 | Mem0 OSS                             | Not implemented | Future self-hosted service backend               |
 | Graphiti                             | Not implemented | Future temporal graph backend                    |
@@ -110,11 +110,10 @@ memory:
   enabled: true
 ```
 
-OpenCode can receive the generated memory skill, SDLC memory hooks, plugin entry, and
-adapter dependency when memory is enabled. Pi registers the normalized memory tools
-when an operator loads `@harnessctl/pi-tools`, but automatic Pi extension and skill
-installation is unsupported. Memory-enabled Pi or all-harness installer requests fail
-before writes. See [skills](skills.md) and [configuration](configuration.md).
+OpenCode receives the generated memory skill, SDLC memory hooks, plugin entry, and
+adapter dependency when memory is enabled. Pi receives the generated memory skill and
+hooks, while project-local `@harnessctl/pi-tools` registers normalized memory tools.
+See [skills](skills.md) and [configuration](configuration.md).
 
 ## Future service examples — NOT IMPLEMENTED
 

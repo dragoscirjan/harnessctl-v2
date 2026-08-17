@@ -254,7 +254,9 @@ def _render_context(
     config: Mapping[str, Any] | None,
 ) -> dict[str, object]:
     metadata = COMMAND_METADATA[command]
-    memory_hooks_enabled = bool(harness == "opencode" and config and config["memory"]["enabled"])
+    memory_hooks_enabled = bool(
+        harness in {"opencode", "pi"} and config and config["memory"]["enabled"]
+    )
     if not memory_hooks_enabled:
         return {"memory_hooks_enabled": False, **metadata}
 

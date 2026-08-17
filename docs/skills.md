@@ -9,26 +9,25 @@ boundary. Tool availability comes from separately loaded host adapters.
 [`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers four
 skill templates.
 
-| Skill          | Configuration                                           | OpenCode installation                                          | Purpose                                                        |
-| -------------- | ------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
-| Caveman        | `communication.caveman.enabled` and `mode`              | Generated at `.opencode/skills/caveman/SKILL.md` when enabled  | Concise communication without losing exact technical substance |
-| Memory         | `memory.enabled`, retrieval bounds, and repository root | Generated at `.opencode/skills/memory/SKILL.md` when enabled   | Safe retrieval and persistence of curated repository knowledge |
-| Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always generated at `.opencode/skills/issue-tracking/SKILL.md` | Provider-exclusive local or remote issue workflow guidance     |
-| CVS            | `cvs.local` and validated remote provider               | Always generated at `.opencode/skills/cvs/SKILL.md`            | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance      |
+| Skill          | Configuration                                           | Installation                                                | Purpose                                                        |
+| -------------- | ------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| Caveman        | `communication.caveman.enabled` and `mode`              | OpenCode when enabled; always `.pi/skills/caveman/SKILL.md` | Concise communication without losing exact technical substance |
+| Memory         | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; always `.pi/skills/memory/SKILL.md`  | Safe retrieval and persistence of curated repository knowledge |
+| Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance     |
+| CVS            | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance      |
 
 Memory requires caveman. Enabling memory also installs the OpenCode plugin entry and
 adds `@harnessctl/opencode-tools` to `.opencode/package.json`; this is the current
 adapter-registration path. The memory skill receives only compiled retrieval limits
 and repository root, not the whole configuration.
 
-All 18 SDLC prompts are configuration-rendered. OpenCode receives memory hooks when
-memory is enabled. Pi prompt rendering intentionally omits those hooks.
+All 18 SDLC prompts are configuration-rendered under `.opencode/commands/` or the
+official Pi `.pi/prompts/` path. Both harnesses receive memory hooks when
+memory is enabled.
 
 OpenCode and Pi adapter packages expose generic configuration, filesystem issue, and
-repository-memory tools. Pi has normalized memory tool registration in
-`@harnessctl/pi-tools`, but harnessctl does not install a Pi extension or skill.
-Memory-enabled `--harness pi` and `--harness all` installation therefore fail before
-writes; operators must register the Pi package themselves.
+repository-memory tools. Pi installs `npm:@harnessctl/pi-tools@latest` project-locally;
+its `pi.extensions` manifest loads the tool registration extension.
 
 The issue-tracking skill is self-contained and provider-specific. Filesystem mode
 documents normalized harnessctl tools and revision handling. Remote modes document
@@ -70,7 +69,7 @@ MIT `npm:pi-mcp-adapter@2.26.0` prerequisite is present or separately consented 
 These host files register routes; they do not grant authentication, prove capability,
 or install provider CLIs or external GPL `forgejo-mcp` 2.33.0.
 
-No Pi issue-tracking skill path or discovery contract has been verified. Planned
-Pi issue- and CVS-skill generation remains compiled out until that boundary is designed
-and tested. Pi MCP host configuration is implemented and does not imply skill support.
+Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for all four skills.
+Issue guidance is written to `.opencode/skills/issue-tracking/SKILL.md` or
+`.pi/skills/issue-tracking/SKILL.md`.
 See [issues](issues.md) and [CVS and MCP providers](cvs.md).

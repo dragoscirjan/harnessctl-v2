@@ -53,7 +53,10 @@ def _write_remote_config(project: Path) -> None:
 def _write_pi_adapter_config(project: Path) -> None:
     settings = project / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
-    settings.write_text('{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n', encoding="utf-8")
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
 
 
 def _copy_runtime_dependency(package: str, site_packages: Path) -> None:
@@ -61,6 +64,13 @@ def _copy_runtime_dependency(package: str, site_packages: Path) -> None:
     assert spec is not None and spec.submodule_search_locations
     source = Path(next(iter(spec.submodule_search_locations)))
     shutil.copytree(source, site_packages / package)
+
+
+def test_pi_tools_package_declares_loadable_extension() -> None:
+    package = json.loads((ROOT / "extensions/pi-tools/package.json").read_text(encoding="utf-8"))
+
+    assert package["pi"]["extensions"] == ["./dist/index.js"]
+    assert "dist" in package["files"]
 
 
 def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
@@ -195,7 +205,7 @@ assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/
 assert len(TEMPLATES) == 18
 for command in TEMPLATES:
     assert '## Project memory exit' in render_prompt(command, 'opencode', config=config)
-    assert 'memory_' not in render_prompt(command, 'pi', config=config)
+    assert '## Project memory exit' in render_prompt(command, 'pi', config=config)
 providers = {
     'filesystem': (
         'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,'
@@ -249,23 +259,20 @@ for provider, connection in providers.items():
     for project in (enabled_opencode, enabled_pi, enabled_all):
         _write_enabled_config(project)
     _write_remote_config(remote_opencode)
-    _write_pi_adapter_config(disabled_pi)
+    for project in (disabled_pi, enabled_pi, enabled_all):
+        _write_pi_adapter_config(project)
 
     cli = [str(python), "-m", "harnessctl.install", "--cwd"]
     _run([*cli, str(disabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
-    assert not (disabled_pi / ".opencode/skills/issue-tracking").exists()
+    assert (disabled_pi / ".pi/skills/issue-tracking/SKILL.md").is_file()
     assert (disabled_pi / ".pi/mcp.json").is_file()
     for project, harness in ((enabled_pi, "pi"), (enabled_all, "all")):
-        result = _run(
-            [*cli, str(project), "--harness", harness],
-            cwd=runtime,
-            env=environment,
-            expected_returncode=2,
-        )
-        assert "automatic Pi extension and skill installation is not yet verified" in result.stderr
-        assert not (project / ".opencode").exists()
-        assert not (project / ".pi").exists()
+        _run([*cli, str(project), "--harness", harness], cwd=runtime, env=environment)
+        assert (project / ".pi/skills/memory/SKILL.md").is_file()
+        assert len(list((project / ".pi/prompts").glob("*.md"))) == COMMAND_COUNT
+        if harness == "all":
+            assert (project / ".opencode/skills/memory/SKILL.md").is_file()
 
     _run([*cli, str(enabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(remote_opencode), "--harness", "opencode"], cwd=runtime, env=environment)

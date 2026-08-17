@@ -46,7 +46,7 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     assert "Repository YAML" in memory
     assert "Shared local SQLite" in memory
     assert "Disposable internal cache; not a backend" in memory
-    assert "Automatic Pi adapter/skill install" in memory
+    assert "project-local `@harnessctl/pi-tools`" in memory
     assert "Only `memory.backend: repository` is accepted today" in memory
     for token_env in (
         "HARNESSCTL_LIBSQL_TOKEN",
@@ -83,6 +83,7 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
         assert f"`{cli}`" in cvs
     for path in (
         ".opencode/skills/cvs/SKILL.md",
+        ".pi/skills/cvs/SKILL.md",
         ".opencode/opencode.json",
         ".pi/mcp.json",
         ".pi/settings.json",
@@ -91,4 +92,4 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     assert "npm:pi-mcp-adapter@2.26.0" in cvs
     assert "forgejo-mcp` 2.33.0" in cvs
     assert "Environment-variable names only" in cvs
-    assert "Pi CVS skill generation is **unsupported**" in cvs
+    assert "npm:@harnessctl/pi-tools@latest" in cvs

@@ -7,7 +7,7 @@ The registry in
 templates. Installation renders every template as a hyphenated Markdown command for
 OpenCode and Pi. Source inspection, artifact creation, code edits, checks, and
 delivery remain theoretical conversation-only actions. When repository memory is
-enabled, OpenCode prompts may perform their explicitly bounded memory retrieval or
+enabled, OpenCode and Pi prompts may perform their explicitly bounded memory retrieval or
 persistence hook; that does not prove any SDLC work occurred. Command names describe
 the stage being proposed, not automation already performed.
 
@@ -33,11 +33,11 @@ the stage being proposed, not automation already performed.
 | `work-finish`           | Propose final delivery or deployment                | Perform no deployment; human approval remains required |
 
 OpenCode files are installed under `.opencode/commands/`; Pi files are installed under
-`.pi/commands/`. Rendering is harness-specific, but stage intent is shared. Enabled
-repository memory adds bounded entry or exit guidance only to OpenCode prompts; it
-does not establish approval, completion, verification, merge, or deployment.
+`.pi/prompts/`. Rendering is harness-specific, but stage intent is shared. Enabled
+repository memory adds bounded entry or exit guidance to both harnesses; it does not
+establish approval, completion, verification, merge, or deployment.
 
-A complete example enabling those OpenCode memory hooks is:
+A complete example enabling those memory hooks is:
 
 ```yaml
 communication:
