@@ -30,6 +30,7 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 | `issues.tools`               | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
 | `issues.remote.url`          | None                        | Required for remote providers; rejected for filesystem                        |
 | `issues.remote.token_env`    | None                        | Required provider token environment-variable name; rejected for filesystem    |
+| `issues.remote.transport`    | `auto` remotely             | Independent remote Issues policy: `auto`, `cli`, or `mcp`; rejected locally   |
 | `paths.root`                 | `.harnessctl`               | General harnessctl artifact root                                              |
 | `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                            |
 | `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                          |
@@ -39,7 +40,7 @@ The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
 `issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
 `issue_unrelate`, `issue_link_document`, `issue_validate`, and `issue_archive`.
 
-A complete filesystem example is:
+A complete default configuration is:
 
 ```yaml
 version: 2
@@ -48,6 +49,39 @@ issues:
   root: .harnessctl/issues
   prefix: hrn-
   tools: issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive
+cvs:
+  local: git
+  remote:
+    provider: github
+    transport: auto
+    tools: gh
+    url: https://github.com
+    token_env: GH_TOKEN
+mcp:
+  output_limit_mode: bounded-guidance
+paths:
+  root: .harnessctl
+  tasks: .harnessctl/tasks
+  reports: .harnessctl/reports
+workflow:
+  default_task_type: bug
+communication:
+  caveman:
+    enabled: true
+    mode: strict
+memory:
+  enabled: false
+  backend: repository
+  namespace:
+    organization_id: local
+    project_id: project
+    default_topic: general
+  retrieval:
+    limit: 8
+    max_chars: 12000
+    include_superseded: false
+  repository:
+    root: .harnessctl/memory
 ```
 
 Filesystem configuration rejects `issues.remote`.
@@ -77,14 +111,40 @@ Filesystem configuration rejects `issues.remote`.
 `memory.repository.cache` input is temporarily tolerated by TypeScript for
 compatibility, but it is unused and not generated; do not configure it.
 
+### CVS and MCP settings
+
+| Key                    | Default            | Current meaning |
+| ---------------------- | ------------------ | --------------- |
+| `cvs.local`            | `git`              | Direct local authority: `git` or `jj`; never routed through MCP |
+| `cvs.remote.provider`  | `github`           | Independent remote CVS authority: `github`, `gitlab`, `gitea`, or `forgejo` |
+| `cvs.remote.transport` | `auto`             | Remote CVS policy: `auto`, `cli`, or `mcp` |
+| `cvs.remote.tools`     | `gh`               | Exact provider CLI identifier; no arguments or paths |
+| `cvs.remote.url`       | `https://github.com` | Validated collaboration URL |
+| `cvs.remote.token_env` | `GH_TOKEN`         | Environment-variable name only, never a value |
+| `mcp.output_limit_mode` | `bounded-guidance` | `bounded-guidance` or Pi-only `hard`; OpenCode and `all` reject `hard` |
+
+GitHub requires `gh`, `https://github.com`, and `GH_TOKEN`; GitLab requires
+`glab`, `https://gitlab.com`, and `GITLAB_TOKEN`; Gitea requires `tea`, an
+explicit HTTPS URL, and `GITEA_TOKEN`; Forgejo requires `forgejo-cli`, an explicit
+HTTPS URL, and `FORGEJO_TOKEN`. A non-GitHub provider override must specify the complete
+remote branch rather than inherit GitHub fields. The complete provider and host-format
+examples are in [CVS and MCP providers](cvs.md).
+
+CVS and Issues are validated independently. Identical MCP definitions may share a fixed
+server registration, but neither domain inherits the other's provider, transport, CLI,
+URL, token environment name, or authority. Fixed IDs are generated and cannot be
+configured.
+
 ## Remote issue routing
 
-Provider-aware issue configuration and OpenCode skill generation are implemented.
-Remote selections require explicit tools instead of inheriting filesystem defaults:
+Provider-aware issue configuration, transport routing, MCP projection, and OpenCode
+skill generation are implemented. Remote selections require explicit tools instead of
+inheriting filesystem defaults:
 GitHub uses `gh`, GitLab uses `glab`, Gitea uses `tea`, and Forgejo uses
 `forgejo-cli`. Known provider/tool mismatches fail validation.
 
-Every remote selection requires `issues.remote` with exactly `url` and `token_env`.
+Every remote selection requires `issues.remote` with `url`, `token_env`, and optionally
+`transport`; old valid remote configurations migrate in memory to `transport: auto`.
 GitHub requires `https://github.com` and `GH_TOKEN`; GitLab requires
 `https://gitlab.com` and `GITLAB_TOKEN`. Gitea and Forgejo require an explicit
 operator-selected instance URL and respectively `GITEA_TOKEN` and `FORGEJO_TOKEN`.
@@ -102,6 +162,7 @@ issues:
   type: github
   tools: gh
   remote:
+    transport: auto
     url: https://github.com
     token_env: GH_TOKEN
 ```
@@ -113,6 +174,7 @@ issues:
   type: gitlab
   tools: glab
   remote:
+    transport: auto
     url: https://gitlab.com
     token_env: GITLAB_TOKEN
 ```
@@ -124,6 +186,7 @@ issues:
   type: gitea
   tools: tea
   remote:
+    transport: auto
     url: https://gitea.example.com
     token_env: GITEA_TOKEN
 ```
@@ -135,6 +198,7 @@ issues:
   type: forgejo
   tools: forgejo-cli
   remote:
+    transport: auto
     url: https://forgejo.example.com
     token_env: FORGEJO_TOKEN
 ```
@@ -142,7 +206,8 @@ issues:
 Replace only the Gitea or Forgejo example host with the real instance URL. These tool
 values are executable identifiers, not commands. harnessctl does not install,
 authenticate, or invoke a configured CLI. The generated issue-tracking skill instructs the host agent to use
-the operator-managed CLI and configured remote endpoint. Generic local issue tools
-fail closed in remote mode instead of mutating YAML.
+the configured CLI/MCP policy and remote endpoint. Generic local issue tools fail closed
+in remote mode instead of mutating YAML. See [CVS and MCP providers](cvs.md) for exact
+`auto`, `cli`, and `mcp` selection, host files, consent, and security boundaries.
 See [issues](issues.md). Future memory shapes are documented separately in
 [memory](memory.md); all remain invalid today.

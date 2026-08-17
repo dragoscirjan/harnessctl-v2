@@ -7,13 +7,25 @@ import contextlib
 import errno
 import json
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
 from .config import ConfigError, load_config
+from .mcp import (
+    OUTPUT_GUARD,
+    ServerIntent,
+    deduplicate_server_intents,
+    render_opencode_mcp,
+    render_pi_mcp,
+    required_server_intents,
+)
 from .templates import TEMPLATES, render_prompt, render_skill
 
 TARGETS = {
@@ -26,9 +38,25 @@ OPENCODE_PACKAGE = Path(".opencode/package.json")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
 LOCAL_CACHE = Path(".harnessctl/cache/harnessctl.sqlite")
+OPENCODE_CONFIG = Path(".opencode/opencode.json")
+PI_MCP_CONFIG = Path(".pi/mcp.json")
+PI_SETTINGS = Path(".pi/settings.json")
+PI_ADAPTER = "npm:pi-mcp-adapter@2.26.0"
+PI_TIMEOUT_SECONDS = 120
+PI_RESIDUAL_EFFECTS = (
+    "project-local .pi/npm, package-manager metadata, downloads, caches, "
+    "lifecycle-script effects, and other external state may remain"
+)
 
 
-def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
+def install(
+    cwd: Path,
+    harness: str,
+    force: bool = False,
+    *,
+    allow_pi_mcp_adapter_install: bool = False,
+    confirm_pi_mcp_adapter_install: Callable[[str], bool] | None = None,
+) -> list[Path]:
     """Install prompt files for one harness or all supported harnesses."""
     if harness == "all":
         harnesses: Iterable[str] = TARGETS
@@ -45,19 +73,39 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
             "installation is not yet verified; install with --harness opencode or "
             "register @harnessctl/pi-tools manually."
         )
+    if harness in ("opencode", "all") and config["mcp"]["output_limit_mode"] == "hard":
+        raise ConfigError("mcp.output_limit_mode=hard is supported only by Pi")
+
+    intents = deduplicate_server_intents(required_server_intents(config, harness))
+    intents = _preflight_server_executables(intents)
     rendered_targets: list[tuple[Path, str]] = []
     conflicts: list[Path] = []
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
         for command in COMMANDS:
             relative_target = relative_directory / f"{command}.md"
-            target = (root / relative_target).resolve()
-            if root not in target.parents:
-                raise ValueError(f"target escapes project root: {relative_target}")
+            target = _target(root, relative_target)
             rendered_targets.append(
                 (target, render_command(selected_harness, command, config=config))
             )
     if harness in ("opencode", "all"):
+        cvs = config["cvs"]
+        cvs_remote = cvs["remote"]
+        rendered_targets.append(
+            (
+                _target(root, OPENCODE_SKILLS / "cvs/SKILL.md"),
+                render_skill(
+                    "cvs",
+                    local=cvs["local"],
+                    provider=cvs_remote["provider"],
+                    transport=cvs_remote["transport"],
+                    tools=cvs_remote["tools"],
+                    remote_url=cvs_remote["url"],
+                    token_env=cvs_remote["token_env"],
+                    mcp_id=f"cvs_{cvs_remote['provider']}",
+                ),
+            )
+        )
         issues = config["issues"]
         issue_context: dict[str, object] = {
             "provider": issues["type"],
@@ -67,8 +115,10 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
             issue_context.update(
+                transport=issues["remote"]["transport"],
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
+                mcp_id=f"cvs_{issues['type']}",
             )
         rendered_targets.append(
             (
@@ -106,7 +156,34 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
             rendered_targets.append(
                 (_target(root, Path(".gitignore")), _memory_ignore(root, repository))
             )
-    mergeable_targets = {_target(root, OPENCODE_PACKAGE), _target(root, Path(".gitignore"))}
+    if harness in ("opencode", "all"):
+        opencode_path = _target(root, OPENCODE_CONFIG)
+        opencode_content = _merge_host_json(
+            opencode_path,
+            "mcp",
+            {intent.server_id: render_opencode_mcp(intent) for intent in intents},
+            force=force,
+        )
+        if opencode_content is not None:
+            rendered_targets.append((opencode_path, opencode_content))
+
+    pi_state: _PiAdapterState | None = None
+    pi_executable: str | None = None
+    if harness in ("pi", "all") and intents:
+        pi_mcp_path = _target(root, PI_MCP_CONFIG)
+        pi_content = _merge_pi_json(pi_mcp_path, intents, force=force)
+        if pi_content is not None:
+            rendered_targets.append((pi_mcp_path, pi_content))
+        pi_state = _inspect_pi_adapter(root)
+        if not pi_state.configured:
+            pi_executable = _preflight_pi_launcher()
+
+    mergeable_targets = {
+        _target(root, OPENCODE_PACKAGE),
+        _target(root, Path(".gitignore")),
+        _target(root, OPENCODE_CONFIG),
+        _target(root, PI_MCP_CONFIG),
+    }
     for target, _ in rendered_targets:
         if target.exists() and target not in mergeable_targets and not force:
             conflicts.append(target)
@@ -115,22 +192,59 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
         raise FileExistsError(f"refusing to overwrite existing files:\n{joined}")
     _validate_plan(root, rendered_targets, config, harness)
 
-    previous: list[tuple[Path, bool, bytes]] = []
+    previous = _capture_before_images(target for target, _ in rendered_targets)
     created_directories: list[Path] = []
+    adapter_installed = False
+    adapter_install_attempted = False
+    settings_path = _target(root, PI_SETTINGS) if pi_state is not None else None
+    settings_before = _capture_before_image(settings_path) if settings_path is not None else None
+    mutation_started = False
     try:
+        if pi_state is not None and not pi_state.configured:
+            _authorize_pi_adapter_install(
+                allow_pi_mcp_adapter_install,
+                confirm_pi_mcp_adapter_install,
+            )
+            adapter_install_attempted = True
+            mutation_started = True
+            try:
+                _run_pi_package_action(root, "install", pi_executable=pi_executable)
+            except BaseException:
+                try:
+                    adapter_installed = _inspect_pi_adapter(root).configured
+                except BaseException:
+                    # The absent before-image plus newly malformed package settings
+                    # means the transaction may have added external state.
+                    adapter_installed = True
+                raise
+            adapter_installed = True
+            if not _inspect_pi_adapter(root).configured:
+                raise RuntimeError(f"Pi did not register exact project-local package {PI_ADAPTER}")
         for target, content in rendered_targets:
+            mutation_started = True
+            _target(root, target.relative_to(root))
             _ensure_directory(target.parent, root, created_directories)
-            existed = target.exists()
-            if existed and not target.is_file():
-                raise IsADirectoryError(f"target is not a regular file: {target}")
-            previous.append((target, existed, target.read_bytes() if existed else b""))
             write_atomic(target, content)
         if harness in ("opencode", "all"):
             if config["memory"]["enabled"]:
                 _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
             _smoke_check(root, check_memory=config["memory"]["enabled"])
+        _smoke_check_mcp(root, harness, intents)
     except BaseException as error:
-        rollback_errors = _rollback(previous, created_directories)
+        rollback_errors: list[BaseException] = []
+        if adapter_installed:
+            try:
+                _run_pi_package_action(root, "remove")
+            except BaseException as cleanup_error:
+                rollback_errors.append(cleanup_error)
+        if mutation_started:
+            rollback_errors.extend(_rollback(root, previous, created_directories))
+        if adapter_install_attempted and settings_path is not None and settings_before is not None:
+            rollback_errors.extend(_restore_before_image(root, settings_path, settings_before))
+        if adapter_install_attempted:
+            rollback_errors.append(
+                RuntimeError(f"Pi adapter cleanup is best effort: {PI_RESIDUAL_EFFECTS}")
+            )
         if rollback_errors:
             raise BaseExceptionGroup(
                 "installation failed and rollback was incomplete",
@@ -138,6 +252,287 @@ def install(cwd: Path, harness: str, force: bool = False) -> list[Path]:
             ) from error
         raise
     return [target for target, _ in rendered_targets]
+
+
+@dataclass(frozen=True)
+class _PiAdapterState:
+    configured: bool
+
+
+def _preflight_server_executables(intents: list[ServerIntent]) -> list[ServerIntent]:
+    """Apply explicit-local failure and auto-local omission before host rendering."""
+    retained: list[ServerIntent] = []
+    forgejo_mcp = shutil.which("forgejo-mcp")
+    for intent in intents:
+        if intent.command != "forgejo-mcp":
+            retained.append(intent)
+            continue
+        explicit = any(policy.endswith(":mcp") for policy in intent.requesting_policies)
+        if forgejo_mcp is None and explicit:
+            raise RuntimeError(f"{intent.server_id} explicitly requires forgejo-mcp on PATH")
+        if forgejo_mcp is not None:
+            retained.append(intent)
+    return retained
+
+
+def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, member in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON member: {key}")
+        value[key] = member
+    return value
+
+
+def _load_json_object(path: Path, label: str) -> tuple[dict[str, Any], bytes | None]:
+    if path.is_symlink():
+        raise ValueError(f"{label} must not be a symlink: {path}")
+    if not path.exists():
+        return {}, None
+    if not path.is_file():
+        raise ValueError(f"{label} must be a regular file: {path}")
+    original = path.read_bytes()
+    try:
+        loaded = json.loads(original.decode("utf-8"), object_pairs_hook=_reject_duplicate_members)
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as error:
+        raise ValueError(f"invalid {label} {path}: {error}") from error
+    if not isinstance(loaded, dict):
+        raise ValueError(f"{label} must contain a JSON object: {path}")
+    return loaded, original
+
+
+def _merge_host_json(
+    path: Path,
+    container_name: str,
+    required: Mapping[str, Mapping[str, Any]],
+    *,
+    force: bool,
+) -> str | None:
+    """Merge only fixed IDs, preserving unrelated top-level and sibling values."""
+    if not required:
+        return None
+    document, original = _load_json_object(path, "host MCP configuration")
+    container = document.get(container_name)
+    if container is None:
+        container = {}
+        document[container_name] = container
+    if not isinstance(container, dict):
+        raise ValueError(f"{container_name} must be a JSON object in {path}")
+    changed = original is None
+    for server_id, expected in required.items():
+        current = container.get(server_id)
+        if current == expected:
+            continue
+        if current is not None and not force:
+            raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
+        container[server_id] = dict(expected)
+        changed = True
+    if not changed:
+        return None
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+def _merge_pi_json(path: Path, intents: list[ServerIntent], *, force: bool) -> str | None:
+    """Merge Pi servers and the sole harnessctl-owned adapter setting."""
+    if not intents:
+        return None
+    document, original = _load_json_object(path, "Pi MCP configuration")
+    servers = document.get("mcpServers")
+    if servers is None:
+        servers = {}
+        document["mcpServers"] = servers
+    if not isinstance(servers, dict):
+        raise ValueError(f"mcpServers must be a JSON object in {path}")
+    settings = document.get("settings")
+    if settings is None:
+        settings = {}
+        document["settings"] = settings
+    if not isinstance(settings, dict):
+        raise ValueError(f"settings must be a JSON object in {path}")
+
+    changed = original is None
+    for intent in intents:
+        expected = render_pi_mcp(intent)
+        current = servers.get(intent.server_id)
+        if current != expected:
+            if current is not None and not force:
+                raise FileExistsError(
+                    f"conflicting harnessctl-owned MCP ID {intent.server_id} in {path}"
+                )
+            servers[intent.server_id] = expected
+            changed = True
+    current_guard = settings.get("outputGuard")
+    if current_guard != OUTPUT_GUARD:
+        if current_guard is not None and not force:
+            raise FileExistsError(f"conflicting settings.outputGuard in {path}")
+        settings["outputGuard"] = dict(OUTPUT_GUARD)
+        changed = True
+    if not changed:
+        return None
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+def _inspect_pi_adapter(root: Path) -> _PiAdapterState:
+    settings_path = _target(root, PI_SETTINGS)
+    settings, _ = _load_json_object(settings_path, "Pi project settings")
+    packages = settings.get("packages", [])
+    if not isinstance(packages, list):
+        raise ValueError(f"packages must be an array in {settings_path}")
+    sources: list[str] = []
+    for entry in packages:
+        if isinstance(entry, str):
+            source = entry
+        elif isinstance(entry, dict) and isinstance(entry.get("source"), str):
+            source = entry["source"]
+        else:
+            raise ValueError(f"malformed package entry in {settings_path}")
+        sources.append(source)
+    exact_count = sources.count(PI_ADAPTER)
+    adapter_sources = [source for source in sources if "pi-mcp-adapter" in source]
+    if exact_count > 1:
+        raise ValueError(f"duplicate exact Pi adapter entries in {settings_path}")
+    if adapter_sources and adapter_sources != [PI_ADAPTER]:
+        raise ValueError(
+            f"unpinned or wrong-version Pi adapter in {settings_path}; expected {PI_ADAPTER}"
+        )
+    return _PiAdapterState(configured=exact_count == 1)
+
+
+def _authorize_pi_adapter_install(
+    noninteractive_opt_in: bool,
+    confirmation: Callable[[str], bool] | None,
+) -> None:
+    disclosure = (
+        f"Harnessctl must run `pi install -l {PI_ADAPTER} --no-approve`, modifying "
+        f".pi/settings.json and project-local .pi/npm; {PI_RESIDUAL_EFFECTS}."
+    )
+    print(disclosure, file=sys.stderr)
+    if confirmation is not None:
+        if not confirmation(disclosure):
+            raise RuntimeError("Pi MCP adapter installation was not approved")
+        return
+    if not noninteractive_opt_in:
+        raise RuntimeError(
+            f"Pi requires {PI_ADAPTER}; install it manually or pass "
+            "--allow-pi-mcp-adapter-install in noninteractive operation"
+        )
+
+
+def _pi_invocation(
+    pi_path: str, action: str, *, windows: bool | None = None
+) -> tuple[list[str], bool]:
+    package_args = [action, "-l", PI_ADAPTER, "--no-approve"]
+    suffix = Path(pi_path).suffix.lower()
+    is_windows = os.name == "nt" if windows is None else windows
+    if not is_windows:
+        return [pi_path, *package_args], False
+    if suffix == ".exe":
+        return [pi_path, *package_args], False
+    if suffix not in {".cmd", ".bat"}:
+        raise RuntimeError("Windows Pi executable must be an .exe, .cmd, or .bat")
+    prohibited = '\r\n\x00"%!^&|<>'
+    if any(character in pi_path for character in prohibited):
+        raise RuntimeError("unsafe Windows Pi shim path")
+    cmd_path = shutil.which("cmd.exe")
+    if cmd_path is None:
+        raise RuntimeError("Windows Pi shim requires cmd.exe on PATH")
+    command = f'"{pi_path}" {" ".join(package_args)}'
+    return [cmd_path, "/d", "/s", "/c", command], False
+
+
+def _preflight_pi_launcher() -> str:
+    pi_path = shutil.which("pi")
+    if pi_path is None:
+        raise RuntimeError("Pi MCP adapter installation requires pi on PATH")
+    _pi_invocation(pi_path, "install")
+    return pi_path
+
+
+def _run_pi_package_action(root: Path, action: str, *, pi_executable: str | None = None) -> None:
+    pi_path = pi_executable or shutil.which("pi")
+    if pi_path is None:
+        raise RuntimeError("Pi MCP adapter cleanup requires pi on PATH")
+    invocation, use_shell = _pi_invocation(pi_path, action)
+    try:
+        result = subprocess.run(
+            invocation,
+            cwd=root,
+            shell=use_shell,
+            check=False,
+            capture_output=True,
+            timeout=PI_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(f"pi {action} timed out; result may be ambiguous") from error
+    try:
+        stdout = result.stdout.decode("utf-8", errors="strict")
+        stderr = result.stderr.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise RuntimeError(f"pi {action} produced undecodable output") from error
+    if result.returncode != 0:
+        detail = (stderr or stdout).strip()
+        raise RuntimeError(f"pi {action} failed with exit {result.returncode}: {detail}")
+
+
+def _restore_before_image(
+    root: Path, path: Path, before: tuple[bool, bytes]
+) -> list[BaseException]:
+    try:
+        _target(root, path.relative_to(root))
+        existed, content = before
+        if existed:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            write_atomic_bytes(path, content)
+        else:
+            path.unlink(missing_ok=True)
+        if path.exists() != existed or (existed and path.read_bytes() != content):
+            raise RuntimeError(f"failed to verify exact rollback of {path}")
+    except BaseException as error:
+        return [error]
+    return []
+
+
+def _capture_before_image(path: Path) -> tuple[bool, bytes]:
+    """Capture one validated regular-file before-image without following symlinks."""
+    if path.is_symlink():
+        raise ValueError(f"managed target must not be a symlink: {path}")
+    if not path.exists():
+        return False, b""
+    if not path.is_file():
+        raise IsADirectoryError(f"target is not a regular file: {path}")
+    return True, path.read_bytes()
+
+
+def _capture_before_images(paths: Iterable[Path]) -> list[tuple[Path, bool, bytes]]:
+    """Capture every unique owned file before an external package can mutate it."""
+    captured: list[tuple[Path, bool, bytes]] = []
+    seen: set[Path] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        existed, content = _capture_before_image(path)
+        captured.append((path, existed, content))
+    return captured
+
+
+def _smoke_check_mcp(root: Path, harness: str, intents: list[ServerIntent]) -> None:
+    if harness in ("opencode", "all") and intents:
+        document, _ = _load_json_object(
+            _target(root, OPENCODE_CONFIG), "OpenCode MCP configuration"
+        )
+        for intent in intents:
+            if document.get("mcp", {}).get(intent.server_id) != render_opencode_mcp(intent):
+                raise RuntimeError(f"OpenCode MCP smoke check failed for {intent.server_id}")
+    if harness in ("pi", "all") and intents:
+        document, _ = _load_json_object(_target(root, PI_MCP_CONFIG), "Pi MCP configuration")
+        for intent in intents:
+            if document.get("mcpServers", {}).get(intent.server_id) != render_pi_mcp(intent):
+                raise RuntimeError(f"Pi MCP smoke check failed for {intent.server_id}")
+        if document.get("settings", {}).get("outputGuard") != OUTPUT_GUARD:
+            raise RuntimeError("Pi settings.outputGuard smoke check failed")
+        if not _inspect_pi_adapter(root).configured:
+            raise RuntimeError("Pi adapter package smoke check failed")
 
 
 def write_atomic(target: Path, content: str) -> None:
@@ -171,8 +566,17 @@ def write_atomic_bytes(target: Path, content: bytes) -> None:
 
 
 def _target(root: Path, relative: Path) -> Path:
-    target = (root / relative).resolve()
-    if root not in target.parents:
+    if relative.is_absolute() or ".." in relative.parts:
+        raise ValueError(f"target escapes project root: {relative}")
+    target = root
+    for part in relative.parts:
+        if part in ("", "."):
+            continue
+        target /= part
+        if target.is_symlink():
+            raise ValueError(f"managed target path must not contain symlinks: {target}")
+    resolved = target.resolve()
+    if resolved != root and root not in resolved.parents:
         raise ValueError(f"target escapes project root: {relative}")
     return target
 
@@ -269,16 +673,21 @@ def _initialize_memory_paths(
 
 
 def _rollback(
-    previous: list[tuple[Path, bool, bytes]], created_directories: list[Path]
+    root: Path,
+    previous: list[tuple[Path, bool, bytes]],
+    created_directories: list[Path],
 ) -> list[BaseException]:
     """Restore file before-images, then remove transaction-created empty directories."""
     errors: list[BaseException] = []
     for target, existed, content in reversed(previous):
         try:
+            _target(root, target.relative_to(root))
             if existed:
                 write_atomic_bytes(target, content)
             else:
                 target.unlink(missing_ok=True)
+            if target.exists() != existed or (existed and target.read_bytes() != content):
+                raise RuntimeError(f"failed to verify exact rollback of {target}")
         except BaseException as error:
             errors.append(error)
 
@@ -349,9 +758,24 @@ def main() -> int:
     parser.add_argument("--cwd", type=Path, default=Path.cwd())
     parser.add_argument("--harness", choices=["opencode", "pi", "all"], default="all")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--allow-pi-mcp-adapter-install", action="store_true")
     args = parser.parse_args()
+    confirmation: Callable[[str], bool] | None = None
+    if sys.stdin.isatty():
+
+        def confirm_install(_disclosure: str) -> bool:
+            answer = input("Install pinned Pi MCP adapter? [y/N] ")
+            return answer.strip().lower() in {"y", "yes"}
+
+        confirmation = confirm_install
     try:
-        for target in install(args.cwd, args.harness, args.force):
+        for target in install(
+            args.cwd,
+            args.harness,
+            args.force,
+            allow_pi_mcp_adapter_install=args.allow_pi_mcp_adapter_install,
+            confirm_pi_mcp_adapter_install=confirmation,
+        ):
             print(f"Installed {target}")
     except (ConfigError, FileExistsError, OSError, RuntimeError, ValueError) as error:
         parser.error(str(error))

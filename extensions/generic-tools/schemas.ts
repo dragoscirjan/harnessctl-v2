@@ -12,18 +12,72 @@ export const FILESYSTEM_ISSUE_TOOLS =
 const safeTokenEnvironmentName = z
   .string()
   .regex(/^[A-Z][A-Z0-9_]*$/, 'must be an uppercase environment variable name, not a token value');
-const explicitRemoteUrl = z
+const httpsInstanceUrl = z
   .url()
   .regex(
     // eslint-disable-next-line no-control-regex -- remote URLs enter generated Markdown and must reject every control range
-    /^https?:\/\/(?![^/\s]*@)(?!.*[\u0000-\u001F\u007F-\u009F\u2028\u2029`])[^\s/?#]+(?:\/[^\s?#]*)?$/,
-    'must be an absolute HTTP(S) URL without credentials, whitespace, backticks, query, or fragment',
+    /^https:\/\/(?![^/\s]*@)(?!.*[\u0000-\u001F\u007F-\u009F\u2028\u2029`${}])[^\s/?#]+(?:\/[^\s?#]*)?$/,
+    'must be an absolute HTTPS URL without credentials, interpolation, whitespace, backticks, query, or fragment',
   )
   .meta({ format: 'uri' });
-const remoteConnection = <UrlSchema extends z.ZodType<string>, TokenSchema extends z.ZodType<string>>(
-  url: UrlSchema,
-  token_env: TokenSchema,
-) => z.object({ url, token_env }).strict();
+
+export const cvsLocalSchema = z.enum(['git', 'jj']);
+export const remoteProviderSchema = z.enum(['github', 'gitlab', 'gitea', 'forgejo']);
+export const remoteTransportSchema = z.enum(['auto', 'cli', 'mcp']);
+export const mcpOutputLimitModeSchema = z.enum(['bounded-guidance', 'hard']);
+
+const PROVIDER_CONTRACTS = {
+  github: { tools: 'gh', url: z.literal('https://github.com') },
+  gitlab: { tools: 'glab', url: z.literal('https://gitlab.com') },
+  gitea: { tools: 'tea', url: httpsInstanceUrl },
+  forgejo: { tools: 'forgejo-cli', url: httpsInstanceUrl },
+} as const;
+
+type Provider = keyof typeof PROVIDER_CONTRACTS;
+
+function remoteFields(provider: Provider) {
+  const contract = PROVIDER_CONTRACTS[provider];
+  return {
+    transport: remoteTransportSchema,
+    url: contract.url,
+    token_env: safeTokenEnvironmentName,
+  };
+}
+
+function issueRemoteSchema(provider: Provider) {
+  return z.object(remoteFields(provider)).strict();
+}
+
+export const remoteServiceSchema = z.discriminatedUnion('provider', [
+  z
+    .object({
+      provider: z.literal('github'),
+      tools: z.literal(PROVIDER_CONTRACTS.github.tools),
+      ...remoteFields('github'),
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal('gitlab'),
+      tools: z.literal(PROVIDER_CONTRACTS.gitlab.tools),
+      ...remoteFields('gitlab'),
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal('gitea'),
+      tools: z.literal(PROVIDER_CONTRACTS.gitea.tools),
+      ...remoteFields('gitea'),
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal('forgejo'),
+      tools: z.literal(PROVIDER_CONTRACTS.forgejo.tools),
+      ...remoteFields('forgejo'),
+    })
+    .strict(),
+]);
 const issueBase = {
   root: safeProjectPath,
   prefix: z.string().regex(/^[A-Za-z0-9_-]*$/, 'must contain only ASCII letters, digits, underscores, or hyphens'),
@@ -35,7 +89,7 @@ const issuesSchema = z.discriminatedUnion('type', [
       ...issueBase,
       type: z.literal('github'),
       tools: z.literal('gh'),
-      remote: remoteConnection(z.literal('https://github.com'), safeTokenEnvironmentName.pipe(z.literal('GH_TOKEN'))),
+      remote: issueRemoteSchema('github'),
     })
     .strict(),
   z
@@ -43,10 +97,7 @@ const issuesSchema = z.discriminatedUnion('type', [
       ...issueBase,
       type: z.literal('gitlab'),
       tools: z.literal('glab'),
-      remote: remoteConnection(
-        z.literal('https://gitlab.com'),
-        safeTokenEnvironmentName.pipe(z.literal('GITLAB_TOKEN')),
-      ),
+      remote: issueRemoteSchema('gitlab'),
     })
     .strict(),
   z
@@ -54,7 +105,7 @@ const issuesSchema = z.discriminatedUnion('type', [
       ...issueBase,
       type: z.literal('gitea'),
       tools: z.literal('tea'),
-      remote: remoteConnection(explicitRemoteUrl, safeTokenEnvironmentName.pipe(z.literal('GITEA_TOKEN'))),
+      remote: issueRemoteSchema('gitea'),
     })
     .strict(),
   z
@@ -62,7 +113,7 @@ const issuesSchema = z.discriminatedUnion('type', [
       ...issueBase,
       type: z.literal('forgejo'),
       tools: z.literal('forgejo-cli'),
-      remote: remoteConnection(explicitRemoteUrl, safeTokenEnvironmentName.pipe(z.literal('FORGEJO_TOKEN'))),
+      remote: issueRemoteSchema('forgejo'),
     })
     .strict(),
 ]);
@@ -71,6 +122,8 @@ export const configV2Schema = z
   .object({
     version: z.literal(2),
     issues: issuesSchema,
+    cvs: z.object({ local: cvsLocalSchema, remote: remoteServiceSchema }).strict(),
+    mcp: z.object({ output_limit_mode: mcpOutputLimitModeSchema }).strict(),
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),
@@ -141,6 +194,11 @@ export const configV2Schema = z
   });
 
 export type ConfigV2 = z.infer<typeof configV2Schema>;
+export type CvsLocal = z.infer<typeof cvsLocalSchema>;
+export type RemoteProvider = z.infer<typeof remoteProviderSchema>;
+export type RemoteTransport = z.infer<typeof remoteTransportSchema>;
+export type RemoteService = z.infer<typeof remoteServiceSchema>;
+export type McpOutputLimitMode = z.infer<typeof mcpOutputLimitModeSchema>;
 
 export const memoryTypeSchema = z.enum(['semantic', 'episodic', 'procedural']);
 export const recordTypeSchema = z.enum(['fact', 'decision', 'event', 'lesson']);

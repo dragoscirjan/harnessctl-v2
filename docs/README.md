@@ -13,6 +13,8 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
   setting.
 - [Memory](memory.md): canonical YAML, immutable records, security, and cache limits.
 - [Issues](issues.md): canonical filesystem workflow and configured remote CLI routing.
+- [CVS and MCP providers](cvs.md): Git/Jujutsu, remote transport routing, generated
+  OpenCode/Pi configuration, consent, and security boundaries.
 
 ## Authority and status
 
@@ -27,6 +29,8 @@ The designs most relevant to these pages are the
 [SDLC memory-hooks design](../.specs/lld-00002-caveman-memory-hooks-across-sdlc-commands-v2.md),
 [local persistence design](../.specs/lld-00006-simplified-local-persistence-and-sqlite-write-through-cache-v1.md),
 and [documentation and issue-routing design](../.specs/lld-00007-documentation-set-and-configured-issue-tracking-skill-v1.md).
+The current CVS and MCP contracts are governed by the
+[CVS/MCP design](../.specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md).
 
 ## Product boundary
 

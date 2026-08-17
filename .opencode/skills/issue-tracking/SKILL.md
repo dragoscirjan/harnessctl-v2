@@ -5,7 +5,7 @@ description: Manage project issues through the configured filesystem issue autho
 
 # Issue Tracking
 
-Use only the configured issue tooling described below. Never switch providers, call an unconfigured tool, or edit provider storage directly. If a required tool is unavailable, stop and report the exact missing capability to the user.
+Use only the configured issue tooling described below. Never switch providers, call an unconfigured tool, call provider APIs directly, or edit provider storage directly. If a required tool is unavailable, stop and report the exact missing capability to the user.
 
 ## Issue Content
 

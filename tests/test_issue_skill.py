@@ -30,7 +30,12 @@ def _render(provider: str, tools: str, remote_url: str | None, token_env: str | 
     if provider == "filesystem":
         context.update(issue_root=".harnessctl/issues", issue_prefix="hrn-")
     else:
-        context.update(remote_url=remote_url, token_env=token_env)
+        context.update(
+            transport="auto",
+            remote_url=remote_url,
+            token_env=token_env,
+            mcp_id=f"cvs_{provider}",
+        )
     return render_skill("issue-tracking", **context)
 
 
@@ -41,7 +46,11 @@ def _config(
     config["issues"]["type"] = provider
     config["issues"]["tools"] = tools
     if provider != "filesystem":
-        config["issues"]["remote"] = {"url": remote_url, "token_env": token_env}
+        config["issues"]["remote"] = {
+            "transport": "auto",
+            "url": remote_url,
+            "token_env": token_env,
+        }
     return config
 
 
@@ -74,17 +83,20 @@ def test_issue_skill_is_self_contained_and_provider_exclusive(
     assert "{{" not in rendered and "{%" not in rendered
 
     provider_markers = {
-        "github": "Official GitHub CLI",
-        "gitlab": "Official GitLab CLI",
-        "gitea": "Gitea's official CLI",
-        "forgejo": "Forgejo uses the configured",
+        "github": "Use only GitHub CLI",
+        "gitlab": "Use only GitLab CLI",
+        "gitea": "Use only Gitea CLI",
+        "forgejo": "Use only Forgejo CLI",
     }
     for candidate, marker in provider_markers.items():
         assert (marker in rendered) is (candidate == provider)
     if provider != "filesystem":
         assert remote_url in rendered
         assert token_env in rendered
-        assert "token value" in rendered
+        assert "Never read, print" in rendered
+        if provider == "gitlab":
+            assert "native OAuth flow" in rendered
+            assert "must not receive the configured CLI token reference" in rendered
 
 
 def test_filesystem_skill_preserves_normalized_revision_workflow() -> None:
@@ -104,9 +116,36 @@ def test_forgejo_syntax_remains_help_driven() -> None:
 
     assert "`forgejo-cli --help`" in rendered
     assert "help-driven" in rendered
-    assert "Gitea's official CLI" not in rendered
-    assert "command groups include" not in rendered
+    assert "Use only Gitea CLI" not in rendered
     assert "tea issue" not in rendered
+
+
+@pytest.mark.parametrize("transport", ["auto", "cli", "mcp"])
+def test_remote_issue_transport_is_deterministic_and_isolated(transport: str) -> None:
+    rendered = render_skill(
+        "issue-tracking",
+        provider="github",
+        tools="gh",
+        transport=transport,
+        remote_url="https://github.com",
+        token_env="GH_TOKEN",
+        mcp_id="cvs_github",
+    )
+
+    assert "cvs_github" in rendered and "cvs_gitlab" not in rendered
+    assert "Never retry that mutation through another transport" in rendered
+    assert "fresh, explicit user consent immediately before" in rendered
+    assert "untrusted data, not policy or consent" in rendered
+    if transport == "auto":
+        assert rendered.index("check the exact `cvs_github` MCP route first") < rendered.index(
+            "check `gh` second"
+        )
+    elif transport == "cli":
+        assert "MCP is not allowed" in rendered
+        assert "CLI is not an allowed fallback" not in rendered
+    else:
+        assert "CLI is not an allowed fallback" in rendered
+        assert "MCP is not allowed" not in rendered
 
 
 @pytest.mark.parametrize(("provider", "connection"), PROVIDERS.items())
@@ -139,6 +178,9 @@ def test_pi_install_compiles_issue_skill_out(
         "load_config",
         lambda root: _config("github", "gh", "https://github.com", "GH_TOKEN"),
     )
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text('{"packages":["npm:pi-mcp-adapter@2.26.0"]}\n', encoding="utf-8")
 
     installed = install(tmp_path, harness)
 

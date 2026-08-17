@@ -15,6 +15,7 @@ def test_documentation_set_and_root_index_exist() -> None:
         "configuration.md",
         "memory.md",
         "issues.md",
+        "cvs.md",
     }
     assert {path.name for path in DOCS.glob("*.md")} == expected
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
@@ -57,3 +58,30 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     assert "enabled: false" in memory
     assert "project_id: payments-api" in memory
     assert "Minimal deep-merge override" in memory
+
+
+def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
+    cvs = (DOCS / "cvs.md").read_text(encoding="utf-8")
+
+    for value in ("git", "jj", "auto", "cli", "mcp"):
+        assert f"`{value}`" in cvs
+    for provider, server_id, cli in (
+        ("GitHub", "cvs_github", "gh"),
+        ("GitLab", "cvs_gitlab", "glab"),
+        ("Gitea", "cvs_gitea", "tea"),
+        ("Forgejo", "cvs_forgejo", "forgejo-cli"),
+    ):
+        assert provider in cvs
+        assert server_id in cvs
+        assert f"`{cli}`" in cvs
+    for path in (
+        ".opencode/skills/cvs/SKILL.md",
+        ".opencode/opencode.json",
+        ".pi/mcp.json",
+        ".pi/settings.json",
+    ):
+        assert path in cvs
+    assert "npm:pi-mcp-adapter@2.26.0" in cvs
+    assert "forgejo-mcp` 2.33.0" in cvs
+    assert "Environment-variable names only" in cvs
+    assert "Pi CVS skill generation is **unsupported**" in cvs

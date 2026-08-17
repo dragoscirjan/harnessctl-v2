@@ -110,16 +110,20 @@
             "remote": {
               "type": "object",
               "properties": {
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
                 "url": {
                   "type": "string",
                   "const": "https://github.com"
                 },
                 "token_env": {
                   "type": "string",
-                  "const": "GH_TOKEN"
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
                 }
               },
-              "required": ["url", "token_env"],
+              "required": ["transport", "url", "token_env"],
               "additionalProperties": false
             }
           },
@@ -156,16 +160,20 @@
             "remote": {
               "type": "object",
               "properties": {
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
                 "url": {
                   "type": "string",
                   "const": "https://gitlab.com"
                 },
                 "token_env": {
                   "type": "string",
-                  "const": "GITLAB_TOKEN"
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
                 }
               },
-              "required": ["url", "token_env"],
+              "required": ["transport", "url", "token_env"],
               "additionalProperties": false
             }
           },
@@ -202,17 +210,21 @@
             "remote": {
               "type": "object",
               "properties": {
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
                 "url": {
                   "format": "uri",
                   "type": "string",
-                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                  "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
                 },
                 "token_env": {
                   "type": "string",
-                  "const": "GITEA_TOKEN"
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
                 }
               },
-              "required": ["url", "token_env"],
+              "required": ["transport", "url", "token_env"],
               "additionalProperties": false
             }
           },
@@ -249,17 +261,21 @@
             "remote": {
               "type": "object",
               "properties": {
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
                 "url": {
                   "format": "uri",
                   "type": "string",
-                  "pattern": "^https?:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                  "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
                 },
                 "token_env": {
                   "type": "string",
-                  "const": "FORGEJO_TOKEN"
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
                 }
               },
-              "required": ["url", "token_env"],
+              "required": ["transport", "url", "token_env"],
               "additionalProperties": false
             }
           },
@@ -267,6 +283,142 @@
           "additionalProperties": false
         }
       ]
+    },
+    "cvs": {
+      "type": "object",
+      "properties": {
+        "local": {
+          "type": "string",
+          "enum": ["git", "jj"]
+        },
+        "remote": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "github"
+                },
+                "tools": {
+                  "type": "string",
+                  "const": "gh"
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
+                "url": {
+                  "type": "string",
+                  "const": "https://github.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              },
+              "required": ["provider", "tools", "transport", "url", "token_env"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "gitlab"
+                },
+                "tools": {
+                  "type": "string",
+                  "const": "glab"
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
+                "url": {
+                  "type": "string",
+                  "const": "https://gitlab.com"
+                },
+                "token_env": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              },
+              "required": ["provider", "tools", "transport", "url", "token_env"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "gitea"
+                },
+                "tools": {
+                  "type": "string",
+                  "const": "tea"
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              },
+              "required": ["provider", "tools", "transport", "url", "token_env"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "forgejo"
+                },
+                "tools": {
+                  "type": "string",
+                  "const": "forgejo-cli"
+                },
+                "transport": {
+                  "type": "string",
+                  "enum": ["auto", "cli", "mcp"]
+                },
+                "url": {
+                  "format": "uri",
+                  "type": "string",
+                  "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])[^\\s/?#]+(?:\\/[^\\s?#]*)?$"
+                },
+                "token_env": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              },
+              "required": ["provider", "tools", "transport", "url", "token_env"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["local", "remote"],
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "output_limit_mode": {
+          "type": "string",
+          "enum": ["bounded-guidance", "hard"]
+        }
+      },
+      "required": ["output_limit_mode"],
+      "additionalProperties": false
     },
     "communication": {
       "type": "object",
@@ -365,6 +517,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["version", "issues", "communication", "memory"],
+  "required": ["version", "issues", "cvs", "mcp", "communication", "memory"],
   "additionalProperties": {}
 }

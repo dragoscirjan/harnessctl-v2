@@ -32,12 +32,12 @@ The local adapter tool set is listed in [configuration](configuration.md). OpenC
 and Pi adapters register it when their packages are loaded. Skill installation and
 tool registration are separate concerns.
 
-## Configured remote providers
+## Configured remote providers and transports
 
-Configuration-driven guidance for GitHub, GitLab, Gitea, and Forgejo is implemented.
-No harnessctl remote adapter, API client, provider migration, CLI installer, command
-runner, repository selector, or credential store exists. Local issue operations are
-not a remote-provider interface.
+Configuration-driven CLI/MCP guidance and host MCP projection for GitHub, GitLab,
+Gitea, and Forgejo are implemented. No harnessctl remote adapter, API client, provider
+migration, CLI installer, command runner, repository selector, credential store, or Pi
+issue skill exists. Local issue operations are not a remote-provider interface.
 
 Routing pairs GitHub with `gh`, GitLab with `glab`, Gitea with `tea`, and
 Forgejo with `forgejo-cli`. The CLI must already be installed. Remote configuration
@@ -45,6 +45,14 @@ identifies the provider endpoint and names the environment variable containing t
 token; the token value remains only in the environment and must never appear in YAML.
 Agents must confirm an ambiguous repository before mutation and must not fall back to
 filesystem or another provider when the selected CLI fails.
+
+Remote Issues independently select `auto`, `cli`, or `mcp` through
+`issues.remote.transport`; omission in an existing valid remote configuration migrates
+in memory to `auto`. `cli` permits only the matrix CLI. `mcp` permits only the fixed-ID
+service and never falls back to CLI. `auto` preflights MCP first and may select the CLI
+only before invocation. After any mutation starts, every result, error, timeout,
+cancellation, or ambiguity is terminal for automatic routing. CVS configuration and
+runtime success never determine the Issues route.
 
 | Provider | CLI           | Required URL          | Required token environment variable |
 | -------- | ------------- | --------------------- | ----------------------------------- |
@@ -60,6 +68,7 @@ issues:
   type: github
   tools: gh
   remote:
+    transport: auto
     url: https://github.com
     token_env: GH_TOKEN
 ```
@@ -71,6 +80,7 @@ issues:
   type: gitlab
   tools: glab
   remote:
+    transport: cli
     url: https://gitlab.com
     token_env: GITLAB_TOKEN
 ```
@@ -82,6 +92,7 @@ issues:
   type: gitea
   tools: tea
   remote:
+    transport: mcp
     url: https://gitea.example.com
     token_env: GITEA_TOKEN
 ```
@@ -93,6 +104,7 @@ issues:
   type: forgejo
   tools: forgejo-cli
   remote:
+    transport: auto
     url: https://forgejo.example.com
     token_env: FORGEJO_TOKEN
 ```
@@ -103,9 +115,18 @@ to filesystem and are ignored remotely.
 
 Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
-OpenCode issue-tracking skill contains only the selected provider guidance. It does
-not install tools or grant access. Pi issue-skill installation remains unsupported
-because no skill discovery path is verified.
+OpenCode issue-tracking skill contains only the selected provider and transport
+guidance. It does not install tools or grant access. Pi issue-skill installation remains
+unsupported because no skill discovery path is verified. Pi MCP host configuration is
+separately implemented through the pinned adapter prerequisite.
+
+Remote Issues use fixed IDs `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and
+`cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
+environment-name, endpoint, command, version, OAuth, header, or toolset mismatch fails
+instead of choosing one domain. GitHub and GitLab use official hosted MCP services.
+Gitea and Forgejo use operator-installed external GPL `forgejo-mcp` 2.33.0 and require
+the runtime version check before mutation. See [CVS and MCP providers](cvs.md) for exact
+host formats, vetted license boundaries, output limits, and Pi consent/residuals.
 
 Capability references used by generated guidance are:
 

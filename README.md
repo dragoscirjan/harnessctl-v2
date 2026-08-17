@@ -23,6 +23,7 @@ Start with the [documentation index](docs/README.md), then use the focused guide
 - [Configuration and tool settings](docs/configuration.md)
 - [Repository memory and disposable cache](docs/memory.md)
 - [Filesystem issues and configured provider routing](docs/issues.md)
+- [Version control and MCP provider setup](docs/cvs.md)
 
 The detailed intended lifecycle remains in [FLOWS.md](FLOWS.md). Topic guides label
 implemented behavior separately from plans so roadmap material is not mistaken for a
@@ -326,6 +327,9 @@ Implemented in `src/harnessctl/`:
 - Conflict detection that reports all existing targets.
 - Explicit `--force` overwrite behavior.
 - OpenCode and Pi target generation.
+- Configurable direct Git or Jujutsu guidance and provider-specific CVS routing.
+- Fixed-ID GitHub, GitLab, Gitea, and Forgejo MCP projection into OpenCode and Pi host
+  files, with independently configured CVS and Issues policies.
 - Packaged prompt templates that are included in built wheels.
 
 The current registry contains 18 canonical templates and installs each under the
@@ -405,6 +409,12 @@ unverified Pi skill path or extension-distribution mechanism. When repository me
 is enabled, `--harness pi` and `--harness all` fail before writing; register the Pi
 package manually until distribution and skill discovery are verified.
 
+OpenCode receives a generated CVS skill at `.opencode/skills/cvs/SKILL.md`. Pi CVS and
+Issues skill distribution remains unsupported, but Pi MCP host configuration is
+implemented through the consent-gated, pinned `npm:pi-mcp-adapter@2.26.0` prerequisite.
+See the [CVS and MCP guide](docs/cvs.md) for exact formats, transport fallback, external
+license boundaries, and residual installation effects.
+
 Both adapters also have model-backed integration coverage for eight workflows:
 
 - configuration creation;
@@ -442,6 +452,8 @@ The following are intentionally not part of the current slice:
 - automatic retry, ensemble, or escalation behavior;
 - model-tier routing and cost-aware model selection;
 - external issue trackers or hosting integrations;
+- direct provider API clients, provider CLI installation/authentication, and automatic
+  merge;
 - worktrees, automatic commits, automatic pushes, or automatic PR creation;
 - automatic merge;
 - self-development mode;
