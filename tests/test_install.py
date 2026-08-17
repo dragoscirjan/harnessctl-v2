@@ -892,8 +892,8 @@ def test_local_mcp_missing_binary_still_installs_cli_skill(
 
     skill = tmp_path / ".opencode/skills/cvs/SKILL.md"
     assert skill in installed
-    assert "Available remote CLI: `forgejo-cli`" in skill.read_text(encoding="utf-8")
-    assert "No MCP server is available" in skill.read_text(encoding="utf-8")
+    assert "- Remote CLI: `forgejo-cli`." in skill.read_text(encoding="utf-8")
+    assert "- Remote MCP: unavailable." in skill.read_text(encoding="utf-8")
 
 
 def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
