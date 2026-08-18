@@ -19,6 +19,10 @@ from harnessctl.templates import (
 install_module = importlib.import_module("harnessctl.install")
 
 
+def _mock_pi_path() -> str:
+    return "C:/tools/pi.exe" if install_module.os.name == "nt" else "/usr/bin/pi"
+
+
 def _tree_manifest(root: Path) -> dict[str, tuple[str, bytes | None]]:
     return {
         path.relative_to(root).as_posix(): (
@@ -1027,7 +1031,7 @@ def test_pi_missing_adapter_without_opt_in_has_no_project_mutation(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
 
     with pytest.raises(RuntimeError, match="allow-pi-package-install"):
@@ -1048,7 +1052,7 @@ def test_pi_host_symlink_fails_before_package_mutation(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
     monkeypatch.setattr(
         install_module.subprocess,
@@ -1073,7 +1077,7 @@ def test_pi_owned_file_conflict_fails_before_package_mutation(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
     monkeypatch.setattr(
         install_module.subprocess,
@@ -1094,7 +1098,7 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
 
     def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
@@ -1117,14 +1121,14 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
 
     assert calls == [
         [
-            "/usr/bin/pi",
+            _mock_pi_path(),
             "install",
             "-l",
             "npm:@harnessctl/pi-tools@latest",
             "--approve",
         ],
         [
-            "/usr/bin/pi",
+            _mock_pi_path(),
             "install",
             "-l",
             "npm:pi-mcp-adapter@2.26.0",
@@ -1145,7 +1149,7 @@ def test_pi_failure_removes_transaction_adapter_and_restores_exact_tree(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
 
     def fake_run(args: list[str], **_kwargs: object) -> SimpleNamespace:
@@ -1188,7 +1192,7 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
     monkeypatch.setattr(
         install_module.shutil,
         "which",
-        lambda name: "/usr/bin/pi" if name == "pi" else None,
+        lambda name: _mock_pi_path() if name == "pi" else None,
     )
 
     def fake_run(args: list[str], **_kwargs: object) -> SimpleNamespace:
