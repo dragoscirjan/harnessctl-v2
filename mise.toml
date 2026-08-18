@@ -106,6 +106,10 @@ run = ["node scripts/smoke-packages.mjs", "bun scripts/smoke-packages.mjs"]
 description = "Validate GitHub Actions workflows"
 run = "actionlint"
 
+[tasks.mermaid-check]
+description = "Validate Mermaid syntax and accessibility metadata"
+run = "npm run mermaid:check"
+
 [tasks.python-test]
 description = "Run Python tests"
 run = "uv run pytest"
@@ -148,7 +152,7 @@ depends = ["node-test", "python-test"]
 
 [tasks.quality]
 description = "Run the complete local quality gate"
-depends = ["format", "lint", "node-quality", "python-test", "release-artifacts", "node-dupcheck", "python-deadcode", "actions-lint"]
+depends = ["format", "lint", "node-quality", "python-test", "release-artifacts", "node-dupcheck", "python-deadcode", "actions-lint", "mermaid-check"]
 
 [tasks.integration]
 description = "Run harness integration tests using configured model environments"

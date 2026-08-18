@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00058"
+"type": "task"
+"title": "Define template-derived SDLC transition model"
+"status": "done"
+"created_at": "2026-08-18T20:02:07.197Z"
+"updated_at": "2026-08-18T20:48:40.721Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00057"
+"body": "Given all 18 canonical templates under `src/harnessctl/templates/sdlc/`\nWhen command recommendations, approval gates, loops, blocked states, and boundaries are extracted\nThen one complete transition model must describe every source command without inventing behavior.\n\n## Acceptance criteria\n\n- [x] Installed and conceptual command names are mapped.\n- [x] `work-new` confirmation/revision loop is explicit.\n- [x] Entity routing and design branches are explicit.\n- [x] Verification/review repair loops are explicit.\n- [x] Contextual, blocked, and terminal outcomes are represented."
+"comments": []

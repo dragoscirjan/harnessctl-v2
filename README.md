@@ -33,20 +33,16 @@ current capability.
 
 The product has four layers:
 
-```text
-Canonical SDLC prompts
-        │
-        ▼
-Harness-specific compiled commands
-        │
-        ├── OpenCode Markdown commands
-        └── Pi prompt payloads / future Pi extension
-        │
-        ▼
-Generic filesystem and workflow tools
-        │
-        ▼
-Repository + human decisions + evidence
+```mermaid
+flowchart TD
+    accTitle: harnessctl product layers
+    accDescr: Canonical prompts compile into harness-specific commands that use generic tools to produce human-governed repository records and evidence.
+    prompts[Canonical SDLC prompts] --> commands[Harness-specific compiled commands]
+    commands --> opencode[OpenCode Markdown commands]
+    commands --> pi[Pi prompt payloads / future Pi extension]
+    opencode --> tools[Generic filesystem and workflow tools]
+    pi --> tools
+    tools --> record[Repository + human decisions + evidence]
 ```
 
 ### harnessctl owns
@@ -76,30 +72,25 @@ necessary.
 
 The conceptual command flow is:
 
-```text
-/new
-  │
-  ▼
-/explore
-  │
-  ▼
-/plan ──────────────── human approval required
-  │
-  ▼
-/implement
-  │
-  ▼
-/verify
-  │
-  ▼
-/review ────────────── human review required
-  │
-  ▼
-/finish ────────────── delivery approval required
-  │
-  ▼
-human merge
+```mermaid
+flowchart TD
+    accTitle: Abbreviated intended SDLC flow
+    accDescr: Work moves from intake through exploration, planning, implementation, verification, review, and delivery, with human approval gates before implementation, finishing, and merge.
+    new["work-new<br/>/work new · /new"] --> explore["work-explore<br/>/work explore · /explore"]
+    explore --> plan["work-plan<br/>/work plan · /plan"]
+    plan --> planGate{Human approval required}
+    planGate --> implement["work-implement<br/>/work implement · /implement"]
+    implement --> verify["work-verify<br/>/work verify · /verify"]
+    verify --> review["work-review<br/>/work review · /review"]
+    review --> reviewGate{Human review required}
+    reviewGate --> finish["work-finish<br/>/work finish · /finish"]
+    finish --> deliveryGate{Delivery approval required}
+    deliveryGate --> merge[Human merge]
 ```
+
+This overview is intentionally abbreviated. The
+[authoritative 18-template command transition graph and accessible edge table](docs/sdlc.md#authoritative-command-transitions)
+cover contextual routes, gates, repair loops, and terminal outcomes.
 
 The grouped command names above are the desired workflow vocabulary. Current
 OpenCode installation uses the explicit hyphenated form because OpenCode command

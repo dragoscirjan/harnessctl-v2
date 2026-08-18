@@ -13,25 +13,28 @@ and existing issue/design records instead of relying only on the current chat.
 
 The SDLC is organized around these entities:
 
-```text
-Initiative
-  └── Epic
-        └── Story
-              └── Task
-                    └── Code change
+```mermaid
+flowchart TD
+    accTitle: SDLC entity hierarchy
+    accDescr: Initiatives contain Epics, Epics contain Stories, Stories contain Tasks, and Tasks produce code changes.
+    initiative[Initiative] --> epic[Epic]
+    epic --> story[Story]
+    story --> task[Task]
+    task --> change[Code change]
 ```
 
 Design documents attach to the entity they describe:
 
-```text
-Initiative / Epic / Story
-        │
-        ├── design document
-        ├── HLD
-        └── LLD(s)
-                │
-                ▼
-              Tasks
+```mermaid
+flowchart TD
+    accTitle: Design documents and tasks
+    accDescr: Initiatives, Epics, and Stories may have general designs, HLDs, or LLDs, each of which can inform Tasks.
+    entity[Initiative / Epic / Story] --> design[Design document]
+    entity --> hld[HLD]
+    entity --> lld["LLD(s)"]
+    design --> tasks[Tasks]
+    hld --> tasks
+    lld --> tasks
 ```
 
 The issue-management tools own IDs, parent/child relationships, dependencies, and
@@ -78,6 +81,8 @@ vocabulary, shown below using short labels, is:
 
 ```text
 /new
+/explore
+/plan
 /resume
 /start-initiative <id>
 /start-epic <id>
@@ -99,6 +104,8 @@ OpenCode may initially expose the canonical commands as hyphenated Markdown comm
 
 ```text
 /work-new
+/work-explore
+/work-plan
 /work-resume
 /work-start-initiative
 /work-start-epic
@@ -120,6 +127,8 @@ Pi may expose the same operations through a grouped extension command:
 
 ```text
 /work new
+/work explore
+/work plan
 /work resume
 /work start-initiative
 /work start-epic
@@ -143,57 +152,49 @@ conceptual source of truth.
 
 ## 3. Entity lifecycle
 
-```text
-/new
-  │
-  ├── match existing Initiative/Epic
-  │       └── /resume or /start-initiative /start-epic
-  │
-  └── create new Initiative or Epic after confirmation
-          │
-          ├── /start-initiative
-          │       └── split into Epics
-          │
-          └── /start-epic
-                  ├── /write-stories
-                  │       └── /start-story
-                  ├── /design-doc
-                  ├── /hld
-                  ├── /lld
-                  ├── /write-tasks
-                  └── /implement
+```mermaid
+flowchart TD
+    accTitle: Intended entity lifecycle
+    accDescr: Intake identifies an existing or new Initiative or Epic, then entity-context commands recommend Story, design, task, or implementation stages.
+    new["work-new<br/>/work new · /new"] --> match{Matching Initiative or Epic?}
+    match -->|Yes| existing[Match existing Initiative / Epic]
+    existing --> resume["work-resume<br/>/work resume · /resume"]
+    existing --> startExisting["work-start-initiative · /work start-initiative · /start-initiative<br/>or work-start-epic · /work start-epic · /start-epic"]
+    match -->|No, after confirmation| create[Create new Initiative or Epic]
+    create --> startInitiative["work-start-initiative<br/>/work start-initiative · /start-initiative"]
+    startInitiative --> split[Split into Epics]
+    create --> startEpic["work-start-epic<br/>/work start-epic · /start-epic"]
+    split --> startEpic
+    startEpic --> writeStories["work-write-stories<br/>/work write-stories · /write-stories"]
+    writeStories --> startStory["work-start-story<br/>/work start-story · /start-story"]
+    startEpic --> designDoc["work-design-doc<br/>/work design-doc · /design-doc"]
+    startEpic --> hld["work-hld<br/>/work hld · /hld"]
+    startEpic --> lld["work-lld<br/>/work lld · /lld"]
+    startEpic --> writeTasks["work-write-tasks<br/>/work write-tasks · /write-tasks"]
+    startEpic --> implement["work-implement<br/>/work implement · /implement"]
 ```
 
 The delivery path is:
 
-```text
-design-doc / hld / lld
-              │
-              ▼
-            /write-tasks
-              │ approved task graph
-              ▼
-          /implement
-              │
-              ▼
-           /verify
-              │
-              ├── failed or incomplete ──► /implement
-              │
-              ▼
-           /review
-              │
-              ├── repair required ───────► /implement
-              │
-              ▼
-            /cvs
-              │ branch + commit + PR
-              ▼
-           /finish
-              │ deployment proposal if needed
-              ▼
-        human merge/deployment
+```mermaid
+flowchart TD
+    accTitle: Intended delivery path
+    accDescr: Approved designs lead to Tasks and implementation, followed by verification and review repair loops, version-control delivery, and human merge or deployment.
+    design["work-design-doc · /work design-doc · /design-doc<br/>work-hld · /work hld · /hld<br/>work-lld · /work lld · /lld"] --> tasks["work-write-tasks<br/>/work write-tasks · /write-tasks"]
+    tasks -->|Approved task graph| implement["work-implement<br/>/work implement · /implement"]
+    implement --> verify["work-verify<br/>/work verify · /verify"]
+    verify -->|Failed or incomplete| implement
+    verify -->|Passes| review["work-review<br/>/work review · /review"]
+    review -->|Repair required| implement
+    review -->|Accepted| cvs["work-cvs<br/>/work cvs · /cvs"]
+    cvs -->|Branch + commit + PR| finish["work-finish<br/>/work finish · /finish"]
+    finish -->|Deployment proposal if needed| human[Human merge / deployment]
 ```
+
+This lifecycle view is intentionally entity-oriented. See the
+[authoritative 18-template command transition graph and accessible edge table](docs/sdlc.md#authoritative-command-transitions)
+for every installed prompt, conceptual alias, contextual route, gate, loop, and
+terminal outcome.
 
 ## 4. `/new` — establish or locate work
 
@@ -242,9 +243,8 @@ Suggested next command
 
 **Must not:** create a duplicate entity without discussing existing matches.
 
-**Current status:** The current `work-new` prototype only creates a conversational
-work contract and does not yet search or create initiatives/epics. This is the first
-prompt that needs to be redesigned.
+**Current status:** Installed as `work-new`. It creates a conversational work contract
+but does not search for or create Initiatives or Epics.
 
 ## 5. `/resume` — recover previous work
 
@@ -286,8 +286,8 @@ Recommended next command
 Written artifacts are authoritative. Memory is useful for discovery but must not
 override a contradictory artifact without human confirmation.
 
-**Current status:** Not implemented. The README contains only a manual resume
-checklist.
+**Current status:** Installed as the theoretical `work-resume` prompt. It reconstructs
+user-supplied context but does not perform artifact or tool-based recovery.
 
 ## 6. `/start-initiative` — split an initiative into epics
 
@@ -325,8 +325,8 @@ Suggested next Epic
 
 **Gate:** Human approval before creating Epics.
 
-**Current status:** Not implemented as a prompt command. Generic issue hierarchy tools
-are available.
+**Current status:** Installed as a theoretical conversation-only prompt. Generic issue
+hierarchy tools exist, but this prompt does not create Epics.
 
 ## 7. `/start-epic` — understand an Epic and choose the next path
 
@@ -369,7 +369,8 @@ Risks
 Recommended next command
 ```
 
-**Current status:** Not implemented.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+load artifacts or invoke the recommended next command.
 
 ## 8. `/start-from` — select active context
 
@@ -393,7 +394,8 @@ Recommended next command
 This is a context-selection command, not a mutation command. It is the bridge between
 resuming work and choosing a specific operation.
 
-**Current status:** Not implemented.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+load or mutate entity state.
 
 ## 9. `/write-stories` — split an Epic into Stories
 
@@ -418,8 +420,8 @@ resuming work and choosing a specific operation.
 **Output:** Story proposals, relationships, acceptance criteria, and recommended next
 step for the first selected Story.
 
-**Current status:** Not implemented as a prompt command. Generic issue creation can
-create Stories manually.
+**Current status:** Installed as a theoretical conversation-only prompt. Generic issue
+tools can create Stories, but this prompt does not invoke them.
 
 ## 10. `/start-story` — understand a Story and choose its execution path
 
@@ -454,7 +456,8 @@ inside an Epic.
 **Output:** Story understanding, parent Epic context, existing documentation, existing
 tasks, missing information, risks, and the recommended next command.
 
-**Current status:** Not implemented.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+load Story artifacts or invoke the recommended next command.
 
 ## 11. Design-document commands
 
@@ -513,8 +516,8 @@ the HLD/PRD dependency.
 
 **Next recommendation:** `/write-tasks`.
 
-**Current status:** Design files exist in `.specs/`, but these prompt commands do not
-yet generate or link them automatically.
+**Current status:** All three prompts are installed in theoretical conversation-only
+mode. Design files exist in `.specs/`, but these prompts do not write or link them.
 
 ## 12. `/write-tasks` — decompose design into executable tasks
 
@@ -548,7 +551,8 @@ yet generate or link them automatically.
 .harnessctl/write-tasks/<task-id>/links.md
 ```
 
-**Current status:** Generic issue tools exist, but design-to-task extraction does not.
+**Current status:** Installed as a theoretical conversation-only prompt. Generic issue
+tools exist, but this prompt does not extract or create Tasks.
 
 ## 13. `/implement` — execute approved work
 
@@ -580,7 +584,8 @@ sequentially.
 
 **Next recommendation:** `/verify`.
 
-**Current status:** Not implemented as a prompt command.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+edit source files or run implementation tools.
 
 ## 14. `/verify` — quality and acceptance verification
 
@@ -616,8 +621,8 @@ unverified claims, and remaining risks.
 - `/implement` with repair comments when verification fails;
 - `/review` when verification passes.
 
-**Current status:** Not implemented as a prompt command. Repository quality commands
-exist and can be invoked manually.
+**Current status:** Installed as a theoretical conversation-only prompt. Repository
+quality commands exist, but this prompt does not execute them.
 
 ## 15. `/review` — independent review
 
@@ -659,7 +664,8 @@ Decision: accept, repair, block, or reject
 - `/implement` with findings when repairs are required;
 - `/cvs` when accepted.
 
-**Current status:** Not implemented as a prompt command.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+inspect code or execute review tools.
 
 ## 16. `/cvs` — branch, commit, and pull request
 
@@ -688,8 +694,8 @@ Decision: accept, repair, block, or reject
 
 **Must not:** merge the pull request. Merge is always human-only.
 
-**Current status:** Not implemented as a prompt command. The agent workflow can
-perform these operations manually when explicitly authorized.
+**Current status:** Installed as a theoretical conversation-only prompt. The configured
+CVS skill can guide authorized operations, but this prompt does not execute them.
 
 ## 17. `/finish` — delivery/deployment preparation
 
@@ -712,13 +718,16 @@ perform these operations manually when explicitly authorized.
 **Must not:** merge or deploy automatically without explicit policy and human
 approval.
 
-**Current status:** Not implemented.
+**Current status:** Installed as a theoretical conversation-only prompt. It does not
+merge, deploy, or run delivery tools.
 
 ## 18. Dependencies and approvals
 
 | Command             | Required context         | Primary output                         | Approval/gate                |
 | ------------------- | ------------------------ | -------------------------------------- | ---------------------------- |
 | `/new`              | User request             | Initiative or Epic + work contract     | Contract/entity confirmation |
+| `/explore`          | Confirmed work contract  | Read-only evidence report              | No mutation                  |
+| `/plan`             | Contract + evidence      | Implementation plan                    | Plan approval                |
 | `/resume`           | Written artifacts/memory | Current-state summary                  | No automatic continuation    |
 | `/start-initiative` | Initiative               | Epic proposals/children                | Epic breakdown approval      |
 | `/start-epic`       | Epic                     | Context and next-action recommendation | User chooses next action     |
@@ -796,8 +805,9 @@ The assistant must stop and report `BLOCKED` when:
 - One shared local-operation barrier and internal cache rebuild/repair.
 - OpenCode and Pi adapter tools.
 - uv/Jinja prompt installer.
-- `work-new`, `work-explore`, and `work-plan` prompt templates, although their
-  semantics must be realigned with this entity-first flow.
+- All 18 `work-*` prompt templates and generated OpenCode/Pi prompt files.
+- Read-only repository exploration in `work-explore`; the remaining prompts keep
+  their documented bounded or theoretical behavior.
 - Mise-managed Node, Python, and shell quality workflow.
 
 ### Partially implemented
@@ -807,16 +817,18 @@ The assistant must stop and report `BLOCKED` when:
 - HLDs and LLDs exist as manually authored `.specs/` documents.
 - Document links and issue hierarchy are supported by generic tools.
 - OpenCode/Pi integration tests exercise the tools, not the full SDLC prompt flow.
+- Prompt distribution is complete, but end-to-end tool-enabled SDLC orchestration is
+  partial.
 
 ### Not implemented
 
-- Entity-aware `/new` that searches and creates Initiatives/Epics.
-- `/resume` memory/artifact recovery.
-- `/start-initiative`, `/start-epic`, `/start-from`, `/write-stories`, and
-  `/start-story`.
-- `/design-doc`, `/hld`, `/lld`, and automatic entity-linked design creation.
-- `/write-tasks` design-to-task decomposition.
-- `/implement`, `/verify`, `/review`, `/cvs`, and `/finish` prompts.
+- Entity-aware execution behind `/new`, including Initiative/Epic search and creation.
+- Tool-enabled `/resume` artifact recovery.
+- Tool-enabled entity loading and mutation behind `/start-initiative`, `/start-epic`,
+  `/start-from`, `/write-stories`, and `/start-story`.
+- Automatic entity-linked design creation behind `/design-doc`, `/hld`, and `/lld`.
+- Design-to-task extraction behind `/write-tasks`.
+- Tool-enabled implementation, verification, review, CVS delivery, and finish flows.
 - Pi grouped command extension.
 - Orchestrator, workers, model tiers, retry, ensemble, and escalation routing.
 - External tracker adapters and self-development mode.
@@ -843,24 +855,16 @@ The assistant must stop and report `BLOCKED` when:
 
 ## 23. Roles
 
-```text
-product owner / human
-  └── confirms entities, designs, stories, tasks, review, delivery, and merge
-
-tech advisor / architect
-  └── HLDs and architecture decisions
-
-tech lead
-  └── LLDs, technical decomposition, implementation strategy
-
-lead engineer
-  └── task implementation and tests
-
-reviewer
-  └── independent verification and review
-
-orchestrator
-  └── coordinates stages and delegates only within policy
+```mermaid
+flowchart LR
+    accTitle: SDLC roles and responsibilities
+    accDescr: Human owners, architects, leads, engineers, reviewers, and the Orchestrator each have distinct approval, design, implementation, review, or coordination responsibilities.
+    human[Product owner / human] --> humanRole[Confirms entities, designs, stories, tasks, review, delivery, and merge]
+    architect[Tech advisor / architect] --> architectRole[HLDs and architecture decisions]
+    lead[Tech lead] --> leadRole[LLDs, technical decomposition, implementation strategy]
+    engineer[Lead engineer] --> engineerRole[Task implementation and tests]
+    reviewer[Reviewer] --> reviewerRole[Independent verification and review]
+    orchestrator[Orchestrator] --> orchestratorRole[Coordinates stages and delegates only within policy]
 ```
 
 ## 24. Returning after a break

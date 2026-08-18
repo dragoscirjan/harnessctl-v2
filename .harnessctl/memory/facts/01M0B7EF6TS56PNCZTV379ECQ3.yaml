@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M0B7EF6TS56PNCZTV379ECQ3
+memory_type: semantic
+record_type: fact
+organization_id: local
+project_id: project
+topic: workflow-preferences
+summary: No LLD for docs work; use approved chat plan.
+details: User rejected new LLD during SDLC Mermaid documentation task. Proceed from approved chat plan unless user explicitly requests design artifact.
+source:
+  kind: user-confirmed
+  ref: conversation
+  revision: null
+created_at: 2026-08-18T20:01:48.250Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - caveman
+  - docs
+  - lld
+  - workflow
