@@ -1,5 +1,15 @@
 # @harnessctl/pi-tools
 
+## 0.1.6
+
+### Patch Changes
+
+- [#25](https://github.com/dragoscirjan/harnessctl-v2/pull/25) [`70281cc`](https://github.com/dragoscirjan/harnessctl-v2/commit/70281cc831c24128fc8566a4744128ea2d048dd2) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add provider-aware CVS and Issues guidance, generated OpenCode and Pi MCP configuration,
+  direct OpenCode tools registration, and complete Pi prompts, skills, and tool-package
+  installation.
+- Updated dependencies [[`70281cc`](https://github.com/dragoscirjan/harnessctl-v2/commit/70281cc831c24128fc8566a4744128ea2d048dd2)]:
+  - @harnessctl/generic-tools@0.1.6
+
 ## 0.1.5
 
 ### Patch Changes
