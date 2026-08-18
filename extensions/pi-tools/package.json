@@ -23,6 +23,10 @@
       "import": "./dist/index.js"
     }
   },
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./dist/index.js"]
+  },
   "files": ["dist"],
   "publishConfig": {
     "access": "public",

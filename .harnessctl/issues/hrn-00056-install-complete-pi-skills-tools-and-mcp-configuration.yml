@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00056"
+"type": "bug"
+"title": "Install complete Pi skills tools and MCP configuration"
+"status": "done"
+"created_at": "2026-08-17T22:48:09.087Z"
+"updated_at": "2026-08-17T23:16:17.984Z"
+"created_by": "lead-engineer"
+"assigned_to": "devops"
+"parent": "hrn-00050"
+"body": "Given a Pi project\nWhen harnessctl installs Pi assets with package consent\nThen all SDLC prompts, all configured skills, harnessctl Pi tools, and configured CVS MCP servers are operational.\n\n## Requirements\n\n- Install all 18 prompts under `.pi/prompts/`.\n- Install `caveman`, `cvs`, `issue-tracking`, and `memory` under `.pi/skills/`.\n- Install project-local `@harnessctl/pi-tools` and pinned `pi-mcp-adapter` with explicit consent.\n- Generate `.pi/mcp.json` with configured CVS servers.\n- Enable Pi memory hooks when repository memory is enabled.\n- Preserve prevalidation, rollback, secret, and cross-platform safeguards.\n\n## Acceptance\n\n- [x] Pi prompts and skills match current renderers.\n- [x] Pi tools and MCP adapter package state is verified.\n- [x] Pi MCP configuration matches configured CVS intents.\n- [x] Tests and full quality checks pass."
+"comments":
+  - "id": "hrn-00056-C0001"
+    "created_at": "2026-08-17T23:16:12.370Z"
+    "created_by": "lead-engineer"
+    "body": "Implemented complete Pi prompt, skill, tool-package, and MCP installation. Full quality/build/runtime/package checks passed. Live project package installation waits for release because published `@harnessctl/pi-tools@0.1.4` lacks new `pi.extensions`; installing stale `latest` would not expose tools."

@@ -8,6 +8,13 @@ function temporaryDirectory(): string {
   return mkdtempSync(join(tmpdir(), 'harnessctl-config-'));
 }
 
+const PROVIDERS = [
+  ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
+  ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+  ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+  ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
+] as const;
+
 describe('configuration tools', () => {
   it('creates the neutral default configuration', () => {
     const cwd = temporaryDirectory();
@@ -24,6 +31,16 @@ describe('configuration tools', () => {
           tools:
             'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
         },
+        cvs: {
+          local: 'git',
+          remote: {
+            provider: 'github',
+            tools: 'gh',
+            url: 'https://github.com',
+            token_env: 'GH_TOKEN',
+          },
+        },
+        mcp: { output_limit_mode: 'bounded-guidance' },
         paths: {
           root: '.harnessctl',
           tasks: '.harnessctl/tasks',
@@ -125,7 +142,7 @@ describe('configuration tools', () => {
     ['github', ' gh ', 'gh', 'https://github.com', 'GH_TOKEN'],
     ['gitlab', ' glab ', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
     ['gitea', ' tea ', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
-    ['forgejo', ' forgejo-cli ', 'forgejo-cli', 'http://forgejo.example.test:3000', 'FORGEJO_TOKEN'],
+    ['forgejo', ' forgejo-cli ', 'forgejo-cli', 'https://forgejo.example.test:3000', 'FORGEJO_TOKEN'],
   ])(
     'normalizes explicit %s tooling and retains filesystem-only overlay defaults',
     (type, tools, normalized, url, tokenEnv) => {
@@ -202,11 +219,11 @@ describe('configuration tools', () => {
     ['gitea', 'tea', 'gitea.example.test', 'GITEA_TOKEN'],
     ['gitea', 'tea', 'https://user:secret@gitea.example.test', 'GITEA_TOKEN'],
     ['gitea', 'tea', 'https://gitea.example.test/`injected`', 'GITEA_TOKEN'],
+    ['gitea', 'tea', 'https://gitea.example.test/${TOKEN}', 'GITEA_TOKEN'],
     ['gitea', 'tea', 'https://gitea.example.test?owner=project', 'GITEA_TOKEN'],
     ['gitea', 'tea', 'https://gitea.example.test#project', 'GITEA_TOKEN'],
     ['forgejo', 'forgejo-cli', 'ssh://forgejo.example.test', 'FORGEJO_TOKEN'],
     ['github', 'gh', 'https://github.com', 'secret-value'],
-    ['gitea', 'tea', 'https://gitea.example.test', 'GH_TOKEN'],
   ])('rejects invalid %s remote connection %s %s', (type, tools, url, tokenEnv) => {
     expect(() =>
       readConfigFromText(
@@ -215,21 +232,90 @@ describe('configuration tools', () => {
     ).toThrow(/remote/u);
   });
 
+  it.each(['git', 'jj'])('accepts %s with every CVS provider for CLI and MCP capabilities', (local) => {
+    for (const [provider, tools, url, tokenEnv] of PROVIDERS) {
+      expect(
+        readConfigFromText(
+          `version: 2\ncvs:\n  local: ${local}\n  remote:\n    provider: ${provider}\n    tools: ${tools}\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+        ),
+      ).toMatchObject({ cvs: { local, remote: { provider, tools, url, token_env: tokenEnv } } });
+    }
+  });
+
+  it('preserves provider CLI and MCP connection data for CVS and Issues', () => {
+    const config = readConfigFromText(
+      'version: 1\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n',
+    );
+    expect(config).toMatchObject({
+      cvs: { remote: { provider: 'github', tools: 'gh', url: 'https://github.com', token_env: 'GH_TOKEN' } },
+      issues: {
+        type: 'github',
+        tools: 'gh',
+        remote: { url: 'https://github.com', token_env: 'ISSUE_TOKEN' },
+      },
+      mcp: { output_limit_mode: 'bounded-guidance' },
+    });
+  });
+
+  it.each(PROVIDERS.slice(1))('requires a complete explicit CVS override for %s', (provider) => {
+    expect(() => readConfigFromText(`version: 2\ncvs:\n  remote:\n    provider: ${provider}\n`)).toThrow(
+      /cvs\.remote\.(tools|url|token_env)/u,
+    );
+  });
+
+  it.each([
+    ['cvs.local', 'cvs:\n  local: svn'],
+    ['cvs.remote.transport', 'cvs:\n  remote:\n    transport: auto'],
+    [
+      'issues.remote.transport',
+      'issues:\n  type: github\n  tools: gh\n  remote:\n    transport: auto\n    url: https://github.com\n    token_env: GH_TOKEN',
+    ],
+    ['cvs.remote.tools', 'cvs:\n  remote:\n    tools: glab'],
+    ['cvs.remote.url', 'cvs:\n  remote:\n    url: https://github.example.test'],
+    ['cvs.remote.token_env', 'cvs:\n  remote:\n    token_env: ghp_secret'],
+    ['mcp.output_limit_mode', 'mcp:\n  output_limit_mode: unlimited'],
+  ])('rejects unsafe or unsupported %s', (_field, yaml) => {
+    expect(() => readConfigFromText(`version: 2\n${yaml}\n`)).toThrow(ConfigError);
+  });
+
+  it.each([
+    'issues:\n  unexpected: true',
+    'issues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n    unexpected: true',
+    'cvs:\n  unexpected: true',
+    'cvs:\n  remote:\n    mcp_id: cvs_github',
+    'mcp:\n  servers:\n    id: cvs_github',
+  ])('rejects unknown nested configuration without making fixed MCP IDs configurable', (yaml) => {
+    expect(() => readConfigFromText(`version: 2\n${yaml}\n`)).toThrow(ConfigError);
+  });
+
+  it('accepts hard output limiting as a host-neutral configuration policy', () => {
+    expect(readConfigFromText('version: 2\nmcp:\n  output_limit_mode: hard\n')).toMatchObject({
+      mcp: { output_limit_mode: 'hard' },
+    });
+  });
+
   it.each([
     ['github', 'glab'],
     ['gitlab', 'gh'],
     ['gitea', 'gh'],
     ['forgejo', 'tea,gh'],
   ])('rejects provider/tool mismatch %s with %s', (type, tools) => {
-    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n`)).toThrow(
-      /issues\.tools/u,
-    );
+    const connection = PROVIDERS.find(([provider]) => provider === type);
+    expect(connection).toBeDefined();
+    const [, , url, tokenEnv] = connection!;
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
+      ),
+    ).toThrow(/issues\.tools/u);
   });
 
   it.each(['gh --token secret', '../gh', 'TOKEN=value', 'gh;rm', 'gh,', ''])('rejects unsafe tool text %j', (tools) => {
-    expect(() => readConfigFromText(`version: 2\nissues:\n  type: forgejo\n  tools: "${tools}"\n`)).toThrow(
-      /issues\.tools/u,
-    );
+    expect(() =>
+      readConfigFromText(
+        `version: 2\nissues:\n  type: forgejo\n  tools: "${tools}"\n  remote:\n    url: https://forgejo.example.test\n    token_env: FORGEJO_TOKEN\n`,
+      ),
+    ).toThrow(/issues\.tools/u);
   });
 
   it('rejects incomplete, extended, and duplicate filesystem tool sets', () => {

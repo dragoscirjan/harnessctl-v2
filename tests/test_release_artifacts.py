@@ -50,11 +50,27 @@ def _write_remote_config(project: Path) -> None:
     )
 
 
+def _write_pi_adapter_config(project: Path) -> None:
+    settings = project / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
+
+
 def _copy_runtime_dependency(package: str, site_packages: Path) -> None:
     spec = importlib.util.find_spec(package)
     assert spec is not None and spec.submodule_search_locations
     source = Path(next(iter(spec.submodule_search_locations)))
     shutil.copytree(source, site_packages / package)
+
+
+def test_pi_tools_package_declares_loadable_extension() -> None:
+    package = json.loads((ROOT / "extensions/pi-tools/package.json").read_text(encoding="utf-8"))
+
+    assert package["pi"]["extensions"] == ["./dist/index.js"]
+    assert "dist" in package["files"]
 
 
 def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
@@ -107,6 +123,8 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     assert len(expected_resources & {"templates/sdlc/_partials/memory-entry.md.j2"}) == 1
     assert len(expected_resources & {"templates/sdlc/_partials/memory-exit.md.j2"}) == 1
     assert "templates/skills/issue-tracking/SKILL.md.j2" in expected_resources
+    assert "templates/skills/cvs/SKILL.md.j2" in expected_resources
+    assert "mcp.py" in expected_resources
 
     with zipfile.ZipFile(wheels[0]) as archive:
         wheel_members = set(archive.namelist())
@@ -175,16 +193,19 @@ import harnessctl
 from copy import deepcopy
 from pathlib import Path
 from harnessctl.config import DEFAULT_CONFIG
+from harnessctl.mcp import required_server_intents, render_opencode_mcp
 from harnessctl.templates import TEMPLATES, render_prompt, render_skill
 
 checkout = Path(__import__('os').environ['HARNESSCTL_CHECKOUT']).resolve()
 assert checkout not in Path(harnessctl.__file__).resolve().parents
 config = deepcopy(DEFAULT_CONFIG)
 config['memory']['enabled'] = True
+intent = required_server_intents(config, 'opencode')[0]
+assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/'
 assert len(TEMPLATES) == 18
 for command in TEMPLATES:
     assert '## Project memory exit' in render_prompt(command, 'opencode', config=config)
-    assert 'memory_' not in render_prompt(command, 'pi', config=config)
+    assert '## Project memory exit' in render_prompt(command, 'pi', config=config)
 providers = {
     'filesystem': (
         'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,'
@@ -205,7 +226,10 @@ for provider, connection in providers.items():
     if provider == 'filesystem':
         context.update(issue_root='.harnessctl/issues', issue_prefix='hrn-')
     else:
-        context.update(remote_url=remote_url, token_env=token_env)
+        context.update(
+            remote_url=remote_url, token_env=token_env,
+            mcp_id=f'cvs_{provider}', mcp_available=True,
+        )
     rendered = render_skill('issue-tracking', **context)
     assert f'the configured {provider} issue authority' in rendered
     assert tools in rendered
@@ -235,35 +259,38 @@ for provider, connection in providers.items():
     for project in (enabled_opencode, enabled_pi, enabled_all):
         _write_enabled_config(project)
     _write_remote_config(remote_opencode)
+    for project in (disabled_pi, enabled_pi, enabled_all):
+        _write_pi_adapter_config(project)
 
     cli = [str(python), "-m", "harnessctl.install", "--cwd"]
     _run([*cli, str(disabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
-    assert not (disabled_pi / ".opencode/skills/issue-tracking").exists()
+    assert (disabled_pi / ".pi/skills/issue-tracking/SKILL.md").is_file()
+    assert (disabled_pi / ".pi/mcp.json").is_file()
     for project, harness in ((enabled_pi, "pi"), (enabled_all, "all")):
-        result = _run(
-            [*cli, str(project), "--harness", harness],
-            cwd=runtime,
-            env=environment,
-            expected_returncode=2,
-        )
-        assert "automatic Pi extension and skill installation is not yet verified" in result.stderr
-        assert not (project / ".opencode").exists()
-        assert not (project / ".pi").exists()
+        _run([*cli, str(project), "--harness", harness], cwd=runtime, env=environment)
+        assert (project / ".pi/skills/memory/SKILL.md").is_file()
+        assert len(list((project / ".pi/prompts").glob("*.md"))) == COMMAND_COUNT
+        if harness == "all":
+            assert (project / ".opencode/skills/memory/SKILL.md").is_file()
 
     _run([*cli, str(enabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(remote_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     commands = list((enabled_opencode / ".opencode/commands").glob("*.md"))
     assert len(commands) == COMMAND_COUNT
     assert all("## Project memory exit" in path.read_text(encoding="utf-8") for path in commands)
-    for skill in ("caveman", "memory", "issue-tracking"):
+    for skill in ("caveman", "cvs", "memory", "issue-tracking"):
         assert (enabled_opencode / f".opencode/skills/{skill}/SKILL.md").is_file()
     remote_skill = remote_opencode / ".opencode/skills/issue-tracking/SKILL.md"
-    assert "Official GitHub CLI `gh issue`" in remote_skill.read_text(encoding="utf-8")
-    assert "Official GitLab CLI" not in remote_skill.read_text(encoding="utf-8")
-    assert (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").is_file()
-    package = json.loads((enabled_opencode / ".opencode/package.json").read_text(encoding="utf-8"))
-    assert package["dependencies"]["@harnessctl/opencode-tools"] == "0.1.0"
+    assert "Use GitHub CLI `gh` or live tools under `cvs_github`" in remote_skill.read_text(
+        encoding="utf-8"
+    )
+    assert "Use only GitLab CLI" not in remote_skill.read_text(encoding="utf-8")
+    opencode = json.loads(
+        (enabled_opencode / ".opencode/opencode.json").read_text(encoding="utf-8")
+    )
+    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert not (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").exists()
     assert not (enabled_opencode / ".harnessctl/cache/harnessctl.sqlite").exists()
 
     conflict = _run(

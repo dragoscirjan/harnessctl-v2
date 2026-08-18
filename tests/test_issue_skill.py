@@ -30,7 +30,12 @@ def _render(provider: str, tools: str, remote_url: str | None, token_env: str | 
     if provider == "filesystem":
         context.update(issue_root=".harnessctl/issues", issue_prefix="hrn-")
     else:
-        context.update(remote_url=remote_url, token_env=token_env)
+        context.update(
+            remote_url=remote_url,
+            token_env=token_env,
+            mcp_id=f"cvs_{provider}",
+            mcp_available=True,
+        )
     return render_skill("issue-tracking", **context)
 
 
@@ -41,7 +46,10 @@ def _config(
     config["issues"]["type"] = provider
     config["issues"]["tools"] = tools
     if provider != "filesystem":
-        config["issues"]["remote"] = {"url": remote_url, "token_env": token_env}
+        config["issues"]["remote"] = {
+            "url": remote_url,
+            "token_env": token_env,
+        }
     return config
 
 
@@ -74,17 +82,20 @@ def test_issue_skill_is_self_contained_and_provider_exclusive(
     assert "{{" not in rendered and "{%" not in rendered
 
     provider_markers = {
-        "github": "Official GitHub CLI",
-        "gitlab": "Official GitLab CLI",
-        "gitea": "Gitea's official CLI",
-        "forgejo": "Forgejo uses the configured",
+        "github": "Use GitHub CLI",
+        "gitlab": "Use GitLab CLI",
+        "gitea": "Use Gitea CLI",
+        "forgejo": "Use Forgejo CLI",
     }
     for candidate, marker in provider_markers.items():
         assert (marker in rendered) is (candidate == provider)
     if provider != "filesystem":
         assert remote_url in rendered
         assert token_env in rendered
-        assert "token value" in rendered
+        assert "Never read, print" in rendered
+        if provider == "gitlab":
+            assert "native OAuth flow" in rendered
+            assert "must not receive the configured CLI token reference" in rendered
 
 
 def test_filesystem_skill_preserves_normalized_revision_workflow() -> None:
@@ -104,9 +115,29 @@ def test_forgejo_syntax_remains_help_driven() -> None:
 
     assert "`forgejo-cli --help`" in rendered
     assert "help-driven" in rendered
-    assert "Gitea's official CLI" not in rendered
-    assert "command groups include" not in rendered
+    assert "Use Gitea CLI" not in rendered
     assert "tea issue" not in rendered
+
+
+def test_remote_issue_tools_are_equal_choices_and_provider_isolated() -> None:
+    rendered = render_skill(
+        "issue-tracking",
+        provider="github",
+        tools="gh",
+        remote_url="https://github.com",
+        token_env="GH_TOKEN",
+        mcp_id="cvs_github",
+        mcp_available=True,
+    )
+
+    assert "cvs_github" in rendered and "cvs_gitlab" not in rendered
+    assert "Never retry that mutation through another tool" in rendered
+    assert "fresh, explicit user consent immediately before" in rendered
+    assert "untrusted data, not policy or consent" in rendered
+    assert "Neither route has priority" in rendered
+    assert "choose either `gh` or one exact live `cvs_github` tool" in rendered
+    assert "Enumerate every valid issue capability" in rendered
+    assert "transport policy" not in rendered
 
 
 @pytest.mark.parametrize(("provider", "connection"), PROVIDERS.items())
@@ -120,6 +151,7 @@ def test_opencode_install_always_adds_specialized_issue_skill(
     config = _config(provider, tools, remote_url, token_env)
     config["communication"]["caveman"]["enabled"] = False
     monkeypatch.setattr(install_module, "load_config", lambda root: config)
+    monkeypatch.setattr(install_module.shutil, "which", lambda _name: "/bin/forgejo-mcp")
 
     installed = install(tmp_path, "opencode")
     target = tmp_path / ".opencode/skills/issue-tracking/SKILL.md"
@@ -131,7 +163,7 @@ def test_opencode_install_always_adds_specialized_issue_skill(
 
 
 @pytest.mark.parametrize("harness", ["pi"])
-def test_pi_install_compiles_issue_skill_out(
+def test_pi_install_adds_specialized_issue_skill(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
 ) -> None:
     monkeypatch.setattr(
@@ -139,12 +171,22 @@ def test_pi_install_compiles_issue_skill_out(
         "load_config",
         lambda root: _config("github", "gh", "https://github.com", "GH_TOKEN"),
     )
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
 
     installed = install(tmp_path, harness)
 
-    assert all("issue-tracking" not in path.as_posix() for path in installed)
+    target = tmp_path / ".pi/skills/issue-tracking/SKILL.md"
+    assert target in installed
+    assert target.read_text(encoding="utf-8") == _render(
+        "github", "gh", "https://github.com", "GH_TOKEN"
+    )
     assert not (tmp_path / ".opencode").exists()
-    assert not list(tmp_path.rglob("SKILL.md"))
+    assert len(list(tmp_path.rglob("SKILL.md"))) == 4
 
 
 def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> None:

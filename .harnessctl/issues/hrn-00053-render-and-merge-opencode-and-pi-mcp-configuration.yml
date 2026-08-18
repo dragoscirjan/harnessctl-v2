@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00053"
+"type": "task"
+"title": "Render and merge OpenCode and Pi MCP configuration"
+"status": "done"
+"created_at": "2026-08-17T20:51:22.949Z"
+"updated_at": "2026-08-17T22:01:44.315Z"
+"created_by": "lead-engineer"
+"assigned_to": "devops"
+"parent": "hrn-00050"
+"depends_on":
+  - "hrn-00052"
+"body": "Given configured provider CLI and MCP connection data\nWhen installing for OpenCode or Pi\nThen every available host-specific MCP configuration is merged atomically, identical server definitions deduplicate, conflicts fail unless forced, and owned files/settings roll back.\n\n## Acceptance\n\n- [x] OpenCode and Pi formats render correctly with env references only.\n- [x] Pi adapter installation requires consent and pinned version.\n- [x] Hosted MCPs project directly; Gitea/Forgejo MCP projects only when its executable exists, while CLI remains available.\n- [x] Cross-platform launcher and rollback tests pass."
+"comments": []

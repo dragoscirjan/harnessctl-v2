@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00051"
+"type": "task"
+"title": "Add CVS and MCP configuration contracts"
+"status": "done"
+"created_at": "2026-08-17T20:51:22.756Z"
+"updated_at": "2026-08-17T22:01:44.114Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00050"
+"body": "Given configuration version 2\nWhen CVS and MCP settings are loaded\nThen TS, Python, and generated schemas apply identical defaults, provider validation, fixed IDs, secret-name rules, and preserve both CLI and MCP connection data without a transport selector.\n\n## Acceptance\n\n- [x] Defaults are git and GitHub.\n- [x] CLI and MCP capability data validate by provider without a transport selector.\n- [x] Unknown or unsafe settings fail before mutation.\n- [x] Schema parity tests pass."
+"comments": []

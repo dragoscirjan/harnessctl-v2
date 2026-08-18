@@ -21,6 +21,16 @@ const validConfig = {
     type: 'filesystem',
     tools: FILESYSTEM_ISSUE_TOOLS,
   },
+  cvs: {
+    local: 'git',
+    remote: {
+      provider: 'github',
+      tools: 'gh',
+      url: 'https://github.com',
+      token_env: 'GH_TOKEN',
+    },
+  },
+  mcp: { output_limit_mode: 'bounded-guidance' },
   communication: { caveman: { enabled: true, mode: 'strict' } },
   memory: {
     enabled: true,
@@ -32,6 +42,12 @@ const validConfig = {
 };
 
 const addFormats = addFormatsModule as unknown as FormatsPlugin;
+const PROVIDERS = [
+  ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
+  ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
+  ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
+  ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
+] as const;
 
 const validRecord = {
   schema_version: 1,
@@ -198,7 +214,7 @@ describe('canonical Zod schemas', () => {
     ['filesystem', FILESYSTEM_ISSUE_TOOLS, undefined],
     ['github', 'gh', { url: 'https://github.com', token_env: 'GH_TOKEN' }],
     ['gitlab', 'glab', { url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' }],
-    ['gitea', 'tea', { url: 'http://gitea.example.test:3000', token_env: 'GITEA_TOKEN' }],
+    ['gitea', 'tea', { url: 'https://gitea.example.test:3000', token_env: 'GITEA_TOKEN' }],
     ['forgejo', 'forgejo-cli', { url: 'https://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
   ])('accepts exact %s provider contract in runtime and portable schemas', (type, tools, remote) => {
     const document = { ...validConfig, issues: { ...validConfig.issues, type, tools, ...(remote && { remote }) } };
@@ -224,12 +240,13 @@ describe('canonical Zod schemas', () => {
     ['filesystem', { url: 'https://github.com', token_env: 'GH_TOKEN' }],
     ['github', undefined],
     ['github', { url: 'https://github.example.test', token_env: 'GH_TOKEN' }],
-    ['gitlab', { url: 'https://gitlab.com', token_env: 'GH_TOKEN' }],
+    ['gitlab', { url: 'https://gitlab.com', token_env: 'token-value' }],
     ['gitea', { url: 'gitea.example.test', token_env: 'GITEA_TOKEN' }],
     ['gitea', { url: 'https://', token_env: 'GITEA_TOKEN' }],
     ['gitea', { url: 'https://gitea.example.test/\u0007injected', token_env: 'GITEA_TOKEN' }],
     ['gitea', { url: 'https://gitea.example.test/\u001binjected', token_env: 'GITEA_TOKEN' }],
     ['gitea', { url: 'https://gitea.example.test/\u0085injected', token_env: 'GITEA_TOKEN' }],
+    ['gitea', { url: 'https://gitea.example.test/${TOKEN}', token_env: 'GITEA_TOKEN' }],
     ['forgejo', { url: 'ftp://forgejo.example.test', token_env: 'FORGEJO_TOKEN' }],
     ['forgejo', { url: 'https://forgejo.example.test', token_env: 'token-value' }],
   ])('rejects invalid %s remote contract in runtime and portable schemas', (type, remote) => {
@@ -244,6 +261,67 @@ describe('canonical Zod schemas', () => {
     };
     expect(configV2Schema.safeParse(document).success).toBe(false);
     expect(configContractValidator()(document)).toBe(false);
+  });
+
+  it('keeps Zod and JSON Schema aligned with CLI and MCP data for every CVS provider', () => {
+    for (const [provider, tools, url, tokenEnv] of PROVIDERS) {
+      for (const local of ['git', 'jj']) {
+        const document = {
+          ...validConfig,
+          cvs: { local, remote: { provider, tools, url, token_env: tokenEnv } },
+        };
+        expect(configV2Schema.safeParse(document).success).toBe(true);
+        expect(configContractValidator()(document)).toBe(true);
+      }
+    }
+  });
+
+  it.each([
+    { ...validConfig, cvs: { ...validConfig.cvs, extra: true } },
+    { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, id: 'cvs_github' } } },
+    { ...validConfig, mcp: { ...validConfig.mcp, server_id: 'cvs_github' } },
+    { ...validConfig, issues: { ...validConfig.issues, extra: true } },
+    {
+      ...validConfig,
+      issues: {
+        ...validConfig.issues,
+        type: 'github',
+        tools: 'gh',
+        remote: { url: 'https://github.com', token_env: 'GH_TOKEN', extra: true },
+      },
+    },
+  ])('rejects unknown strict configuration keys in runtime and portable schemas', (document) => {
+    expect(configV2Schema.safeParse(document).success).toBe(false);
+    expect(configContractValidator()(document)).toBe(false);
+  });
+
+  it.each([
+    { ...validConfig, cvs: { ...validConfig.cvs, local: 'svn' } },
+    { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, transport: 'auto' } } },
+    {
+      ...validConfig,
+      issues: {
+        ...validConfig.issues,
+        type: 'github',
+        tools: 'gh',
+        remote: { url: 'https://github.com', token_env: 'GH_TOKEN', transport: 'auto' },
+      },
+    },
+    { ...validConfig, cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, tools: 'glab' } } },
+    {
+      ...validConfig,
+      cvs: { ...validConfig.cvs, remote: { ...validConfig.cvs.remote, token_env: 'ghp_secret-value' } },
+    },
+    { ...validConfig, mcp: { output_limit_mode: 'unbounded' } },
+  ])('rejects invalid CVS and MCP policy values in runtime and portable schemas', (document) => {
+    expect(configV2Schema.safeParse(document).success).toBe(false);
+    expect(configContractValidator()(document)).toBe(false);
+  });
+
+  it('accepts hard output policy in runtime and portable schemas', () => {
+    const document = { ...validConfig, mcp: { output_limit_mode: 'hard' } };
+    expect(configV2Schema.safeParse(document).success).toBe(true);
+    expect(configContractValidator()(document)).toBe(true);
   });
 
   it.each(['libsql', 'mem0', 'graphiti', 'custom'])('continues rejecting future memory backend %s', (backend) => {

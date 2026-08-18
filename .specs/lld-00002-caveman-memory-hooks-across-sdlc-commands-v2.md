@@ -266,12 +266,12 @@ Pi hooks may be enabled only by a later design that verifies all of the followin
 - Build both wheel and source distribution from a clean checkout state and fail on missing or unexpected build outputs.
 - Inspect both archives for all canonical SDLC templates, the new shared partials, both skill templates, and required Python modules; reject protected generated project outputs.
 - Install the wheel into a fresh isolated environment without importing source from the checkout. Render all commands through the installed package to prove Jinja includes resolve from packaged resources.
-- Run the installed module CLI against temporary projects. Memory-disabled OpenCode and Pi installation succeeds with memory-free commands; memory-enabled OpenCode installs hooked commands, skills, and registration; memory-enabled Pi and all-harness requests fail before creating either target tree.
+- Run the installed module CLI against temporary projects. Memory-disabled OpenCode and Pi installation succeeds with memory-free commands; memory-enabled installs produce hooked commands and skills for both harnesses. Pi package mutation remains consent-gated.
 - Exercise conflict refusal and a forced OpenCode install from the isolated package. Artifact verification uses local build outputs only and performs no network package installation.
 
 ### Quality verification
 
-Run the repository's existing Python tests, TypeScript tests, lint, format, duplicate check, audit, build, validation, generated-contract freshness, and release-artifact tasks. Verify changed-file scope excludes `.opencode/commands/`, `.pi/commands/`, generated OpenCode skills/plugin files, and `.harnessctl/memory/`.
+Run the repository's existing Python tests, TypeScript tests, lint, format, duplicate check, audit, build, validation, generated-contract freshness, and release-artifact tasks. Verify generated OpenCode commands and skills plus Pi prompts and skills match current renderers.
 
 ## Migration and compatibility
 

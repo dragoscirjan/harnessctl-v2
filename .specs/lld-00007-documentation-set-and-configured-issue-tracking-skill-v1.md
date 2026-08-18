@@ -145,7 +145,7 @@ This change does not add a remote tool adapter. The OpenCode and Pi adapter sour
 
 Existing plugin and package registration behavior remains owned by the memory installation path; this design does not widen or rename it. Environments using local issue tools remain responsible for loading the existing adapter as today. Documentation must state this boundary so installing a skill is not mistaken for installing a CLI or host adapter.
 
-Pi command rendering and tool registration remain as currently implemented, but no Pi issue-tracking skill file is installed. The issue skill is compiled out of Pi targets because no verified Pi skill path or discovery contract exists. A valid remote issue configuration alone does not make Pi skill installation supported. The existing memory-enabled Pi and all-harness pre-write rejection remains unchanged.
+Pi discovers project skills under `.pi/skills/`. Current installation writes the configured issue-tracking skill there and registers local issue tools through project-local `@harnessctl/pi-tools`; package mutation requires explicit operator consent.
 
 ## Local issue provider guard
 
@@ -269,15 +269,15 @@ The docs state that none of these future providers uses the local barrier or SQL
 | `extensions/generic-tools/contracts/config-v2.schema.json`                            | Regenerated portable contract; never hand-edited.                                                                                       |
 | `src/harnessctl/templates.py`                                                         | Register issue-tracking skill and pass a narrow validated render context.                                                               |
 | `src/harnessctl/templates/skills/issue-tracking/SKILL.md.j2`                          | Self-contained provider-exclusive issue guidance.                                                                                       |
-| `src/harnessctl/install.py`                                                           | Install and smoke-check the OpenCode issue skill for all valid providers; preserve Pi compile-out and exact rollback.                   |
+| `src/harnessctl/install.py`                                                           | Install and smoke-check the issue skill for both harnesses; preserve package consent and exact owned-file rollback.                     |
 | `extensions/generic-tools/issues.ts`                                                  | Common local-provider assertion and side-effect-free remote rejection.                                                                  |
 | `extensions/generic-tools/config.spec.ts`, `extensions/generic-tools/schemas.spec.ts` | TypeScript defaults, migration, provider validation, schema parity, and freshness.                                                      |
 | `extensions/generic-tools/issues.spec.ts`                                             | Every public local operation's remote rejection and no-local-side-effects checks.                                                       |
 | `extensions/opencode-tools/index.spec.ts`, `extensions/pi-tools/index.spec.ts`        | Existing registration plus provider-mismatch error-envelope coverage.                                                                   |
-| `tests/test_install.py`                                                               | Python config parity, provider-specific rendering, OpenCode installation, Pi absence, conflicts, and exact rollback.                    |
+| `tests/test_install.py`                                                               | Python config parity, provider-specific rendering, both harness installs, conflicts, package consent, and rollback.                     |
 | `tests/test_release_artifacts.py`                                                     | Wheel and source-distribution inclusion plus isolated installed rendering and installation.                                             |
 | `tests/test_docs.py`                                                                  | Local-link, current-example, future-label, defaults, provider fact, and current/future wording consistency.                             |
-| `.opencode/skills/issue-tracking/SKILL.md`                                            | Reinstalled generated OpenCode skill for this repository after implementation; this is the only newly authorized root generated target. |
+| `.opencode/skills/issue-tracking/SKILL.md`, `.pi/skills/issue-tracking/SKILL.md`       | Reinstalled generated issue skills for this repository after implementation.                                                            |
 | New Changesets entry                                                                  | Patch release for `@harnessctl/generic-tools`; no manual package-version edit.                                                          |
 
 No Python release-version mechanism is introduced. The Python wheel and source distribution change because the new Jinja resource is included, but `pyproject.toml` version remains governed by the project's existing process. Modify `pyproject.toml` only if artifact inspection proves package-resource inclusion needs an explicit declaration.
@@ -402,7 +402,7 @@ Each subtask is limited to one through three files and depends on the preceding 
 - Forgejo syntax drift: `forgejo-cli` operations may vary by installed version. Mitigation: help-driven syntax with no inferred capabilities or subcommands.
 - Recursive failure reporting: a broken CLI or authentication path cannot record its own failure. Mitigation: comment only through an operational channel with a known target; otherwise stop and report directly to the user.
 - Skill/tool confusion: installing Markdown does not install a CLI or necessarily register an adapter. Mitigation: explicit docs and generated-skill prerequisites.
-- Pi capability leakage: a generic skill target could imply unsupported discovery. Mitigation: OpenCode-only target planning and Pi absence tests.
+- Pi capability drift: package or skill discovery may change. Mitigation: verified `.pi/skills/` paths, explicit `pi.extensions` metadata, package-state checks, and release artifact tests.
 - Cache misdescription: users may treat SQLite as authority. Mitigation: consistent canonical/cache language and terminology tests.
 - README divergence: a second full flow description would become stale. Mitigation: topic ownership, cross-links, and focused docs consistency tests.
 - Rollback regression: one unconditional OpenCode target broadens every installation plan. Mitigation: include it in preflight conflicts, before-images, smoke checks, and exact-tree fault tests.

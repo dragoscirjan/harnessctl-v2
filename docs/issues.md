@@ -32,19 +32,26 @@ The local adapter tool set is listed in [configuration](configuration.md). OpenC
 and Pi adapters register it when their packages are loaded. Skill installation and
 tool registration are separate concerns.
 
-## Configured remote providers
+## Configured remote providers and capabilities
 
-Configuration-driven guidance for GitHub, GitLab, Gitea, and Forgejo is implemented.
-No harnessctl remote adapter, API client, provider migration, CLI installer, command
-runner, repository selector, or credential store exists. Local issue operations are
-not a remote-provider interface.
+Configuration-driven CLI/MCP guidance and host MCP projection for GitHub, GitLab,
+Gitea, and Forgejo are implemented. No harnessctl remote adapter, API client, provider
+migration, CLI installer, command runner, repository selector, credential store, or Pi
+issue skill exists. Local issue operations are not a remote-provider interface.
 
 Routing pairs GitHub with `gh`, GitLab with `glab`, Gitea with `tea`, and
 Forgejo with `forgejo-cli`. The CLI must already be installed. Remote configuration
 identifies the provider endpoint and names the environment variable containing the
 token; the token value remains only in the environment and must never appear in YAML.
 Agents must confirm an ambiguous repository before mutation and must not fall back to
-filesystem or another provider when the selected CLI fails.
+filesystem or another provider when a selected route fails.
+
+Remote Issues enumerate both the provider's valid CLI capabilities and its fixed-ID MCP
+capabilities. The agent chooses the suitable available capability for each operation;
+there is no configured selector or required MCP-first order. It must choose before a
+mutation starts. After mutation begins, every result, error, timeout, cancellation, or
+ambiguity is terminal for that route and the agent must never switch routes for the same
+mutation. CVS configuration and runtime success never determine the Issues choice.
 
 | Provider | CLI           | Required URL          | Required token environment variable |
 | -------- | ------------- | --------------------- | ----------------------------------- |
@@ -103,9 +110,21 @@ to filesystem and are ignored remotely.
 
 Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
-OpenCode issue-tracking skill contains only the selected provider guidance. It does
-not install tools or grant access. Pi issue-skill installation remains unsupported
-because no skill discovery path is verified.
+OpenCode and Pi issue-tracking skills contain only the selected provider's valid CLI and
+MCP capability guidance. They do not install provider tools or grant access. Pi uses
+`.pi/skills/issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
+
+Remote Issues use fixed IDs `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and
+`cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
+environment-name, endpoint, command, version, OAuth, header, or toolset mismatch fails
+instead of choosing one domain. GitHub and GitLab use official hosted MCP services.
+Gitea and Forgejo use operator-installed external GPL `forgejo-mcp` 2.33.0 and require
+the runtime version check before mutation. See [CVS and MCP providers](cvs.md) for exact
+host formats, vetted license boundaries, output limits, and Pi consent/residuals.
+
+For Gitea and Forgejo, MCP capability is available only when the `forgejo-mcp`
+executable is present. CLI capability is independently available only when `tea` or
+`forgejo-cli`, respectively, is present. One route's absence does not disable the other.
 
 Capability references used by generated guidance are:
 

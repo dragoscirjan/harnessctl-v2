@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -21,6 +22,8 @@ REMOTE_ISSUE_PROVIDERS = {
     "gitea": {"tool": "tea", "url": None, "token_env": "GITEA_TOKEN"},
     "forgejo": {"tool": "forgejo-cli", "url": None, "token_env": "FORGEJO_TOKEN"},
 }
+CVS_LOCALS = frozenset({"git", "jj"})
+MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
@@ -30,6 +33,16 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "type": "filesystem",
         "tools": FILESYSTEM_ISSUE_TOOLS,
     },
+    "cvs": {
+        "local": "git",
+        "remote": {
+            "provider": "github",
+            "tools": "gh",
+            "url": "https://github.com",
+            "token_env": "GH_TOKEN",
+        },
+    },
+    "mcp": {"output_limit_mode": "bounded-guidance"},
     "paths": {
         "root": ".harnessctl",
         "tasks": ".harnessctl/tasks",
@@ -75,8 +88,7 @@ def load_config(cwd: Path) -> dict[str, Any]:
     version = value.get("version")
     if version not in (None, 1, 2):
         raise ConfigError(f"unsupported configuration version: {version}")
-    _require_explicit_remote_tools(value)
-    _require_remote_connection(value)
+    _require_explicit_remote_configuration(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
     _validate(config)
@@ -102,6 +114,7 @@ def _mapping(parent: dict[str, Any], key: str) -> dict[str, Any]:
 
 def _validate(config: dict[str, Any]) -> None:
     issues = _mapping(config, "issues")
+    _allowed_keys(issues, {"root", "prefix", "type", "tools", "remote"}, "issues")
     _safe_path(issues, "root", "issues")
     prefix = issues.get("prefix")
     if not isinstance(prefix, str) or not all(
@@ -115,6 +128,23 @@ def _validate(config: dict[str, Any]) -> None:
         raise ConfigError("issues.type must be filesystem, github, gitlab, gitea, or forgejo")
     _normalize_issue_tools(issues, issue_type)
     _validate_issue_remote(issues, issue_type)
+
+    cvs = _mapping(config, "cvs")
+    _allowed_keys(cvs, {"local", "remote"}, "cvs")
+    if cvs.get("local") not in CVS_LOCALS:
+        raise ConfigError("cvs.local must be git or jj")
+    remote = _mapping(cvs, "remote")
+    _allowed_keys(
+        remote,
+        {"provider", "tools", "url", "token_env"},
+        "cvs.remote",
+    )
+    _validate_remote_service(remote, "cvs.remote", "provider")
+
+    mcp = _mapping(config, "mcp")
+    _allowed_keys(mcp, {"output_limit_mode"}, "mcp")
+    if mcp.get("output_limit_mode") not in MCP_OUTPUT_LIMIT_MODES:
+        raise ConfigError("mcp.output_limit_mode must be bounded-guidance or hard")
 
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):
@@ -142,7 +172,7 @@ def _validate(config: dict[str, Any]) -> None:
     _safe_path(repository, "root", "memory.repository")
 
 
-def _require_explicit_remote_tools(source: dict[str, Any]) -> None:
+def _require_explicit_remote_configuration(source: dict[str, Any]) -> None:
     issues = source.get("issues")
     if (
         isinstance(issues, dict)
@@ -152,15 +182,26 @@ def _require_explicit_remote_tools(source: dict[str, Any]) -> None:
         raise ConfigError(
             f"issues.type={issues['type']} requires issues.tools to be selected explicitly"
         )
+    if (
+        isinstance(issues, dict)
+        and issues.get("type") in REMOTE_ISSUE_TYPES
+        and "remote" not in issues
+    ):
+        raise ConfigError(f"issues.type={issues['type']} requires issues.remote")
 
-
-def _require_remote_connection(source: dict[str, Any]) -> None:
-    issues = source.get("issues")
-    if not isinstance(issues, dict):
+    cvs = source.get("cvs")
+    if not isinstance(cvs, dict) or not isinstance(cvs.get("remote"), dict):
         return
-    issue_type = issues.get("type", "filesystem")
-    if issue_type in REMOTE_ISSUE_TYPES and "remote" not in issues:
-        raise ConfigError(f"issues.type={issue_type} requires issues.remote")
+    remote = cvs["remote"]
+    provider = remote.get("provider")
+    if provider is None or provider == "github":
+        return
+    for key in ("tools", "url", "token_env"):
+        if key not in remote:
+            raise ConfigError(
+                f"cvs.remote.provider={provider} requires cvs.remote.{key} "
+                "to be selected explicitly"
+            )
 
 
 def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
@@ -205,26 +246,57 @@ def _validate_issue_remote(issues: dict[str, Any], issue_type: str) -> None:
         return
     if not isinstance(remote, dict):
         raise ConfigError("issues.remote must be a mapping")
+    _allowed_keys(remote, {"url", "token_env"}, "issues.remote")
     if set(remote) != {"url", "token_env"}:
         raise ConfigError("issues.remote must contain exactly url and token_env")
+    service = {"provider": issue_type, **remote, "tools": issues["tools"]}
+    _validate_remote_service(service, "issues.remote", "provider")
+    remote["url"] = service["url"]
 
-    url = remote.get("url")
+
+def _validate_remote_service(remote: dict[str, Any], namespace: str, provider_key: str) -> None:
+    provider = remote.get(provider_key)
+    if provider not in REMOTE_ISSUE_TYPES:
+        raise ConfigError(f"{namespace}.{provider_key} must be github, gitlab, gitea, or forgejo")
+    expected = REMOTE_ISSUE_PROVIDERS[provider]
+    tools = remote.get("tools")
+    if not isinstance(tools, str):
+        raise ConfigError(f"{namespace}.tools must be a string")
+    normalized_tools = _tool_identifiers(tools, f"{namespace}.tools")
+    if normalized_tools != [expected["tool"]]:
+        raise ConfigError(
+            f"{namespace}.tools must be exactly {expected['tool']} for "
+            f"{namespace}.{provider_key}={provider}"
+        )
+    remote["tools"] = expected["tool"]
+    url = _validate_remote_url(remote.get("url"), namespace)
+    expected_url = expected["url"]
+    if expected_url is not None and url != expected_url:
+        raise ConfigError(
+            f"{namespace}.url must be exactly {expected_url} for "
+            f"{namespace}.{provider_key}={provider}"
+        )
+    remote["url"] = url
+    _validate_environment_name(remote.get("token_env"), f"{namespace}.token_env")
+
+
+def _validate_remote_url(value: Any, namespace: str) -> str:
+    url = value
     if (
         not isinstance(url, str)
         or not url.strip()
         or not url.isprintable()
         or any(character.isspace() for character in url)
-        or "`" in url
+        or any(character in url for character in "`${}")
     ):
-        raise ConfigError("issues.remote.url must be a non-empty absolute http(s) URL")
-    url = url.strip()
+        raise ConfigError(f"{namespace}.url must be a non-empty absolute HTTPS URL")
     try:
         parsed = urlsplit(url)
         port = parsed.port
     except ValueError as error:
-        raise ConfigError("issues.remote.url must be a valid absolute http(s) URL") from error
+        raise ConfigError(f"{namespace}.url must be a valid absolute HTTPS URL") from error
     if (
-        parsed.scheme not in {"http", "https"}
+        parsed.scheme != "https"
         or not parsed.netloc
         or parsed.hostname is None
         or parsed.username is not None
@@ -234,21 +306,37 @@ def _validate_issue_remote(issues: dict[str, Any], issue_type: str) -> None:
         or parsed.query
         or parsed.fragment
     ):
-        raise ConfigError("issues.remote.url must be an absolute http(s) URL without credentials")
+        raise ConfigError(f"{namespace}.url must be an absolute HTTPS URL without credentials")
+    return url
 
-    expected = REMOTE_ISSUE_PROVIDERS[issue_type]
-    expected_url = expected["url"]
-    if expected_url is not None and url != expected_url:
+
+def _validate_environment_name(value: Any, namespace: str) -> None:
+    if not isinstance(value, str) or re.fullmatch(r"[A-Z][A-Z0-9_]*", value) is None:
         raise ConfigError(
-            f"issues.remote.url must be exactly {expected_url} for issues.type={issue_type}"
+            f"{namespace} must be an uppercase environment variable name, not a token value"
         )
-    token_env = remote.get("token_env")
-    if token_env != expected["token_env"]:
+
+
+def _allowed_keys(parent: dict[str, Any], allowed: set[str], namespace: str) -> None:
+    unknown = sorted(set(parent) - allowed)
+    if unknown:
+        raise ConfigError(f"{namespace} contains unknown keys: {', '.join(unknown)}")
+
+
+def _tool_identifiers(value: str, namespace: str) -> list[str]:
+    tools = [tool.strip() for tool in value.split(",")]
+    if any(
+        not tool
+        or not all(
+            character.isascii() and (character.isalnum() or character in "_-") for character in tool
+        )
+        for tool in tools
+    ):
         raise ConfigError(
-            f"issues.remote.token_env must be exactly {expected['token_env']} "
-            f"for issues.type={issue_type}"
+            f"{namespace} entries must be safe executable identifiers without "
+            "arguments, paths, assignments, or shell operators"
         )
-    remote["url"] = url
+    return tools
 
 
 def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> None:

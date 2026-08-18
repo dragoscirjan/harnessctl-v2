@@ -60,6 +60,7 @@ export type { IssueStorageCatalog, IssueStorageCandidate, IssueStorageStatus } f
 export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };
 export { configV2Schema, memoryDocumentSchema, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';
+export type { CvsLocal, McpOutputLimitMode, RemoteProvider, RemoteService } from './schemas.js';
 export {
   MemoryConflictError,
   MemoryError,

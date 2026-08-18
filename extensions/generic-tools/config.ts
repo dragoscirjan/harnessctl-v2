@@ -21,6 +21,16 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     type: 'filesystem',
     tools: FILESYSTEM_ISSUE_TOOLS,
   },
+  cvs: {
+    local: 'git',
+    remote: {
+      provider: 'github',
+      tools: 'gh',
+      url: 'https://github.com',
+      token_env: 'GH_TOKEN',
+    },
+  },
+  mcp: { output_limit_mode: 'bounded-guidance' },
   paths: {
     root: '.harnessctl',
     tasks: '.harnessctl/tasks',
@@ -73,10 +83,11 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
   if (version !== undefined && version !== 1 && version !== 2)
     throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
 
-  assertRemoteToolsExplicit(value);
+  assertRemoteConfigurationExplicit(value);
   const config = deepMerge(DEFAULT_CONFIG, value);
   config.version = 2;
   normalizeIssueTools(config);
+  normalizeCvsTools(config);
   const result = configV2Schema.safeParse(config);
   if (!result.success) throw new ConfigError(`Invalid configuration:\n${formatSchemaError(result.error)}`);
   return result.data;
@@ -90,13 +101,39 @@ const EXPECTED_PROVIDER_TOOL: Readonly<Record<string, string>> = {
   forgejo: 'forgejo-cli',
 };
 
-function assertRemoteToolsExplicit(value: ConfigDocument): void {
+function assertRemoteConfigurationExplicit(value: ConfigDocument): void {
   const issues = value.issues;
-  if (!isMapping(issues) || !REMOTE_ISSUE_TYPES.has(String(issues.type))) return;
-  if (!Object.prototype.hasOwnProperty.call(issues, 'tools'))
+  if (isMapping(issues) && REMOTE_ISSUE_TYPES.has(String(issues.type))) {
+    if (!Object.prototype.hasOwnProperty.call(issues, 'tools'))
+      throw new ConfigError(
+        `Invalid configuration: issues.type=${String(issues.type)} requires issues.tools to be selected explicitly.`,
+      );
+    if (!Object.prototype.hasOwnProperty.call(issues, 'remote'))
+      throw new ConfigError(`Invalid configuration: issues.type=${String(issues.type)} requires issues.remote.`);
+  }
+
+  const cvs = value.cvs;
+  if (!isMapping(cvs) || !isMapping(cvs.remote)) return;
+  const provider = cvs.remote.provider;
+  if (provider === undefined || provider === 'github') return;
+  for (const key of ['tools', 'url', 'token_env']) {
+    if (!Object.prototype.hasOwnProperty.call(cvs.remote, key))
+      throw new ConfigError(
+        `Invalid configuration: cvs.remote.provider=${String(provider)} requires cvs.remote.${key} to be selected explicitly.`,
+      );
+  }
+}
+
+function normalizeCvsTools(config: ConfigDocument): void {
+  const cvs = config.cvs;
+  if (!isMapping(cvs) || !isMapping(cvs.remote) || typeof cvs.remote.tools !== 'string') return;
+  const tools = parseToolIdentifiers(cvs.remote.tools, 'cvs.remote.tools');
+  const expected = EXPECTED_PROVIDER_TOOL[String(cvs.remote.provider)];
+  if (expected !== undefined && (tools.length !== 1 || tools[0] !== expected))
     throw new ConfigError(
-      `Invalid configuration: issues.type=${String(issues.type)} requires issues.tools to be selected explicitly.`,
+      `Invalid configuration: cvs.remote.tools must be exactly ${expected} for cvs.remote.provider=${String(cvs.remote.provider)}.`,
     );
+  if (expected !== undefined) cvs.remote.tools = expected;
 }
 
 function normalizeIssueTools(config: ConfigDocument): void {
@@ -124,11 +161,11 @@ function normalizeIssueTools(config: ConfigDocument): void {
   if (expected !== undefined) issues.tools = expected;
 }
 
-function parseToolIdentifiers(value: string): string[] {
+function parseToolIdentifiers(value: string, field = 'issues.tools'): string[] {
   const tools = value.split(',').map((tool) => tool.trim());
   if (tools.some((tool) => !/^[A-Za-z0-9_-]+$/u.test(tool)))
     throw new ConfigError(
-      'Invalid configuration: issues.tools entries must be safe executable identifiers without arguments, paths, assignments, or shell operators.',
+      `Invalid configuration: ${field} entries must be safe executable identifiers without arguments, paths, assignments, or shell operators.`,
     );
   return tools;
 }
