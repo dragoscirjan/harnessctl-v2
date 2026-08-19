@@ -78,7 +78,7 @@ def write_legacy_commands(root: Path, harness: str, *, mixed: bool = False) -> P
         content = f"custom legacy {command}\n"
         if mixed and command == "work-plan":
             content = install_module.render_command(harness, command, config=load_config(root))
-        (directory / f"{command}.md").write_text(content, encoding="utf-8")
+        (directory / f"{command}.md").write_bytes(content.encode("utf-8"))
     return directory
 
 
@@ -286,10 +286,9 @@ def test_replacement_does_not_bypass_unrelated_conflicts(tmp_path: Path) -> None
 
 
 def test_windows_replacement_uses_path_deletion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     write_legacy_commands(tmp_path, "opencode")
-    monkeypatch.setattr(install_module.os, "name", "nt")
 
     install(tmp_path, "opencode", replace_sdlc_command_set=True)
 
