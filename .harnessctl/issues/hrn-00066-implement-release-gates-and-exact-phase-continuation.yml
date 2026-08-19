@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00066"
+"type": "task"
+"title": "Implement release gates and exact-phase continuation"
+"status": "done"
+"created_at": "2026-08-19T12:09:18.265Z"
+"updated_at": "2026-08-19T12:30:14.410Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00061"
+"depends_on":
+  - "hrn-00065"
+"body": "Given verified or interrupted Epic work\nWhen Release or Continue runs\nThen Release enforces delivery gates and Continue resumes exactly one validated phase.\n\n## Deliverables\n\n- Mandatory branch, commit, push, and PR checks.\n- Fresh consent for remote/destructive actions and every merge.\n- Deployment only by explicit request with verified workflow.\n- Continue candidate search bounded to five unfinished checkpoints.\n- Artifact-backed checkpoint validation and ambiguity handling.\n\n## Acceptance\n\n- [x] Continue never combines or silently advances phases.\n- [x] Existing valid delivery actions count as satisfied.\n- [x] Human merge remains default.\n- [x] Eligible issue closure requires evidence and confirmation."
+"comments":
+  - "id": "hrn-00066-C0001"
+    "created_at": "2026-08-19T12:29:52.215Z"
+    "created_by": "lead-engineer"
+    "body": "Focused implementation passed: Ruff and 55 template tests. Full Pytest currently has 11 expected transitional failures from legacy 18-command installer/docs assertions; scheduled under hrn-00067 and hrn-00068."

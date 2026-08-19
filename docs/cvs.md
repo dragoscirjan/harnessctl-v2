@@ -21,7 +21,7 @@ The installer currently:
 - installs neither provider CLIs nor `forgejo-mcp`; and
 - can consentfully install Pi tools and the exact adapter prerequisite described below.
 
-Pi receives all 18 commands, all four generated skills, the Pi tools extension, and MCP
+Pi receives all five commands, all four generated skills, the Pi tools extension, and MCP
 host configuration through verified project-local discovery paths.
 
 ## Configuration

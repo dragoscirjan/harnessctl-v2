@@ -7,7 +7,7 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
 
 ## Guides
 
-- [SDLC](sdlc.md): 18 rendered commands, stage boundaries, and approval gates.
+- [SDLC](sdlc.md): five Epic-first commands, stage boundaries, and approval gates.
 - [Skills](skills.md): caveman, memory, and issue-tracking guidance.
 - [Configuration](configuration.md): defaults, overlay behavior, and every current
   setting.

@@ -8,25 +8,19 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 SDLC_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "sdlc"
 AUTHORITATIVE_TITLE = "Authoritative template-derived command transitions"
+PUBLIC_COMMANDS = {
+    "work-build",
+    "work-continue",
+    "work-plan",
+    "work-release",
+    "work-verify",
+}
 COMMAND_NODE_IDS = {
-    "work-new": "new",
-    "work-explore": "explore",
     "work-plan": "plan",
-    "work-resume": "resume",
-    "work-start-from": "startFrom",
-    "work-start-initiative": "startInitiative",
-    "work-start-epic": "startEpic",
-    "work-write-stories": "stories",
-    "work-start-story": "startStory",
-    "work-design-doc": "design",
-    "work-hld": "hld",
-    "work-lld": "lld",
-    "work-write-tasks": "tasks",
-    "work-implement": "implement",
+    "work-build": "build",
     "work-verify": "verify",
-    "work-review": "review",
-    "work-cvs": "cvs",
-    "work-finish": "finish",
+    "work-release": "release",
+    "work-continue": "continueWork",
 }
 
 
@@ -116,18 +110,15 @@ def _table_node_id(cell: str) -> str:
     command = re.search(r"`(work-[a-z-]+)`", cell)
     if command:
         return COMMAND_NODE_IDS[command.group(1)]
-    if cell == "User request":
+    if cell in {"User request", "Prompt or issue ID"}:
         return "request"
     for prefix, node_id in (
-        ("`STOP — COMMAND BOUNDARY`", "intakeBoundary"),
-        ("`CONTEXTUAL CLARIFICATION OUTCOME`", "clarification"),
-        ("`STOPPED`", "stopped"),
-        ("`STOP — APPROVED PLAN OUTCOME`", "approvedPlan"),
-        ("`CONTEXTUAL NEXT COMMAND`", "contextualNext"),
+        ("`USER CONFIRMATION`", "confirmation"),
+        ("`INITIATIVE MODE STOP`", "initiativeStop"),
+        ("`BLOCKED OR STOPPED`", "blocked"),
+        ("`HUMAN MERGE OR COMPLETE`", "complete"),
+        ("`SAME PHASE STOP`", "samePhaseStop"),
         ("`BLOCKED`", "blocked"),
-        ("`CONTEXTUAL RECOMMENDATION`", "contextualRecommendation"),
-        ("`STOP — APPROVAL PROPOSAL`", "approvalBoundary"),
-        ("`COMPLETE`", "complete"),
     ):
         if cell.startswith(prefix):
             return node_id
@@ -140,13 +131,12 @@ def test_authoritative_transitions_label_all_installed_and_conceptual_commands()
     section = section.split("## Planned or future", 1)[0]
     flows = (ROOT / "FLOWS.md").read_text(encoding="utf-8")
     templates = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
-    assert len(templates) == 18
+    assert {template.name.removesuffix(".md.j2") for template in templates} == PUBLIC_COMMANDS
     for template in templates:
         installed = template.name.removesuffix(".md.j2")
         conceptual = installed.removeprefix("work-")
         assert installed in section
         assert f"/work {conceptual}" in section
-        assert f"/{conceptual}" in section
         assert f"/{installed}" in flows
         assert f"/work {conceptual}" in flows
 
@@ -154,7 +144,7 @@ def test_authoritative_transitions_label_all_installed_and_conceptual_commands()
 def test_command_template_changes_force_transition_documentation_review() -> None:
     """Snapshot all command templates; partials are intentionally excluded."""
     templates = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
-    assert len(templates) == 18
+    assert {template.name.removesuffix(".md.j2") for template in templates} == PUBLIC_COMMANDS
     digest = hashlib.sha256()
     for template in templates:
         digest.update(template.name.encode())
@@ -163,9 +153,9 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
         digest.update(b"\0")
 
     # Any command-template change requires reviewing the graph and edge table before
-    # deliberately updating this complete 18-template digest.
+    # deliberately updating this complete five-template digest.
     assert digest.hexdigest() == (
-        "adb2814aff1a3a5c099a044eb51b85aaa0da88486039abbfd7b5647eab8b67d0"
+        "477852698079cf790313b99887e0221a3ee3ab010d9c9f563dcf0d3b4cfa63ae"
     )
 
 

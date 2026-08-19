@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00068"
+"type": "task"
+"title": "Update SDLC documentation generated outputs and final verification"
+"status": "done"
+"created_at": "2026-08-19T12:09:27.068Z"
+"updated_at": "2026-08-19T12:55:54.593Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00061"
+"depends_on":
+  - "hrn-00067"
+"body": "Given the implemented five-command SDLC\nWhen final verification runs\nThen docs, generated outputs, packages, and transition checks describe and ship only the supported behavior.\n\n## Deliverables\n\n- Update README, FLOWS, SDLC docs, Mermaid transitions, and command inventory.\n- Reinstall OpenCode/Pi outputs through explicit migration.\n- Update template drift digest and release-artifact assertions.\n- Full code review and cross-platform quality verification.\n\n## Acceptance\n\n- [x] Exactly five packaged templates and generated outputs exist.\n- [x] Old useful behavior is represented internally, not as public commands.\n- [x] Mermaid graph/table matches implemented transitions.\n- [x] Quality, build, runtime smoke, package checks, and installer tests pass."
+"comments":
+  - "id": "hrn-00068-C0001"
+    "created_at": "2026-08-19T12:55:43.188Z"
+    "created_by": "lead-engineer"
+    "body": "Verification passed: 245 Python tests, 172 generic tests, OpenCode 2, Pi 3, six Mermaid diagrams, package/build/runtime checks, reviewer approval. OpenCode/Pi outputs migrated and byte-verified at exactly five commands."

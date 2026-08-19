@@ -1,41 +1,25 @@
-# Verify Work
+# Work Verify
+
+Verify one recognized Epic against current acceptance, quality, security, compatibility,
+and review evidence. Diagnose failures with the user, maintain canonical occurrence Bugs,
+and stop before Build, Plan, or Release work.
+
+{% include "sdlc/_partials/governance.md.j2" %}
+
+{% include "sdlc/_partials/epic-context.md.j2" %}
 
 {% include "sdlc/_partials/memory-entry.md.j2" %}
 
-Operate in theoretical conversation-only mode. Do not use tools, inspect files, run
-commands, or modify anything.
+{% include "sdlc/_partials/verify-checklist.md.j2" %}
 
-Define how implemented work should be verified against its contract, design, Tasks,
-and acceptance criteria.
+## Output
 
-Consider all relevant quality dimensions:
+Report recognized Epic, verify phase/state, authoritative evidence, classified checks,
+diagnosed defect occurrences, discussed route choices and user selection, Bug discovery or
+mutation results, confirmation status, completed step, next permitted step, blockers, and
+checkpoint result. Never claim a check ran, a defect was resolved, or a Bug was created,
+reused, reopened, transitioned, updated, or related without current evidence.
 
-- functional tests;
-- integration tests;
-- formatting, linting, and type checking;
-- security and privacy;
-- dependency and configuration changes;
-- duplication and dead code;
-- scope and changed-file checks;
-- documentation and operational impact.
-
-Return:
-
-### Verification target
-
-### Acceptance criteria mapping
-
-### Commands and checks to run
-
-### Evidence required
-
-### Failure handling
-
-### Unverified claims
-
-### Recommendation
-
-Recommend `/implement` with repair comments if checks fail, otherwise `/review`.
-Do not claim that verification was executed.
+{% include "sdlc/_partials/checkpoint.md.j2" %}
 
 {% include "sdlc/_partials/memory-exit.md.j2" %}

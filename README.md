@@ -39,7 +39,7 @@ flowchart TD
     accDescr: Canonical prompts compile into harness-specific commands that use generic tools to produce human-governed repository records and evidence.
     prompts[Canonical SDLC prompts] --> commands[Harness-specific compiled commands]
     commands --> opencode[OpenCode Markdown commands]
-    commands --> pi[Pi prompt payloads / future Pi extension]
+    commands --> pi[Pi prompts, skills, and tool extension]
     opencode --> tools[Generic filesystem and workflow tools]
     pi --> tools
     tools --> record[Repository + human decisions + evidence]
@@ -70,242 +70,84 @@ necessary.
 
 ## Intended SDLC flow
 
-The conceptual command flow is:
+The public workflow is Epic-first and has exactly five commands:
 
 ```mermaid
 flowchart TD
-    accTitle: Abbreviated intended SDLC flow
-    accDescr: Work moves from intake through exploration, planning, implementation, verification, review, and delivery, with human approval gates before implementation, finishing, and merge.
-    new["work-new<br/>/work new · /new"] --> explore["work-explore<br/>/work explore · /explore"]
-    explore --> plan["work-plan<br/>/work plan · /plan"]
-    plan --> planGate{Human approval required}
-    planGate --> implement["work-implement<br/>/work implement · /implement"]
-    implement --> verify["work-verify<br/>/work verify · /verify"]
-    verify --> review["work-review<br/>/work review · /review"]
-    review --> reviewGate{Human review required}
-    reviewGate --> finish["work-finish<br/>/work finish · /finish"]
-    finish --> deliveryGate{Delivery approval required}
-    deliveryGate --> merge[Human merge]
+    accTitle: Epic-first SDLC flow
+    accDescr: Plan confirms one Epic and its executable plan, Build implements bounded work, Verify either returns confirmed defects to Build or advances to Release, and Continue resumes one exact step in one current phase.
+    request([Prompt or issue ID]) --> plan["work-plan<br/>/work plan"]
+    plan -->|Approved Epic plan| build["work-build<br/>/work build"]
+    build -->|Verification boundary| verify["work-verify<br/>/work verify"]
+    verify -->|Confirmed corrective Bugs| build
+    verify -->|Pass| release["work-release<br/>/work release"]
+    release --> human[Human merge by default]
+    continueWork["work-continue<br/>/work continue"] -. "Resume exactly one step" .-> plan
+    continueWork -. "Resume exactly one step" .-> build
+    continueWork -. "Resume exactly one step" .-> verify
+    continueWork -. "Resume exactly one step" .-> release
 ```
 
-This overview is intentionally abbreviated. The
-[authoritative 18-template command transition graph and accessible edge table](docs/sdlc.md#authoritative-command-transitions)
-cover contextual routes, gates, repair loops, and terminal outcomes.
+Every command first resolves exactly one owning Epic. `work-build`, `work-verify`,
+`work-release`, and `work-continue` stop and redirect to `work-plan` when no Epic can
+be resolved. The [authoritative five-command transition graph and accessible edge
+table](docs/sdlc.md#authoritative-command-transitions) cover every gate, loop, and
+terminal outcome.
 
-The grouped command names above are the desired workflow vocabulary. Current
-OpenCode installation uses the explicit hyphenated form because OpenCode command
-files map directly to command names:
+OpenCode and Pi install these exact hyphenated names:
 
 ```text
-/work-new
-/work-explore
 /work-plan
+/work-build
+/work-verify
+/work-release
+/work-continue
 ```
 
-The intended Pi extension will eventually expose the grouped form:
+The canonical harness-neutral aliases are:
 
 ```text
-/work new
-/work explore
 /work plan
-/work implement
+/work build
 /work verify
-/work review
-/work finish
+/work release
+/work continue
 ```
 
-The short names (`/new`, `/explore`, etc.) are conceptual shorthand for the stages,
-not yet guaranteed host aliases.
+Grouped aliases describe canonical semantics; they are not additional generated command
+files. The former 18-command vocabulary is not installed as aliases. Useful intake,
+exploration, Initiative/Epic creation, design, decomposition, implementation, review,
+CVS, finish, and resume behavior remains inside the five commands as phase checklists.
 
 ## Stage contracts
 
-Each stage consumes a defined output from the previous stage and produces an explicit
-output for the next stage. A stage must stop at its boundary instead of silently
-continuing into the next one.
+Each command stops at its public phase boundary. `work-plan` accepts a prompt,
+Initiative ID, Epic ID, or text mentioning one. It searches for matches and, after
+confirmation, either creates one Epic or creates an Initiative with attached Epics.
+Initiative mode then stops; Epic mode clarifies, explores, selects proportionate design,
+decomposes confirmed work, and obtains approval for one executable Epic plan.
 
-### 1. `/new` — work contract
+`work-build` selects or resumes ready Story, Task, or Bug work inside that Epic. Each
+slice has bounded scope, evidence, tests, and a stop condition. One-time YOLO consent is
+limited to the confirmed Epic and ready item set; it ends on a blocker, scope change,
+verification boundary, user stop, ambiguity, or exhausted work and never authorizes
+remote or destructive actions.
 
-**Purpose:** Turn a natural-language request into a shared, reviewable agreement
-between the user and the assistant.
+`work-verify` maps current evidence to acceptance and quality requirements. A pass
+recommends Release. A distinct defect occurrence becomes exactly one confirmed,
+provider-discoverable, non-archived canonical Bug parented to the Epic and routes back
+to Build. Requirement or design-scope changes route to Plan instead.
 
-**Consumes:** User request and conversation context.
+`work-release` requires current successful verification. It completes or validates the
+mandatory feature branch, commit, push, and pull-request sequence. Push, pull-request
+mutation, merge, deployment, remote closure, and destructive actions require fresh
+action-specific consent. Merge is human by default; deployment is Not needed unless
+explicitly requested and supported by a verified workflow.
 
-**Produces:** A confirmed work contract:
-
-```text
-Objective
-Motivation
-Context
-Constraints
-Scope
-Acceptance criteria
-Open questions
-Suggested next step
-```
-
-**Behavior:**
-
-- Ask focused clarification questions one at a time.
-- Separate confirmed facts from assumptions.
-- Ask the user to confirm the proposed contract.
-- Revise it if the user disagrees.
-- Stop after confirmation.
-
-**Must not:**
-
-- create files, issues, branches, or specifications;
-- classify the request as a bug/task/story/epic;
-- explore the repository;
-- delegate to workers;
-- implement, verify, commit, push, or open a pull request.
-
-### 2. `/explore` — evidence report
-
-**Purpose:** Understand the existing repository and gather evidence before planning.
-
-**Consumes:** Confirmed work contract.
-
-**Produces:** An evidence report:
-
-```text
-Question investigated
-Confirmed evidence
-Relevant files and symbols
-Observed behavior
-Assumptions
-Risks and contradictions
-Unanswered questions
-Recommendation
-```
-
-**Behavior:**
-
-- Use targeted reads and searches.
-- Cite files, symbols, commands, and outputs.
-- Identify contradictions and missing evidence.
-- Recommend whether planning can begin.
-
-**Must not:**
-
-- modify repository files;
-- create issues or branches;
-- implement a solution;
-- claim behavior that was not observed.
-
-### 3. `/plan` — approved implementation plan
-
-**Purpose:** Convert the work contract and evidence into the smallest viable plan.
-
-**Consumes:** Confirmed work contract and evidence report.
-
-**Produces:** A proposed implementation plan:
-
-```text
-Problem statement
-Confirmed requirements
-Evidence used
-Files and components likely to change
-Implementation steps
-Tests and verification
-Risks and mitigations
-Non-goals
-Open decisions
-```
-
-**Approval gate:** The assistant must ask explicitly:
-
-```text
-Do you approve this plan for implementation?
-```
-
-No implementation may begin without a positive human response. The approval should
-eventually be tied to the exact plan revision or content hash.
-
-### 4. `/implement` — scoped change execution
-
-**Purpose:** Execute an approved plan.
-
-**Consumes:** Confirmed work contract, evidence report, and approved plan.
-
-**Produces:** Repository changes plus an implementation result:
-
-```text
-Work performed
-Files changed
-Tests added or changed
-Commands run
-Results
-Deviations from the plan
-Unresolved risks
-Recommendation
-```
-
-**Rules:**
-
-- Stay within approved scope.
-- Do not silently rewrite the plan.
-- Stop on contradictions or missing approval.
-- Do not change protected policy, permission, or escalation configuration.
-- Do not commit, push, or create a pull request automatically.
-
-### 5. `/verify` — evidence-backed verification
-
-**Purpose:** Determine whether the implementation satisfies the contract and plan.
-
-**Consumes:** Work contract, approved plan, implementation result, and repository
-diff.
-
-**Produces:** A verification report:
-
-```text
-Commands executed
-Exit statuses
-Acceptance criteria mapping
-Changed files
-Observed failures
-Unverified claims
-Remaining risks
-Recommendation
-```
-
-Claims without tool-backed evidence must be marked unverified.
-
-### 6. `/review` — human review package
-
-**Purpose:** Prepare a concise review decision for the human.
-
-**Consumes:** All prior artifacts, diff, and verification report.
-
-**Produces:**
-
-```text
-What changed
-Why it changed
-Evidence
-Known risks
-Remaining concerns
-Suggested decision: accept, repair, block, or reject
-```
-
-The assistant may recommend a decision but does not merge or override the human.
-
-### 7. `/finish` — delivery preparation
-
-**Purpose:** Prepare delivery metadata after implementation and review.
-
-**Consumes:** Approved work, verification, and human review decision.
-
-**Produces:**
-
-```text
-Commit suggestion
-Push suggestion
-Pull request title/body suggestion
-Outstanding warnings
-Human actions required
-```
-
-It may prepare commands or metadata, but merge remains human-only.
+`work-continue` resolves one Epic and its exact authoritative phase and candidate step.
+Without an ID it presents at most five unfinished candidates and waits for selection.
+It resumes exactly one confirmed step in Plan, Build, Verify, or Release, checkpoints
+that result, and stops without advancing phases.
 
 ## What is implemented today
 
@@ -323,7 +165,7 @@ Implemented in `src/harnessctl/`:
   files, with independently configured CVS and Issues policies.
 - Packaged prompt templates that are included in built wheels.
 
-The current registry contains 18 canonical templates and installs each under the
+The current registry contains five canonical templates and installs each under the
 OpenCode and Pi command directories. See the [SDLC guide](docs/sdlc.md) for the exact
 command set and current host boundaries.
 
@@ -394,7 +236,7 @@ OpenCode and Pi adapters currently register the generic issue/configuration tool
 the normalized repository-memory tools. Adapter tests cover Pi memory registration,
 store, search, and validation delegation.
 
-Automatic memory installation supports OpenCode and Pi. Pi receives all 18 commands,
+Automatic memory installation supports OpenCode and Pi. Pi receives all five commands,
 all four skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
 `pi.extensions` package manifest loads the tool extension.
 
@@ -435,30 +277,27 @@ The repository now uses:
 
 The following are intentionally not part of the current slice:
 
-- a Pi extension that exposes `/work new` and grouped subcommands;
+- runtime dispatch for grouped `/work *` aliases;
 - a primary Orchestrator agent definition;
 - anonymous worker assignment and result contracts in prompts;
 - durable `.harnessctl/tasks/` workflow artifacts;
 - plan approval artifacts and revision/hash coupling;
 - automatic retry, ensemble, or escalation behavior;
 - model-tier routing and cost-aware model selection;
-- external issue trackers or hosting integrations;
-- direct provider API clients, provider CLI installation/authentication, and automatic
-  merge;
-- worktrees, automatic commits, automatic pushes, or automatic PR creation;
-- automatic merge;
+- direct provider API clients and provider CLI installation/authentication;
+- worktrees and autonomous merge;
 - self-development mode;
 - game-development-specific workflows.
 
-The generic issue tools are more advanced than the prompt workflow because they were
-implemented as a separate filesystem-management slice. The 18 prompt templates are
-currently conversation-only proposals and do not orchestrate those tools.
+The five prompts coordinate only configured capabilities and retain explicit proposal,
+confirmation, authority, checkpoint, and host-permission boundaries. They do not add a
+workflow runtime or make prompts a security boundary.
 
 ## Next implementation steps
 
 Current roadmap areas include durable approval artifacts, grouped Pi command
 dispatch, model-tier and retry policy, remote provider adapters, and protected
-self-development. These remain separate from the installed 18-command prompt set.
+self-development. These remain separate from the installed five-command prompt set.
 See [FLOWS.md](FLOWS.md) for intended sequencing and the
 [topic documentation](docs/README.md) for current-versus-planned boundaries.
 

@@ -22,7 +22,7 @@ therefore remain available even when memory is disabled. Older local plugin shim
 retired. The memory skill receives only compiled retrieval limits and repository root,
 not the whole configuration.
 
-All 18 SDLC prompts are configuration-rendered under `.opencode/commands/` or the
+All five SDLC prompts are configuration-rendered under `.opencode/commands/` or the
 official Pi `.pi/prompts/` path. Both harnesses receive memory hooks when
 memory is enabled.
 

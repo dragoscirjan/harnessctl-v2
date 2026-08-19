@@ -118,6 +118,10 @@ run = "uv run pytest"
 description = "Build and verify isolated Python release artifacts"
 run = "uv run pytest tests/test_release_artifacts.py"
 
+[tasks.python-dist]
+description = "Build the Python wheel and source distribution"
+run = "uv build --out-dir dist"
+
 [tasks.build]
 description = "Build and inspect all publishable packages"
 depends = ["node-build", "release-artifacts"]

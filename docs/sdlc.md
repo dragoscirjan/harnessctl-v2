@@ -3,177 +3,187 @@
 ## Current implementation
 
 The registry in
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) contains 18 canonical
-templates. Installation renders every template as a hyphenated Markdown command for
-OpenCode and Pi. `work-explore` may inspect and read relevant repository areas and run
-safe read-only diagnostics. Artifact creation, code edits, mutating checks, and
-delivery remain theoretical conversation-only actions, and every other prompt remains
-bounded by its template. When repository memory is enabled, OpenCode and Pi prompts
-may perform their explicitly bounded memory retrieval or persistence hook; that does
-not prove any SDLC work occurred. Command names describe the stage being proposed, not
-automation already performed.
+[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) contains exactly five
+public command templates. OpenCode and Pi installation renders these files:
 
-| Installed command       | Stage responsibility                                | Boundary or gate                                       |
-| ----------------------- | --------------------------------------------------- | ------------------------------------------------------ |
-| `work-new`              | Establish a work contract                           | Confirm scope; stop before exploration                 |
-| `work-explore`          | Gather repository evidence                          | Read-only diagnostics; stop before planning            |
-| `work-plan`             | Propose an implementation plan                      | Explicit human approval; no implementation             |
-| `work-resume`           | Recover interrupted context                         | Report state; never continue silently                  |
-| `work-start-initiative` | Propose an initiative decomposition                 | Human approval; do not claim Epics were created        |
-| `work-start-epic`       | Establish Epic context                              | User chooses the next stage                            |
-| `work-start-from`       | Select an existing active entity                    | Context selection only                                 |
-| `work-write-stories`    | Propose an Epic’s Stories                           | Human approval; do not claim Story creation            |
-| `work-start-story`      | Establish Story context                             | User chooses the next stage                            |
-| `work-design-doc`       | Propose a general design                            | Do not claim the document was written or linked        |
-| `work-hld`              | Propose high-level architecture                     | Do not claim the HLD was written or approved           |
-| `work-lld`              | Propose low-level design                            | Do not claim the LLD was written or approved           |
-| `work-write-tasks`      | Propose atomic implementation tasks                 | Human approval of the task graph                       |
-| `work-implement`        | Propose how approved work should be implemented     | Do not edit or claim completion                        |
-| `work-verify`           | Define acceptance and quality checks                | Do not run or claim verification                       |
-| `work-review`           | Propose an independent review                       | Human accepts, repairs, blocks, or rejects             |
-| `work-cvs`              | Propose branch, commit, push, and pull request work | Perform no delivery action; never merge                |
-| `work-finish`           | Propose final delivery or deployment                | Perform no deployment; human approval remains required |
+| Installed name  | Canonical alias  | Responsibility                                                                 |
+| --------------- | ---------------- | ------------------------------------------------------------------------------ |
+| `work-plan`     | `/work plan`     | Resolve or create the owning Epic and obtain approval for one executable plan. |
+| `work-build`    | `/work build`    | Select or resume ready Epic work and implement bounded slices.                 |
+| `work-verify`   | `/work verify`   | Verify the Epic and route passes or confirmed defects.                         |
+| `work-release`  | `/work release`  | Complete verified branch, commit, push, and pull-request delivery.             |
+| `work-continue` | `/work continue` | Resume exactly one authoritative step in one current phase.                    |
 
 OpenCode files are installed under `.opencode/commands/`; Pi files are installed under
-`.pi/prompts/`. Rendering is harness-specific, but stage intent is shared. Enabled
-repository memory adds bounded entry or exit guidance to both harnesses; it does not
-establish approval, completion, verification, merge, or deployment.
+`.pi/prompts/`. The grouped `/work *` forms are canonical harness-neutral aliases, not
+additional installed files. Short aliases and the former 18 commands are not generated.
+There is no `work-maintain`; maintenance starts in Plan, and verification defects return
+to Build as confirmed Bugs.
 
-A complete example enabling those memory hooks is:
+The former intake, exploration, Initiative/Epic start, Story and Task decomposition,
+design document, HLD, LLD, implementation, review, CVS, finish, and resume behavior is
+preserved as internal phase checklists. It is not a public command surface.
 
-```yaml
-communication:
-  caveman:
-    enabled: true
-    mode: strict
-memory:
-  enabled: true
-  backend: repository
-  namespace:
-    organization_id: local
-    project_id: project
-    default_topic: general
-  retrieval:
-    limit: 8
-    max_chars: 12000
-    include_superseded: false
-  repository:
-    root: .harnessctl/memory
-```
+Every command proposes and explains classified actions, allows revision, and obtains
+confirmation before reads or mutations. It resolves exactly one authoritative owning
+Epic before phase work. Story, Task, and Bug inputs resolve through their parent
+hierarchy. Ambiguous or contradictory ownership blocks. When no Epic resolves,
+Build, Verify, Release, and Continue stop and redirect to Plan rather than creating one.
 
-Stage contracts frame expected inputs and bounded outputs. A command must report a
-missing prerequisite rather than infer it, and must not silently cross into the next
-stage. Plans, decompositions, designs, delivery actions, deployment, and merge retain
-their stated human gates. See [FLOWS.md](../FLOWS.md) for the intended tool-enabled
-lifecycle, arguments, artifacts, dependencies, resumability, and invalid transitions.
+Enabled repository memory adds compact resumable checkpoints, but memory remains
+advisory and never proves completion. Issue hierarchy, linked specifications, source,
+Git, tests, and provider evidence remain authoritative. Prompts are protocols, not a
+workflow runtime or security boundary.
+
+## Phase behavior
+
+### Plan
+
+Plan accepts a natural-language prompt, Initiative ID, Epic ID, or text mentioning
+either. It searches configured issue authority for relevant Initiative and Epic
+candidates and presents duplicate and scope boundaries before confirmed creation.
+
+- **Prompt mode:** clarify the request, gather confirmed evidence, and choose a valid
+  entity mode.
+- **Initiative mode:** present one Initiative boundary and a separated, ordered set of
+  attached Epics. After confirmation, create them and stop, recommending a separate
+  Plan invocation for each Epic.
+- **Epic mode:** resolve or create one Epic, then adaptively clarify, explore, assess
+  dependencies and risks, select proportionate design, link approved artifacts,
+  decompose confirmed Stories, Tasks, or existing Bugs, and define verification and
+  release requirements.
+
+The user may revise proposed requirements, design level, decomposition, and scope.
+Plan requires explicit confirmation before creating entities or artifacts and explicit
+approval of the final executable Epic plan. Implementation begins only through a later
+Build invocation.
+
+### Build
+
+Build reconciles the approved plan, issue state, linked artifacts, source, Git, tests,
+and checkpoint. It resumes the exact unfinished slice when work has started; otherwise
+it selects a confirmed ready Story, Task, or Bug. Each slice declares its objective,
+scope, expected files or component boundary, tests, and stop condition.
+
+YOLO is one-time, Epic-scoped, bounded consent for the displayed eligible ready items.
+It ends on the first blocker, scope change, verification boundary, user stop, ambiguous
+result, or exhausted work. It never authorizes remote or destructive actions, closure,
+merge, deployment, safety relaxation, or work outside the Epic. Build checkpoints each
+slice and stops at Verify.
+
+### Verify
+
+Verify confirms a check set and evaluates applicable acceptance, test, integration,
+formatting, lint, typing, security, privacy, dependency, configuration, duplication,
+dead-code, scope, documentation, operational, and release evidence. It preserves the
+former independent review perspectives inside this phase.
+
+A pass recommends Release. Failures are discussed and grouped by distinct defect
+occurrence, not repeated symptom. After confirmation, each occurrence has exactly one
+provider-discoverable, non-archived canonical Bug parented to the Epic. A matching open
+or in-progress Bug is reused; a matching done or closed unresolved occurrence blocks
+duplication until a supported confirmed transition or a proven regression/new
+occurrence is selected. Confirmed corrective Bugs route to Build. Requirement,
+acceptance-boundary, architecture, or design-scope changes route to Plan.
+
+### Release
+
+Release requires current successful verification. Its mandatory sequence is feature
+branch, commit, push, and pull request. Current evidence may satisfy an already-complete
+action only when it belongs to the Epic, contains intended scope, targets the correct
+base, and has no contradictory state.
+
+Each unsatisfied action is confirmed separately. Push, pull-request creation or update,
+merge, deployment, remote issue closure, and destructive actions require fresh explicit
+consent immediately before invocation. Merge remains a human action by default; model
+merge requires fresh consent naming the exact pull request and action. Deployment is
+Not needed unless explicitly requested and proceeds only through a verified repository
+workflow with environment, migration, rollback, monitoring, and authorization evidence.
+
+### Continue
+
+Continue resolves the owning Epic and exact authoritative current phase. With no ID it
+searches once, presents at most five unfinished Epic candidates, and waits for selection;
+it never chooses the newest automatically. It reconciles checkpoint claims with current
+issue, specification, source, Git, test, and provider evidence.
+
+Continue resumes exactly one user-confirmed step in Plan, Build, Verify, or Release,
+records that result, and stops. It does not combine phases or enter the next phase when
+the step completes. If no valid checkpoint exists but an Epic does, it presents only
+authority-supported phase candidates for user selection.
 
 ## Authoritative command transitions
 
-This graph is derived from all 18 installed templates. Each command node shows the
-installed `work-*` name, canonical conceptual `/work *` name, and short conceptual
-alias. Solid edges are recommended later command invocations; they do not silently
-execute the destination. Dashed edges are revision, gate, context, or terminal
-outcomes. Contextual outcomes mean the next step depends on the current conversation;
-they do not enumerate or invoke a destination. `BLOCKED`, `STOPPED`, and `COMPLETE`
-are outcomes, not commands.
+This graph is derived from all five installed templates. Each command node shows the
+installed `work-*` name and canonical `/work *` alias. Solid edges are public phase
+recommendations; dashed edges are gates, redirects, same-phase resumption, or terminal
+outcomes. A recommended destination is not silently invoked.
 
 ```mermaid
 flowchart TD
     accTitle: Authoritative template-derived command transitions
-    accDescr: The 18 installed work commands stop at explicit boundaries, recommend only template-defined later commands, loop for revisions or repairs where defined, and end in blocked, stopped, or complete outcomes where applicable.
-    request([User request]) -->|Start intake| new["work-new<br/>/work new · /new"]
-    new -. "Changes requested" .-> new
-    new -. "Confirmed; stop after contextual suggestion" .-> intakeBoundary([STOP — COMMAND BOUNDARY<br/>Contextual suggested next step:<br/>for example exploration, design,<br/>implementation, or clarification])
-    explore["work-explore<br/>/work explore · /explore"] -->|Proceed to planning| plan["work-plan<br/>/work plan · /plan"]
-    explore -. "Ask for clarification" .-> clarification([CONTEXTUAL CLARIFICATION OUTCOME])
-    explore -. "Stop recommended" .-> stopped([STOPPED])
-    plan -. "Changes requested" .-> plan
-    plan -. "Human approves; stop" .-> approvedPlan([STOP — APPROVED PLAN OUTCOME])
-    resume["work-resume<br/>/work resume · /resume"] -. "Reconstructed context confirmed" .-> contextualNext([CONTEXTUAL NEXT COMMAND])
-    resume -. "Context missing or disputed" .-> blocked([BLOCKED])
-    startFrom["work-start-from<br/>/work start-from · /start-from"] -. "Contextual recommendation only" .-> contextualRecommendation([CONTEXTUAL RECOMMENDATION])
-    startInitiative["work-start-initiative<br/>/work start-initiative · /start-initiative"] -. "Epic decomposition proposed; approval requested" .-> approvalBoundary([STOP — APPROVAL PROPOSAL])
-    startEpic["work-start-epic<br/>/work start-epic · /start-epic"] -->|Stories needed| stories["work-write-stories<br/>/work write-stories · /write-stories"]
-    startEpic -->|Existing Story selected| startStory["work-start-story<br/>/work start-story · /start-story"]
-    startEpic -->|General design needed| design["work-design-doc<br/>/work design-doc · /design-doc"]
-    startEpic -->|Architecture needed| hld["work-hld<br/>/work hld · /hld"]
-    startEpic -->|Technical design needed| lld["work-lld<br/>/work lld · /lld"]
-    startEpic -->|Task decomposition needed| tasks["work-write-tasks<br/>/work write-tasks · /write-tasks"]
-    startEpic -->|Approved work ready| implement["work-implement<br/>/work implement · /implement"]
-    stories -->|Human approves Story breakdown| startStory
-    startStory -->|General design needed| design
-    startStory -->|Architecture needed| hld
-    startStory -->|Technical design needed| lld
-    startStory -->|Task decomposition needed| tasks
-    startStory -->|Approved work ready| implement
-    design -->|Concrete technical design needed| lld
-    design -->|Design already actionable| tasks
-    hld -->|Component technical design needed| lld
-    lld -->|Design proposed| tasks
-    tasks -->|Human approves task graph| implement
-    implement -->|Implementation proposal complete| verify["work-verify<br/>/work verify · /verify"]
-    verify -->|Checks fail; repair comments supplied| implement
-    verify -->|Checks pass| review["work-review<br/>/work review · /review"]
-    review -->|Decision: repair| implement
-    review -->|Decision: accept| cvs["work-cvs<br/>/work cvs · /cvs"]
-    review -. "Decision: block" .-> blocked
-    review -. "Decision: reject" .-> stopped
-    cvs -->|Delivery actions approved and complete| finish["work-finish<br/>/work finish · /finish"]
-    finish -->|User confirms merged, deployed, or finished| complete([COMPLETE])
+    accDescr: Five Epic-first commands resolve one owning Epic, Plan requires confirmation and approval, Build stops for Verify, defects return to Build, successful verification reaches Release, and Continue resumes one step in one phase.
+    request([Prompt or issue ID]) -->|Start or recover planning| plan["work-plan<br/>/work plan"]
+    plan -. "Entity or plan changes requested" .-> plan
+    plan -. "Initiative and attached Epics confirmed" .-> initiativeStop([INITIATIVE MODE STOP])
+    plan -. "Epic actions require confirmation" .-> confirmation([USER CONFIRMATION])
+    confirmation -->|Executable Epic plan approved| build["work-build<br/>/work build"]
+    build -. "Epic missing or scope changes" .-> plan
+    build -->|Bounded work reaches verification boundary| verify["work-verify<br/>/work verify"]
+    verify -. "Epic missing or requirements change" .-> plan
+    verify -->|Confirmed corrective Bugs or repairs| build
+    verify -->|Current checks pass| release["work-release<br/>/work release"]
+    release -. "Epic missing" .-> plan
+    release -. "Current verification missing or stale" .-> verify
+    release -->|Delivery satisfied; human merge default| complete([HUMAN MERGE OR COMPLETE])
+    continueWork["work-continue<br/>/work continue"] -. "Epic missing" .-> plan
+    continueWork -. "Resume one Plan step" .-> plan
+    continueWork -. "Resume one Build step" .-> build
+    continueWork -. "Resume one Verify step" .-> verify
+    continueWork -. "Resume one Release step" .-> release
+    continueWork -. "Ambiguous authority or checkpoint" .-> blocked([BLOCKED OR STOPPED])
+    continueWork -. "One resumed step completes" .-> samePhaseStop([SAME PHASE STOP])
 ```
 
 The following table is the accessible edge-equivalent of the graph. Rows use the same
-source, condition, and destination, including non-command routing and outcome nodes.
+source, condition, and destination, including gates and outcomes.
 
-| Source                                                                   | Condition or gate                               | Destination                                                                                                                  |
-| ------------------------------------------------------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| User request                                                             | Start intake                                    | `work-new` / `/work new` / `/new`                                                                                            |
-| `work-new` / `/work new` / `/new`                                        | Changes requested                               | Same command (revision loop)                                                                                                 |
-| `work-new` / `/work new` / `/new`                                        | Confirmed; stop after contextual suggestion     | `STOP — COMMAND BOUNDARY`: contextual suggested next step, for example exploration, design, implementation, or clarification |
-| `work-explore` / `/work explore` / `/explore`                            | Proceed to planning                             | `work-plan` / `/work plan` / `/plan`                                                                                         |
-| `work-explore` / `/work explore` / `/explore`                            | Ask for clarification                           | `CONTEXTUAL CLARIFICATION OUTCOME`                                                                                           |
-| `work-explore` / `/work explore` / `/explore`                            | Stop recommended                                | `STOPPED`                                                                                                                    |
-| `work-plan` / `/work plan` / `/plan`                                     | Changes requested                               | Same command (revision loop)                                                                                                 |
-| `work-plan` / `/work plan` / `/plan`                                     | Human approves; stop                            | `STOP — APPROVED PLAN OUTCOME`                                                                                               |
-| `work-resume` / `/work resume` / `/resume`                               | Reconstructed context confirmed                 | `CONTEXTUAL NEXT COMMAND`                                                                                                    |
-| `work-resume` / `/work resume` / `/resume`                               | Context missing or disputed                     | `BLOCKED`                                                                                                                    |
-| `work-start-from` / `/work start-from` / `/start-from`                   | Contextual recommendation only                  | `CONTEXTUAL RECOMMENDATION`                                                                                                  |
-| `work-start-initiative` / `/work start-initiative` / `/start-initiative` | Epic decomposition proposed; approval requested | `STOP — APPROVAL PROPOSAL`                                                                                                   |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Stories needed                                  | `work-write-stories` / `/work write-stories` / `/write-stories`                                                              |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Existing Story selected                         | `work-start-story` / `/work start-story` / `/start-story`                                                                    |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | General design needed                           | `work-design-doc` / `/work design-doc` / `/design-doc`                                                                       |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Architecture needed                             | `work-hld` / `/work hld` / `/hld`                                                                                            |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Technical design needed                         | `work-lld` / `/work lld` / `/lld`                                                                                            |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Task decomposition needed                       | `work-write-tasks` / `/work write-tasks` / `/write-tasks`                                                                    |
-| `work-start-epic` / `/work start-epic` / `/start-epic`                   | Approved work ready                             | `work-implement` / `/work implement` / `/implement`                                                                          |
-| `work-write-stories` / `/work write-stories` / `/write-stories`          | Human approves Story breakdown                  | `work-start-story` / `/work start-story` / `/start-story`                                                                    |
-| `work-start-story` / `/work start-story` / `/start-story`                | General design needed                           | `work-design-doc` / `/work design-doc` / `/design-doc`                                                                       |
-| `work-start-story` / `/work start-story` / `/start-story`                | Architecture needed                             | `work-hld` / `/work hld` / `/hld`                                                                                            |
-| `work-start-story` / `/work start-story` / `/start-story`                | Technical design needed                         | `work-lld` / `/work lld` / `/lld`                                                                                            |
-| `work-start-story` / `/work start-story` / `/start-story`                | Task decomposition needed                       | `work-write-tasks` / `/work write-tasks` / `/write-tasks`                                                                    |
-| `work-start-story` / `/work start-story` / `/start-story`                | Approved work ready                             | `work-implement` / `/work implement` / `/implement`                                                                          |
-| `work-design-doc` / `/work design-doc` / `/design-doc`                   | Concrete technical design needed                | `work-lld` / `/work lld` / `/lld`                                                                                            |
-| `work-design-doc` / `/work design-doc` / `/design-doc`                   | Design already actionable                       | `work-write-tasks` / `/work write-tasks` / `/write-tasks`                                                                    |
-| `work-hld` / `/work hld` / `/hld`                                        | Component technical design needed               | `work-lld` / `/work lld` / `/lld`                                                                                            |
-| `work-lld` / `/work lld` / `/lld`                                        | Design proposed                                 | `work-write-tasks` / `/work write-tasks` / `/write-tasks`                                                                    |
-| `work-write-tasks` / `/work write-tasks` / `/write-tasks`                | Human approves task graph                       | `work-implement` / `/work implement` / `/implement`                                                                          |
-| `work-implement` / `/work implement` / `/implement`                      | Implementation proposal complete                | `work-verify` / `/work verify` / `/verify`                                                                                   |
-| `work-verify` / `/work verify` / `/verify`                               | Checks fail; repair comments supplied           | `work-implement` / `/work implement` / `/implement`                                                                          |
-| `work-verify` / `/work verify` / `/verify`                               | Checks pass                                     | `work-review` / `/work review` / `/review`                                                                                   |
-| `work-review` / `/work review` / `/review`                               | Decision: `repair`                              | `work-implement` / `/work implement` / `/implement`                                                                          |
-| `work-review` / `/work review` / `/review`                               | Decision: `accept`                              | `work-cvs` / `/work cvs` / `/cvs`                                                                                            |
-| `work-review` / `/work review` / `/review`                               | Decision: `block`                               | `BLOCKED`                                                                                                                    |
-| `work-review` / `/work review` / `/review`                               | Decision: `reject`                              | `STOPPED`                                                                                                                    |
-| `work-cvs` / `/work cvs` / `/cvs`                                        | Delivery actions approved and complete          | `work-finish` / `/work finish` / `/finish`                                                                                   |
-| `work-finish` / `/work finish` / `/finish`                               | User confirms merged, deployed, or finished     | `COMPLETE`                                                                                                                   |
+| Source                             | Condition or gate                          | Destination                      |
+| ---------------------------------- | ------------------------------------------ | -------------------------------- |
+| Prompt or issue ID                 | Start or recover planning                  | `work-plan` / `/work plan`       |
+| `work-plan` / `/work plan`         | Entity or plan changes requested           | Same command (revision loop)     |
+| `work-plan` / `/work plan`         | Initiative and attached Epics confirmed    | `INITIATIVE MODE STOP`           |
+| `work-plan` / `/work plan`         | Epic actions require confirmation          | `USER CONFIRMATION`              |
+| `USER CONFIRMATION`                | Executable Epic plan approved              | `work-build` / `/work build`     |
+| `work-build` / `/work build`       | Epic missing or scope changes              | `work-plan` / `/work plan`       |
+| `work-build` / `/work build`       | Bounded work reaches verification boundary | `work-verify` / `/work verify`   |
+| `work-verify` / `/work verify`     | Epic missing or requirements change        | `work-plan` / `/work plan`       |
+| `work-verify` / `/work verify`     | Confirmed corrective Bugs or repairs       | `work-build` / `/work build`     |
+| `work-verify` / `/work verify`     | Current checks pass                        | `work-release` / `/work release` |
+| `work-release` / `/work release`   | Epic missing                               | `work-plan` / `/work plan`       |
+| `work-release` / `/work release`   | Current verification missing or stale      | `work-verify` / `/work verify`   |
+| `work-release` / `/work release`   | Delivery satisfied; human merge default    | `HUMAN MERGE OR COMPLETE`        |
+| `work-continue` / `/work continue` | Epic missing                               | `work-plan` / `/work plan`       |
+| `work-continue` / `/work continue` | Resume one Plan step                       | `work-plan` / `/work plan`       |
+| `work-continue` / `/work continue` | Resume one Build step                      | `work-build` / `/work build`     |
+| `work-continue` / `/work continue` | Resume one Verify step                     | `work-verify` / `/work verify`   |
+| `work-continue` / `/work continue` | Resume one Release step                    | `work-release` / `/work release` |
+| `work-continue` / `/work continue` | Ambiguous authority or checkpoint          | `BLOCKED OR STOPPED`             |
+| `work-continue` / `/work continue` | One resumed step completes                 | `SAME PHASE STOP`                |
 
-## Planned or future — not implemented
+## Migration from 18 commands
 
-Grouped Pi commands such as `/work plan` are not installed. Short aliases such as
-`/plan`, and any other host alias not represented by an installed file, are not
-guaranteed. Tool-enabled execution of the lifecycle, automatic orchestration,
-model-tier routing, retries, autonomous merge, and automatic deployment are also
-outside the current command installer.
+No deprecated alias files are installed. Existing generated outputs are replaced only
+through the installer's explicit `--replace-sdlc-command-set` migration consent.
 
-See [skills](skills.md) for prompt/skill distinctions and
-[configuration](configuration.md) for installer settings.
+| Deprecated command family                                                                                                                                                       | Replacement     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `work-new`, `work-explore`, `work-start-initiative`, `work-start-epic`, `work-write-stories`, `work-start-story`, `work-design-doc`, `work-hld`, `work-lld`, `work-write-tasks` | `work-plan`     |
+| `work-implement`                                                                                                                                                                | `work-build`    |
+| `work-review`                                                                                                                                                                   | `work-verify`   |
+| `work-cvs`, `work-finish`                                                                                                                                                       | `work-release`  |
+| `work-resume`, `work-start-from`                                                                                                                                                | `work-continue` |
+
+Without the replacement flag, selected-harness legacy outputs block installation before
+mutation. `--force` alone does not delete retired files. See [configuration](configuration.md)
+for installer settings and [skills](skills.md) for prompt/skill boundaries.
