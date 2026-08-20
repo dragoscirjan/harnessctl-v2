@@ -1,0 +1,11 @@
+# Build
+
+Require one Epic with approved executable plan. Reconcile issue state, scope, dependencies, design, source/Git, tests, checkpoint. Missing Epic/plan → Plan.
+
+If work started, show unfinished item/slice evidence and offer resume. Else ask which ready Epic-owned Story/Task/Bug to start. Ready = approved scope, dependencies met, sufficient design, clear owner, no safety blocker. Corrective Bug requires current verification and confirmed repair. Requirement/acceptance/architecture/design scope change → Plan.
+
+Before coding, confirm item, bounded objective, expected files/component, focused tests, stop condition, and any in-progress transition. Implement one local slice. Run focused/applicable local checks. Unexpected scope, ambiguity, failed required check, or blocker stops work.
+
+Load `build-yolo.md` only when YOLO is offered/requested.
+
+Close a detailed issue only when current implementation/tests map every acceptance criterion and user separately confirms exact transition. Build never closes Epic. At verification boundary checkpoint evidence, recommend `work-verify`, stop. Never run Verify/Release or remote/destructive actions here.

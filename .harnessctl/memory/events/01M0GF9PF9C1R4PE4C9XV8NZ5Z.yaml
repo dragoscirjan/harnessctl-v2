@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M0GF9PF9C1R4PE4C9XV8NZ5Z
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: quality-tooling
+summary: "Expanded lint/format coverage: ESLint scans project; Prettier scans supported extensions."
+details: package.json uses `eslint .` and explicit Prettier JS/TS/JSON/Markdown/YAML/TOML/CSS/HTML glob. eslint.config.mjs excludes generated/managed/external trees and req.md; GitHub workflow YAML override avoids `on:` false positive. .prettierignore excludes lockfiles and managed/external trees. `mise run quality`, npm lint/format, and `git diff --check` passed. Three reviewer calls returned empty; no reviewer verdict.
+source:
+  kind: artifact
+  ref: package.json, eslint.config.mjs, .prettierignore
+  revision: null
+created_at: 2026-08-20T20:55:12.617Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - eslint
+  - prettier
+  - quality

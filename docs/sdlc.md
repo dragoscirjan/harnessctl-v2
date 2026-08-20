@@ -22,7 +22,31 @@ to Build as confirmed Bugs.
 
 The former intake, exploration, Initiative/Epic start, Story and Task decomposition,
 design document, HLD, LLD, implementation, review, CVS, finish, and resume behavior is
-preserved as internal phase checklists. It is not a public command surface.
+preserved in progressively disclosed SDLC skill references. It is not a public command
+surface.
+
+### Progressive-disclosure layout
+
+Each installed command is a compact dispatch shell: load the `sdlc` skill, load one
+normal phase reference, apply user arguments, and stop at that phase boundary. The
+shared skill tree is installed byte-for-byte identically at
+`.opencode/skills/sdlc/` and `.pi/skills/sdlc/`:
+
+- `SKILL.md` contains cross-phase authority, consent, safety, result, and loading rules;
+- `references/{plan,build,verify,release,continue}.md` contain normal phase behavior;
+- eight conditional references cover Initiative planning, design, decomposition, YOLO,
+  defects, deployment, reconciliation, and compiled checkpoint policy.
+
+Agents load conditional references only when the matching condition occurs and never
+preload the full tree. Disabled memory compiles an unavailable-checkpoint policy;
+enabled memory compiles bounded retrieval and persistence guidance. OpenCode and Pi
+therefore receive equivalent workflow instructions without an added runtime or MCP.
+
+Enforced source-template budgets are: each command body at most 140 words/900 bytes,
+core skill at most 400 words/2,800 bytes, normal phase reference at most 550 words/4,000
+bytes, conditional reference at most 350 words/2,600 bytes, and shell + core + normal
+phase at most 1,050 words/7,500 bytes. Every command is also tested to remain at least
+80% smaller by bytes than its former memory-enabled inline baseline.
 
 Every command proposes and explains classified actions, allows revision, and obtains
 confirmation before reads or mutations. It resolves exactly one authoritative owning

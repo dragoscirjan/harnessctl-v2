@@ -1,7 +1,7 @@
 """Canonical prompt loading and harness-specific rendering."""
 
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -76,6 +76,24 @@ SKILL_TEMPLATES = {
     "cvs": "skills/cvs/SKILL.md.j2",
     "issue-tracking": "skills/issue-tracking/SKILL.md.j2",
     "memory": "skills/memory/SKILL.md.j2",
+    "sdlc": "skills/sdlc/SKILL.md.j2",
+}
+SKILL_RESOURCE_TEMPLATES = {
+    "sdlc": {
+        "references/plan.md": "skills/sdlc/references/plan.md.j2",
+        "references/plan-initiative.md": "skills/sdlc/references/plan-initiative.md.j2",
+        "references/plan-design.md": "skills/sdlc/references/plan-design.md.j2",
+        "references/plan-decompose.md": "skills/sdlc/references/plan-decompose.md.j2",
+        "references/build.md": "skills/sdlc/references/build.md.j2",
+        "references/build-yolo.md": "skills/sdlc/references/build-yolo.md.j2",
+        "references/verify.md": "skills/sdlc/references/verify.md.j2",
+        "references/verify-defects.md": "skills/sdlc/references/verify-defects.md.j2",
+        "references/release.md": "skills/sdlc/references/release.md.j2",
+        "references/release-deploy.md": "skills/sdlc/references/release-deploy.md.j2",
+        "references/continue.md": "skills/sdlc/references/continue.md.j2",
+        "references/continue-reconcile.md": "skills/sdlc/references/continue-reconcile.md.j2",
+        "references/checkpoint.md": "skills/sdlc/references/checkpoint.md.j2",
+    }
 }
 
 
@@ -149,7 +167,23 @@ def render_skill(skill: str, **context: object) -> str:
     template_name = SKILL_TEMPLATES.get(skill)
     if template_name is None:
         raise ValueError(f"unsupported skill: {skill}")
-    environment = Environment(
+    environment = _skill_environment()
+    return environment.get_template(template_name).render(**context)
+
+
+def render_skill_resources(skill: str, **context: object) -> dict[str, str]:
+    """Render validated files nested below one installed skill directory."""
+    resources = SKILL_RESOURCE_TEMPLATES.get(skill, {})
+    _validate_skill_resource_paths(resources)
+    environment = _skill_environment()
+    return {
+        path: environment.get_template(template).render(**context).rstrip("\n") + "\n"
+        for path, template in resources.items()
+    }
+
+
+def _skill_environment() -> Environment:
+    return Environment(
         loader=FileSystemLoader(TEMPLATE_ROOT),
         undefined=StrictUndefined,
         autoescape=False,
@@ -157,4 +191,22 @@ def render_skill(skill: str, **context: object) -> str:
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    return environment.get_template(template_name).render(**context)
+
+
+def _validate_skill_resource_paths(resources: Mapping[str, str]) -> None:
+    portable: set[str] = set()
+    for raw_path in resources:
+        path = PurePosixPath(raw_path)
+        if (
+            not raw_path
+            or "\\" in raw_path
+            or path.is_absolute()
+            or path.parts[:1] != ("references",)
+            or any(part in {"", ".", ".."} for part in path.parts)
+            or path.suffix != ".md"
+        ):
+            raise ValueError(f"unsafe skill resource path: {raw_path}")
+        key = raw_path.casefold()
+        if key in portable:
+            raise ValueError(f"duplicate portable skill resource path: {raw_path}")
+        portable.add(key)

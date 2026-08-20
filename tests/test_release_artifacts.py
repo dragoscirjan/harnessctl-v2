@@ -127,8 +127,17 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         for path in package_root.rglob("*")
         if path.is_file() and path.suffix in {".py", ".j2"}
     }
-    assert len(expected_resources & {"templates/sdlc/_partials/memory-entry.md.j2"}) == 1
-    assert len(expected_resources & {"templates/sdlc/_partials/memory-exit.md.j2"}) == 1
+    assert "templates/skills/sdlc/SKILL.md.j2" in expected_resources
+    assert (
+        len(
+            {
+                path
+                for path in expected_resources
+                if path.startswith("templates/skills/sdlc/references/") and path.endswith(".md.j2")
+            }
+        )
+        == 13
+    )
     assert "templates/skills/issue-tracking/SKILL.md.j2" in expected_resources
     assert "templates/skills/cvs/SKILL.md.j2" in expected_resources
     assert "mcp.py" in expected_resources
@@ -215,7 +224,7 @@ from harnessctl.install import (
     LEGACY_SDLC_COMMAND_REPLACEMENTS, RETIRED_SDLC_COMMANDS, install,
 )
 from harnessctl.mcp import required_server_intents, render_opencode_mcp
-from harnessctl.templates import TEMPLATES, render_prompt, render_skill
+from harnessctl.templates import TEMPLATES, render_prompt, render_skill, render_skill_resources
 
 checkout = Path(__import__('os').environ['HARNESSCTL_CHECKOUT']).resolve()
 assert checkout not in Path(harnessctl.__file__).resolve().parents
@@ -231,8 +240,13 @@ assert len(RETIRED_SDLC_COMMANDS) == 16
 assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
 assert inspect.signature(install).parameters['replace_sdlc_command_set'].default is False
 for command in TEMPLATES:
-    assert '## Project memory exit' in render_prompt(command, 'opencode', config=config)
-    assert '## Project memory exit' in render_prompt(command, 'pi', config=config)
+    assert 'memory_search' not in render_prompt(command, 'opencode', config=config)
+    assert 'memory_search' not in render_prompt(command, 'pi', config=config)
+checkpoint = render_skill_resources(
+    'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000
+)['references/checkpoint.md']
+assert 'memory_store' in checkpoint
+assert 'limit 5, 4000 chars' in checkpoint
 providers = {
     'filesystem': (
         'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,'
@@ -413,7 +427,9 @@ for provider, connection in providers.items():
         assert {path.stem for path in (project / relative).glob("*.md")} == CURRENT_COMMANDS
     commands = list((enabled_opencode / ".opencode/commands").glob("*.md"))
     assert len(commands) == COMMAND_COUNT
-    assert all("## Project memory exit" in path.read_text(encoding="utf-8") for path in commands)
+    assert all("memory_search" not in path.read_text(encoding="utf-8") for path in commands)
+    checkpoint = enabled_opencode / ".opencode/skills/sdlc/references/checkpoint.md"
+    assert "memory_store" in checkpoint.read_text(encoding="utf-8")
     for skill in ("caveman", "cvs", "memory", "issue-tracking"):
         assert (enabled_opencode / f".opencode/skills/{skill}/SKILL.md").is_file()
     remote_skill = remote_opencode / ".opencode/skills/issue-tracking/SKILL.md"

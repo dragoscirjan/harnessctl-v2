@@ -46,13 +46,13 @@ Configuration remains version 2. Existing missing-file, version 1, partial versi
 
 ### CVS keys
 
-| Key | Type and accepted values | Default | Contract |
-| --- | --- | --- | --- |
-| `cvs.local` | `git` or `jj` | `git` | Selects direct local repository operations. It never routes through MCP. |
-| `cvs.remote.provider` | `github`, `gitlab`, `gitea`, or `forgejo` | `github` | Selects the remote collaboration authority independently of Issues. |
-| `cvs.remote.tools` | One exact provider CLI identifier | `gh` | Uses `gh`, `glab`, `tea`, or `forgejo-cli` according to provider. It is an identifier, never command text. |
-| `cvs.remote.url` | Validated provider URL | `https://github.com` | GitHub and GitLab accept only their public service URL. Gitea and Forgejo require an explicit HTTPS instance URL. |
-| `cvs.remote.token_env` | Valid environment-variable name | `GH_TOKEN` | Stores a name only. GitHub uses it for hosted MCP PAT interpolation. Gitea and Forgejo map it to `FORGEJO_ACCESS_TOKEN`. GitLab MCP ignores it because OAuth owns credentials. |
+| Key                    | Type and accepted values                  | Default              | Contract                                                                                                                                                                       |
+| ---------------------- | ----------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cvs.local`            | `git` or `jj`                             | `git`                | Selects direct local repository operations. It never routes through MCP.                                                                                                       |
+| `cvs.remote.provider`  | `github`, `gitlab`, `gitea`, or `forgejo` | `github`             | Selects the remote collaboration authority independently of Issues.                                                                                                            |
+| `cvs.remote.tools`     | One exact provider CLI identifier         | `gh`                 | Uses `gh`, `glab`, `tea`, or `forgejo-cli` according to provider. It is an identifier, never command text.                                                                     |
+| `cvs.remote.url`       | Validated provider URL                    | `https://github.com` | GitHub and GitLab accept only their public service URL. Gitea and Forgejo require an explicit HTTPS instance URL.                                                              |
+| `cvs.remote.token_env` | Valid environment-variable name           | `GH_TOKEN`           | Stores a name only. GitHub uses it for hosted MCP PAT interpolation. Gitea and Forgejo map it to `FORGEJO_ACCESS_TOKEN`. GitLab MCP ignores it because OAuth owns credentials. |
 
 The exact provider CLI matrix is GitHub with `gh`, GitLab with `glab`, Gitea with `tea`, and Forgejo with `forgejo-cli`. The exact public collaboration URLs are `https://github.com` and `https://gitlab.com`. Gitea and Forgejo reject HTTP, credentials, query strings, fragments, whitespace, control characters, backticks, and unsafe interpolation content.
 
@@ -62,9 +62,9 @@ The existing `issues.type`, `issues.root`, `issues.prefix`, `issues.tools`,
 `issues.remote.url`, and `issues.remote.token_env` keys remain. No route-selector key is
 added.
 
-| Issue authority | Capability behavior |
-| --- | --- |
-| `filesystem` | Existing local harnessctl tools, expected revisions, append-only comments, relationships, archive behavior, and no-direct-edit policy remain exact. |
+| Issue authority | Capability behavior                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filesystem`    | Existing local harnessctl tools, expected revisions, append-only comments, relationships, archive behavior, and no-direct-edit policy remain exact.      |
 | Remote provider | The valid provider CLI and fixed-ID MCP capabilities are both enumerated. Provider, CLI, URL, and environment-name validation remain independent of CVS. |
 
 Existing remote Issues configurations do not gain a selector and do not inherit CVS
@@ -73,8 +73,8 @@ configurations remain byte-semantically unchanged at the canonical issue layer.
 
 ### MCP policy key
 
-| Key | Accepted values | Default | Contract |
-| --- | --- | --- | --- |
+| Key                     | Accepted values              | Default            | Contract                                                                                                                                |
+| ----------------------- | ---------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `mcp.output_limit_mode` | `bounded-guidance` or `hard` | `bounded-guidance` | Controls only whether verified host output limiting is requested. It never represents a provider body-size or workflow aggregate limit. |
 
 Python and TypeScript configuration validation accept `hard` as a policy value, while installation validates it against selected hosts. OpenCode or `all` rejects `hard`. Pi accepts it only with the verified adapter output guard. This preserves host-aware validation without pretending OpenCode has a control it does not expose.
@@ -157,12 +157,12 @@ Regenerate this artifact through `generate-contracts.ts`. It must express enums,
 
 ## Fixed MCP service catalog
 
-| Provider | Fixed ID | Pinned service contract |
-| --- | --- | --- |
-| GitHub | `cvs_github` | Remote `https://api.githubcopilot.com/mcp/`; PAT header; toolsets exactly `repos,issues,pull_requests,actions,git`; OpenCode OAuth false. |
-| GitLab | `cvs_gitlab` | Remote `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration; no token header or environment reference. |
-| Gitea | `cvs_gitea` | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Gitea HTTPS URL. |
-| Forgejo | `cvs_forgejo` | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Forgejo HTTPS URL. |
+| Provider | Fixed ID      | Pinned service contract                                                                                                                   |
+| -------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub   | `cvs_github`  | Remote `https://api.githubcopilot.com/mcp/`; PAT header; toolsets exactly `repos,issues,pull_requests,actions,git`; OpenCode OAuth false. |
+| GitLab   | `cvs_gitlab`  | Remote `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration; no token header or environment reference.           |
+| Gitea    | `cvs_gitea`   | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Gitea HTTPS URL.                                              |
+| Forgejo  | `cvs_forgejo` | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Forgejo HTTPS URL.                                            |
 
 `forgejo-mcp` is operator-installed and remains an external GPL process. Harnessctl does not distribute, vendor, import, link, or install it. `MushroomFleet/gitea-mcp` is neither a fallback nor generated guidance.
 
@@ -176,12 +176,12 @@ The owned file is `.opencode/opencode.json`. Parse it as one JSON object before 
 
 Harnessctl owns only the fixed IDs it needs beneath top-level `mcp`:
 
-| ID | Exact owned OpenCode definition |
-| --- | --- |
-| `cvs_github` | `type` is `remote`; `url` is the official hosted endpoint; `headers.Authorization` is `Bearer {env:NAME}`; `headers.X-MCP-Toolsets` is the exact five-toolset string; `oauth` is false. |
-| `cvs_gitlab` | `type` is `remote`; `url` is the official GitLab MCP endpoint; `oauth` is an empty object; no authorization header or token environment reference exists. |
-| `cvs_gitea` | `type` is `local`; `command` is the ordered list containing `forgejo-mcp`, `--transport`, `stdio`, `--url`, and the validated URL; `environment.FORGEJO_ACCESS_TOKEN` is `{env:NAME}`. |
-| `cvs_forgejo` | Same local shape as Gitea with the validated Forgejo URL and Forgejo token-name reference. |
+| ID            | Exact owned OpenCode definition                                                                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cvs_github`  | `type` is `remote`; `url` is the official hosted endpoint; `headers.Authorization` is `Bearer {env:NAME}`; `headers.X-MCP-Toolsets` is the exact five-toolset string; `oauth` is false. |
+| `cvs_gitlab`  | `type` is `remote`; `url` is the official GitLab MCP endpoint; `oauth` is an empty object; no authorization header or token environment reference exists.                               |
+| `cvs_gitea`   | `type` is `local`; `command` is the ordered list containing `forgejo-mcp`, `--transport`, `stdio`, `--url`, and the validated URL; `environment.FORGEJO_ACCESS_TOKEN` is `{env:NAME}`.  |
+| `cvs_forgejo` | Same local shape as Gitea with the validated Forgejo URL and Forgejo token-name reference.                                                                                              |
 
 An absent `mcp` member is created. A non-object `mcp` member fails. An identical owned ID is retained semantically and is not treated as a conflict. A differing owned ID blocks the complete plan unless force is supplied. Force replaces only that fixed-ID value. It never rewrites unrelated MCP IDs or unrelated top-level settings.
 
@@ -197,12 +197,12 @@ Harnessctl owns required fixed IDs beneath `mcpServers` and only `outputGuard` b
 
 The exact owned value is `settings.outputGuard` containing `maxBytes` 51200, `maxLines` 2000, and `detailsMaxBytes` 16384. Existing different values at that owned path are conflicts. Force may replace only that path; it may not replace the entire settings object. Harnessctl omits global and per-server `directTools`; the adapter’s documented default therefore keeps one proxy tool and prevents direct-tool expansion. It also omits `hostConfigDiscovery`, `includeTools`, and `excludeTools`.
 
-| ID | Exact owned Pi definition |
-| --- | --- |
-| `cvs_github` | Official URL; PAT authorization as `Bearer ${NAME}`; exact GitHub toolset header; `auth` bearer; `lifecycle` lazy. No direct-tool or tool-name filter fields. |
-| `cvs_gitlab` | Official URL; `auth` oauth; empty `oauth`; no authorization header, token reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle` lazy. No direct-tool or tool-name filter fields. |
-| `cvs_gitea` | `command` `forgejo-mcp`; ordered `args` of `--transport`, `stdio`, `--url`, validated URL; `env.FORGEJO_ACCESS_TOKEN` as `${NAME}`; lazy lifecycle. No direct-tool or tool-name filter fields. |
-| `cvs_forgejo` | Same process shape with the validated Forgejo URL and Forgejo token-name reference. No direct-tool or tool-name filter fields. |
+| ID            | Exact owned Pi definition                                                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cvs_github`  | Official URL; PAT authorization as `Bearer ${NAME}`; exact GitHub toolset header; `auth` bearer; `lifecycle` lazy. No direct-tool or tool-name filter fields.                                  |
+| `cvs_gitlab`  | Official URL; `auth` oauth; empty `oauth`; no authorization header, token reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle` lazy. No direct-tool or tool-name filter fields.          |
+| `cvs_gitea`   | `command` `forgejo-mcp`; ordered `args` of `--transport`, `stdio`, `--url`, validated URL; `env.FORGEJO_ACCESS_TOKEN` as `${NAME}`; lazy lifecycle. No direct-tool or tool-name filter fields. |
+| `cvs_forgejo` | Same process shape with the validated Forgejo URL and Forgejo token-name reference. No direct-tool or tool-name filter fields.                                                                 |
 
 No global lifecycle key is emitted. No undocumented aggregate-output, provider-body-size, OAuth-token, discovery, direct-tool, or provider tool-catalog field is emitted.
 
@@ -275,16 +275,16 @@ MCP prompts, server instructions, tool descriptions and results, CLI output, iss
 
 ## Hard controls versus guidance
 
-| Boundary | Classification | Exact treatment |
-| --- | --- | --- |
-| GitHub `X-MCP-Toolsets` header | Hard server request control | Always project exactly `repos,issues,pull_requests,actions,git`. |
-| Pi per-call `outputGuard` | Hard adapter control when active | Project exact byte, line, and details bounds. Verify projected settings. Document that runtime kill switches remain outside harnessctl control. |
-| Pi proxy-only default | Verified adapter behavior | Omit global and per-server `directTools`, `includeTools`, and `excludeTools`; verify that generated configuration cannot request direct-tool expansion. |
-| OpenCode GitHub header | Hard requested toolset restriction | Project the exact header. |
-| OpenCode non-GitHub tool filtering | Guidance only | Generated skills permit only the configured operation and prohibit file uploads; do not claim host enforcement or stable provider tool catalogs. |
-| One page, 20 results, maximum five pages or 100 results | Bounded guidance | Validate schema-exposed arguments where present; stop when evidence is sufficient. |
-| 16,000-character inline, 32,000-character per-call text, 64,000-character workflow aggregate targets | Guidance only | Never claim truncation or enforcement. Require narrower retrieval and verification when decisions depend on omitted or oversized content. |
-| Provider response-body and workflow aggregate size | No hard control | Document residual context-exhaustion and disclosure risk. |
+| Boundary                                                                                             | Classification                     | Exact treatment                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub `X-MCP-Toolsets` header                                                                       | Hard server request control        | Always project exactly `repos,issues,pull_requests,actions,git`.                                                                                        |
+| Pi per-call `outputGuard`                                                                            | Hard adapter control when active   | Project exact byte, line, and details bounds. Verify projected settings. Document that runtime kill switches remain outside harnessctl control.         |
+| Pi proxy-only default                                                                                | Verified adapter behavior          | Omit global and per-server `directTools`, `includeTools`, and `excludeTools`; verify that generated configuration cannot request direct-tool expansion. |
+| OpenCode GitHub header                                                                               | Hard requested toolset restriction | Project the exact header.                                                                                                                               |
+| OpenCode non-GitHub tool filtering                                                                   | Guidance only                      | Generated skills permit only the configured operation and prohibit file uploads; do not claim host enforcement or stable provider tool catalogs.        |
+| One page, 20 results, maximum five pages or 100 results                                              | Bounded guidance                   | Validate schema-exposed arguments where present; stop when evidence is sufficient.                                                                      |
+| 16,000-character inline, 32,000-character per-call text, 64,000-character workflow aggregate targets | Guidance only                      | Never claim truncation or enforcement. Require narrower retrieval and verification when decisions depend on omitted or oversized content.               |
+| Provider response-body and workflow aggregate size                                                   | No hard control                    | Document residual context-exhaustion and disclosure risk.                                                                                               |
 
 ## Installer preflight and transaction
 
@@ -361,22 +361,22 @@ External package installation is not exactly reversible. Never remove a pre-exis
 
 ## Concrete files and ownership
 
-| Files | Responsibility |
-| --- | --- |
-| `src/harnessctl/config.py`, `tests/test_install.py` | Python defaults, migration, validation, and installer contract cases. |
-| `extensions/generic-tools/config.ts`, `extensions/generic-tools/config.spec.ts` | Matching TypeScript defaults, migration, explicitness, and parity. |
-| `extensions/generic-tools/schemas.ts`, `extensions/generic-tools/schemas.spec.ts` | Strict runtime schema, inferred interfaces, cross-field rules, and portable-schema parity. |
-| `extensions/generic-tools/contracts/config-v2.schema.json` | Generated portable configuration contract. |
-| `src/harnessctl/mcp.py`, `tests/test_mcp_projection.py` | Fixed catalog, intent dedupe/conflict, exact OpenCode and Pi projection, and merge ownership. |
-| `src/harnessctl/templates.py`, `src/harnessctl/templates/skills/cvs/SKILL.md.j2` | CVS skill registration and narrow rendering. |
-| `src/harnessctl/templates/skills/issue-tracking/SKILL.md.j2`, `tests/test_issue_skill.py` | Independent Issues capability selection, trust rules, bounded guidance, and filesystem preservation. |
-| `src/harnessctl/install.py`, `tests/test_install.py` | Transaction planning, host merges, Pi prerequisite consent and verification, atomic commit, rollback, and CLI opt-in. |
-| `docs/configuration.md`, `docs/skills.md` | Exact keys, defaults, independent domains, generated skill behavior, hard controls versus guidance. |
-| `docs/issues.md`, new `docs/cvs.md` | Local issue preservation, provider matrices, capability selection, merge consent, and CLI/MCP troubleshooting. |
-| `docs/README.md`, `README.md` | Documentation routing and concise current capability summary. |
-| `tests/test_docs.py`, `tests/test_release_artifacts.py` | Link, example, pin, artifact, isolated install, and current-versus-future checks. |
-| New `.changeset/*.md` | Patch release for `@harnessctl/generic-tools`; package versions remain Changesets-owned. |
-| `.opencode/opencode.json`, `.opencode/skills/*`, `.pi/mcp.json`, `.pi/prompts/*`, `.pi/skills/*` | Reinstalled generated repository artifacts after all checks. |
+| Files                                                                                            | Responsibility                                                                                                        |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `src/harnessctl/config.py`, `tests/test_install.py`                                              | Python defaults, migration, validation, and installer contract cases.                                                 |
+| `extensions/generic-tools/config.ts`, `extensions/generic-tools/config.spec.ts`                  | Matching TypeScript defaults, migration, explicitness, and parity.                                                    |
+| `extensions/generic-tools/schemas.ts`, `extensions/generic-tools/schemas.spec.ts`                | Strict runtime schema, inferred interfaces, cross-field rules, and portable-schema parity.                            |
+| `extensions/generic-tools/contracts/config-v2.schema.json`                                       | Generated portable configuration contract.                                                                            |
+| `src/harnessctl/mcp.py`, `tests/test_mcp_projection.py`                                          | Fixed catalog, intent dedupe/conflict, exact OpenCode and Pi projection, and merge ownership.                         |
+| `src/harnessctl/templates.py`, `src/harnessctl/templates/skills/cvs/SKILL.md.j2`                 | CVS skill registration and narrow rendering.                                                                          |
+| `src/harnessctl/templates/skills/issue-tracking/SKILL.md.j2`, `tests/test_issue_skill.py`        | Independent Issues capability selection, trust rules, bounded guidance, and filesystem preservation.                  |
+| `src/harnessctl/install.py`, `tests/test_install.py`                                             | Transaction planning, host merges, Pi prerequisite consent and verification, atomic commit, rollback, and CLI opt-in. |
+| `docs/configuration.md`, `docs/skills.md`                                                        | Exact keys, defaults, independent domains, generated skill behavior, hard controls versus guidance.                   |
+| `docs/issues.md`, new `docs/cvs.md`                                                              | Local issue preservation, provider matrices, capability selection, merge consent, and CLI/MCP troubleshooting.        |
+| `docs/README.md`, `README.md`                                                                    | Documentation routing and concise current capability summary.                                                         |
+| `tests/test_docs.py`, `tests/test_release_artifacts.py`                                          | Link, example, pin, artifact, isolated install, and current-versus-future checks.                                     |
+| New `.changeset/*.md`                                                                            | Patch release for `@harnessctl/generic-tools`; package versions remain Changesets-owned.                              |
+| `.opencode/opencode.json`, `.opencode/skills/*`, `.pi/mcp.json`, `.pi/prompts/*`, `.pi/skills/*` | Reinstalled generated repository artifacts after all checks.                                                          |
 
 Install Pi project artifacts only after explicit package consent. Do not hand-edit generated schemas, package versions, prompts, skills, or MCP configuration.
 

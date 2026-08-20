@@ -1,0 +1,19 @@
+"version": 1
+"id": "hrn-00069"
+"type": "story"
+"title": "Optimize SDLC prompts for local LLMs"
+"status": "done"
+"created_at": "2026-08-20T17:54:53.829Z"
+"updated_at": "2026-08-20T19:33:29.889Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00001"
+"metadata":
+  "design": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md"
+  "mode": "yolo-approved"
+"body": "As a local-LLM user\nI want compact progressively disclosed SDLC commands\nSo that workflow guidance preserves safety while consuming far less context.\n\n## Requirements\n\n- Keep five public command names and Epic-first behavior.\n- Install one compact `sdlc` skill with lazy phase/conditional references for OpenCode and Pi.\n- Keep command shells under approved hard word/byte budgets.\n- Preserve authority, confirmation, memory, YOLO, Bug, release, and Continue behavior.\n- Package and verify every nested skill resource.\n\n## Acceptance\n\n- [x] Every command body is at least 80% smaller by bytes than current memory-enabled baseline.\n- [x] Typical command + core + normal phase stays under 1,050 words and 7,500 bytes.\n- [x] Conditional policy loads only when its condition applies.\n- [x] OpenCode and Pi install byte-equivalent SDLC skill trees.\n- [x] Full quality, artifact, package, and runtime checks pass.\n\n## Design\n\n- `.specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md`"
+"comments":
+  - "id": "hrn-00069-C0001"
+    "created_at": "2026-08-20T19:33:16.110Z"
+    "created_by": "lead-engineer"
+    "body": "Acceptance verified by template/install/release tests, byte-equivalent host-tree checks, `mise run quality`, and `mise run runtime-smoke`. Command reductions: 95.3–96.8%; all aggregate budgets passed. — lead-engineer"

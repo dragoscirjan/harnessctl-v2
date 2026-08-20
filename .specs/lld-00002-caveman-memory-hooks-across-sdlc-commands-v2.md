@@ -84,16 +84,16 @@ No new user-facing configuration key is required. Retrieval still uses `memory.r
 
 The effective render context contains:
 
-| Field | Meaning |
-|---|---|
-| Harness | `opencode` or `pi` from the existing renderer contract. |
-| Memory hooks enabled | True only when project memory is enabled and the selected harness has verified automatic memory registration. Initially, only OpenCode qualifies. |
-| Memory profile | `priority-entry` or `exit-only`. |
-| Phase label | Compact command-specific search context. |
-| Retrieval limit | Existing configured result-count bound. |
-| Retrieval character bound | Existing configured serialized-size bound. |
-| Default topic | Existing configured topic used to narrow search when no better entity topic exists. |
-| Exit classes | The confirmed or verified record classes potentially valid for that phase. |
+| Field                     | Meaning                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Harness                   | `opencode` or `pi` from the existing renderer contract.                                                                                           |
+| Memory hooks enabled      | True only when project memory is enabled and the selected harness has verified automatic memory registration. Initially, only OpenCode qualifies. |
+| Memory profile            | `priority-entry` or `exit-only`.                                                                                                                  |
+| Phase label               | Compact command-specific search context.                                                                                                          |
+| Retrieval limit           | Existing configured result-count bound.                                                                                                           |
+| Retrieval character bound | Existing configured serialized-size bound.                                                                                                        |
+| Default topic             | Existing configured topic used to narrow search when no better entity topic exists.                                                               |
+| Exit classes              | The confirmed or verified record classes potentially valid for that phase.                                                                        |
 
 `render_prompt` and `render_command` retain a memory-disabled default for direct callers. The installer passes the validated configuration-derived context explicitly. This preserves existing callers while preventing enabled installation from accidentally using default-disabled rendering.
 
@@ -114,26 +114,26 @@ The includes must not weaken each command's existing read-only or theoretical be
 
 All commands receive optional compiled hooks. “Entry search” means one bounded phase-entry `memory_search`. “Exit candidate” means persistence is allowed only when the listed item independently satisfies the confirmation and provenance rules.
 
-| Command | Profile | Entry search intent | Exit candidates |
-|---|---|---|---|
-| `work-new` | exit-only | None; avoid contaminating new intake with unrelated history. | User-confirmed reusable scope decision only. |
-| `work-explore` | priority-entry | Prior verified facts, known risks, and relevant decisions for the investigation question. | Newly observed verified fact or reusable lesson; never a recommendation. |
-| `work-plan` | priority-entry | Approved constraints, prior decisions, known risks, and lessons relevant to the planned scope. | Explicitly approved reusable decision; never a proposed plan. |
-| `work-resume` | priority-entry | Active entity ID, prior decisions, blockers, and last verified events. | User-confirmed correction or decision; verified event only with current evidence. |
-| `work-start-initiative` | exit-only | None. | User-approved durable initiative boundary or decision; never proposed Epics. |
-| `work-start-epic` | exit-only | None. | User-confirmed durable Epic decision; never expected documentation or work. |
-| `work-start-from` | priority-entry | Exact active entity, parent, dependencies, decisions, and last verified event. | Confirmed correction or decision; no inferred progress. |
-| `work-write-stories` | exit-only | None. | User-approved durable decomposition decision; never uncreated Story claims. |
-| `work-start-story` | exit-only | None. | User-confirmed durable Story decision; never expected Tasks or designs. |
-| `work-design-doc` | exit-only | None. | Explicitly confirmed reusable design decision; never the proposal itself. |
-| `work-hld` | priority-entry | Existing architecture decisions, constraints, risks, migrations, and operational lessons. | Explicitly confirmed architecture decision; never an unapproved HLD. |
-| `work-lld` | priority-entry | Approved HLD decisions, interface constraints, known failures, compatibility risks, and lessons. | Explicitly confirmed technical decision; never an unapproved LLD. |
-| `work-write-tasks` | exit-only | None. | Explicitly approved sequencing or dependency decision; never uncreated Task claims. |
-| `work-implement` | priority-entry | Approved task decisions, known compatibility risks, prior failures, and implementation lessons. | Confirmed deviation decision; verified event or lesson only from current authoritative evidence. |
-| `work-verify` | priority-entry | Acceptance decisions, prior verified failures, known risks, and verification lessons. | Verified result event or lesson only when checks actually ran and evidence is cited; theoretical plans produce no write. |
-| `work-review` | exit-only | None. | User-confirmed accepted-risk decision; verified review event only with actual review evidence. |
-| `work-cvs` | exit-only | None. | User-confirmed delivery decision; verified event only after current CVS evidence. |
-| `work-finish` | exit-only | None. | Confirmed release decision or verified delivery event; never inferred merge, deployment, or completion. |
+| Command                 | Profile        | Entry search intent                                                                              | Exit candidates                                                                                                          |
+| ----------------------- | -------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `work-new`              | exit-only      | None; avoid contaminating new intake with unrelated history.                                     | User-confirmed reusable scope decision only.                                                                             |
+| `work-explore`          | priority-entry | Prior verified facts, known risks, and relevant decisions for the investigation question.        | Newly observed verified fact or reusable lesson; never a recommendation.                                                 |
+| `work-plan`             | priority-entry | Approved constraints, prior decisions, known risks, and lessons relevant to the planned scope.   | Explicitly approved reusable decision; never a proposed plan.                                                            |
+| `work-resume`           | priority-entry | Active entity ID, prior decisions, blockers, and last verified events.                           | User-confirmed correction or decision; verified event only with current evidence.                                        |
+| `work-start-initiative` | exit-only      | None.                                                                                            | User-approved durable initiative boundary or decision; never proposed Epics.                                             |
+| `work-start-epic`       | exit-only      | None.                                                                                            | User-confirmed durable Epic decision; never expected documentation or work.                                              |
+| `work-start-from`       | priority-entry | Exact active entity, parent, dependencies, decisions, and last verified event.                   | Confirmed correction or decision; no inferred progress.                                                                  |
+| `work-write-stories`    | exit-only      | None.                                                                                            | User-approved durable decomposition decision; never uncreated Story claims.                                              |
+| `work-start-story`      | exit-only      | None.                                                                                            | User-confirmed durable Story decision; never expected Tasks or designs.                                                  |
+| `work-design-doc`       | exit-only      | None.                                                                                            | Explicitly confirmed reusable design decision; never the proposal itself.                                                |
+| `work-hld`              | priority-entry | Existing architecture decisions, constraints, risks, migrations, and operational lessons.        | Explicitly confirmed architecture decision; never an unapproved HLD.                                                     |
+| `work-lld`              | priority-entry | Approved HLD decisions, interface constraints, known failures, compatibility risks, and lessons. | Explicitly confirmed technical decision; never an unapproved LLD.                                                        |
+| `work-write-tasks`      | exit-only      | None.                                                                                            | Explicitly approved sequencing or dependency decision; never uncreated Task claims.                                      |
+| `work-implement`        | priority-entry | Approved task decisions, known compatibility risks, prior failures, and implementation lessons.  | Confirmed deviation decision; verified event or lesson only from current authoritative evidence.                         |
+| `work-verify`           | priority-entry | Acceptance decisions, prior verified failures, known risks, and verification lessons.            | Verified result event or lesson only when checks actually ran and evidence is cited; theoretical plans produce no write. |
+| `work-review`           | exit-only      | None.                                                                                            | User-confirmed accepted-risk decision; verified review event only with actual review evidence.                           |
+| `work-cvs`              | exit-only      | None.                                                                                            | User-confirmed delivery decision; verified event only after current CVS evidence.                                        |
+| `work-finish`           | exit-only      | None.                                                                                            | Confirmed release decision or verified delivery event; never inferred merge, deployment, or completion.                  |
 
 The priority list is intentionally limited to resume, start-from, explore, plan, HLD, LLD, implement, and verify. A later expansion requires evidence that another entry search improves outcomes enough to justify context and latency.
 
@@ -195,25 +195,25 @@ Pi hooks may be enabled only by a later design that verifies all of the followin
 
 ## Files and responsibilities
 
-| File or group | Change responsibility |
-|---|---|
-| `src/harnessctl/templates.py` | Command metadata, render context, complete-matrix validation, and memory-disabled direct-call compatibility. |
-| `src/harnessctl/install.py` | Pass validated context, compile OpenCode hooks, retain Pi guard, install both skills/plugin, extend smoke checks, and roll back files plus transaction-created empty directories. |
-| `src/harnessctl/config.py` | Enforce memory-to-caveman cross-field invariant while preserving defaults and migration. |
-| `src/harnessctl/templates/sdlc/_partials/memory-entry.md.j2` | Shared bounded retrieval and narrow tool-exception prose. |
-| `src/harnessctl/templates/sdlc/_partials/memory-exit.md.j2` | Shared write gates, authority, supersession, and claim restrictions. |
-| `src/harnessctl/templates/sdlc/work-*.md.j2` | Include shared hooks at phase boundaries; retain command-specific behavior. |
-| `src/harnessctl/templates/skills/memory/SKILL.md.j2` | Mandatory caveman policy for store, supersede, and import. |
-| `extensions/generic-tools/schemas.ts` | Runtime configuration invariant while retaining the version 1 persisted record limits of 1,000 and 12,000 characters. |
-| `extensions/generic-tools/contracts/config-v2.schema.json` | External config invariant matching runtime behavior. |
-| `extensions/generic-tools/contracts/memory-record-v1.schema.json` | Remain at the backward-compatible persisted limits; parity tests prevent accidental compactness tightening. |
-| `extensions/generic-tools/generate-contracts.ts` and `extensions/generic-tools/schemas.spec.ts` | Generated-contract freshness and runtime/JSON Schema parity for every changed canonical schema. |
-| `extensions/generic-tools/config.spec.ts` | Defaults, migration, and invalid-combination coverage. |
-| `extensions/generic-tools/memory.ts` and `extensions/generic-tools/memory.spec.ts` | Separate mutation-input compactness from canonical validation; provide store, supersede, preview-import, and atomic import diagnostics. |
-| `tests/test_install.py` | Render matrix, installer, compile-out, conflicts, rollback, and protected-root behavior. |
-| `pyproject.toml` | Declare Python package data explicitly if artifact inspection shows templates or partials are absent. |
-| `tests/test_release_artifacts.py` | Build and inspect wheel and source distribution, install the wheel in isolation, verify packaged rendering resources, and exercise installed CLI safeguards. |
-| `mise.toml` | Add release-artifact verification to the existing quality or build gate without duplicating unit tests. |
+| File or group                                                                                   | Change responsibility                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/harnessctl/templates.py`                                                                   | Command metadata, render context, complete-matrix validation, and memory-disabled direct-call compatibility.                                                                      |
+| `src/harnessctl/install.py`                                                                     | Pass validated context, compile OpenCode hooks, retain Pi guard, install both skills/plugin, extend smoke checks, and roll back files plus transaction-created empty directories. |
+| `src/harnessctl/config.py`                                                                      | Enforce memory-to-caveman cross-field invariant while preserving defaults and migration.                                                                                          |
+| `src/harnessctl/templates/sdlc/_partials/memory-entry.md.j2`                                    | Shared bounded retrieval and narrow tool-exception prose.                                                                                                                         |
+| `src/harnessctl/templates/sdlc/_partials/memory-exit.md.j2`                                     | Shared write gates, authority, supersession, and claim restrictions.                                                                                                              |
+| `src/harnessctl/templates/sdlc/work-*.md.j2`                                                    | Include shared hooks at phase boundaries; retain command-specific behavior.                                                                                                       |
+| `src/harnessctl/templates/skills/memory/SKILL.md.j2`                                            | Mandatory caveman policy for store, supersede, and import.                                                                                                                        |
+| `extensions/generic-tools/schemas.ts`                                                           | Runtime configuration invariant while retaining the version 1 persisted record limits of 1,000 and 12,000 characters.                                                             |
+| `extensions/generic-tools/contracts/config-v2.schema.json`                                      | External config invariant matching runtime behavior.                                                                                                                              |
+| `extensions/generic-tools/contracts/memory-record-v1.schema.json`                               | Remain at the backward-compatible persisted limits; parity tests prevent accidental compactness tightening.                                                                       |
+| `extensions/generic-tools/generate-contracts.ts` and `extensions/generic-tools/schemas.spec.ts` | Generated-contract freshness and runtime/JSON Schema parity for every changed canonical schema.                                                                                   |
+| `extensions/generic-tools/config.spec.ts`                                                       | Defaults, migration, and invalid-combination coverage.                                                                                                                            |
+| `extensions/generic-tools/memory.ts` and `extensions/generic-tools/memory.spec.ts`              | Separate mutation-input compactness from canonical validation; provide store, supersede, preview-import, and atomic import diagnostics.                                           |
+| `tests/test_install.py`                                                                         | Render matrix, installer, compile-out, conflicts, rollback, and protected-root behavior.                                                                                          |
+| `pyproject.toml`                                                                                | Declare Python package data explicitly if artifact inspection shows templates or partials are absent.                                                                             |
+| `tests/test_release_artifacts.py`                                                               | Build and inspect wheel and source distribution, install the wheel in isolation, verify packaged rendering resources, and exercise installed CLI safeguards.                      |
+| `mise.toml`                                                                                     | Add release-artifact verification to the existing quality or build gate without duplicating unit tests.                                                                           |
 
 ## Testing strategy
 

@@ -26,7 +26,7 @@ from .mcp import (
     render_pi_mcp,
     required_server_intents,
 )
-from .templates import TEMPLATES, render_prompt, render_skill
+from .templates import TEMPLATES, render_prompt, render_skill, render_skill_resources
 
 TARGETS = {
     "opencode": Path(".opencode/commands"),
@@ -125,6 +125,11 @@ def install(
     command_targets: dict[Path, tuple[str, str]] = {}
     retired_targets: list[Path] = []
     conflicts: list[Path] = []
+    sdlc_context = {
+        "memory_hooks_enabled": bool(config["memory"]["enabled"]),
+        "retrieval_limit": config["memory"]["retrieval"]["limit"],
+        "retrieval_max_chars": config["memory"]["retrieval"]["max_chars"],
+    }
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
         for command in COMMANDS:
@@ -137,6 +142,13 @@ def install(
             _target(root, relative_directory / f"{command}.md") for command in RETIRED_SDLC_COMMANDS
         )
     if harness in ("opencode", "all"):
+        _append_skill_tree(
+            rendered_targets,
+            root,
+            OPENCODE_SKILLS / "sdlc",
+            "sdlc",
+            sdlc_context,
+        )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
         rendered_targets.append(
@@ -200,6 +212,13 @@ def install(
                 ]
             )
     if harness in ("pi", "all"):
+        _append_skill_tree(
+            rendered_targets,
+            root,
+            Path(".pi/skills/sdlc"),
+            "sdlc",
+            sdlc_context,
+        )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
         rendered_targets.append(
@@ -431,6 +450,23 @@ def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]
     return [
         intent for intent in intents if intent.command != "forgejo-mcp" or forgejo_mcp_available
     ]
+
+
+def _append_skill_tree(
+    rendered_targets: list[tuple[Path, str]],
+    root: Path,
+    relative_root: Path,
+    skill: str,
+    context: Mapping[str, object],
+) -> None:
+    """Append one skill and all validated progressive-disclosure resources."""
+    rendered_targets.append(
+        (_target(root, relative_root / "SKILL.md"), render_skill(skill, **context))
+    )
+    rendered_targets.extend(
+        (_target(root, relative_root / relative), content)
+        for relative, content in render_skill_resources(skill, **context).items()
+    )
 
 
 def _has_mcp(intents: list[ServerIntent], provider: str) -> bool:
@@ -787,7 +823,7 @@ def _smoke_check_pi(
     actual_commands = {path.stem for path in command_directory.glob("*.md") if path.is_file()}
     if not set(COMMANDS) <= actual_commands:
         raise RuntimeError("Pi command smoke check failed")
-    for skill in ("cvs", "issue-tracking", "caveman", "memory"):
+    for skill in ("cvs", "issue-tracking", "caveman", "memory", "sdlc"):
         skill_path = _target(root, Path(f".pi/skills/{skill}/SKILL.md"))
         if not skill_path.is_file():
             raise RuntimeError(f"Pi {skill} skill smoke check failed")
@@ -972,6 +1008,18 @@ def _smoke_check(root: Path, *, check_memory: bool) -> None:
     issue_skill = root / OPENCODE_SKILLS / "issue-tracking/SKILL.md"
     if not issue_skill.is_file():
         raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
+
+    sdlc_skill = root / OPENCODE_SKILLS / "sdlc/SKILL.md"
+    if not sdlc_skill.is_file():
+        raise RuntimeError("OpenCode SDLC skill smoke check failed")
+    for relative in render_skill_resources(
+        "sdlc",
+        memory_hooks_enabled=check_memory,
+        retrieval_limit=1,
+        retrieval_max_chars=1,
+    ):
+        if not (root / OPENCODE_SKILLS / "sdlc" / relative).is_file():
+            raise RuntimeError(f"OpenCode SDLC resource smoke check failed: {relative}")
 
     config, _ = _load_json_object(root / OPENCODE_CONFIG, "OpenCode configuration")
     plugins = config.get("plugin")

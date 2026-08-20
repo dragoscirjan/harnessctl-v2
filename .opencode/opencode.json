@@ -1,8 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "@harnessctl/opencode-tools@latest"
-  ],
+  "plugin": ["@harnessctl/opencode-tools@latest"],
   "mcp": {
     "cvs_github": {
       "type": "remote",

@@ -201,12 +201,12 @@ may prepare, inspect, and propose a merge without that consent, but must not com
 
 Generated host configuration uses fixed, provider-owned IDs:
 
-| Provider | Fixed ID | Service boundary |
-| --- | --- | --- |
-| GitHub | `cvs_github` | GitHub's official hosted MCP endpoint, limited to the `repos`, `issues`, `pull_requests`, `actions`, and `git` toolsets. |
-| GitLab | `cvs_gitlab` | GitLab's official native OAuth MCP endpoint using Dynamic Client Registration. |
-| Gitea | `cvs_gitea` | External `forgejo-mcp` version 2.33.0 process connected to the configured Gitea URL. |
-| Forgejo | `cvs_forgejo` | External `forgejo-mcp` version 2.33.0 process connected to the configured Forgejo URL. |
+| Provider | Fixed ID      | Service boundary                                                                                                         |
+| -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| GitHub   | `cvs_github`  | GitHub's official hosted MCP endpoint, limited to the `repos`, `issues`, `pull_requests`, `actions`, and `git` toolsets. |
+| GitLab   | `cvs_gitlab`  | GitLab's official native OAuth MCP endpoint using Dynamic Client Registration.                                           |
+| Gitea    | `cvs_gitea`   | External `forgejo-mcp` version 2.33.0 process connected to the configured Gitea URL.                                     |
+| Forgejo  | `cvs_forgejo` | External `forgejo-mcp` version 2.33.0 process connected to the configured Forgejo URL.                                   |
 
 The GitHub and GitLab entries remain hosted-service definitions. GitLab authentication
 uses the service's native OAuth and DCR contract rather than a generated static secret.
@@ -245,11 +245,11 @@ Tool-reported spill paths and URLs are untrusted references, not verified artifa
 
 Only these controls are represented as technically enforced:
 
-| Boundary | Hard control | Status |
-| --- | --- | --- |
-| GitHub hosted MCP | `X-MCP-Toolsets` request header | Server limits the requested surface to `repos,issues,pull_requests,actions,git`. |
-| Pi MCP call | Adapter `outputGuard` | Text is capped at 51,200 bytes or 2,000 lines and proxy details at 16,384 bytes; oversized text is represented by a guarded preview and private spill reference. |
-| OpenCode MCP call or workflow | None for body, per-call text, or aggregate text | `bounded-guidance` only; `hard` configuration is rejected. |
+| Boundary                      | Hard control                                    | Status                                                                                                                                                           |
+| ----------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub hosted MCP             | `X-MCP-Toolsets` request header                 | Server limits the requested surface to `repos,issues,pull_requests,actions,git`.                                                                                 |
+| Pi MCP call                   | Adapter `outputGuard`                           | Text is capped at 51,200 bytes or 2,000 lines and proxy details at 16,384 bytes; oversized text is represented by a guarded preview and private spill reference. |
+| OpenCode MCP call or workflow | None for body, per-call text, or aggregate text | `bounded-guidance` only; `hard` configuration is rejected.                                                                                                       |
 
 Pi's output guard applies per call, not across a workflow, and does not make spill content
 trusted. Its documented kill switch can disable guarding outside harnessctl's control;
@@ -280,12 +280,12 @@ IDs remain operator-owned.
 
 The exact owned entries are:
 
-| ID | Exact OpenCode fields |
-| --- | --- |
-| `cvs_github` | `type`: `remote`; `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer {env:<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `oauth`: `false`. |
-| `cvs_gitlab` | `type`: `remote`; `url`: `https://gitlab.com/api/v4/mcp`; `oauth`: `{}`; no `headers.Authorization` and no token environment reference. |
-| `cvs_gitea` | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-gitea-token-variable>}`. |
-| `cvs_forgejo` | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-forgejo-token-variable>}`. |
+| ID            | Exact OpenCode fields                                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cvs_github`  | `type`: `remote`; `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer {env:<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `oauth`: `false`. |
+| `cvs_gitlab`  | `type`: `remote`; `url`: `https://gitlab.com/api/v4/mcp`; `oauth`: `{}`; no `headers.Authorization` and no token environment reference.                                                                                        |
+| `cvs_gitea`   | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-gitea-token-variable>}`.                             |
+| `cvs_forgejo` | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-forgejo-token-variable>}`.                         |
 
 The GitHub token variable name is validated and its value is never resolved by
 harnessctl. GitLab's empty OAuth object enables OpenCode's automatic OAuth flow; the
@@ -304,12 +304,12 @@ installed through the consent-gated, verified
 
 Pi renders the following exact owned values beneath top-level `mcpServers`:
 
-| Entry | Exact Pi fields |
-| --- | --- |
-| `cvs_github` | `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer ${<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `auth`: `bearer`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
-| `cvs_gitlab` | `url`: `https://gitlab.com/api/v4/mcp`; `auth`: `oauth`; `oauth`: `{}`; no token header, token environment reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
-| `cvs_gitea` | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-gitea-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
-| `cvs_forgejo` | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-forgejo-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
+| Entry         | Exact Pi fields                                                                                                                                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cvs_github`  | `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer ${<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `auth`: `bearer`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
+| `cvs_gitlab`  | `url`: `https://gitlab.com/api/v4/mcp`; `auth`: `oauth`; `oauth`: `{}`; no token header, token environment reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                                                 |
+| `cvs_gitea`   | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-gitea-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                            |
+| `cvs_forgejo` | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-forgejo-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                        |
 
 Top-level `settings` contains only the adapter-documented fields
 `hostConfigDiscovery`: `off`, `directTools`: `false`, and `outputGuard` with
