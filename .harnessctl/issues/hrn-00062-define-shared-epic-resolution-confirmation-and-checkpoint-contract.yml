@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00062"
+"type": "task"
+"title": "Define shared Epic resolution confirmation and checkpoint contract"
+"status": "done"
+"created_at": "2026-08-19T12:08:58.725Z"
+"updated_at": "2026-08-19T12:18:07.520Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00061"
+"body": "Given any simplified SDLC command\nWhen it receives a prompt or issue reference\nThen it resolves one authoritative Epic or redirects to Plan\nAnd it applies shared confirmation and checkpoint rules.\n\n## Deliverables\n\n- Five-command registry and shared phase vocabulary.\n- Epic resolution rules for prompts, Initiatives, Epics, and child issues.\n- Required/recommended/optional/not-needed confirmation model.\n- Compact confirmed checkpoint shape using existing memory tools.\n- Duplicate-checkpoint reconciliation and authority safeguards.\n\n## Acceptance\n\n- [x] No proposal or transcript is persisted as checkpoint state.\n- [x] Missing Epic behavior is deterministic for every command.\n- [x] Shared rules avoid duplicated policy prose.\n- [x] Focused rendering and checkpoint contract tests pass."
+"comments": []

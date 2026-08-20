@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00059"
+"type": "task"
+"title": "Replace SDLC architecture diagrams with Mermaid"
+"status": "done"
+"created_at": "2026-08-18T20:02:11.295Z"
+"updated_at": "2026-08-18T20:48:46.016Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00057"
+"depends_on":
+  - "hrn-00058"
+"body": "Given the approved template-derived transition model\nWhen documentation is updated\nThen Mermaid diagrams must explain product layers, entity relationships, delivery flow, resumability, roles, and command transitions without duplicating a second authoritative graph.\n\n## Acceptance criteria\n\n- [x] Root README architecture/flow sections use Mermaid.\n- [x] `FLOWS.md` text diagrams use Mermaid where semantically useful.\n- [x] `docs/sdlc.md` owns authoritative transition graph and equivalent table.\n- [x] Other docs link to authoritative graph instead of copying it.\n- [x] Diagram labels show `work-*` and conceptual aliases where commands appear.\n- [x] Current-vs-planned claims match template behavior."
+"comments": []

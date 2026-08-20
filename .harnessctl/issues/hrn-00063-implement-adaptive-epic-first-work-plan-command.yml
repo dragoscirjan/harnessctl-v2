@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00063"
+"type": "task"
+"title": "Implement adaptive Epic-first work plan command"
+"status": "done"
+"created_at": "2026-08-19T12:09:02.744Z"
+"updated_at": "2026-08-19T12:20:58.804Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00061"
+"depends_on":
+  - "hrn-00062"
+"body": "Given a new prompt, Initiative, or Epic\nWhen `/work plan` runs\nThen it proposes and executes only user-confirmed planning steps\nAnd produces one approved executable Epic plan.\n\n## Deliverables\n\n- New-prompt one-Epic or Initiative-plus-Epics flow.\n- Initiative decomposition followed by per-Epic Plan recommendations.\n- Epic planning choices for exploration, design, decomposition, verification, and release.\n- Adaptive design choices: none, lightweight, design doc, HLD, LLD, HLD+LLD, or GDD.\n\n## Acceptance\n\n- [x] Story/Task/Bug input resolves owning Epic or redirects safely.\n- [x] Every artifact/entity requires confirmation.\n- [x] Planning order remains adaptive.\n- [x] Focused Plan rendering tests pass."
+"comments": []

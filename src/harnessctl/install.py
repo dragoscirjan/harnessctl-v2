@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import warnings
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -32,6 +33,51 @@ TARGETS = {
     "pi": Path(".pi/prompts"),
 }
 COMMANDS = tuple(TEMPLATES.keys())
+CURRENT_SDLC_COMMANDS = COMMANDS
+LEGACY_SDLC_COMMANDS = (
+    "work-new",
+    "work-explore",
+    "work-resume",
+    "work-start-initiative",
+    "work-start-epic",
+    "work-start-from",
+    "work-write-stories",
+    "work-start-story",
+    "work-design-doc",
+    "work-hld",
+    "work-lld",
+    "work-write-tasks",
+    "work-implement",
+    "work-plan",
+    "work-review",
+    "work-verify",
+    "work-cvs",
+    "work-finish",
+)
+LEGACY_SDLC_COMMAND_REPLACEMENTS = {
+    "work-new": "work-plan",
+    "work-explore": "work-plan",
+    "work-resume": "work-continue",
+    "work-start-initiative": "work-plan",
+    "work-start-epic": "work-plan",
+    "work-start-from": "work-continue",
+    "work-write-stories": "work-plan",
+    "work-start-story": "work-plan",
+    "work-design-doc": "work-plan",
+    "work-hld": "work-plan",
+    "work-lld": "work-plan",
+    "work-write-tasks": "work-plan",
+    "work-implement": "work-build",
+    "work-plan": "work-plan",
+    "work-review": "work-verify",
+    "work-verify": "work-verify",
+    "work-cvs": "work-release",
+    "work-finish": "work-release",
+}
+OVERLAPPING_SDLC_COMMANDS = frozenset({"work-plan", "work-verify"})
+RETIRED_SDLC_COMMANDS = tuple(
+    command for command in LEGACY_SDLC_COMMANDS if command not in OVERLAPPING_SDLC_COMMANDS
+)
 OPENCODE_SKILLS = Path(".opencode/skills")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
@@ -54,9 +100,11 @@ def install(
     harness: str,
     force: bool = False,
     *,
+    replace_sdlc_command_set: bool = False,
     allow_pi_package_install: bool = False,
     allow_pi_mcp_adapter_install: bool = False,
     confirm_pi_mcp_adapter_install: Callable[[str], bool] | None = None,
+    disclose_sdlc_replacement: Callable[[str], None] | None = None,
 ) -> list[Path]:
     """Install prompt files for one harness or all supported harnesses."""
     if harness == "all":
@@ -74,15 +122,20 @@ def install(
     intents = deduplicate_server_intents(required_server_intents(config, harness))
     intents = _available_server_intents(intents)
     rendered_targets: list[tuple[Path, str]] = []
+    command_targets: dict[Path, tuple[str, str]] = {}
+    retired_targets: list[Path] = []
     conflicts: list[Path] = []
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
         for command in COMMANDS:
             relative_target = relative_directory / f"{command}.md"
             target = _target(root, relative_target)
-            rendered_targets.append(
-                (target, render_command(selected_harness, command, config=config))
-            )
+            content = render_command(selected_harness, command, config=config)
+            rendered_targets.append((target, content))
+            command_targets[target] = (command, content)
+        retired_targets.extend(
+            _target(root, relative_directory / f"{command}.md") for command in RETIRED_SDLC_COMMANDS
+        )
     if harness in ("opencode", "all"):
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
@@ -232,25 +285,63 @@ def install(
         _target(root, OPENCODE_CONFIG),
         _target(root, PI_MCP_CONFIG),
     }
-    for target, _ in rendered_targets:
-        if target.exists() and target not in mergeable_targets and not force:
+    _validate_plan(root, rendered_targets, config, harness, retired_targets)
+    legacy_command_targets = _detect_legacy_commands(command_targets, retired_targets)
+    if legacy_command_targets and not replace_sdlc_command_set:
+        joined = "\n".join(f"- {target}" for target in legacy_command_targets)
+        raise FileExistsError(
+            "deprecated SDLC command outputs detected; rerun with "
+            f"--replace-sdlc-command-set to replace them:\n{joined}"
+        )
+
+    for target, content in rendered_targets:
+        if not target.exists() or target in mergeable_targets or force:
+            continue
+        command = command_targets.get(target, (None, ""))[0]
+        replacement_authorized = replace_sdlc_command_set and (
+            command in OVERLAPPING_SDLC_COMMANDS or target.read_bytes() == content.encode("utf-8")
+        )
+        if not replacement_authorized:
             conflicts.append(target)
     if conflicts:
         joined = "\n".join(f"- {target}" for target in conflicts)
         raise FileExistsError(f"refusing to overwrite existing files:\n{joined}")
-    _validate_plan(root, rendered_targets, config, harness)
-
-    legacy_targets: list[Path] = []
+    if replace_sdlc_command_set and legacy_command_targets:
+        joined = "\n".join(f"- {target}" for target in legacy_command_targets)
+        disclosure = (
+            "Replacing deprecated SDLC command outputs. These files may contain "
+            "custom changes. Existing work-plan/work-verify files will be replaced "
+            f"and retired command files will be deleted:\n{joined}"
+        )
+        if disclose_sdlc_replacement is None:
+            warnings.warn(disclosure, UserWarning, stacklevel=2)
+        else:
+            disclose_sdlc_replacement(disclosure)
+    deletion_targets = (
+        [target for target in retired_targets if target.exists()]
+        if replace_sdlc_command_set
+        else []
+    )
+    legacy_plugin_targets: list[Path] = []
     if harness in ("opencode", "all"):
         legacy_plugin = _target(root, OPENCODE_PLUGIN)
         if legacy_plugin.exists():
             if not legacy_plugin.is_file():
                 raise ValueError(f"legacy OpenCode plugin must be a regular file: {legacy_plugin}")
             if legacy_plugin.read_text(encoding="utf-8") == LEGACY_PLUGIN_CONTENT:
-                legacy_targets.append(legacy_plugin)
+                legacy_plugin_targets.append(legacy_plugin)
 
+    write_targets = [
+        (target, content)
+        for target, content in rendered_targets
+        if not target.exists() or target.read_bytes() != content.encode("utf-8")
+    ]
     previous = _capture_before_images(
-        [*(target for target, _ in rendered_targets), *legacy_targets]
+        [
+            *(target for target, _ in write_targets),
+            *deletion_targets,
+            *legacy_plugin_targets,
+        ]
     )
     created_directories: list[Path] = []
     installed_pi_packages: list[str] = []
@@ -283,12 +374,16 @@ def install(
                 installed_pi_packages.append(source)
                 if source not in _inspect_pi_packages(root).configured:
                     raise RuntimeError(f"Pi did not register exact project-local package {source}")
-        for target, content in rendered_targets:
+        for target, content in write_targets:
             mutation_started = True
             _target(root, target.relative_to(root))
             _ensure_directory(target.parent, root, created_directories)
             write_atomic(target, content)
-        for target in legacy_targets:
+        for target in deletion_targets:
+            mutation_started = True
+            target.unlink(missing_ok=True)
+        for target in legacy_plugin_targets:
+            mutation_started = True
             target.unlink()
         if config["memory"]["enabled"]:
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
@@ -782,12 +877,16 @@ def _validate_plan(
     rendered_targets: list[tuple[Path, str]],
     config: Mapping[str, Any],
     harness: str,
+    retired_targets: Iterable[Path] = (),
 ) -> None:
     """Validate every file and directory kind before the first mutation."""
     directories = {target.parent for target, _ in rendered_targets}
     for target, _ in rendered_targets:
         if target.exists() and not target.is_file():
             raise IsADirectoryError(f"target is not a regular file: {target}")
+    for target in retired_targets:
+        if target.exists() and not target.is_file():
+            raise IsADirectoryError(f"retired target is not a regular file: {target}")
     if config["memory"]["enabled"]:
         memory_root = _target(root, Path(str(config["memory"]["repository"]["root"])))
         directories.update(
@@ -800,6 +899,21 @@ def _validate_plan(
             if current.exists() and not current.is_dir():
                 raise NotADirectoryError(f"path is not a directory: {current}")
             current = current.parent
+
+
+def _detect_legacy_commands(
+    command_targets: Mapping[Path, tuple[str, str]], retired_targets: Iterable[Path]
+) -> list[Path]:
+    """Return every selected-harness legacy path in stable path order."""
+    detected = [target for target in retired_targets if target.exists()]
+    for target, (command, rendered) in command_targets.items():
+        if (
+            command in OVERLAPPING_SDLC_COMMANDS
+            and target.exists()
+            and target.read_bytes() != rendered.encode("utf-8")
+        ):
+            detected.append(target)
+    return sorted(set(detected), key=lambda path: str(path))
 
 
 def _initialize_memory_paths(
@@ -892,6 +1006,11 @@ def main() -> int:
     parser.add_argument("--harness", choices=["opencode", "pi", "all"], default="all")
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--replace-sdlc-command-set",
+        action="store_true",
+        help="replace legacy Plan/Verify outputs and delete the 16 retired SDLC commands",
+    )
+    parser.add_argument(
         "--allow-pi-package-install",
         "--allow-pi-mcp-adapter-install",
         dest="allow_pi_package_install",
@@ -912,8 +1031,10 @@ def main() -> int:
             args.cwd,
             args.harness,
             args.force,
+            replace_sdlc_command_set=args.replace_sdlc_command_set,
             allow_pi_package_install=args.allow_pi_package_install,
             confirm_pi_mcp_adapter_install=confirmation,
+            disclose_sdlc_replacement=lambda message: print(message, file=sys.stderr),
         ):
             print(f"Installed {target}")
     except (ConfigError, FileExistsError, OSError, RuntimeError, ValueError) as error:

@@ -11,7 +11,14 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMAND_COUNT = 18
+COMMAND_COUNT = 5
+CURRENT_COMMANDS = {
+    "work-plan",
+    "work-build",
+    "work-verify",
+    "work-release",
+    "work-continue",
+}
 
 
 def _run(
@@ -128,16 +135,26 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
 
     with zipfile.ZipFile(wheels[0]) as archive:
         wheel_members = set(archive.namelist())
+        metadata_name = next(name for name in wheel_members if name.endswith(".dist-info/METADATA"))
+        assert "Version: 0.2.0" in archive.read(metadata_name).decode("utf-8")
     assert {f"harnessctl/{path}" for path in expected_resources} <= wheel_members
 
     with tarfile.open(sdists[0], mode="r:gz") as archive:
         sdist_members = set(archive.getnames())
+        pyproject_name = next(name for name in sdist_members if name.endswith("/pyproject.toml"))
+        assert 'version = "0.2.0"' in archive.extractfile(pyproject_name).read().decode("utf-8")
     sdist_package_members = {
         member.split("/src/harnessctl/", maxsplit=1)[1]
         for member in sdist_members
         if "/src/harnessctl/" in member
     }
     assert expected_resources <= sdist_package_members
+    public_templates = {
+        Path(path).stem.removesuffix(".md")
+        for path in expected_resources
+        if path.startswith("templates/sdlc/work-") and path.endswith(".md.j2")
+    }
+    assert public_templates == CURRENT_COMMANDS
     protected_fragments = ("/.opencode/", "/.pi/", "/.harnessctl/")
     assert not any(
         fragment in f"/{member}/"
@@ -193,6 +210,10 @@ import harnessctl
 from copy import deepcopy
 from pathlib import Path
 from harnessctl.config import DEFAULT_CONFIG
+from harnessctl.install import (
+    CURRENT_SDLC_COMMANDS, LEGACY_SDLC_COMMANDS,
+    LEGACY_SDLC_COMMAND_REPLACEMENTS, RETIRED_SDLC_COMMANDS, install,
+)
 from harnessctl.mcp import required_server_intents, render_opencode_mcp
 from harnessctl.templates import TEMPLATES, render_prompt, render_skill
 
@@ -202,7 +223,13 @@ config = deepcopy(DEFAULT_CONFIG)
 config['memory']['enabled'] = True
 intent = required_server_intents(config, 'opencode')[0]
 assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/'
-assert len(TEMPLATES) == 18
+assert set(TEMPLATES) == set(CURRENT_SDLC_COMMANDS) == {
+    'work-plan', 'work-build', 'work-verify', 'work-release', 'work-continue'
+}
+assert len(LEGACY_SDLC_COMMANDS) == 18
+assert len(RETIRED_SDLC_COMMANDS) == 16
+assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
+assert inspect.signature(install).parameters['replace_sdlc_command_set'].default is False
 for command in TEMPLATES:
     assert '## Project memory exit' in render_prompt(command, 'opencode', config=config)
     assert '## Project memory exit' in render_prompt(command, 'pi', config=config)
@@ -239,7 +266,55 @@ for provider, connection in providers.items():
     assert '{{' not in rendered
 """
     isolated_environment = environment | {"HARNESSCTL_CHECKOUT": str(ROOT)}
+    render_check = "import inspect\n" + render_check
     _run([str(python), "-c", render_check], cwd=runtime, env=isolated_environment)
+
+    sdist_runtime = tmp_path / "sdist-runtime"
+    sdist_runtime.mkdir()
+    with tarfile.open(sdists[0], mode="r:gz") as archive:
+        archive.extractall(sdist_runtime, filter="data")
+    sdist_root = next(path for path in sdist_runtime.iterdir() if path.is_dir())
+    sdist_environment = isolated_environment | {"PYTHONPATH": str(sdist_root / "src")}
+    _run([sys.executable, "-c", render_check], cwd=sdist_runtime, env=sdist_environment)
+    sdist_migration = sdist_runtime / "migration"
+    legacy_directory = sdist_migration / ".opencode/commands"
+    legacy_directory.mkdir(parents=True)
+    for command in {
+        "work-new",
+        "work-explore",
+        "work-resume",
+        "work-start-initiative",
+        "work-start-epic",
+        "work-start-from",
+        "work-write-stories",
+        "work-start-story",
+        "work-design-doc",
+        "work-hld",
+        "work-lld",
+        "work-write-tasks",
+        "work-implement",
+        "work-plan",
+        "work-review",
+        "work-verify",
+        "work-cvs",
+        "work-finish",
+    }:
+        (legacy_directory / f"{command}.md").write_text("legacy\n", encoding="utf-8")
+    _run(
+        [
+            sys.executable,
+            "-m",
+            "harnessctl.install",
+            "--cwd",
+            str(sdist_migration),
+            "--harness",
+            "opencode",
+            "--replace-sdlc-command-set",
+        ],
+        cwd=sdist_runtime,
+        env=sdist_environment,
+    )
+    assert {path.stem for path in legacy_directory.glob("*.md")} == CURRENT_COMMANDS
 
     disabled_opencode = runtime / "disabled-opencode"
     disabled_pi = runtime / "disabled-pi"
@@ -247,6 +322,8 @@ for provider, connection in providers.items():
     enabled_pi = runtime / "enabled-pi"
     enabled_all = runtime / "enabled-all"
     remote_opencode = runtime / "remote-opencode"
+    migrate_opencode = runtime / "migrate-opencode"
+    migrate_pi = runtime / "migrate-pi"
     for project in (
         disabled_opencode,
         disabled_pi,
@@ -254,15 +331,50 @@ for provider, connection in providers.items():
         enabled_pi,
         enabled_all,
         remote_opencode,
+        migrate_opencode,
+        migrate_pi,
     ):
         project.mkdir()
     for project in (enabled_opencode, enabled_pi, enabled_all):
         _write_enabled_config(project)
     _write_remote_config(remote_opencode)
-    for project in (disabled_pi, enabled_pi, enabled_all):
+    for project in (disabled_pi, enabled_pi, enabled_all, migrate_pi):
         _write_pi_adapter_config(project)
 
+    legacy_commands = {
+        "work-new",
+        "work-explore",
+        "work-resume",
+        "work-start-initiative",
+        "work-start-epic",
+        "work-start-from",
+        "work-write-stories",
+        "work-start-story",
+        "work-design-doc",
+        "work-hld",
+        "work-lld",
+        "work-write-tasks",
+        "work-implement",
+        "work-plan",
+        "work-review",
+        "work-verify",
+        "work-cvs",
+        "work-finish",
+    }
+    for project, relative in (
+        (migrate_opencode, Path(".opencode/commands")),
+        (migrate_pi, Path(".pi/prompts")),
+    ):
+        directory = project / relative
+        directory.mkdir(parents=True)
+        for command in legacy_commands:
+            (directory / f"{command}.md").write_text(f"legacy {command}\n", encoding="utf-8")
+
     cli = [str(python), "-m", "harnessctl.install", "--cwd"]
+    help_result = _run(
+        [str(python), "-m", "harnessctl.install", "--help"], cwd=runtime, env=environment
+    )
+    assert "--replace-sdlc-command-set" in help_result.stdout
     _run([*cli, str(disabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
     assert (disabled_pi / ".pi/skills/issue-tracking/SKILL.md").is_file()
@@ -276,6 +388,29 @@ for provider, connection in providers.items():
 
     _run([*cli, str(enabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(remote_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
+    for project, harness, relative in (
+        (migrate_opencode, "opencode", Path(".opencode/commands")),
+        (migrate_pi, "pi", Path(".pi/prompts")),
+    ):
+        rejected = _run(
+            [*cli, str(project), "--harness", harness],
+            cwd=runtime,
+            env=environment,
+            expected_returncode=2,
+        )
+        assert "deprecated SDLC command outputs detected" in rejected.stderr
+        _run(
+            [
+                *cli,
+                str(project),
+                "--harness",
+                harness,
+                "--replace-sdlc-command-set",
+            ],
+            cwd=runtime,
+            env=environment,
+        )
+        assert {path.stem for path in (project / relative).glob("*.md")} == CURRENT_COMMANDS
     commands = list((enabled_opencode / ".opencode/commands").glob("*.md"))
     assert len(commands) == COMMAND_COUNT
     assert all("## Project memory exit" in path.read_text(encoding="utf-8") for path in commands)

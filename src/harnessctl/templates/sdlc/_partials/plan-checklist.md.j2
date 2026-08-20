@@ -1,0 +1,95 @@
+## Plan modes
+
+Interpret the supplied text only enough to identify a natural-language prompt or mentioned
+Initiative, Epic, Story, Task, or Bug ID. Before searching or reading, present the bounded
+read-only evidence set through the shared action gate.
+
+For a new prompt, search the configured issue authority for relevant Initiative and Epic
+candidates. Show bounded duplicate candidates, overlap, boundaries, and uncertainty before
+proposing creation. Duplicate or ambiguous matches block creation until the user selects an
+authority or confirms a distinct boundary.
+
+Present exactly one confirmed mode:
+
+- **Epic mode:** recognize an existing Epic or propose one new Epic, then plan only that Epic.
+- **Initiative mode:** recognize or propose one Initiative and its attached Epic set. Before
+  any creation, show the Initiative boundary, each proposed Epic's objective, scope separation,
+  non-goals, acceptance direction, dependencies, and creation order. Confirm the Initiative
+  and every Epic individually, create them through the configured issue tools, attach them
+  using supported hierarchy, and verify the results. Then list a separate
+  `work-plan <epic-id>` recommendation for every created or attached Epic and stop. Never
+  design, decompose, or produce a combined executable plan for multiple Epics.
+
+An Initiative ID enters Initiative mode. An Epic ID enters Epic mode. A Story, Task, or Bug
+ID enters Epic mode only after its owning Epic is resolved through authoritative parents.
+A prompt mentioning an ID follows that entity's mode. If a prompt may be either one Epic or
+an Initiative with several Epics, explain both boundaries and wait for the user's choice.
+
+Entity creation is never implied by approving a mode or decomposition. Classify the exact
+entity action, show its title, type, parent, body or acceptance criteria, dependencies, and
+relationships, and obtain current item-level confirmation before each create or relationship
+mutation. On failure or an ambiguous result, stop; do not retry through another authority.
+
+## Adaptive Epic planning
+
+In Epic mode, build a revisable planning set from these concerns. Give every offered or
+omitted concern exactly one shared classification and reason:
+
+- requirement clarification and explicit scope/non-goals;
+- repository and linked-artifact exploration;
+- dependency, compatibility, migration, and risk analysis;
+- estimates with assumptions, ranges or uncertainty;
+- proportionate design work;
+- Story, Task, and pre-existing Bug decomposition;
+- acceptance criteria and verification evidence requirements;
+- release, rollback, documentation, operational, and migration requirements.
+
+Mark irrelevant concerns **Not needed** with reasons rather than silently dropping them.
+Recommended and Optional work may be declined with its recorded confidence or maintenance
+consequence. Required work may not be bypassed. Let the user add, remove, reject, or
+reclassify work, show the revised set, and confirm each bounded step before reads or changes.
+
+Choose the next confirmed step from discovered prerequisites, risk, and uncertainty, not a
+fixed waterfall. Exploration may precede closed clarification when compatibility evidence is
+blocking; clarification or decomposition may expose new exploration or design work; a small,
+well-known Epic may proceed directly to lightweight decomposition. After each result, revise
+and reconfirm the remaining classified set. Never treat approval of the set as blanket
+consent to execute all later steps.
+
+## Design choice and artifacts
+
+When enough evidence exists, recommend or ask the user to choose exactly one design level:
+**none**, **lightweight**, **design document**, **HLD**, **LLD**, **HLD plus LLD**, or **GDD**.
+Explain why the selected level is proportionate and why weaker and stronger choices are Not
+needed, Optional, or insufficient. `none` still records the confirmed rationale and risks;
+`lightweight` records the minimum decisions in the executable plan. Reserve GDD for game work
+and follow the existing domain skill boundary.
+
+Reuse an existing artifact only after confirming relevance, status, and revision. Before
+creating or revising each approved design artifact, show its type, purpose, scope, intended
+path, parent when applicable, and link target; classify and confirm that bounded action.
+Create it only through existing specification tooling and link it only through configured
+issue tooling. Confirm link mutations separately when they were not in the displayed action
+set. Never copy artifact bodies into issues or memory. HLD plus LLD may proceed only in the
+dependency order justified by current evidence; each artifact remains separately confirmed.
+
+## Decomposition and approval boundary
+
+Decompose only the recognized Epic. Present each proposed Story, Task, or pre-existing Bug
+action with explicit parentage, objective, scope, acceptance criteria, dependencies, order,
+linked artifacts, estimate uncertainty, and non-goals. Confirm every entity and relationship
+before creation. Small Epics may contain direct Tasks or Bugs; classify unnecessary Stories
+as Not needed. Do not recreate existing issues or turn an unconfirmed interpretation into a
+Bug.
+
+Present one `Proposed executable Epic plan` containing: recognized Epic; approved scope and
+non-goals; authoritative evidence; selected design level and artifact paths; ordered ready
+Stories, Tasks, and Bugs; dependencies; acceptance criteria; verification evidence; release,
+rollback, documentation, and operational requirements; estimates and uncertainty; risks and
+mitigations; and blockers or open decisions. The ordering must reflect dependencies, not
+template section order.
+
+Ask for explicit approval of that exact plan. Revise and ask again when requested. Only after
+approval label it `Approved executable Epic plan`, checkpoint the approval, recommend a later
+`work-build <epic-id>` invocation, and stop. Never implement, verify, release, or plan a second
+Epic in this invocation.

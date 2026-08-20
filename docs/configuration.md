@@ -111,14 +111,14 @@ compatibility, but it is unused and not generated; do not configure it.
 
 ### CVS and MCP settings
 
-| Key                    | Default            | Current meaning |
-| ---------------------- | ------------------ | --------------- |
-| `cvs.local`            | `git`              | Direct local authority: `git` or `jj`; never routed through MCP |
-| `cvs.remote.provider`  | `github`           | Independent remote CVS authority: `github`, `gitlab`, `gitea`, or `forgejo` |
-| `cvs.remote.tools`     | `gh`               | Exact provider CLI identifier; no arguments or paths |
-| `cvs.remote.url`       | `https://github.com` | Validated collaboration URL |
-| `cvs.remote.token_env` | `GH_TOKEN`         | Environment-variable name only, never a value |
-| `mcp.output_limit_mode` | `bounded-guidance` | `bounded-guidance` or Pi-only `hard`; OpenCode and `all` reject `hard` |
+| Key                     | Default              | Current meaning                                                             |
+| ----------------------- | -------------------- | --------------------------------------------------------------------------- |
+| `cvs.local`             | `git`                | Direct local authority: `git` or `jj`; never routed through MCP             |
+| `cvs.remote.provider`   | `github`             | Independent remote CVS authority: `github`, `gitlab`, `gitea`, or `forgejo` |
+| `cvs.remote.tools`      | `gh`                 | Exact provider CLI identifier; no arguments or paths                        |
+| `cvs.remote.url`        | `https://github.com` | Validated collaboration URL                                                 |
+| `cvs.remote.token_env`  | `GH_TOKEN`           | Environment-variable name only, never a value                               |
+| `mcp.output_limit_mode` | `bounded-guidance`   | `bounded-guidance` or Pi-only `hard`; OpenCode and `all` reject `hard`      |
 
 GitHub requires `gh`, `https://github.com`, and `GH_TOKEN`; GitLab requires
 `glab`, `https://gitlab.com`, and `GITLAB_TOKEN`; Gitea requires `tea`, an

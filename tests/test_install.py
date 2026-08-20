@@ -7,13 +7,18 @@ from types import SimpleNamespace
 import pytest
 
 from harnessctl.config import DEFAULT_CONFIG, ConfigError, load_config
-from harnessctl.install import install
+from harnessctl.install import (
+    CURRENT_SDLC_COMMANDS,
+    LEGACY_SDLC_COMMAND_REPLACEMENTS,
+    LEGACY_SDLC_COMMANDS,
+    RETIRED_SDLC_COMMANDS,
+    install,
+)
 from harnessctl.templates import (
     COMMAND_METADATA,
     TEMPLATES,
     render_prompt,
     render_skill,
-    render_work_new,
 )
 
 install_module = importlib.import_module("harnessctl.install")
@@ -66,28 +71,37 @@ def write_pinned_pi_adapter(root: Path) -> None:
     )
 
 
-def test_rendered_prompts_share_the_canonical_body() -> None:
-    opencode = render_work_new("opencode")
-    pi = render_work_new("pi")
+def write_legacy_commands(root: Path, harness: str, *, mixed: bool = False) -> Path:
+    directory = root / install_module.TARGETS[harness]
+    directory.mkdir(parents=True, exist_ok=True)
+    for command in LEGACY_SDLC_COMMANDS:
+        content = f"custom legacy {command}\n"
+        if mixed and command == "work-plan":
+            content = install_module.render_command(harness, command, config=load_config(root))
+        (directory / f"{command}.md").write_bytes(content.encode("utf-8"))
+    return directory
 
-    assert "description: Start a human-guided work intake" in opencode
-    assert "description: Start a human-guided work intake" not in pi
+
+def test_rendered_prompts_share_the_canonical_body() -> None:
+    opencode = render_prompt("work-plan", "opencode")
+    pi = render_prompt("work-plan", "pi")
+
+    assert "description: Recognize one Epic and produce its approved executable plan" in opencode
+    assert "description:" not in pi
     assert opencode.endswith(pi)
     assert "{{" not in pi
-    assert "No files were created or modified." in pi
+    assert "Resumable checkpoints are unavailable" in pi
 
 
-@pytest.mark.parametrize("command", ["work-new", "work-explore", "work-plan"])
-def test_enabled_memory_does_not_claim_that_no_files_changed(command: str) -> None:
+@pytest.mark.parametrize("command", TEMPLATES)
+def test_enabled_memory_does_not_claim_unverified_completion(command: str) -> None:
     config = deepcopy(DEFAULT_CONFIG)
     config["memory"]["enabled"] = True
 
     rendered = render_prompt(command, "opencode", config=config)
 
-    assert "No files were created or modified." not in rendered
-    assert (
-        "No source, issue, specification, or task artifact files were created or modified."
-        in rendered
+    assert "Never report completion from advisory state alone" in rendered or (
+        "Never claim" in rendered or "Never infer" in rendered
     )
 
 
@@ -95,11 +109,11 @@ def test_memory_entry_prefers_entity_topic_before_default() -> None:
     config = deepcopy(DEFAULT_CONFIG)
     config["memory"]["enabled"] = True
 
-    rendered = render_prompt("work-explore", "opencode", config=config)
+    rendered = render_prompt("work-plan", "opencode", config=config)
     normalized = " ".join(rendered.split())
 
-    assert "current entity-specific topic when known" in normalized
-    assert "otherwise fall back to `general`" in normalized
+    assert "exact Epic ID and `plan` phase" in normalized
+    assert "Before Epic recognition, use `general` only" in normalized
 
 
 def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
@@ -119,7 +133,7 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
     install(tmp_path, "opencode")
-    target = tmp_path / ".opencode/commands/work-new.md"
+    target = tmp_path / ".opencode/commands/work-build.md"
     original = target.read_text(encoding="utf-8")
 
     with pytest.raises(FileExistsError):
@@ -138,21 +152,179 @@ def test_install_all_reports_all_conflicts(tmp_path: Path) -> None:
         install(tmp_path, "all")
 
     normalized_error = str(error.value).replace("\\", "/")
-    assert ".opencode/commands/work-new.md" in normalized_error
-    assert ".pi/prompts/work-new.md" in normalized_error
+    assert ".opencode/commands/work-build.md" in normalized_error
+    assert ".pi/prompts/work-build.md" in normalized_error
     assert ".opencode/commands/work-plan.md" in normalized_error
 
 
-def test_explore_and_plan_prompts_define_their_boundaries() -> None:
-    explore = render_prompt("work-explore", "pi")
+def test_command_set_migration_metadata_is_exact() -> None:
+    assert (
+        tuple(TEMPLATES)
+        == CURRENT_SDLC_COMMANDS
+        == (
+            "work-plan",
+            "work-build",
+            "work-verify",
+            "work-release",
+            "work-continue",
+        )
+    )
+    assert len(LEGACY_SDLC_COMMANDS) == 18
+    assert len(RETIRED_SDLC_COMMANDS) == 16
+    assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
+    assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS.values()) == set(CURRENT_SDLC_COMMANDS)
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_legacy_commands_fail_before_writes_without_replacement_consent(
+    tmp_path: Path, force: bool
+) -> None:
+    directory = write_legacy_commands(tmp_path, "opencode", mixed=True)
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError) as error:
+        install(tmp_path, "opencode", force=force)
+
+    assert _tree_manifest(tmp_path) == before
+    message = str(error.value).replace("\\", "/")
+    detected = [line for line in message.splitlines() if line.startswith("- ")]
+    assert len(detected) == 17
+    assert f"- {directory.as_posix()}/work-verify.md" in detected
+    assert f"- {directory.as_posix()}/work-plan.md" not in detected
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("mixed", [False, True])
+def test_replacement_migrates_only_selected_harness(
+    tmp_path: Path, harness: str, mixed: bool
+) -> None:
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    selected = write_legacy_commands(tmp_path, harness, mixed=mixed)
+    other_harness = "pi" if harness == "opencode" else "opencode"
+    other = write_legacy_commands(tmp_path, other_harness)
+    other_before = {path.name: path.read_bytes() for path in other.glob("*.md")}
+
+    install(tmp_path, harness, replace_sdlc_command_set=True)
+
+    assert {path.stem for path in selected.glob("*.md")} == set(CURRENT_SDLC_COMMANDS)
+    assert {path.name: path.read_bytes() for path in other.glob("*.md")} == other_before
+    for command in CURRENT_SDLC_COMMANDS:
+        assert (selected / f"{command}.md").read_text(encoding="utf-8") == (
+            install_module.render_command(harness, command, config=load_config(tmp_path))
+        )
+
+
+def test_replacement_discloses_every_affected_path_before_mutation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = write_legacy_commands(tmp_path, "opencode")
+    disclosures: list[str] = []
+    original_write = install_module.write_atomic
+
+    def checked_write(path: Path, content: str) -> None:
+        assert disclosures, "migration write preceded affected-path disclosure"
+        original_write(path, content)
+
+    monkeypatch.setattr(install_module, "write_atomic", checked_write)
+
+    install(
+        tmp_path,
+        "opencode",
+        replace_sdlc_command_set=True,
+        disclose_sdlc_replacement=disclosures.append,
+    )
+
+    assert len(disclosures) == 1
+    disclosure = disclosures[0].replace("\\", "/")
+    assert "may contain custom changes" in disclosure
+    affected = [
+        line.removeprefix("- ") for line in disclosure.splitlines() if line.startswith("- ")
+    ]
+    assert affected == sorted(
+        (directory / f"{command}.md").as_posix() for command in LEGACY_SDLC_COMMANDS
+    )
+
+
+def test_all_harness_replacement_is_independent_and_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_pinned_pi_adapter(tmp_path)
+    write_legacy_commands(tmp_path, "opencode")
+    write_legacy_commands(tmp_path, "pi", mixed=True)
+
+    install(tmp_path, "all", replace_sdlc_command_set=True)
+    first = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "write_atomic",
+        lambda *_args: pytest.fail("idempotent replacement attempted a write"),
+    )
+    install(tmp_path, "all", replace_sdlc_command_set=True)
+
+    assert _tree_manifest(tmp_path) == first
+    for relative in install_module.TARGETS.values():
+        assert {path.stem for path in (tmp_path / relative).glob("*.md")} == set(
+            CURRENT_SDLC_COMMANDS
+        )
+
+
+def test_replacement_does_not_bypass_unrelated_conflicts(tmp_path: Path) -> None:
+    write_legacy_commands(tmp_path, "opencode")
+    build = tmp_path / ".opencode/commands/work-build.md"
+    build.write_bytes(b"custom build\x00")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError, match="work-build.md"):
+        install(tmp_path, "opencode", replace_sdlc_command_set=True)
+
+    assert _tree_manifest(tmp_path) == before
+    install(tmp_path, "opencode", force=True, replace_sdlc_command_set=True)
+    assert build.read_text(encoding="utf-8") == install_module.render_command(
+        "opencode", "work-build", config=load_config(tmp_path)
+    )
+
+
+def test_windows_replacement_uses_path_deletion(
+    tmp_path: Path,
+) -> None:
+    write_legacy_commands(tmp_path, "opencode")
+
+    install(tmp_path, "opencode", replace_sdlc_command_set=True)
+
+    assert not any(
+        (tmp_path / ".opencode/commands" / f"{command}.md").exists()
+        for command in RETIRED_SDLC_COMMANDS
+    )
+
+
+def test_migration_failure_restores_customized_files_and_deletions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_legacy_commands(tmp_path, "opencode")
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda _root, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected migration failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected migration failure"):
+        install(tmp_path, "opencode", replace_sdlc_command_set=True)
+
+    assert _tree_manifest(tmp_path) == before
+
+
+def test_build_and_plan_prompts_define_their_boundaries() -> None:
+    build = render_prompt("work-build", "pi")
     plan = render_prompt("work-plan", "opencode")
 
-    assert "### Confirmed evidence" in explore
-    assert "Do not create or modify files." in explore
-    assert "human approval" in plan
-    assert "Do not create or modify files." in plan
-    assert "description: Gather repository evidence for a work contract" not in explore
-    assert "description: Propose an implementation plan for human approval" in plan
+    assert "bounded local slices" in build
+    assert "stop before verification" in build
+    assert "one approved executable plan for one Epic" in plan
+    assert "stops before any Epic plan is produced" in plan
+    assert "description:" not in build
+    assert "description: Recognize one Epic" in plan
 
 
 def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
@@ -588,7 +760,7 @@ def test_config_allows_disabled_memory_and_caveman(tmp_path: Path) -> None:
 
 
 def test_command_metadata_exactly_covers_templates() -> None:
-    assert len(COMMAND_METADATA) == 18
+    assert len(COMMAND_METADATA) == 5
     assert COMMAND_METADATA.keys() == TEMPLATES.keys()
 
 
@@ -598,7 +770,7 @@ def test_memory_disabled_prompts_compile_memory_out() -> None:
 
     for command in TEMPLATES:
         disabled = render_prompt(command, "opencode")
-        assert "memory" not in disabled.lower()
+        assert "memory_" not in disabled
         assert "{{" not in disabled
         assert "{%" not in disabled
 
@@ -618,16 +790,7 @@ def test_enabled_opencode_prompts_have_bounded_shared_memory_hooks() -> None:
     enabled_config["memory"]["enabled"] = True
     enabled_config["memory"]["retrieval"]["limit"] = 3
     enabled_config["memory"]["retrieval"]["max_chars"] = 2048
-    priority_commands = {
-        "work-resume",
-        "work-start-from",
-        "work-explore",
-        "work-plan",
-        "work-hld",
-        "work-lld",
-        "work-implement",
-        "work-verify",
-    }
+    priority_commands = set(TEMPLATES)
 
     searched_commands = set()
     for command in TEMPLATES:
@@ -686,7 +849,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 
     installed = install(tmp_path, "opencode")
 
-    assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 18
+    assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 5
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert rendered.count("## Project memory boundary") == 1
@@ -704,7 +867,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
     installed = install(tmp_path, "opencode")
 
-    assert len(installed) == 22
+    assert len(installed) == 9
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
@@ -734,7 +897,7 @@ def test_install_supports_pi_memory_distribution(tmp_path: Path, harness: str) -
 
 def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Path) -> None:
     _write_enabled_memory_config(tmp_path)
-    command = tmp_path / ".opencode/commands/work-new.md"
+    command = tmp_path / ".opencode/commands/work-build.md"
     skill = tmp_path / ".opencode/skills/memory/SKILL.md"
     command.parent.mkdir(parents=True)
     skill.parent.mkdir(parents=True)
@@ -747,7 +910,7 @@ def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Pat
 
     assert _tree_manifest(tmp_path) == before
     message = str(error.value).replace("\\", "/")
-    assert ".opencode/commands/work-new.md" in message
+    assert ".opencode/commands/work-build.md" in message
     assert ".opencode/skills/memory/SKILL.md" in message
 
 
@@ -1184,7 +1347,7 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_bytes(b'{"operator":true}\n')
-    owned_command = tmp_path / ".pi/prompts/work-new.md"
+    owned_command = tmp_path / ".pi/prompts/work-build.md"
     owned_command.parent.mkdir(parents=True)
     owned_command.write_bytes(b"operator command\x00")
     before = _tree_manifest(tmp_path)

@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00067"
+"type": "task"
+"title": "Implement explicit legacy command migration and Python distribution"
+"status": "done"
+"created_at": "2026-08-19T12:09:22.499Z"
+"updated_at": "2026-08-19T12:38:02.359Z"
+"created_by": "lead-engineer"
+"assigned_to": "devops"
+"parent": "hrn-00061"
+"depends_on":
+  - "hrn-00066"
+"body": "Given an installed legacy 18-command set\nWhen the simplified set is installed\nThen migration occurs only through explicit replacement consent with exact rollback.\n\n## Deliverables\n\n- `--replace-sdlc-command-set` CLI flag and matching install API option.\n- Five new outputs; replace Plan/Verify and remove sixteen retired outputs per selected harness.\n- Mixed-state detection and fail-before-write behavior without migration consent.\n- Python package version `0.2.0`, release note, wheel/sdist CI artifact.\n\n## Acceptance\n\n- [x] Unrelated conflicts still require normal force handling.\n- [x] OpenCode/Pi/all selection scopes deletion correctly.\n- [x] Windows deletion, idempotence, conflict, and rollback tests pass.\n- [x] No PyPI or npm publication is falsely claimed."
+"comments": []

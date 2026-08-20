@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00061"
+"type": "story"
+"title": "Simplify SDLC into an Epic-first five-command workflow"
+"status": "done"
+"created_at": "2026-08-19T12:08:31.374Z"
+"updated_at": "2026-08-19T12:55:58.754Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00001"
+"metadata":
+  "design": ".specs/lld-00009-simplified-epic-first-sdlc-command-set-delta-v1.md"
+"body": "As a developer\nI want five Epic-first SDLC commands\nSo that I can plan, build, verify, release, and resume work without navigating eighteen narrow commands.\n\n## Requirements\n\n- Replace the public command set with `work-plan`, `work-build`, `work-verify`, `work-release`, and `work-continue`.\n- Require Epic recognition before phase work; non-Plan commands redirect when no Epic exists.\n- Require user confirmation for proposed steps, artifacts, issue changes, and remote/destructive actions.\n- Support adaptive planning, bounded Build YOLO consent, verification Bug creation, and exact-phase continuation.\n- Persist compact confirmed workflow checkpoints while preserving authoritative issue/spec/source/Git/test precedence.\n- Migrate existing generated command sets only through explicit `--replace-sdlc-command-set` consent.\n\n## Acceptance\n\n- [x] OpenCode and Pi render exactly five supported SDLC commands.\n- [x] Plan supports prompts, Initiatives, and Epics with confirmed adaptive decomposition.\n- [x] Build resumes Epic work, offers item selection, and supports bounded YOLO mode.\n- [x] Verify creates or reuses one discoverable Bug per defect occurrence and routes failures through user choice.\n- [x] Release enforces branch, commit, push, and PR plus explicit merge/deployment consent.\n- [x] Continue resumes one validated checkpoint and never silently advances phases.\n- [x] Legacy output migration, rollback, package artifacts, docs, and cross-platform tests pass.\n\n## Design\n\n- `.specs/lld-00009-simplified-epic-first-sdlc-command-set-delta-v1.md`"
+"comments": []

@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00057"
+"type": "story"
+"title": "Document SDLC architecture and command transitions with Mermaid"
+"status": "done"
+"created_at": "2026-08-18T20:02:02.971Z"
+"updated_at": "2026-08-18T20:49:04.218Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00001"
+"body": "As a harnessctl user\nI want accurate Mermaid SDLC diagrams derived from command templates\nSo that I can understand architecture, command transitions, gates, loops, and terminal outcomes.\n\n## Scope\n\nUpdate flow and architecture sections in `README.md`, `FLOWS.md`, and relevant `docs/*.md`. Keep code/config examples unchanged. Show installed `work-*` names and conceptual aliases.\n\n## Acceptance criteria\n\n- [x] Every useful flow/architecture diagram uses portable Mermaid.\n- [x] One authoritative 18-command transition graph matches current templates.\n- [x] Accessible text table mirrors every graph edge and outcome.\n- [x] Implemented and theoretical behavior remain clearly separated.\n- [x] Mermaid syntax, links, formatting, and transition drift checks pass.\n\n## Out of scope\n\n- Changing SDLC template behavior.\n- Adding new command aliases or runtime orchestration.\n- New LLD or HLD artifacts."
+"comments": []
