@@ -152,7 +152,8 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     for template in templates:
         digest.update(template.name.encode())
         digest.update(b"\0")
-        digest.update(template.read_bytes())
+        # Normalize checkout line endings so this review guard is stable on Windows.
+        digest.update(template.read_text(encoding="utf-8").encode())
         digest.update(b"\0")
 
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
