@@ -1,26 +1,9 @@
 # Work Release
 
-{% include "sdlc/_partials/governance.md.j2" %}
+Activate `sdlc`; read `references/release.md`. Apply it to current input.
 
-{% include "sdlc/_partials/epic-context.md.j2" %}
+Resolve one verified Epic and perform only confirmed release actions. Load
+`references/release-deploy.md` only after explicit deployment request.
 
-{% include "sdlc/_partials/memory-entry.md.j2" %}
-
-## Release boundary
-
-Release is Epic-only. If the Epic is absent or current successful verification cannot be
-established authoritatively, stop and direct the user to `work-plan` or `work-verify` as
-appropriate. Complete only the confirmed release actions below; no general approval waives
-an action gate.
-
-{% include "sdlc/_partials/release-checklist.md.j2" %}
-
-## Output
-
-Report recognized Epic, release phase/state, authoritative evidence, classified action,
-confirmation status, completed step, next permitted step, blockers, and checkpoint result.
-Never infer delivery, merge, deployment, or closure.
-
-{% include "sdlc/_partials/checkpoint.md.j2" %}
-
-{% include "sdlc/_partials/memory-exit.md.j2" %}
+Default stop is ready pull request; merge needs fresh explicit consent. Before checkpoint
+work, read `references/checkpoint.md`. Return compact SDLC result.

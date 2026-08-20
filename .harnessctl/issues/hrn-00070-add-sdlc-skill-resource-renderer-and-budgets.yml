@@ -1,0 +1,14 @@
+"version": 1
+"id": "hrn-00070"
+"type": "task"
+"title": "Add SDLC skill resource renderer and budgets"
+"status": "done"
+"created_at": "2026-08-20T17:55:07.783Z"
+"updated_at": "2026-08-20T18:00:41.535Z"
+"created_by": "lead-engineer"
+"assigned_to": "backend-dev"
+"parent": "hrn-00069"
+"metadata":
+  "design": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md"
+"body": "Given the approved compact SDLC LLD\nWhen skill resources and prompt budgets are introduced\nThen rendering is path-safe, deterministic, and measured.\n\n## Deliverables\n\n- Add nested skill resource registry and renderer with path validation.\n- Characterize old memory-enabled prompt sizes.\n- Add word/byte budget helpers and tests.\n\n## Acceptance\n\n- [x] Nested resource paths reject traversal, absolute paths, backslashes, and portable collisions.\n- [x] Rendering uses StrictUndefined and normalized final newlines.\n- [x] Baseline and target budgets are deterministic in tests.\n- [x] Focused Python checks pass."
+"comments": []

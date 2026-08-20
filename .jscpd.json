@@ -1,12 +1,7 @@
 {
   "path": ["extensions", "src", "tests"],
   "pattern": "**/*.{ts,js,py}",
-  "ignore": [
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/coverage/**",
-    "**/*.d.ts"
-  ],
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/coverage/**", "**/*.d.ts"],
   "reporters": ["console", "html"],
   "output": "tmp/jscpd",
   "absolute": false

@@ -4,6 +4,11 @@ coverage/
 **/node_modules/**
 **/dist/**
 **/coverage/**
+**/package-lock.json
 **/*.db
 **/*.sqlite
 tmp/**
+.external-docs/
+.harnessctl/
+.specs-v1/
+/req.md

@@ -1,24 +1,9 @@
 # Work Plan
 
-Recognize planning input, obtain confirmation for proportionate planning work, and finish at
-one approved executable plan for one Epic. A new prompt may instead be decomposed into one
-Initiative and attached Epics, but that mode stops before any Epic plan is produced.
+Activate `sdlc`; read `references/plan.md`. Apply it to current input.
 
-{% include "sdlc/_partials/governance.md.j2" %}
+Resolve/propose one Epic, or decompose one broad outcome into Initiative + Epics and stop.
+Load only conditional references named by `plan.md`, only when their condition occurs.
 
-{% include "sdlc/_partials/epic-context.md.j2" %}
-
-{% include "sdlc/_partials/memory-entry.md.j2" %}
-
-{% include "sdlc/_partials/plan-checklist.md.j2" %}
-
-## Output
-
-Report input and selected mode; recognized Initiative and Epic IDs; plan phase/state;
-authoritative evidence; all classified items and reasons; revisions and confirmation status;
-created entities and artifact links; completed step; next permitted step; blockers; and
-checkpoint result. Never report completion from advisory state alone.
-
-{% include "sdlc/_partials/checkpoint.md.j2" %}
-
-{% include "sdlc/_partials/memory-exit.md.j2" %}
+Finish with one approved executable Epic plan or a clear blocker. Do not Build, Verify, or
+Release. Before checkpoint work, read `references/checkpoint.md`. Return compact SDLC result.

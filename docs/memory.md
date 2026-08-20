@@ -110,9 +110,10 @@ memory:
   enabled: true
 ```
 
-OpenCode receives the generated memory skill, SDLC memory hooks, plugin entry, and
-adapter dependency when memory is enabled. Pi receives the generated memory skill and
-hooks, while project-local `@harnessctl/pi-tools` registers normalized memory tools.
+OpenCode receives the generated memory skill, compiled SDLC checkpoint reference,
+plugin entry, and adapter dependency when memory is enabled. Pi receives the same
+generated memory skill and checkpoint policy, while project-local `@harnessctl/pi-tools`
+registers normalized memory tools.
 See [skills](skills.md) and [configuration](configuration.md).
 
 ## Future service examples — NOT IMPLEMENTED

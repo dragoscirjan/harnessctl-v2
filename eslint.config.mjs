@@ -3,7 +3,17 @@ import typescriptEslintPlugin from '@typescript-eslint/eslint-plugin';
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', '**/*.d.ts', 'extensions/**/out/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      '**/*.d.ts',
+      'extensions/**/out/**',
+      '.external-docs/**',
+      '.harnessctl/**',
+      '.specs-v1/**',
+      'req.md',
+    ],
   },
   ...templEslintConfig,
   {
@@ -23,6 +33,13 @@ export default [
         },
       ],
       'no-useless-escape': 'off',
+    },
+  },
+  {
+    files: ['.github/workflows/*.{yml,yaml}'],
+    rules: {
+      // GitHub's `on:` key is valid but appears empty under the parser's YAML 1.1 semantics.
+      'yml/no-empty-mapping-value': 'off',
     },
   },
   {

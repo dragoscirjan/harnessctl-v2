@@ -256,12 +256,12 @@ schema and row integrity, and runtime selection. Adapter tests preserve tool con
 - [x] One shared exclusive barrier serializes participating local operations.
 - [x] Safe valid YAML presentation is accepted and writes are deterministic.
 - [x] Successful mutations synchronize or synchronously rebuild
-  `.harnessctl/cache/harnessctl.sqlite`.
+      `.harnessctl/cache/harnessctl.sqlite`.
 - [x] Cache defects repair internally only from valid canonical YAML.
 - [x] Application journals, projection sinks, change sets, dirty protocols, JSON
-  memory cache, cache-first reads, and agent cache tools are absent.
+      memory cache, cache-first reads, and agent cache tools are absent.
 - [x] Remote-provider routing bypasses local persistence by contract; only repository
-  memory is currently implemented.
+      memory is currently implemented.
 - [x] Runtime-specific SQLite loading is lazy.
 - [x] Installation does not create the cache.
 - [x] Defaults remain `.harnessctl/issues` and `hrn-`.

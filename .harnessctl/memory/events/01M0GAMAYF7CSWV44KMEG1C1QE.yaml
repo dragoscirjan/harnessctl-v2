@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M0GAMAYF7CSWV44KMEG1C1QE
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: compact-sdlc-prompts
+summary: "Story hrn-00069 completed: five SDLC shells now use progressively disclosed sdlc skill tree."
+details: LLD `.specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md`; tasks hrn-00070..73 done. Shell reductions 95.3–96.8%; max shell+core+normal 535 words/4,306 bytes. `mise run quality` and `mise run runtime-smoke` passed. Three reviewer calls returned empty results; no reviewer approval obtained. User-owned `req.md` untouched/untracked.
+source:
+  kind: artifact
+  ref: hrn-00069
+  revision: null
+created_at: 2026-08-20T19:33:38.383Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - progressive-disclosure
+  - prompt-budget
+  - sdlc

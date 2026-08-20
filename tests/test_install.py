@@ -16,9 +16,11 @@ from harnessctl.install import (
 )
 from harnessctl.templates import (
     COMMAND_METADATA,
+    SKILL_RESOURCE_TEMPLATES,
     TEMPLATES,
     render_prompt,
     render_skill,
+    render_skill_resources,
 )
 
 install_module = importlib.import_module("harnessctl.install")
@@ -35,6 +37,14 @@ def _tree_manifest(root: Path) -> dict[str, tuple[str, bytes | None]]:
             None if path.is_dir() else path.read_bytes(),
         )
         for path in sorted(root.rglob("*"))
+    }
+
+
+def _sdlc_context(*, memory_enabled: bool) -> dict[str, object]:
+    return {
+        "memory_hooks_enabled": memory_enabled,
+        "retrieval_limit": 3,
+        "retrieval_max_chars": 2048,
     }
 
 
@@ -90,37 +100,38 @@ def test_rendered_prompts_share_the_canonical_body() -> None:
     assert "description:" not in pi
     assert opencode.endswith(pi)
     assert "{{" not in pi
-    assert "Resumable checkpoints are unavailable" in pi
+    assert "references/plan.md" in pi
+    assert "references/checkpoint.md" in pi
 
 
 @pytest.mark.parametrize("command", TEMPLATES)
 def test_enabled_memory_does_not_claim_unverified_completion(command: str) -> None:
-    config = deepcopy(DEFAULT_CONFIG)
-    config["memory"]["enabled"] = True
+    assert command in TEMPLATES
+    rendered = render_skill("sdlc", **_sdlc_context(memory_enabled=True))
+    checkpoint = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=True))[
+        "references/checkpoint.md"
+    ]
 
-    rendered = render_prompt(command, "opencode", config=config)
-
-    assert "Never report completion from advisory state alone" in rendered or (
-        "Never claim" in rendered or "Never infer" in rendered
-    )
+    assert "current issues/specs/source/Git/tests/provider observations > memory" in rendered
+    assert "Checkpoint never proves approval/completion/current state" in checkpoint
 
 
 def test_memory_entry_prefers_entity_topic_before_default() -> None:
-    config = deepcopy(DEFAULT_CONFIG)
-    config["memory"]["enabled"] = True
-
-    rendered = render_prompt("work-plan", "opencode", config=config)
+    rendered = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=True))[
+        "references/checkpoint.md"
+    ]
     normalized = " ".join(rendered.split())
 
-    assert "exact Epic ID and `plan` phase" in normalized
-    assert "Before Epic recognition, use `general` only" in normalized
+    assert "configured topic + exact Epic ID + phase" in normalized
+    assert "Get only a selected relevant record" in normalized
 
 
 def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     write_pinned_pi_adapter(tmp_path)
     installed = install(tmp_path, "all")
 
-    assert len(installed) == len(TEMPLATES) * 2 + 9
+    resource_count = len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + 1
+    assert len(installed) == len(TEMPLATES) * 2 + 9 + resource_count * 2
     for command in TEMPLATES:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
         assert (tmp_path / f".pi/prompts/{command}.md").exists()
@@ -129,6 +140,8 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     assert (tmp_path / ".opencode/skills/cvs/SKILL.md").exists()
     for skill in ("caveman", "cvs", "issue-tracking", "memory"):
         assert (tmp_path / f".pi/skills/{skill}/SKILL.md").exists()
+    assert (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").is_file()
+    assert (tmp_path / ".pi/skills/sdlc/references/checkpoint.md").is_file()
 
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
@@ -316,15 +329,14 @@ def test_migration_failure_restores_customized_files_and_deletions(
 
 
 def test_build_and_plan_prompts_define_their_boundaries() -> None:
-    build = render_prompt("work-build", "pi")
-    plan = render_prompt("work-plan", "opencode")
+    resources = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=False))
+    build = resources["references/build.md"]
+    plan = resources["references/plan.md"]
 
-    assert "bounded local slices" in build
-    assert "stop before verification" in build
+    assert "Implement one local slice" in build
+    assert "Never run Verify/Release" in build
     assert "one approved executable plan for one Epic" in plan
-    assert "stops before any Epic plan is produced" in plan
-    assert "description:" not in build
-    assert "description: Recognize one Epic" in plan
+    assert "stop before Epic planning" in plan
 
 
 def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
@@ -775,42 +787,41 @@ def test_memory_disabled_prompts_compile_memory_out() -> None:
         assert "{%" not in disabled
 
 
-def test_enabled_pi_prompts_have_memory_hooks() -> None:
+def test_enabled_pi_prompts_delegate_memory_hooks() -> None:
     config = deepcopy(DEFAULT_CONFIG)
     config["memory"]["enabled"] = True
 
     for command in TEMPLATES:
         rendered = render_prompt(command, "pi", config=config)
-        assert rendered.count("## Project memory boundary") == 1
-        assert rendered.count("## Project memory exit") == 1
+        assert "references/checkpoint.md" in rendered or command == "work-continue"
+        assert "memory_search" not in rendered
+
+    checkpoint = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=True))[
+        "references/checkpoint.md"
+    ]
+    assert "memory_store" in checkpoint
+    assert "memory_supersede" in checkpoint
 
 
-def test_enabled_opencode_prompts_have_bounded_shared_memory_hooks() -> None:
+def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None:
     enabled_config = deepcopy(DEFAULT_CONFIG)
     enabled_config["memory"]["enabled"] = True
     enabled_config["memory"]["retrieval"]["limit"] = 3
     enabled_config["memory"]["retrieval"]["max_chars"] = 2048
-    priority_commands = set(TEMPLATES)
-
-    searched_commands = set()
     for command in TEMPLATES:
         rendered = render_prompt(command, "opencode", config=enabled_config)
-        assert rendered.count("## Project memory boundary") == 1
-        assert rendered.count("## Project memory exit") == 1
-        assert "authoritative and override" in rendered
-        assert "provenance" in rendered
-        assert "minimum tokens" in rendered
-        assert "full technical" in rendered
-        assert "never establishes completion" in rendered
-        if "`memory_search`" in rendered:
-            searched_commands.add(command)
-            normalized = " ".join(rendered.split())
-            assert rendered.count("`memory_search`") == 1
-            assert "limit 3" in rendered
-            assert "maximum 2048 returned characters" in normalized
-            assert "call `memory_get` only" in rendered
+        assert "memory_search" not in rendered
 
-    assert searched_commands == priority_commands
+    checkpoint = render_skill_resources(
+        "sdlc",
+        memory_hooks_enabled=True,
+        retrieval_limit=3,
+        retrieval_max_chars=2048,
+    )["references/checkpoint.md"]
+    normalized = " ".join(checkpoint.split())
+    assert "limit 3, 2048 chars" in normalized
+    assert "Store only confirmed/currently verified state with provenance" in normalized
+    assert "Checkpoint never proves approval/completion/current state" in normalized
 
 
 def test_caveman_renders_only_selected_mode() -> None:
@@ -852,8 +863,12 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
     assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 5
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
-        assert rendered.count("## Project memory boundary") == 1
-        assert rendered.count("## Project memory exit") == 1
+        assert "memory_search" not in rendered
+    checkpoint = (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").read_text(
+        encoding="utf-8"
+    )
+    assert "memory_store" in checkpoint
+    assert "limit 5, 4000 chars" in checkpoint
     assert tmp_path / ".opencode/skills/caveman/SKILL.md" in installed
     assert tmp_path / ".opencode/skills/memory/SKILL.md" in installed
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
@@ -867,12 +882,17 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
     installed = install(tmp_path, "opencode")
 
-    assert len(installed) == 9
+    assert len(installed) == 9 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + 1
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
         assert "Project memory" not in rendered
     assert (tmp_path / ".opencode/skills/caveman/SKILL.md").is_file()
+    checkpoint = (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Memory checkpoint unavailable" in checkpoint
+    assert "memory_store" not in checkpoint
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
     assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
     assert not (tmp_path / ".opencode/skills/memory").exists()
@@ -888,11 +908,67 @@ def test_install_supports_pi_memory_distribution(tmp_path: Path, harness: str) -
     installed = install(tmp_path, harness)
 
     assert tmp_path / ".pi/skills/memory/SKILL.md" in installed
-    assert all(
-        "## Project memory exit" in path.read_text(encoding="utf-8")
-        for path in (tmp_path / ".pi/prompts").glob("*.md")
-    )
+    checkpoint = (tmp_path / ".pi/skills/sdlc/references/checkpoint.md").read_text(encoding="utf-8")
+    assert "memory_store" in checkpoint
+    assert "limit 5, 4000 chars" in checkpoint
     assert (tmp_path / ".harnessctl/memory/facts").is_dir()
+
+
+def test_all_install_produces_byte_equivalent_sdlc_skill_trees(tmp_path: Path) -> None:
+    write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, "all")
+
+    opencode = tmp_path / ".opencode/skills/sdlc"
+    pi = tmp_path / ".pi/skills/sdlc"
+    assert _tree_manifest(opencode) == _tree_manifest(pi)
+
+
+def test_nested_sdlc_resource_conflict_and_force_are_transactional(tmp_path: Path) -> None:
+    target = tmp_path / ".opencode/skills/sdlc/references/checkpoint.md"
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"operator checkpoint\x00")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError, match="checkpoint.md"):
+        install(tmp_path, "opencode")
+    assert _tree_manifest(tmp_path) == before
+
+    install(tmp_path, "opencode", force=True)
+    assert target.read_text(encoding="utf-8").startswith("# Workflow checkpoint")
+
+
+def test_nested_sdlc_resource_symlink_is_rejected_without_mutation(tmp_path: Path) -> None:
+    referent = tmp_path / "operator-checkpoint.md"
+    referent.write_bytes(b"operator checkpoint\n")
+    target = tmp_path / ".opencode/skills/sdlc/references/checkpoint.md"
+    target.parent.mkdir(parents=True)
+    target.symlink_to(referent)
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="must not contain symlinks"):
+        install(tmp_path, "opencode", force=True)
+
+    assert _tree_manifest(tmp_path) == before
+    assert referent.read_bytes() == b"operator checkpoint\n"
+
+
+def test_nested_sdlc_resource_failure_restores_exact_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    before = _tree_manifest(tmp_path)
+    original_write = install_module.write_atomic
+
+    def fail_on_checkpoint(target: Path, content: str) -> None:
+        if target.as_posix().endswith("/sdlc/references/checkpoint.md"):
+            raise OSError("injected nested resource failure")
+        original_write(target, content)
+
+    monkeypatch.setattr(install_module, "write_atomic", fail_on_checkpoint)
+    with pytest.raises(OSError, match="injected nested resource failure"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
 
 
 def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Path) -> None:

@@ -62,10 +62,10 @@ Owns pure and filesystem-backed functions. It must not import either host SDK.
 Proposed exports:
 
 ```ts
-createConfig(cwd: string): string
-readConfig(cwd: string): ConfigDocument | ConfigError
-getConfigValue(cwd: string, path: string): unknown | ConfigError
-parseConfig(content: string): ConfigDocument
+export declare function createConfig(cwd: string): string;
+export declare function readConfig(cwd: string): ConfigDocument | ConfigError;
+export declare function getConfigValue(cwd: string, path: string): unknown | ConfigError;
+export declare function parseConfig(content: string): ConfigDocument;
 ```
 
 The package also exposes the default YAML content/schema used by

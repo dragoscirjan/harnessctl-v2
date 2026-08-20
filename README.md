@@ -36,10 +36,13 @@ The product has four layers:
 ```mermaid
 flowchart TD
     accTitle: harnessctl product layers
-    accDescr: Canonical prompts compile into harness-specific commands that use generic tools to produce human-governed repository records and evidence.
-    prompts[Canonical SDLC prompts] --> commands[Harness-specific compiled commands]
+    accDescr: Canonical SDLC policy compiles into compact harness commands and a progressively disclosed skill tree that use generic tools to produce human-governed repository records and evidence.
+    policy[Canonical SDLC policy] --> commands[Compact harness-specific commands]
+    policy --> skill[Shared SDLC skill + phase references]
     commands --> opencode[OpenCode Markdown commands]
-    commands --> pi[Pi prompts, skills, and tool extension]
+    commands --> pi[Pi prompts]
+    skill --> opencode
+    skill --> pi
     opencode --> tools[Generic filesystem and workflow tools]
     pi --> tools
     tools --> record[Repository + human decisions + evidence]
@@ -117,7 +120,8 @@ The canonical harness-neutral aliases are:
 Grouped aliases describe canonical semantics; they are not additional generated command
 files. The former 18-command vocabulary is not installed as aliases. Useful intake,
 exploration, Initiative/Epic creation, design, decomposition, implementation, review,
-CVS, finish, and resume behavior remains inside the five commands as phase checklists.
+CVS, finish, and resume behavior remains behind the five commands as progressively
+disclosed SDLC skill references.
 
 ## Stage contracts
 
@@ -151,23 +155,23 @@ that result, and stops without advancing phases.
 
 ## What is implemented today
 
-### Prompt distribution
+### Command and skill distribution
 
 Implemented in `src/harnessctl/`:
 
-- Jinja2 prompt rendering with strict undefined-variable handling.
-- Atomic prompt installation with rollback on multi-file failure.
+- Jinja2 command and skill-resource rendering with strict undefined-variable handling.
+- Atomic nested-tree installation with exact rollback on multi-file failure.
 - Conflict detection that reports all existing targets.
 - Explicit `--force` overwrite behavior.
 - OpenCode and Pi target generation.
 - Configurable direct Git or Jujutsu guidance and provider-specific CVS routing.
 - Fixed-ID GitHub, GitLab, Gitea, and Forgejo MCP projection into OpenCode and Pi host
   files, with independently configured CVS and Issues policies.
-- Packaged prompt templates that are included in built wheels.
+- Packaged command, skill, and reference templates included in built wheels.
 
-The current registry contains five canonical templates and installs each under the
-OpenCode and Pi command directories. See the [SDLC guide](docs/sdlc.md) for the exact
-command set and current host boundaries.
+The current registry installs five compact command shells plus one SDLC core skill and
+13 progressively disclosed references under both OpenCode and Pi. See the
+[SDLC guide](docs/sdlc.md) for the exact command set, budgets, and host boundaries.
 
 ### Generic issue tooling
 
@@ -237,7 +241,7 @@ the normalized repository-memory tools. Adapter tests cover Pi memory registrati
 store, search, and validation delegation.
 
 Automatic memory installation supports OpenCode and Pi. Pi receives all five commands,
-all four skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
+all five skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
 `pi.extensions` package manifest loads the tool extension.
 
 OpenCode and Pi receive generated CVS and Issues skills. Pi MCP host configuration uses

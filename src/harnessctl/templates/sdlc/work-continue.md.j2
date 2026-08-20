@@ -1,51 +1,9 @@
 # Work Continue
 
-{% include "sdlc/_partials/governance.md.j2" %}
+Activate `sdlc`; read `references/continue.md` and `references/checkpoint.md`. Apply them to
+current input.
 
-{% include "sdlc/_partials/epic-context.md.j2" %}
+Resume one authoritative Epic phase and one confirmed step. Load
+`references/continue-reconcile.md` only for duplicate, interrupted, or ambiguous checkpoints.
 
-{% include "sdlc/_partials/memory-entry.md.j2" %}
-
-## Select one unfinished workflow
-
-Prompt for an optional Epic, Story, Task, or Bug ID. When supplied, resolve exactly one owning
-Epic and search narrowly for that Epic's active checkpoint. Without an ID, search active
-checkpoint records once, present at most five unfinished Epic workflows, and wait for the user
-to select one. Never select the newest or otherwise choose automatically. If no authoritative
-Epic resolves, stop and direct the user to `work-plan`; never create an Epic here.
-
-Treat interrupted or duplicate checkpoint records as ambiguous, not as parallel work. Compare
-all candidates with authority, present contradictions and the proposed logical current record,
-and block resumption until the user resolves ambiguity. Supersede the selected stale record and
-tombstone confirmed stale duplicates only through configured memory capabilities and only after
-the replacement is confirmed or independently verified. Keep partial reconciliation failure
-visible; never choose by timestamp, combine records, or silently discard one.
-
-## Validate and resume one step
-
-Resume exactly one authoritative current plan, build, verify, or release phase and one
-user-confirmed next step. Before resuming, validate checkpoint claims against authoritative
-current issue hierarchy and status, linked plans and specifications, source and Git state,
-tests or verification reports, and CVS/provider evidence relevant to that phase. Report every
-conflict. A checkpoint or memory claim never overrides those sources.
-
-If an Epic exists but no valid checkpoint does, derive only the candidate current phases that
-authority supports, classify them, explain uncertainty, and ask the user to choose. If several
-phases or steps remain plausible, stop for reconciliation; never invent completion history,
-combine candidates, or silently advance.
-
-Record command identity as `work-continue` while retaining the resumed phase. After the one
-step, verify and checkpoint only that result, then stop with a same-phase next recommendation
-or recommend a separate invocation of the next public command. Include a pending next step in
-the checkpoint only after the user confirms it. Never execute that next step, combine phases,
-or advance merely because the resumed step completed.
-
-## Output
-
-Report recognized Epic, resumed phase/state, authoritative evidence, classified step,
-confirmation status, completed step, next permitted step, blockers, and checkpoint result.
-Never infer completion from checkpoint or advisory state.
-
-{% include "sdlc/_partials/checkpoint.md.j2" %}
-
-{% include "sdlc/_partials/memory-exit.md.j2" %}
+Stop after that step. Never combine phases or auto-select workflow. Return compact SDLC result.

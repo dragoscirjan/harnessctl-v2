@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 SDLC_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "sdlc"
+SDLC_SKILL_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "skills" / "sdlc"
 AUTHORITATIVE_TITLE = "Authoritative template-derived command transitions"
 PUBLIC_COMMANDS = {
     "work-build",
@@ -142,9 +143,11 @@ def test_authoritative_transitions_label_all_installed_and_conceptual_commands()
 
 
 def test_command_template_changes_force_transition_documentation_review() -> None:
-    """Snapshot all command templates; partials are intentionally excluded."""
-    templates = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
-    assert {template.name.removesuffix(".md.j2") for template in templates} == PUBLIC_COMMANDS
+    """Snapshot command shells and progressively disclosed SDLC policy."""
+    commands = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
+    assert {template.name.removesuffix(".md.j2") for template in commands} == PUBLIC_COMMANDS
+    templates = [*commands, *sorted(SDLC_SKILL_TEMPLATES.rglob("*.md.j2"))]
+    assert len(templates) == 19
     digest = hashlib.sha256()
     for template in templates:
         digest.update(template.name.encode())
@@ -152,10 +155,10 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
         digest.update(template.read_bytes())
         digest.update(b"\0")
 
-    # Any command-template change requires reviewing the graph and edge table before
-    # deliberately updating this complete five-template digest.
+    # Any shell or disclosed-policy change requires reviewing the graph and edge table
+    # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "477852698079cf790313b99887e0221a3ee3ab010d9c9f563dcf0d3b4cfa63ae"
+        "58ff5e85623cc08016682b6245b942db1bf48a9c2e509bbed931823bbe5f9e55"
     )
 
 

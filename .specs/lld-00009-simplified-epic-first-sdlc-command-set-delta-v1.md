@@ -20,13 +20,13 @@ Where this delta conflicts with the current LLD on SDLC command names, command p
 
 The only public SDLC commands become:
 
-| Command | Responsibility |
-|---|---|
-| `work-plan` | Recognize or create the owning Epic, clarify and explore requirements, select proportionate design, decompose work, and obtain approval for one executable Epic plan. |
-| `work-build` | Select or resume ready Story, Task, or Bug work within one recognized Epic and implement bounded slices. |
-| `work-verify` | Verify one recognized Epic, discuss results, and maintain exactly one provider-discoverable, non-archived canonical Bug per distinct defect occurrence. |
-| `work-release` | Complete mandatory branch, commit, push, and pull-request delivery, then optionally support explicitly requested merge or deployment. |
-| `work-continue` | Resume exactly one authoritative current phase and one next step for a recognized Epic. |
+| Command         | Responsibility                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `work-plan`     | Recognize or create the owning Epic, clarify and explore requirements, select proportionate design, decompose work, and obtain approval for one executable Epic plan. |
+| `work-build`    | Select or resume ready Story, Task, or Bug work within one recognized Epic and implement bounded slices.                                                              |
+| `work-verify`   | Verify one recognized Epic, discuss results, and maintain exactly one provider-discoverable, non-archived canonical Bug per distinct defect occurrence.               |
+| `work-release`  | Complete mandatory branch, commit, push, and pull-request delivery, then optionally support explicitly requested merge or deployment.                                 |
+| `work-continue` | Resume exactly one authoritative current phase and one next step for a recognized Epic.                                                                               |
 
 There is no `work-maintain` command. Maintenance requests enter through `work-plan`; defects discovered during verification become Bugs and return through `work-build`.
 
@@ -71,13 +71,13 @@ Fresh installations generate only the five public commands. No deprecated alias 
 
 The migration map is documentation-only:
 
-| Deprecated command family | Replacement |
-|---|---|
-| `work-new`, `work-explore`, `work-start-initiative`, `work-start-epic`, `work-write-stories`, `work-start-story`, `work-design-doc`, `work-hld`, `work-lld`, `work-write-tasks` | `work-plan` |
-| `work-implement` | `work-build` |
-| `work-review` | `work-verify` |
-| `work-cvs`, `work-finish` | `work-release` |
-| `work-resume`, `work-start-from` | `work-continue` |
+| Deprecated command family                                                                                                                                                       | Replacement     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `work-new`, `work-explore`, `work-start-initiative`, `work-start-epic`, `work-write-stories`, `work-start-story`, `work-design-doc`, `work-hld`, `work-lld`, `work-write-tasks` | `work-plan`     |
+| `work-implement`                                                                                                                                                                | `work-build`    |
+| `work-review`                                                                                                                                                                   | `work-verify`   |
+| `work-cvs`, `work-finish`                                                                                                                                                       | `work-release`  |
+| `work-resume`, `work-start-from`                                                                                                                                                | `work-continue` |
 
 The installer and Python API add the exact opt-in pair `--replace-sdlc-command-set` and `replace_sdlc_command_set=False`. The new set is plan, build, verify, release, and continue. The known legacy set is the current 18-command registry. Its plan and verify paths overlap the new set; the other 16 paths are retired.
 
@@ -226,13 +226,13 @@ The resumed command identity is recorded as `work-continue`, while the phase rem
 
 ### 7.1 States
 
-| Phase | States |
-|---|---|
-| Recognition | unresolved, ambiguous, Epic recognized, Initiative split pending, redirected to Plan |
-| Plan | clarifying, exploring, designing, decomposing, awaiting approval, approved, blocked |
-| Build | selecting, ready, implementing slice, YOLO active, blocked, stopped, verification boundary |
-| Verify | selecting checks, checking, discussing failures, Bugs pending confirmation, failed, passed, blocked |
-| Release | delivery precheck, branch pending or satisfied, commit pending or satisfied, push pending or satisfied, pull request pending or satisfied, human merge pending, deployment pending, complete, blocked |
+| Phase       | States                                                                                                                                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recognition | unresolved, ambiguous, Epic recognized, Initiative split pending, redirected to Plan                                                                                                                  |
+| Plan        | clarifying, exploring, designing, decomposing, awaiting approval, approved, blocked                                                                                                                   |
+| Build       | selecting, ready, implementing slice, YOLO active, blocked, stopped, verification boundary                                                                                                            |
+| Verify      | selecting checks, checking, discussing failures, Bugs pending confirmation, failed, passed, blocked                                                                                                   |
+| Release     | delivery precheck, branch pending or satisfied, commit pending or satisfied, push pending or satisfied, pull request pending or satisfied, human merge pending, deployment pending, complete, blocked |
 
 ### 7.2 Allowed transitions
 
@@ -264,18 +264,18 @@ An interruption or concurrent session may leave multiple active checkpoint recor
 
 The summary identifies the Epic ID, phase, active item, and completed step within the current mutation compactness limit. Details use concise labeled lines only when values exist:
 
-| Field | Meaning |
-|---|---|
-| Epic | Exact recognized Epic ID. |
-| Command and phase | Public command plus plan, build, verify, or release phase. |
-| Active item | Story, Task, Bug, artifact, check batch, branch, commit, pull request, or delivery target. |
-| Completed step | Confirmed or verified result only. |
-| Next step | User-confirmed intended next step only, clearly not claimed complete. An unconfirmed recommendation or proposal is omitted. |
-| Decisions | Confirmed decisions and accepted consequences. |
-| Blockers | Current blockers, uncertainty, and required resolution. |
-| Artifacts | Authoritative issue, task, specification, report, or source paths; no copied bodies. |
-| Delivery | Branch, commit, and pull-request identifiers when verified. |
-| Verification | Current pass, fail, partial, or not-run status with authoritative reference. |
+| Field             | Meaning                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Epic              | Exact recognized Epic ID.                                                                                                   |
+| Command and phase | Public command plus plan, build, verify, or release phase.                                                                  |
+| Active item       | Story, Task, Bug, artifact, check batch, branch, commit, pull request, or delivery target.                                  |
+| Completed step    | Confirmed or verified result only.                                                                                          |
+| Next step         | User-confirmed intended next step only, clearly not claimed complete. An unconfirmed recommendation or proposal is omitted. |
+| Decisions         | Confirmed decisions and accepted consequences.                                                                              |
+| Blockers          | Current blockers, uncertainty, and required resolution.                                                                     |
+| Artifacts         | Authoritative issue, task, specification, report, or source paths; no copied bodies.                                        |
+| Delivery          | Branch, commit, and pull-request identifiers when verified.                                                                 |
+| Verification      | Current pass, fail, partial, or not-run status with authoritative reference.                                                |
 
 Source kind, source reference, source revision, confidence, tags, and namespace retain the existing normalized contract. A checkpoint stores no proposed plan, candidate action, unconfirmed next step, or inferred completion. Caveman style removes transcript narration and repetition while preserving IDs, paths, qualifiers, errors, evidence, and uncertainty. Secret values, raw logs, diffs, artifact bodies, user transcripts, and chain-of-thought are prohibited. Existing reusable-memory policy remains unchanged for all other stores, supersessions, imports, and deletions.
 

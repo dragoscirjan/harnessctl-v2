@@ -258,27 +258,27 @@ The docs state that none of these future providers uses the local barrier or SQL
 
 ## Files and responsibilities
 
-| File or group                                                                         | Change responsibility                                                                                                                   |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`                                                                           | Add documentation routing and correct directly conflicting current-status statements without duplicating topic docs.                    |
-| `docs/README.md`, `docs/sdlc.md`                                                      | Documentation index and concise current SDLC guide with `FLOWS.md` cross-links.                                                         |
-| `docs/skills.md`, `docs/configuration.md`                                             | Skill compilation and complete current configuration/tool guidance.                                                                     |
-| `docs/memory.md`, `docs/issues.md`                                                    | Canonical/cache boundaries, future memory shapes, issue providers, local workflow, and verified CLI facts.                              |
-| `src/harnessctl/config.py`                                                            | Provider enum, normalized exact tools and remote-setting validation, and unchanged overlay/default behavior.                            |
-| `extensions/generic-tools/config.ts`, `extensions/generic-tools/schemas.ts`           | Matching runtime migration, remote-setting validation, and canonical schema.                                                            |
-| `extensions/generic-tools/contracts/config-v2.schema.json`                            | Regenerated portable contract; never hand-edited.                                                                                       |
-| `src/harnessctl/templates.py`                                                         | Register issue-tracking skill and pass a narrow validated render context.                                                               |
-| `src/harnessctl/templates/skills/issue-tracking/SKILL.md.j2`                          | Self-contained provider-exclusive issue guidance.                                                                                       |
-| `src/harnessctl/install.py`                                                           | Install and smoke-check the issue skill for both harnesses; preserve package consent and exact owned-file rollback.                     |
-| `extensions/generic-tools/issues.ts`                                                  | Common local-provider assertion and side-effect-free remote rejection.                                                                  |
-| `extensions/generic-tools/config.spec.ts`, `extensions/generic-tools/schemas.spec.ts` | TypeScript defaults, migration, provider validation, schema parity, and freshness.                                                      |
-| `extensions/generic-tools/issues.spec.ts`                                             | Every public local operation's remote rejection and no-local-side-effects checks.                                                       |
-| `extensions/opencode-tools/index.spec.ts`, `extensions/pi-tools/index.spec.ts`        | Existing registration plus provider-mismatch error-envelope coverage.                                                                   |
-| `tests/test_install.py`                                                               | Python config parity, provider-specific rendering, both harness installs, conflicts, package consent, and rollback.                     |
-| `tests/test_release_artifacts.py`                                                     | Wheel and source-distribution inclusion plus isolated installed rendering and installation.                                             |
-| `tests/test_docs.py`                                                                  | Local-link, current-example, future-label, defaults, provider fact, and current/future wording consistency.                             |
-| `.opencode/skills/issue-tracking/SKILL.md`, `.pi/skills/issue-tracking/SKILL.md`       | Reinstalled generated issue skills for this repository after implementation.                                                            |
-| New Changesets entry                                                                  | Patch release for `@harnessctl/generic-tools`; no manual package-version edit.                                                          |
+| File or group                                                                         | Change responsibility                                                                                                |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                                                                           | Add documentation routing and correct directly conflicting current-status statements without duplicating topic docs. |
+| `docs/README.md`, `docs/sdlc.md`                                                      | Documentation index and concise current SDLC guide with `FLOWS.md` cross-links.                                      |
+| `docs/skills.md`, `docs/configuration.md`                                             | Skill compilation and complete current configuration/tool guidance.                                                  |
+| `docs/memory.md`, `docs/issues.md`                                                    | Canonical/cache boundaries, future memory shapes, issue providers, local workflow, and verified CLI facts.           |
+| `src/harnessctl/config.py`                                                            | Provider enum, normalized exact tools and remote-setting validation, and unchanged overlay/default behavior.         |
+| `extensions/generic-tools/config.ts`, `extensions/generic-tools/schemas.ts`           | Matching runtime migration, remote-setting validation, and canonical schema.                                         |
+| `extensions/generic-tools/contracts/config-v2.schema.json`                            | Regenerated portable contract; never hand-edited.                                                                    |
+| `src/harnessctl/templates.py`                                                         | Register issue-tracking skill and pass a narrow validated render context.                                            |
+| `src/harnessctl/templates/skills/issue-tracking/SKILL.md.j2`                          | Self-contained provider-exclusive issue guidance.                                                                    |
+| `src/harnessctl/install.py`                                                           | Install and smoke-check the issue skill for both harnesses; preserve package consent and exact owned-file rollback.  |
+| `extensions/generic-tools/issues.ts`                                                  | Common local-provider assertion and side-effect-free remote rejection.                                               |
+| `extensions/generic-tools/config.spec.ts`, `extensions/generic-tools/schemas.spec.ts` | TypeScript defaults, migration, provider validation, schema parity, and freshness.                                   |
+| `extensions/generic-tools/issues.spec.ts`                                             | Every public local operation's remote rejection and no-local-side-effects checks.                                    |
+| `extensions/opencode-tools/index.spec.ts`, `extensions/pi-tools/index.spec.ts`        | Existing registration plus provider-mismatch error-envelope coverage.                                                |
+| `tests/test_install.py`                                                               | Python config parity, provider-specific rendering, both harness installs, conflicts, package consent, and rollback.  |
+| `tests/test_release_artifacts.py`                                                     | Wheel and source-distribution inclusion plus isolated installed rendering and installation.                          |
+| `tests/test_docs.py`                                                                  | Local-link, current-example, future-label, defaults, provider fact, and current/future wording consistency.          |
+| `.opencode/skills/issue-tracking/SKILL.md`, `.pi/skills/issue-tracking/SKILL.md`      | Reinstalled generated issue skills for this repository after implementation.                                         |
+| New Changesets entry                                                                  | Patch release for `@harnessctl/generic-tools`; no manual package-version edit.                                       |
 
 No Python release-version mechanism is introduced. The Python wheel and source distribution change because the new Jinja resource is included, but `pyproject.toml` version remains governed by the project's existing process. Modify `pyproject.toml` only if artifact inspection proves package-resource inclusion needs an explicit declaration.
 
