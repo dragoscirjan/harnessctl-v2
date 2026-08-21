@@ -159,7 +159,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     assert len(templates) == 19
     digest = hashlib.sha256()
     for template in templates:
-        digest.update(template.name.encode())
+        digest.update(template.relative_to(ROOT).as_posix().encode())
         digest.update(b"\0")
         # Normalize checkout line endings so this review guard is stable on Windows.
         digest.update(template.read_text(encoding="utf-8").encode())
@@ -168,7 +168,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "6a14a102b75e2a67121cc3a578d8b6dc78bcc44ccbc2f7f8d6ea334fbefc24ee"
+        "ef8f30e459afc0d9e44ff46a2831d5e28e29533be32b909690f3cb058bd97b35"
     )
 
 
