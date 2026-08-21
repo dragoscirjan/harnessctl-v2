@@ -59,11 +59,12 @@ def _memory_config() -> dict[str, object]:
     return config
 
 
-def _sdlc_context(*, memory_enabled: bool = True) -> dict[str, object]:
+def _sdlc_context(*, memory_enabled: bool = True, tdd_enabled: bool = False) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
         "retrieval_limit": 3,
         "retrieval_max_chars": 2048,
+        "tdd_enabled": tdd_enabled,
     }
 
 
@@ -217,6 +218,52 @@ def test_checkpoint_reference_compiles_memory_policy_by_configuration() -> None:
     assert "Memory checkpoint unavailable" not in enabled
     assert "Memory checkpoint unavailable" in disabled
     assert "memory_store" not in disabled
+
+
+def test_build_reference_compiles_tdd_policy_by_configuration() -> None:
+    enabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=True))[
+        "references/build.md"
+    ]
+    disabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=False))[
+        "references/build.md"
+    ]
+
+    assert "Load `develop-tdd` before implementation" in enabled
+    assert "Red, Green, and Refactor" in enabled
+    assert "develop-tdd" not in disabled
+    assert "Red, Green, and Refactor" not in disabled
+
+
+def test_continue_reference_compiles_tdd_build_resume_by_configuration() -> None:
+    enabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=True))[
+        "references/continue.md"
+    ]
+    disabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=False))[
+        "references/continue.md"
+    ]
+
+    assert "load `references/build.md` before implementation" in enabled
+    assert "loads `develop-tdd`" in enabled
+    assert "Red, Green, and Refactor" in enabled
+    assert "non-Build resumes" in enabled
+    assert "references/build.md" not in disabled
+    assert "develop-tdd" not in disabled
+    for phase in ("plan", "verify", "release"):
+        assert f"references/{phase}.md" not in enabled
+
+
+def test_develop_tdd_skill_preserves_canonical_cycle_and_rules() -> None:
+    skill = render_skill("develop-tdd")
+
+    for phrase in (
+        "Red-Green-Refactor",
+        "Write failing tests first",
+        "fail for the **right reason**",
+        "minimum code",
+        "No behavior changes",
+        "one test (or a small batch)",
+    ):
+        assert phrase in skill
 
 
 def test_phase_references_preserve_rare_but_required_boundaries() -> None:

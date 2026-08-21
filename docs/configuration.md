@@ -34,6 +34,7 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 | `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                            |
 | `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                          |
 | `workflow.default_task_type` | `bug`                       | Default task classification                                                   |
+| `workflow.tdd.enabled`       | `false`                     | Opt in to generated TDD skill and Build guidance                              |
 
 The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
 `issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
@@ -63,6 +64,8 @@ paths:
   reports: .harnessctl/reports
 workflow:
   default_task_type: bug
+  tdd:
+    enabled: false
 communication:
   caveman:
     enabled: true
@@ -83,6 +86,25 @@ memory:
 ```
 
 Filesystem configuration rejects `issues.remote`.
+
+### TDD settings
+
+`workflow.tdd.enabled` is a boolean and its default is `false`. The default preserves
+existing Build behavior and does not install a TDD skill. Enable it with a partial
+version 2 override:
+
+```yaml
+workflow:
+  tdd:
+    enabled: true
+```
+
+The setting is applied when harnessctl installs the selected host outputs; changing the
+file does not toggle an already installed skill at runtime. Enabled installs generate
+the canonical `develop-tdd` skill for each selected host and compile TDD instructions
+into Build and Build-resuming Continue. Disabling the setting and reinstalling compiles
+those instructions out but leaves any existing skill untouched and dormant. See
+[generated skills](skills.md) for paths and behavior.
 
 ### Caveman settings
 

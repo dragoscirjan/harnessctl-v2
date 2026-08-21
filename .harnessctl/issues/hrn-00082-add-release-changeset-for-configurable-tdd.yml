@@ -1,0 +1,19 @@
+"version": 1
+"id": "hrn-00082"
+"type": "bug"
+"title": "Add release Changeset for configurable TDD"
+"status": "done"
+"created_at": "2026-08-21T00:19:39.149Z"
+"updated_at": "2026-08-21T00:26:00.329Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00074"
+"metadata":
+  "affected_task": "hrn-00077"
+  "discovered_in": "verify"
+"body": "## Defect\n\nPublished `@harnessctl/generic-tools` configuration defaults and schema changed for opt-in `workflow.tdd.enabled`, but the feature branch has no Changeset.\n\n## Classification\n\nConfirmed release-readiness metadata omission discovered during Verify. Runtime behavior, quality, and package smoke gates pass, but repository release policy blocks delivery without release intent.\n\n## Evidence\n\n- `.changeset/README.md` requires a Changeset for every pull request changing a published package.\n- `extensions/generic-tools/config.ts` and `extensions/generic-tools/schemas.ts` change published package behavior.\n- No `.changeset/*.md` file exists.\n- `npx changeset status --since=main` exits 1: `Some packages have been changed but no changesets were found.`\n- Fresh `mise run quality` and `mise run runtime-smoke` pass.\n\n## Scope\n\n- Add one patch Changeset for `@harnessctl/generic-tools` describing the opt-in configurable TDD workflow contract.\n- Do not manually change package versions, lockfile versions, adapter packages, or unrelated release metadata.\n\n## Acceptance\n\n- [ ] A Changeset selects only `@harnessctl/generic-tools` with the smallest correct patch bump.\n- [ ] The Changeset describes `workflow.tdd.enabled` as opt-in/default-disabled.\n- [ ] `npx changeset status --since=main` passes and reports the intended package and bump.\n- [ ] `mise run quality` remains green.\n\n## Impact\n\nRelease is blocked. No production correctness, security, privacy, or compatibility failure is known."
+"comments":
+  - "id": "hrn-00082-C0001"
+    "created_at": "2026-08-21T00:25:15.994Z"
+    "created_by": "lead-engineer"
+    "body": "Build repair complete; Bug remains in_progress pending separate closure confirmation and formal Verify. Added `.changeset/calm-tools-practice-tdd.md`, selecting only `@harnessctl/generic-tools` for a patch and documenting opt-in/default-disabled `workflow.tdd.enabled`. No package version, lockfile, adapter package, or unrelated release metadata was edited. `npx changeset status` passes; exact `--since=main` check also passes through a temporary Git index without changing the real staging area. Changesets projects patch bumps for OpenCode/Pi adapters because both pin generic-tools at exact version `0.1.6`, consistent with repository dependency policy; no adapter Changeset entries were added. `mise run quality` passed (Python 255, Node 181, all configured gates); Prettier and `git diff --check` passed."

@@ -1,0 +1,25 @@
+---
+name: develop-tdd
+description: Enforce Red-Green-Refactor for implementation work.
+---
+
+# TDD - Test-Driven Development
+
+Follow Red-Green-Refactor for each behavior slice.
+
+## Cycle
+
+1. **Red** - Write failing tests first. Run them and verify they fail for the **right reason**, not a syntax or import error.
+2. **Green** - Write the minimum code needed to pass all tests. No more.
+3. **Refactor** - Clean code and tests. No behavior changes. Keep all tests passing.
+
+## Rules
+
+- Write tests before implementation code.
+- Give each test one behavior and a name describing it.
+- Start simple; add complexity incrementally.
+- Run and report tests after Red, Green, and Refactor.
+- Do not write implementation and tests simultaneously.
+- Do not write all tests upfront. Complete one test (or a small batch) before the next.
+- Test behavior, not implementation details.
+- Keep tests independent; mock external dependencies, not internal logic.

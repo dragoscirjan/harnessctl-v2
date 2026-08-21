@@ -122,6 +122,7 @@ export const configV2Schema = z
     issues: issuesSchema,
     cvs: z.object({ local: cvsLocalSchema, remote: remoteServiceSchema }).strict(),
     mcp: z.object({ output_limit_mode: mcpOutputLimitModeSchema }).strict(),
+    workflow: z.looseObject({ tdd: z.looseObject({ enabled: z.boolean() }) }),
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),

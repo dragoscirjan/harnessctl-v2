@@ -6,7 +6,7 @@ boundary. Tool availability comes from separately loaded host adapters.
 
 ## Current implementation
 
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers five
+[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers six
 skill templates.
 
 | Skill          | Configuration                                           | Installation                                                | Purpose                                                              |
@@ -15,13 +15,23 @@ skill templates.
 | Memory         | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; always `.pi/skills/memory/SKILL.md`  | Safe retrieval and persistence of curated repository knowledge       |
 | Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance           |
 | CVS            | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
-| SDLC           | Memory availability and retrieval bounds                | Always under each selected harness's `skills/` directory    | Epic-first core policy plus progressively disclosed phase references |
+| SDLC           | Memory availability, retrieval bounds, and TDD setting  | Always under each selected harness's `skills/` directory    | Epic-first core policy plus progressively disclosed phase references |
+| TDD            | `workflow.tdd.enabled`                                  | Each selected harness only when enabled                     | Red-Green-Refactor development guidance                              |
 
 Memory requires caveman. Every OpenCode installation registers
 `@harnessctl/opencode-tools@latest` in `.opencode/opencode.json`; config and issue tools
 therefore remain available even when memory is disabled. Older local plugin shims are
 retired. The memory skill receives only compiled retrieval limits and repository root,
 not the whole configuration.
+
+TDD is disabled by default. When enabled, OpenCode and Pi receive byte-equivalent
+canonical skills at `.opencode/skills/develop-tdd/SKILL.md` and
+`.pi/skills/develop-tdd/SKILL.md`. Build guidance then loads `develop-tdd` before
+implementation and requires observable Red, Green, and Refactor steps. No TDD skill or
+instruction is generated on a fresh disabled install. Disabling TDD does not delete,
+modify, warn about, or track ownership of an existing skill. A skill left by an earlier
+enabled install remains available for manual use but is dormant: generated Build and
+Build-resuming Continue guidance neither loads nor enforces it.
 
 All five compact SDLC command shells are rendered under `.opencode/commands/` or the
 official Pi `.pi/prompts/` path. Each shell loads the SDLC skill and exactly one normal
@@ -73,7 +83,7 @@ MIT `npm:pi-mcp-adapter@2.26.0` prerequisite is present or separately consented 
 These host files register routes; they do not grant authentication, prove capability,
 or install provider CLIs or external GPL `forgejo-mcp` 2.33.0.
 
-Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for all five skills.
+Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for generated skills.
 Issue guidance is written to `.opencode/skills/issue-tracking/SKILL.md` or
 `.pi/skills/issue-tracking/SKILL.md`.
 See [issues](issues.md) and [CVS and MCP providers](cvs.md).

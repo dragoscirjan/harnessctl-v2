@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00081"
+"type": "task"
+"title": "Remove TDD cleanup and ownership metadata"
+"status": "done"
+"created_at": "2026-08-21T00:01:59.068Z"
+"updated_at": "2026-08-21T00:11:26.815Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00074"
+"depends_on":
+  - "hrn-00076"
+"metadata":
+  "plan_revision": "disabled-means-not-loaded-or-enforced"
+"body": "## Objective\n\nRemove TDD artifact cleanup and ownership metadata so `workflow.tdd.enabled` controls generated workflow use rather than filesystem deletion.\n\n## Scope\n\n- Remove TDD ownership-marker generation and disabled-state deletion, warning, stale-marker, private-claim, and specialized rollback logic from `src/harnessctl/install.py`.\n- Replace cleanup and race tests with focused coverage for fresh-disabled absence and enabled-to-disabled dormant-skill retention.\n- Update `docs/skills.md` to state that disabled installs leave existing TDD skill files untouched.\n- Preserve enabled OpenCode/Pi installation, byte parity, Build activation, Continue-to-Build activation, package inclusion, and existing installer conflict/rollback behavior.\n\n## Acceptance\n\n- [ ] No TDD ownership marker is generated.\n- [ ] A disabled reinstall never deletes or warns about existing TDD skill files.\n- [ ] A skill installed while enabled remains byte-identical after reinstalling with TDD disabled.\n- [ ] Fresh disabled installs do not generate `develop-tdd`.\n- [ ] Disabled Build and Continue guidance neither loads nor enforces TDD.\n- [ ] Enabled OpenCode/Pi behavior remains byte-equivalent.\n- [ ] Focused tests and `mise run quality` pass.\n\n## Dependencies and Order\n\nDepends on completed `hrn-00076`. Complete before final verification task `hrn-00077`.\n\n## Non-Goals\n\n- Runtime toggling without reinstall.\n- Deleting dormant or operator-owned skill files.\n- Changing the TDD skill content, configuration contract, host selection, or Plan/Verify/Release/merge behavior.\n- Framework-specific test commands.\n\n## Estimate and Uncertainty\n\nSmall. Primary changes are installer, focused tests, and skills documentation. Uncertainty is limited to simplifying cumulative lifecycle coverage without weakening enabled-path evidence."
+"comments":
+  - "id": "hrn-00081-C0001"
+    "created_at": "2026-08-21T00:10:43.799Z"
+    "created_by": "lead-engineer"
+    "body": "Build implementation complete; task remains in_progress pending separate closure confirmation and formal Verify. Removed TDD ownership marker and all disabled-state cleanup/warning/claim/specialized rollback behavior. Disabled reinstall now leaves generated or operator skill files byte-identical and dormant; fresh disabled installs generate no skill; disabled Build/Continue contain no TDD loading or enforcement. Enabled OpenCode/Pi skill and policy parity remain covered. Evidence: focused TDD installer tests 9 passed; affected Python suite 211 passed with 8 expected existing warnings; `mise run quality` passed (Python 255, Node 181, all configured gates); Ruff, Prettier, and `git diff --check` passed. Runtime smoke and independent review remain for `work-verify hrn-00074`."

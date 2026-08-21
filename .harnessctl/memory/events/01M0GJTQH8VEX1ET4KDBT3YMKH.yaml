@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M0GJTQH8VEX1ET4KDBT3YMKH
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00075 config contract implemented | focused checks pass
+details: Branch feat/hrn-00074-configurable-tdd. workflow.tdd.enabled defaults false; Python/TS/Zod/generated JSON Schema enforce boolean and preserve loose workflow fields. Python 4 passed; TS/schema 117 passed; Ruff, Prettier, TS typecheck, schema drift, git diff check passed. hrn-00075 remains in_progress; hrn-00076 not started.
+source:
+  kind: artifact
+  ref: hrn-00075
+  revision: null
+created_at: 2026-08-20T21:56:56.488Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - config
+  - sdlc
+  - tdd

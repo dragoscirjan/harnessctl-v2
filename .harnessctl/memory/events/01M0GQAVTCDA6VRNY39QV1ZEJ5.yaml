@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GQAVTCDA6VRNY39QV1ZEJ5
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00080 Continue-to-Build TDD repair complete | Verify pending
+details: Branch feat/hrn-00074-configurable-tdd. hrn-00080 enabled Continue now loads compiled Build policy before resumed implementation; Build loads develop-tdd and requires observable Red, Green, Refactor. Disabled/non-Build Continue and Plan/Verify/Release unchanged; OpenCode/Pi Continue resources byte-equivalent. Red observed; affected 215 passed; mise run quality passed with Python 260 and Node 181; git diff --check passed. hrn-00079 and hrn-00080 remain in_progress; hrn-00077 remains in_progress. Runtime smoke and independent review pending work-verify hrn-00074. No closure, commit, remote, Release, or destructive work.
+source:
+  kind: artifact
+  ref: hrn-00080
+  revision: v1:4f5754278d3b3015693b3fac6d3bc3d0c2b295ff90056e70d9f25a110a99e99f
+created_at: 2026-08-20T23:15:39.468Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GPW4QRAME6E5C5BD0JZ9G3
+tags:
+  - build
+  - continue
+  - quality
+  - sdlc
+  - tdd

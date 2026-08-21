@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GSQ7YA71366SJGJEBMGBBG
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | verify | cleanup requirement rejected | Plan required
+details: "Fresh mise run quality passed: Python 264, Node 181, all configured gates. Fresh mise run runtime-smoke passed all package entrypoints under Node and Bun. Independent review found remaining ownership-marker cleanup races. User confirmed desired behavior: TDD disabled means generated Build/Continue prompts do not load or enforce develop-tdd; installed skill may remain. `.harnessctl-generated.json` serves only cleanup ownership and is unnecessary under this direction. Current Epic acceptance still requires artifact removal, so authority conflicts with confirmed direction; return to work-plan hrn-00074 to revise scope/design before code changes. No Bug update, issue transition, repair, commit, remote, Release, or destructive work."
+source:
+  kind: user-confirmed
+  ref: hrn-00074
+  revision: null
+created_at: 2026-08-20T23:57:22.250Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0GR9S88K5PAXPRFTVRXDX0X
+tags:
+  - plan-required
+  - scope-change
+  - sdlc
+  - tdd
+  - verify

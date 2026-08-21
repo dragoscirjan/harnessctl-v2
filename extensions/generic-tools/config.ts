@@ -38,6 +38,7 @@ export const DEFAULT_CONFIG: ConfigDocument = {
   },
   workflow: {
     default_task_type: 'bug',
+    tdd: { enabled: false },
   },
   communication: {
     caveman: { enabled: true, mode: 'strict' },
