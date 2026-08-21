@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GQV4HSB6G8AMJZQBEGQ41R
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | verify | hrn-00079 concurrent rollback defect blocks Release | Build selected
+details: "Branch feat/hrn-00074-configurable-tdd. Fresh mise run quality passed: Python 260, Node 181, all configured static/package/release-artifact gates. Fresh mise run runtime-smoke passed generic-tools, opencode-tools, pi-tools under Node and Bun. Independent review found active hrn-00079 recurrence: operator content created after atomic cleanup claim can be overwritten by later unconditional rollback. Existing tests cover pre-claim races and non-concurrent rollback only. hrn-00079 updated and valid; user selected Build repair. hrn-00080 acceptance mapped green. hrn-00077, hrn-00079, hrn-00080 remain in_progress; Release blocked. No repair, closure, commit, remote, Plan, Build, Release, or destructive work."
+source:
+  kind: artifact
+  ref: hrn-00079
+  revision: v1:91848d5cd90f137ad564a7d84a26cba259c093f1f4b44099aa8146a5ecf44390
+created_at: 2026-08-20T23:24:32.697Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GQAVTCDA6VRNY39QV1ZEJ5
+tags:
+  - blocked
+  - rollback
+  - sdlc
+  - tdd
+  - verify

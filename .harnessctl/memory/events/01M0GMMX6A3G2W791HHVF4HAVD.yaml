@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0GMMX6A3G2W791HHVF4HAVD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00078 fixture repaired | quality passes
+details: "Branch feat/hrn-00074-configurable-tdd. memory.spec.ts parses YAML and sets memory.enabled by explicit path; production unchanged. Targeted memory 20/20 passed. mise run quality passed: Python 254, Node 181, package and static gates. hrn-00078 remains in_progress pending separate closure confirmation. hrn-00077 remains in_progress. Runtime smoke and independent review pending work-verify."
+source:
+  kind: artifact
+  ref: hrn-00078
+  revision: v1:bba95c5196dbed194a71b58978e7432cba1561b010966a507d89f9fbae7a0609
+created_at: 2026-08-20T22:28:42.826Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GMDT324EC3T9JWBGW374Q1
+tags:
+  - build
+  - quality
+  - tdd
+  - test-fixture

@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0GNQDC0S09ZDYH76J091KXK
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00079 ownership repair implemented | quality passes
+details: "Branch feat/hrn-00074-configurable-tdd. Enabled OpenCode/Pi TDD installs write versioned digest ownership markers. Disabled cleanup requires marker+digest and revalidates before deletion; operator, modified, or raced content warned/preserved; rollback covers both hosts. TDD 12 passed; installer/docs 162 passed; mise run quality passed: Python 257, Node 181 plus configured static/package gates. hrn-00079 remains in_progress; runtime smoke and independent review pending formal Verify; hrn-00077 remains in_progress; Release blocked until Verify."
+source:
+  kind: artifact
+  ref: hrn-00079
+  revision: v1:05994de60041059189f6143c3cddbe6112385402c5dcbfcddf35b09b4e1e3013
+created_at: 2026-08-20T22:47:33.504Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GN8WN0YDFME22XDPB84XJC
+tags:
+  - build
+  - installer
+  - ownership
+  - tdd

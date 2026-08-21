@@ -388,6 +388,23 @@
       "required": ["output_limit_mode"],
       "additionalProperties": false
     },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "tdd": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": ["enabled"],
+          "additionalProperties": {}
+        }
+      },
+      "required": ["tdd"],
+      "additionalProperties": {}
+    },
     "communication": {
       "type": "object",
       "properties": {
@@ -485,6 +502,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["version", "issues", "cvs", "mcp", "communication", "memory"],
+  "required": ["version", "issues", "cvs", "mcp", "workflow", "communication", "memory"],
   "additionalProperties": {}
 }

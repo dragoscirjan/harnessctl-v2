@@ -1,5 +1,6 @@
 import importlib
 import json
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
@@ -40,11 +41,12 @@ def _tree_manifest(root: Path) -> dict[str, tuple[str, bytes | None]]:
     }
 
 
-def _sdlc_context(*, memory_enabled: bool) -> dict[str, object]:
+def _sdlc_context(*, memory_enabled: bool, tdd_enabled: bool = False) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
         "retrieval_limit": 3,
         "retrieval_max_chars": 2048,
+        "tdd_enabled": tdd_enabled,
     }
 
 
@@ -70,6 +72,13 @@ def write_project_config(root: Path, content: str) -> None:
     config = root / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text(f"version: 2\n{content}", encoding="utf-8")
+
+
+def write_tdd_config(root: Path, *, enabled: bool) -> None:
+    write_project_config(
+        root,
+        f"workflow:\n  tdd:\n    enabled: {'true' if enabled else 'false'}\n",
+    )
 
 
 def write_pinned_pi_adapter(root: Path) -> None:
@@ -339,6 +348,104 @@ def test_build_and_plan_prompts_define_their_boundaries() -> None:
     assert "stop before Epic planning" in plan
 
 
+def test_enabled_tdd_installs_equivalent_selected_host_skills(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    write_pinned_pi_adapter(tmp_path)
+
+    installed = install(tmp_path, "all")
+
+    opencode_skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
+    pi_skill = tmp_path / ".pi/skills/develop-tdd/SKILL.md"
+    assert opencode_skill in installed
+    assert pi_skill in installed
+    assert opencode_skill.read_bytes() == pi_skill.read_bytes()
+    assert not (opencode_skill.parent / ".harnessctl-generated.json").exists()
+    assert not (pi_skill.parent / ".harnessctl-generated.json").exists()
+    continue_policies: list[bytes] = []
+    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+        build = (root / "references/build.md").read_text(encoding="utf-8")
+        continue_policy = root / "references/continue.md"
+        assert "Load `develop-tdd` before implementation" in build
+        assert "Red, Green, and Refactor" in build
+        assert "load `references/build.md` before implementation" in continue_policy.read_text(
+            encoding="utf-8"
+        )
+        continue_policies.append(continue_policy.read_bytes())
+    assert continue_policies[0] == continue_policies[1]
+
+
+def test_disabled_tdd_is_absent_from_fresh_install(tmp_path: Path) -> None:
+    install(tmp_path, "opencode")
+
+    assert not (tmp_path / ".opencode/skills/develop-tdd").exists()
+    build = (tmp_path / ".opencode/skills/sdlc/references/build.md").read_text(encoding="utf-8")
+    continue_policy = (tmp_path / ".opencode/skills/sdlc/references/continue.md").read_text(
+        encoding="utf-8"
+    )
+    assert "develop-tdd" not in build
+    assert "Red, Green, and Refactor" not in build
+    assert "references/build.md" not in continue_policy
+    assert "develop-tdd" not in continue_policy
+
+
+def test_disabling_tdd_retains_dormant_generated_skill(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, "all")
+    skills = (
+        tmp_path / ".opencode/skills/develop-tdd/SKILL.md",
+        tmp_path / ".pi/skills/develop-tdd/SKILL.md",
+    )
+    enabled_content = tuple(skill.read_bytes() for skill in skills)
+    assert all(skill.is_file() for skill in skills)
+
+    write_tdd_config(tmp_path, enabled=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, "all", force=True)
+
+    assert tuple(skill.read_bytes() for skill in skills) == enabled_content
+    assert not any("TDD skill" in str(item.message) for item in caught)
+    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+        build = (root / "references/build.md").read_text(encoding="utf-8")
+        continue_policy = (root / "references/continue.md").read_text(encoding="utf-8")
+        assert "develop-tdd" not in build
+        assert "develop-tdd" not in continue_policy
+        assert "Red, Green, and Refactor" not in continue_policy
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_disabled_tdd_leaves_existing_operator_skill_untouched(
+    tmp_path: Path, harness: str
+) -> None:
+    host_root = ".opencode" if harness == "opencode" else ".pi"
+    skill = tmp_path / host_root / "skills/develop-tdd/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("operator-owned TDD policy\n", encoding="utf-8")
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, harness)
+
+    assert skill.read_text(encoding="utf-8") == "operator-owned TDD policy\n"
+    assert not any("TDD skill" in str(item.message) for item in caught)
+
+
+def test_enabled_tdd_operator_skill_conflict_precedes_mutation(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("operator-owned TDD policy\n", encoding="utf-8")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError, match=r"develop-tdd[\\/]SKILL\.md"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
+
+
 def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unsupported harness"):
         install(tmp_path, "unknown")
@@ -457,6 +564,41 @@ def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
         "enabled": True,
         "mode": "strict",
     }
+    assert config["workflow"] == {
+        "default_task_type": "bug",
+        "tdd": {"enabled": False},
+    }
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_config_accepts_tdd_workflow_setting_and_preserves_unknown_fields(
+    tmp_path: Path, enabled: bool
+) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "workflow:\n"
+        "  custom_policy: retained\n"
+        "  tdd:\n"
+        f"    enabled: {str(enabled).lower()}\n"
+        "    custom_policy: retained\n",
+        encoding="utf-8",
+    )
+
+    assert load_config(tmp_path)["workflow"] == {
+        "default_task_type": "bug",
+        "custom_policy": "retained",
+        "tdd": {"enabled": enabled, "custom_policy": "retained"},
+    }
+
+
+def test_config_rejects_non_boolean_tdd_workflow_setting(tmp_path: Path) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("workflow:\n  tdd:\n    enabled: 1\n", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=r"workflow\.tdd\.enabled must be boolean"):
+        load_config(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -817,6 +959,7 @@ def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None
         memory_hooks_enabled=True,
         retrieval_limit=3,
         retrieval_max_chars=2048,
+        tdd_enabled=False,
     )["references/checkpoint.md"]
     normalized = " ".join(checkpoint.split())
     assert "limit 3, 2048 chars" in normalized

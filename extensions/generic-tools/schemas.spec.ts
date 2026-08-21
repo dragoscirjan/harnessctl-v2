@@ -31,6 +31,7 @@ const validConfig = {
     },
   },
   mcp: { output_limit_mode: 'bounded-guidance' },
+  workflow: { default_task_type: 'bug', tdd: { enabled: false } },
   communication: { caveman: { enabled: true, mode: 'strict' } },
   memory: {
     enabled: true,
@@ -102,6 +103,32 @@ describe('canonical Zod schemas', () => {
       expect(contract.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
       expect(contract.$id).toBe(id);
     }
+  });
+
+  it('enforces the TDD workflow boolean while retaining compatible extension fields', () => {
+    const compatible = {
+      ...validConfig,
+      workflow: {
+        ...validConfig.workflow,
+        custom_policy: 'retained',
+        tdd: { enabled: true, custom_policy: 'retained' },
+      },
+    };
+    const invalid = {
+      ...compatible,
+      workflow: { ...compatible.workflow, tdd: { enabled: 1 } },
+    };
+    expect(configV2Schema.safeParse(compatible).success).toBe(true);
+    expect(configV2Schema.safeParse(invalid).success).toBe(false);
+
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const contract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+    ) as object;
+    const validate = ajv.compile(contract);
+    expect(validate(compatible)).toBe(true);
+    expect(validate(invalid)).toBe(false);
   });
 
   it('keeps generated contracts synchronized with canonical Zod schemas', () => {

@@ -144,9 +144,18 @@ def test_authoritative_transitions_label_all_installed_and_conceptual_commands()
 
 def test_command_template_changes_force_transition_documentation_review() -> None:
     """Snapshot command shells and progressively disclosed SDLC policy."""
-    commands = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
+    commands = sorted(
+        SDLC_TEMPLATES.glob("work-*.md.j2"),
+        key=lambda template: template.relative_to(ROOT).as_posix(),
+    )
     assert {template.name.removesuffix(".md.j2") for template in commands} == PUBLIC_COMMANDS
-    templates = [*commands, *sorted(SDLC_SKILL_TEMPLATES.rglob("*.md.j2"))]
+    templates = [
+        *commands,
+        *sorted(
+            SDLC_SKILL_TEMPLATES.rglob("*.md.j2"),
+            key=lambda template: template.relative_to(ROOT).as_posix(),
+        ),
+    ]
     assert len(templates) == 19
     digest = hashlib.sha256()
     for template in templates:
@@ -159,7 +168,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "58ff5e85623cc08016682b6245b942db1bf48a9c2e509bbed931823bbe5f9e55"
+        "6a14a102b75e2a67121cc3a578d8b6dc78bcc44ccbc2f7f8d6ea334fbefc24ee"
     )
 
 
@@ -189,6 +198,29 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     assert "enabled: false" in memory
     assert "project_id: payments-api" in memory
     assert "Minimal deep-merge override" in memory
+
+
+def test_docs_describe_configurable_tdd_behavior() -> None:
+    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
+    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
+    sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
+    normalized_sdlc = " ".join(sdlc.split())
+
+    assert "`workflow.tdd.enabled`" in configuration
+    assert "default is `false`" in configuration
+    assert "workflow:\n  tdd:\n    enabled: true" in configuration
+    for path in (
+        ".opencode/skills/develop-tdd/SKILL.md",
+        ".pi/skills/develop-tdd/SKILL.md",
+    ):
+        assert path in skills
+    assert "does not delete" in skills
+    assert "existing skill untouched and dormant" in configuration
+    assert "remains dormant" in normalized_sdlc
+    assert "`workflow.tdd.enabled`" in sdlc
+    assert "loads `develop-tdd` before implementation" in normalized_sdlc
+    assert "Red, Green, and Refactor" in normalized_sdlc
+    assert "`work-continue` resumes Build" in normalized_sdlc
 
 
 def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:

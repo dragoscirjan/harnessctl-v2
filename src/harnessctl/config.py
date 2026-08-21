@@ -48,7 +48,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "tasks": ".harnessctl/tasks",
         "reports": ".harnessctl/reports",
     },
-    "workflow": {"default_task_type": "bug"},
+    "workflow": {"default_task_type": "bug", "tdd": {"enabled": False}},
     "communication": {"caveman": {"enabled": True, "mode": "strict"}},
     "memory": {
         "enabled": False,
@@ -145,6 +145,10 @@ def _validate(config: dict[str, Any]) -> None:
     _allowed_keys(mcp, {"output_limit_mode"}, "mcp")
     if mcp.get("output_limit_mode") not in MCP_OUTPUT_LIMIT_MODES:
         raise ConfigError("mcp.output_limit_mode must be bounded-guidance or hard")
+
+    tdd = _mapping(_mapping(config, "workflow"), "tdd")
+    if not isinstance(tdd.get("enabled"), bool):
+        raise ConfigError("workflow.tdd.enabled must be boolean")
 
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):

@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0GT24407JTYR9MQ5HXFG6B5
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | plan | disabled means not loaded or enforced | approved
+details: "Epic plan revised and validated. Disabled Build/Continue do not load or enforce TDD; fresh disabled install generates no skill; existing skill remains dormant and untouched. Ownership marker and disabled cleanup removed from design. Created Task hrn-00081, depends on done hrn-00076; hrn-00077 now depends on hrn-00081 and has revised acceptance. Closed hrn-00079 as no longer applicable; history preserved. hrn-00080 unchanged in_progress. Next confirmed phase candidate: work-build hrn-00081. No code, tests, commit, remote, Verify, or Release in Plan."
+source:
+  kind: user-confirmed
+  ref: hrn-00074
+  revision: v1:7dc39e70ef5242920a922ccddb502678f79e1251af582247e43d988767b6be89
+created_at: 2026-08-21T00:03:18.784Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0GSQ7YA71366SJGJEBMGBBG
+tags:
+  - approved
+  - plan-revision
+  - sdlc
+  - tdd

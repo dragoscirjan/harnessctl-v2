@@ -140,6 +140,7 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     )
     assert "templates/skills/issue-tracking/SKILL.md.j2" in expected_resources
     assert "templates/skills/cvs/SKILL.md.j2" in expected_resources
+    assert "templates/skills/develop-tdd/SKILL.md.j2" in expected_resources
     assert "mcp.py" in expected_resources
 
     with zipfile.ZipFile(wheels[0]) as archive:
@@ -243,10 +244,12 @@ for command in TEMPLATES:
     assert 'memory_search' not in render_prompt(command, 'opencode', config=config)
     assert 'memory_search' not in render_prompt(command, 'pi', config=config)
 checkpoint = render_skill_resources(
-    'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000
+    'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000,
+    tdd_enabled=False,
 )['references/checkpoint.md']
 assert 'memory_store' in checkpoint
 assert 'limit 5, 4000 chars' in checkpoint
+assert 'Red-Green-Refactor' in render_skill('develop-tdd')
 providers = {
     'filesystem': (
         'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,'

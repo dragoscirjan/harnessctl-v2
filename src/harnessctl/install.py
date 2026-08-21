@@ -79,6 +79,7 @@ RETIRED_SDLC_COMMANDS = tuple(
     command for command in LEGACY_SDLC_COMMANDS if command not in OVERLAPPING_SDLC_COMMANDS
 )
 OPENCODE_SKILLS = Path(".opencode/skills")
+TDD_SKILL = Path("develop-tdd/SKILL.md")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
 OPENCODE_TOOLS_PLUGIN = "@harnessctl/opencode-tools@latest"
@@ -125,10 +126,13 @@ def install(
     command_targets: dict[Path, tuple[str, str]] = {}
     retired_targets: list[Path] = []
     conflicts: list[Path] = []
+    tdd_enabled = bool(config["workflow"]["tdd"]["enabled"])
+    tdd_skill_content = render_skill("develop-tdd")
     sdlc_context = {
         "memory_hooks_enabled": bool(config["memory"]["enabled"]),
         "retrieval_limit": config["memory"]["retrieval"]["limit"],
         "retrieval_max_chars": config["memory"]["retrieval"]["max_chars"],
+        "tdd_enabled": tdd_enabled,
     }
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
@@ -211,6 +215,8 @@ def install(
                     ),
                 ]
             )
+        if tdd_enabled:
+            rendered_targets.append((_target(root, OPENCODE_SKILLS / TDD_SKILL), tdd_skill_content))
     if harness in ("pi", "all"):
         _append_skill_tree(
             rendered_targets,
@@ -268,6 +274,10 @@ def install(
                 ),
             ]
         )
+        if tdd_enabled:
+            rendered_targets.append(
+                (_target(root, Path(".pi/skills") / TDD_SKILL), tdd_skill_content)
+            )
     if config["memory"]["enabled"]:
         rendered_targets.append(
             (
@@ -407,7 +417,11 @@ def install(
         if config["memory"]["enabled"]:
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
         if harness in ("opencode", "all"):
-            _smoke_check(root, check_memory=config["memory"]["enabled"])
+            _smoke_check(
+                root,
+                check_memory=config["memory"]["enabled"],
+                check_tdd=tdd_enabled,
+            )
         if harness in ("pi", "all"):
             _smoke_check_pi(root, required_pi_packages, rendered_targets)
         _smoke_check_mcp(root, harness, intents)
@@ -1004,7 +1018,7 @@ def _memory_ignore(root: Path, repository: dict[str, object]) -> str:
     return existing + ("" if not existing or existing.endswith("\n") else "\n") + entry + "\n"
 
 
-def _smoke_check(root: Path, *, check_memory: bool) -> None:
+def _smoke_check(root: Path, *, check_memory: bool, check_tdd: bool) -> None:
     issue_skill = root / OPENCODE_SKILLS / "issue-tracking/SKILL.md"
     if not issue_skill.is_file():
         raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
@@ -1017,9 +1031,13 @@ def _smoke_check(root: Path, *, check_memory: bool) -> None:
         memory_hooks_enabled=check_memory,
         retrieval_limit=1,
         retrieval_max_chars=1,
+        tdd_enabled=check_tdd,
     ):
         if not (root / OPENCODE_SKILLS / "sdlc" / relative).is_file():
             raise RuntimeError(f"OpenCode SDLC resource smoke check failed: {relative}")
+
+    if check_tdd and not (root / OPENCODE_SKILLS / TDD_SKILL).is_file():
+        raise RuntimeError("OpenCode develop-tdd skill smoke check failed")
 
     config, _ = _load_json_object(root / OPENCODE_CONFIG, "OpenCode configuration")
     plugins = config.get("plugin")

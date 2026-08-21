@@ -46,7 +46,7 @@ describe('configuration tools', () => {
           tasks: '.harnessctl/tasks',
           reports: '.harnessctl/reports',
         },
-        workflow: { default_task_type: 'bug' },
+        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
         communication: { caveman: { enabled: true, mode: 'strict' } },
         memory: {
           enabled: false,
@@ -125,6 +125,7 @@ describe('configuration tools', () => {
         version: 2,
         issues: { root: '.harnessctl/issues', prefix: 'hrn-' },
         paths: { tasks: '.harnessctl/tasks' },
+        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
         communication: { caveman: { enabled: true, mode: 'strict' } },
         memory: {
           enabled: true,
@@ -136,6 +137,26 @@ describe('configuration tools', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it.each([true, false])('accepts workflow.tdd.enabled=%s and preserves unknown workflow fields', (enabled) => {
+    expect(
+      readConfigFromText(
+        `version: 2\nworkflow:\n  custom_policy: retained\n  tdd:\n    enabled: ${String(enabled)}\n    custom_policy: retained\n`,
+      ),
+    ).toMatchObject({
+      workflow: {
+        default_task_type: 'bug',
+        custom_policy: 'retained',
+        tdd: { enabled, custom_policy: 'retained' },
+      },
+    });
+  });
+
+  it('rejects a non-boolean workflow.tdd.enabled value', () => {
+    expect(() => readConfigFromText('version: 2\nworkflow:\n  tdd:\n    enabled: 1\n')).toThrow(
+      /workflow\.tdd\.enabled/u,
+    );
   });
 
   it.each([

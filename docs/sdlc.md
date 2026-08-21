@@ -89,6 +89,15 @@ and checkpoint. It resumes the exact unfinished slice when work has started; oth
 it selects a confirmed ready Story, Task, or Bug. Each slice declares its objective,
 scope, expected files or component boundary, tests, and stop condition.
 
+When `workflow.tdd.enabled` is true at installation, the generated Build reference loads
+`develop-tdd` before implementation and requires observable Red, Green, and Refactor
+steps for each slice. When `work-continue` resumes Build, its generated Continue policy
+loads that Build reference before implementation, preserving the same TDD boundaries.
+With the default `false` setting, both instructions are compiled out and a fresh install
+does not generate the TDD skill. A skill left by an earlier enabled install remains
+dormant because generated Build and Continue policy does not load or enforce it. TDD does
+not alter Plan, Verify, Release, non-Build Continue, or merge policy.
+
 YOLO is one-time, Epic-scoped, bounded consent for the displayed eligible ready items.
 It ends on the first blocker, scope change, verification boundary, user stop, ambiguous
 result, or exhausted work. It never authorizes remote or destructive actions, closure,
