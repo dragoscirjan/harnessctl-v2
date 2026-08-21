@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00099"
+"type": "bug"
+"title": "Protect explicit null MCP entries from unforced replacement"
+"status": "done"
+"created_at": "2026-08-22T16:36:46.229Z"
+"updated_at": "2026-08-22T16:51:00.414Z"
+"created_by": "lead-engineer"
+"parent": "hrn-00084"
+"metadata":
+  "estimate": "S"
+  "risk": "high"
+  "source": "verify-review"
+"body": "# Protect explicit null MCP entries from unforced replacement\n\n## Summary\n\nThe fixed-ID MCP reconciler treats an existing JSON `null` value as if the key were absent and overwrites it without `--force`. Any present divergent value is operator-owned conflict state and must be protected.\n\n## Evidence\n\n- `src/harnessctl/install.py:707-713` reads with `container.get(server_id)` and only rejects when the result is not `None`.\n- Independent Verify review for `hrn-00084` found no regression coverage for present `null` values.\n\n## Acceptance Criteria\n\n- Reconciliation distinguishes an absent key from a present key whose value is `null`.\n- Any present value unequal to the expected owned definition requires `--force` before replacement.\n- OpenCode and Pi tests cover unforced rejection and forced replacement for explicit `null`.\n- Existing exact-match, recognized-removal, modified-preservation, unrelated-JSON, and rollback behavior remains green.\n\n## Non-Goals\n\n- No new MCP identity, provider command, or third-party lifecycle behavior.\n"
+"comments":
+  - "id": "hrn-00099-C0001"
+    "created_at": "2026-08-22T16:41:13.347Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Added OpenCode/Pi regression coverage for present JSON null. Reconciliation now distinguishes absence from any present divergent value, requires force, and replaces narrowly when forced. Evidence: tests/test_mcp_projection.py 23 passed. Full quality pending final Build boundary."
+  - "id": "hrn-00099-C0002"
+    "created_at": "2026-08-22T16:48:54.595Z"
+    "created_by": "lead-engineer"
+    "body": "Build evidence complete. Explicit null entries under OpenCode `mcp` and Pi `mcpServers` are now treated as present conflicts: unforced replacement fails; `--force` replaces only the owned fixed ID. Focused MCP projection suite: 23 passed. Combined affected Python suite: 202 passed. Canonical `mise run quality`: Python 300; generic Node 193; OpenCode 2; Pi 3; release artifacts and all static/package gates passed. `git diff --check` and issue validation passed. Closure pending separate confirmation."

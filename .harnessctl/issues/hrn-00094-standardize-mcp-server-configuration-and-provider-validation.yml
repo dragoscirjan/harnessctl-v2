@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00094"
+"type": "task"
+"title": "Standardize MCP server configuration and provider validation"
+"status": "done"
+"created_at": "2026-08-21T22:18:46.582Z"
+"updated_at": "2026-08-21T22:33:27.475Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00084"
+"depends_on":
+  - "hrn-00092"
+"metadata":
+  "estimate": "M"
+  "order": 4
+  "plan_status": "approved"
+  "risk": "high"
+"body": "# Standardize MCP server configuration and provider validation\n\n## Objective\n\nReplace the unreleased top-level code-index selection with a standard nested MCP server registry and strict provider-discriminated configuration.\n\n## Scope\n\n- Replace top-level `code_index` with `mcp.servers.sdlc-code-index` in Python and TypeScript defaults.\n- Use the standard entry shape `enabled`, `provider`, and `config`.\n- Default the entry to enabled, provider `codegraphcontext`, and `config: {}`.\n- Define separate strict configuration schemas for `codegraphcontext`, `gitnexus`, and `graphify`; the foundation schemas accept only `{}` until provider Epics add documented fields and defaults.\n- Validate every provider configuration value in Python, canonical TypeScript Zod, and generated JSON Schema. Reject arbitrary pass-through values.\n- Normalize partial configuration with provider-aware defaults after selecting the discriminator so defaults from one provider never leak into another provider's `config`.\n- Keep `mcp.output_limit_mode` as a sibling of `mcp.servers`.\n- Reject the unreleased top-level `code_index` key explicitly while preserving compatible unrelated unknown top-level fields.\n- Add defaults, migration, negative validation, generated-contract drift, and Python/TypeScript parity tests.\n\n## Acceptance Criteria\n\n- Missing configuration normalizes identically to `mcp.servers.sdlc-code-index.enabled=true`, provider `codegraphcontext`, and `config: {}` in Python and TypeScript.\n- Each structural provider selects its own strict Zod and Python-equivalent `config` schema.\n- Unknown providers, logical server IDs, entry fields, provider config fields, nulls, arrays, commands, arguments, fixed IDs, target environment names, and credential values fail with field-specific errors.\n- Switching a partial entry from one provider to another cannot retain or inherit the prior/default provider's configuration values.\n- Top-level `code_index` fails with a migration-oriented error instead of becoming ignored extension data.\n- Generated JSON Schema matches canonical Zod and represents every accepted configuration value.\n- Existing config-v2 partial overlays and unrelated compatible top-level extension fields remain supported.\n- Focused Python and TypeScript tests pass; no MCP executable or provider lifecycle operation runs.\n\n## Dependencies and Order\n\nDepends on completed `hrn-00092`. First corrective Task after the superseded unreleased contract. Estimate M with high schema and migration risk. Blocks the fixed-identity corrective Task.\n\n## Non-Goals\n\n- No provider commands, arguments, environment targets, credentials, installation, setup, indexing, probing, or execution.\n- No real provider option fields; provider Epics add those only with explicit schemas, defaults, mappings, and tests.\n- No compatibility alias for unreleased `code_index`.\n"
+"comments":
+  - "id": "hrn-00094-C0001"
+    "created_at": "2026-08-21T22:30:08.155Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Replaced unreleased top-level code_index with mcp.servers.sdlc-code-index standard entry; added discriminator-first provider defaults, strict Python/Zod provider config validation, explicit legacy-key rejection, and regenerated JSON Schema. Evidence: Python config 93 passed; generic-tools config/schema 130 passed; Ruff, Prettier, TypeScript checks passed. No provider commands or lifecycle behavior added."

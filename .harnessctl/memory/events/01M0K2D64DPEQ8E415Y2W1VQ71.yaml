@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0K2D64DPEQ8E415Y2W1VQ71
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00091 config contract implemented | quality passes
+details: "Branch feat/hrn-00084-code-intelligence-foundation. Added default code_index.enabled=true and provider=codegraphcontext across Python/TypeScript/Zod/generated config-v2 schema. Strict providers: codegraphcontext, gitnexus, graphify; unknown top-level fields retained; command/lifecycle fields rejected. Focused Python 12 and TS 125 pass; generic-tools typecheck and mise run quality pass (Python 265, Node 189); git diff --check passes. hrn-00091 remains in_progress; hrn-00092 not started. No MCP, skill, provider command, commit, remote, Verify, or Release work."
+source:
+  kind: artifact
+  ref: hrn-00091
+  revision: null
+created_at: 2026-08-21T21:07:38.765Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K1WM6MP3JFEY8ZATDAPT5J
+tags:
+  - build
+  - code-index
+  - config
+  - foundation

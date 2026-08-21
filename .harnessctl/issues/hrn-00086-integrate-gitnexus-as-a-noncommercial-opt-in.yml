@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00086"
+"type": "epic"
+"title": "Integrate GitNexus as a noncommercial opt-in"
+"status": "closed"
+"created_at": "2026-08-21T20:21:42.788Z"
+"updated_at": "2026-08-22T21:38:27.488Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00083"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "estimate": "M"
+  "license": "PolyForm-Noncommercial-1.0.0"
+  "order": 3
+  "plan_status": "initiative_decomposed"
+  "provider": "gitnexus"
+"body": "# Integrate GitNexus as a noncommercial opt-in\n\n## Objective\n\nProject GitNexus as an explicit noncommercial provider selected by `mcp.servers.sdlc-code-index` without making it the default.\n\n## Isolated Scope\n\n- Define strict `providers.gitnexus` typed options and safe defaults, including explicit license acknowledgement if required by the executable plan.\n- Expose only documented read-only, repository-bound, source-environment, path, or privacy options; keep command, arguments, fixed ID, target environment names, and credentials code-owned.\n- Map the selected provider to the documented operator-installed GitNexus MCP command.\n- Generate exact fixed-ID `sdlc-code-index` OpenCode and Pi entries without installing, probing, invoking, analyzing, or updating GitNexus.\n- Specialize the `sdlc-code-index` skill for query, context, impact, change analysis, source verification, and stale/unavailable fallback.\n- Document prerequisites, data ownership, optional embeddings, and PolyForm Noncommercial 1.0.0 limits.\n\n## Acceptance Direction\n\n- GitNexus requires explicit provider selection and is never the commercial-safe default.\n- Missing provider options normalize consistently across Python, TypeScript, Zod, and generated schema.\n- Generated settings use fixed ID `sdlc-code-index` and equivalent supported host semantics.\n- Mutation/raw-query capabilities are disabled by safe defaults when current provider documentation supports those controls.\n- No credential values or third-party packages are owned by harnessctl.\n- Tests never run provider analysis, setup, indexing, or MCP.\n\n## Dependencies and Order\n\nDepends on `hrn-00084`; planned after CodeGraphContext.\n\n## Non-Goals\n\n- Do not install GitNexus, approve commercial use, or make commands project-configurable.\n- Do not manage repository registries, indexes, embeddings, grammar builds, or provider lifecycle.\n"
+"comments":
+  - "id": "hrn-00086-C0001"
+    "created_at": "2026-08-22T21:38:13.913Z"
+    "created_by": "tech-advisor"
+    "body": "Superseded by consolidated external-provider guide Epic hrn-00103. GitNexus remains user-installed and user-configured; harnessctl will not generate or operate its MCP entry."

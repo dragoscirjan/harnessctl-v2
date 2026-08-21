@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NX228ZE57AJF3WK8SQ4W4G
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00102/hrn-00107/hrn-00108 repairs | evidence ready
+details: "YOLO Build repaired all routed Verify defects. hrn-00102 preserves exact raw JSON member bytes across OpenCode/Pi ownership changes with type-strict JSON comparison and actual .pi/mcp.json coverage. hrn-00107 compiles SDLC loading guidance from code-index enablement; disabled output refuses retained discoverable copies; provider handshake remains outside SDLC. hrn-00108 preflights dormant paths and symlinks before mutation. Full quality Green: 327 Python, 202 Node, package/type/lint/format/dead-code/duplication/action/shell/Mermaid/artifact gates. Runtime smoke Node+Bun Green; issue/memory validation and diff check Green; independent scoped review approved. Evidence comments: hrn-00102-C0004, hrn-00107-C0003, hrn-00108-C0001. Pending separate user confirmation before Bug closure. No external provider, formal Verify/Release, remote/destructive action, commit, or push."
+source:
+  kind: discussion
+  ref: hrn-00105 YOLO Build
+  revision: null
+created_at: 2026-08-22T23:31:54.783Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0NVDYH0DAYHWJQWG56E2R44
+tags:
+  - build
+  - code-index
+  - evidence-ready
+  - sdlc

@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00092"
+"type": "task"
+"title": "Generalize local MCP projection and owned-entry reconciliation"
+"status": "done"
+"created_at": "2026-08-21T20:57:45.731Z"
+"updated_at": "2026-08-21T21:28:01.976Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00084"
+"depends_on":
+  - "hrn-00091"
+"metadata":
+  "estimate": "M"
+  "order": 2
+  "plan_status": "approved"
+  "risk": "high"
+"body": "# Generalize local MCP projection and owned-entry reconciliation\n\n## Objective\n\nMake local MCP intent rendering provider-neutral and safely manage the fixed structural-provider host entry.\n\n## Scope\n\n- Allow local intents to use optional URLs and deterministic validated environment-variable-name bindings.\n- Render exact OpenCode command arrays and Pi command/args/lazy lifecycle; omit empty environment objects.\n- Preserve all existing CVS remote and Forgejo projections exactly.\n- Reserve fixed ID `code_index` and prohibit configurable IDs, commands, arguments, and target environment names.\n- Add generic reconciliation for desired and recognized historical definitions.\n- Require `--force` for provider-switch conflicts; remove disabled entries only when exact recognized definitions match; preserve/report modified entries.\n- Preserve unrelated host JSON, preflight safety, transactional writes, smoke checks, and exact rollback.\n- Use inert fixtures only; do not probe or invoke executables.\n\n## Acceptance Criteria\n\n- Synthetic local intents produce equivalent OpenCode/Pi semantics with optional URL and empty environment omission.\n- Existing GitHub, GitLab, Gitea, and Forgejo projection tests remain byte-exact.\n- Stable `code_index` cannot be overridden by configuration.\n- Provider switch without force fails before mutation; force replaces only the fixed owned entry.\n- Disabled reconciliation removes exact recognized content and leaves unrelated JSON unchanged.\n- Modified/operator content is preserved and reported, including rollback paths.\n- No third-party process, package manager, installer, setup, or index command executes.\n\n## Dependencies and Order\n\nDepends on `hrn-00091`; second Task. Estimate M with high compatibility risk.\n\n## Non-Goals\n\n- No real CodeGraphContext, GitNexus, or Graphify command definition.\n- No executable availability filtering for code-intelligence providers.\n- No normalized MCP wrapper tools.\n"
+"comments":
+  - "id": "hrn-00092-C0001"
+    "created_at": "2026-08-21T21:26:30.719Z"
+    "created_by": "lead-engineer"
+    "body": "Build slice implemented. `ServerIntent` now supports optional local URLs and validated ordered environment-name bindings; OpenCode/Pi omit empty environment objects while existing CVS projections remain exact. Added fixed `code_index` identity and provider-neutral recognized-definition reconciliation: switch requires force, exact disabled entries are removed, divergent entries are warned/preserved, unrelated JSON is retained, and injected failure restores the exact tree. Tests use inert fixture commands only; no third-party lifecycle executes. Evidence: `tests/test_mcp_projection.py` 21 passed; `tests/test_install.py` plus projection suite 182 passed with 8 established warnings; `mise run quality` passed (Python 278, Node 189); Ruff and `git diff --check` passed. Task remains in_progress; real provider mappings and skill work remain out of scope."

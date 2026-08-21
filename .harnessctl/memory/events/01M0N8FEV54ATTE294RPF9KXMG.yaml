@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0N8FEV54ATTE294RPF9KXMG
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00085
+summary: hrn-00085 | build | hrn-00097 mise-backed adapter | done
+details: hrn-00097 done revision v1:1dd77d6c7d1207b291c6e9078f2a60edb16fdf765849bd02d9d58260f7c71abd. Fixed sdlc-code-index desired/recognized CodeGraphContext intents project `mise exec -- cgc mcp start` plus validated safety environment to OpenCode/Pi. Repository pins and locks pipx:codegraphcontext 0.6.5; user authorized lock/install; mise resolves 0.6.5. Installer never probes/runs provider; no MCP start/index/watch/delete. Focused Python 222; Ruff and diff checks pass. Next hrn-00098.
+source:
+  kind: artifact
+  ref: hrn-00097
+  revision: v1:1dd77d6c7d1207b291c6e9078f2a60edb16fdf765849bd02d9d58260f7c71abd
+created_at: 2026-08-22T17:32:13.542Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0N81R21ZYC884V15BAH33E7
+tags:
+  - build
+  - codegraphcontext
+  - mcp
+  - mise
+  - sdlc

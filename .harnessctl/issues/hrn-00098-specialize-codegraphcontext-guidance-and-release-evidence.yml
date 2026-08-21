@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00098"
+"type": "task"
+"title": "Specialize CodeGraphContext guidance and release evidence"
+"status": "done"
+"created_at": "2026-08-21T23:02:52.190Z"
+"updated_at": "2026-08-22T17:37:25.208Z"
+"created_by": "tech-advisor"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00085"
+"depends_on":
+  - "hrn-00097"
+"metadata":
+  "estimate": "S"
+  "order": 3
+  "plan": "approved"
+  "risk": "medium"
+"body": "# Specialize CodeGraphContext guidance and release evidence\n\n## Objective\n\nComplete the provider integration with retrieval-only generated guidance, explicit operator prerequisites/privacy boundaries, package evidence, and release metadata.\n\n## Scope\n\n- Specialize `sdlc-code-index` generation for CodeGraphContext's observed structural retrieval capabilities while requiring live schema discovery.\n- Keep provider results advisory; require source/config/test/VCS confirmation and Glob/Grep/read fallback for unavailable, stale, incomplete, or unsuitable evidence.\n- Explicitly forbid indexing, watching, deletion, bundle import/clear, raw mutation queries, setup, model download, and lifecycle inference from skill text.\n- Document repository and downstream mise declaration, operator `mise install`, separate `cgc index`, embedded LadybugDB storage, source-index opt-in, project-env isolation, safety environment, refresh ownership, and version drift.\n- Update wheel/sdist/isolated render/install checks, docs inventories, root guidance, and Changeset metadata.\n\n## Acceptance Criteria\n\n- Enabled OpenCode/Pi hosts receive byte-equivalent generated skill bytes specialized only by validated provider/fixed ID data.\n- Disabled fresh installs receive no new skill or active entry; previously generated skill bytes remain dormant and unchanged.\n- Skill names supported retrieval concepts without inventing tool names, parameters, or response fields; it directs live schema inspection.\n- Skill never authorizes provider lifecycle or destructive/mutating tools.\n- Documentation distinguishes harnessctl projection from operator tool installation, repository indexing, storage/privacy choices, and refresh/removal.\n- Docs state CodeGraphContext `0.6.5` is the tested pin and note upstream documentation drift.\n- Package resources, isolated wheel/sdist rendering/install, focused tests, generated contracts, `mise run quality`, and diff/issue validation pass.\n- Verify owns runtime MCP handshake, current acceptance mapping, security/privacy/compatibility review, and independent review.\n\n## Dependencies and Order\n\nDepends on `hrn-00097`; indirectly blocked by `hrn-00084`. Final Build Task for `hrn-00085`.\n\n## Artifacts\n\nGenerated skill/template tests; configuration/skills/code-intelligence documentation; package artifact tests; Changeset and Build evidence.\n\n## Estimate\n\nS. Medium risk because guidance must constrain a provider exposing both retrieval and lifecycle/mutation tools.\n\n## Non-Goals\n\nNo provider install/index/start during harnessctl installation, no invented provider API catalogue, no release/commit/remote action, and no closure of the Epic during Build.\n"
+"comments":
+  - "id": "hrn-00098-C0001"
+    "created_at": "2026-08-22T17:36:24.438Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Specialized generated `sdlc-code-index` guidance for CodeGraphContext retrieval while requiring live schema inspection, advisory/source verification, and Glob/Grep/read fallback. Guidance explicitly forbids indexing, watching, deletion, bundle import/clear, raw mutation queries, setup, model downloads, and inferred lifecycle authority; non-CodeGraphContext providers retain generic guidance. Updated configuration/skills/code-intelligence/root docs for strict privacy defaults, fixed mise projection, tested CodeGraphContext 0.6.5 pin, downstream mise declaration and operator `mise install`, separate `cgc index`, embedded LadybugDB/source-storage/project-env boundaries, refresh/removal ownership, upstream drift, and Verify-owned runtime/review. Updated isolated wheel/sdist assertions and Changeset metadata. Evidence: focused template/docs/release-artifact suite 65 passed; canonical `mise run quality` passed (Python 321; generic Node 202; OpenCode 2; Pi 3; all artifact/package/contract/format/lint/type/dead-code/duplicate/action/Mermaid gates); `git diff --check` passed. No MCP handshake, provider start/index/watch/delete, Release, commit, or remote action ran."

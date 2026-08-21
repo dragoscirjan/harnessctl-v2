@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00076"
+"type": "task"
+"title": "Install and activate the configurable TDD skill"
+"status": "done"
+"created_at": "2026-08-20T21:45:14.688Z"
+"updated_at": "2026-08-20T22:12:36.927Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00074"
+"depends_on":
+  - "hrn-00075"
+"body": "## Objective\n\nPackage one canonical `develop-tdd` skill and make SDLC Build activate it only when configured.\n\n## Scope\n\n- Add and register the canonical TDD skill template.\n- Specialize SDLC Build rendering with `workflow.tdd.enabled`.\n- Install `.opencode/skills/develop-tdd/SKILL.md` and `.pi/skills/develop-tdd/SKILL.md` only for enabled selected hosts.\n- Implement atomic enabled-to-disabled cleanup that deletes only unchanged harnessctl-generated content and preserves or reports modified/operator-owned content.\n- Add focused template, installer, conflict, and rollback tests.\n\n## Acceptance\n\n- [ ] Enabled selected hosts receive the canonical skill.\n- [ ] Enabled Build guidance loads `develop-tdd` before implementation and requires observable Red, Green, Refactor steps.\n- [ ] Disabled generated guidance contains no TDD instruction and fresh installs contain no TDD skill.\n- [ ] Enabled-to-disabled reinstall removes only unchanged generated artifacts.\n- [ ] Modified/operator-owned skill content is never silently overwritten or deleted.\n- [ ] OpenCode and Pi behavior remains equivalent and installer mutation stays atomic.\n\n## Dependencies\n\nBlocked by `hrn-00075`.\n\n## Non-Goals\n\n- Framework-specific test commands.\n- Changes to non-Build SDLC phases.\n\n## Estimate\n\nMedium. Highest uncertainty is safe ownership detection during disable/reinstall."
+"comments":
+  - "id": "hrn-00076-C0001"
+    "created_at": "2026-08-20T22:07:35.464Z"
+    "created_by": "lead-engineer"
+    "body": "Implemented canonical `develop-tdd` packaging and conditional Build activation on `feat/hrn-00074-configurable-tdd`. Enabled OpenCode/Pi hosts receive byte-equivalent generated skills and Red/Green/Refactor Build guidance; disabled renders omit TDD, remove only exact generated files transactionally, and warn/preserve divergent content. Added host-equivalence, conflict, cleanup, rollback, template, and wheel-package coverage. Checks: `uv run pytest tests/test_templates.py tests/test_install.py` (200 passed); isolated release-artifact test (1 passed); Ruff lint/format and `git diff --check` passed. Task remains `in_progress`; no transition requested."

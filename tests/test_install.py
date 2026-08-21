@@ -1,5 +1,7 @@
 import importlib
 import json
+import tomllib
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,6 +26,7 @@ from harnessctl.templates import (
 )
 
 install_module = importlib.import_module("harnessctl.install")
+config_module = importlib.import_module("harnessctl.config")
 
 
 def _mock_pi_path() -> str:
@@ -40,11 +43,18 @@ def _tree_manifest(root: Path) -> dict[str, tuple[str, bytes | None]]:
     }
 
 
-def _sdlc_context(*, memory_enabled: bool) -> dict[str, object]:
+def _sdlc_context(
+    *,
+    memory_enabled: bool,
+    tdd_enabled: bool = False,
+    code_index_enabled: bool = False,
+) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
         "retrieval_limit": 3,
         "retrieval_max_chars": 2048,
+        "tdd_enabled": tdd_enabled,
+        "code_index_enabled": code_index_enabled,
     }
 
 
@@ -70,6 +80,24 @@ def write_project_config(root: Path, content: str) -> None:
     config = root / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text(f"version: 2\n{content}", encoding="utf-8")
+
+
+def write_tdd_config(root: Path, *, enabled: bool) -> None:
+    write_project_config(
+        root,
+        f"workflow:\n  tdd:\n    enabled: {'true' if enabled else 'false'}\n",
+    )
+
+
+def write_sdlc_code_index_config(
+    root: Path, *, enabled: bool, mcp_server: str = "sdlc-code-index"
+) -> None:
+    write_project_config(
+        root,
+        "skills:\n  sdlc-code-index:\n"
+        f"    enabled: {'true' if enabled else 'false'}\n"
+        f"    mcp_server: {mcp_server}\n",
+    )
 
 
 def write_pinned_pi_adapter(root: Path) -> None:
@@ -142,6 +170,11 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
         assert (tmp_path / f".pi/skills/{skill}/SKILL.md").exists()
     assert (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").is_file()
     assert (tmp_path / ".pi/skills/sdlc/references/checkpoint.md").is_file()
+    opencode_sdlc = (tmp_path / ".opencode/skills/sdlc/SKILL.md").read_bytes()
+    pi_sdlc = (tmp_path / ".pi/skills/sdlc/SKILL.md").read_bytes()
+    assert opencode_sdlc == pi_sdlc
+    assert b"`sdlc-code-index` is disabled" in opencode_sdlc
+    assert b"Do not load a discoverable retained copy" in opencode_sdlc
 
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
@@ -339,6 +372,211 @@ def test_build_and_plan_prompts_define_their_boundaries() -> None:
     assert "stop before Epic planning" in plan
 
 
+def test_enabled_tdd_installs_equivalent_selected_host_skills(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    write_pinned_pi_adapter(tmp_path)
+
+    installed = install(tmp_path, "all")
+
+    opencode_skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
+    pi_skill = tmp_path / ".pi/skills/develop-tdd/SKILL.md"
+    assert opencode_skill in installed
+    assert pi_skill in installed
+    assert opencode_skill.read_bytes() == pi_skill.read_bytes()
+    assert not (opencode_skill.parent / ".harnessctl-generated.json").exists()
+    assert not (pi_skill.parent / ".harnessctl-generated.json").exists()
+    continue_policies: list[bytes] = []
+    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+        build = (root / "references/build.md").read_text(encoding="utf-8")
+        continue_policy = root / "references/continue.md"
+        assert "Load `develop-tdd` before implementation" in build
+        assert "Red, Green, and Refactor" in build
+        assert "load `references/build.md` before implementation" in continue_policy.read_text(
+            encoding="utf-8"
+        )
+        continue_policies.append(continue_policy.read_bytes())
+    assert continue_policies[0] == continue_policies[1]
+
+
+def test_disabled_tdd_is_absent_from_fresh_install(tmp_path: Path) -> None:
+    install(tmp_path, "opencode")
+
+    assert not (tmp_path / ".opencode/skills/develop-tdd").exists()
+    build = (tmp_path / ".opencode/skills/sdlc/references/build.md").read_text(encoding="utf-8")
+    continue_policy = (tmp_path / ".opencode/skills/sdlc/references/continue.md").read_text(
+        encoding="utf-8"
+    )
+    assert "develop-tdd" not in build
+    assert "Red, Green, and Refactor" not in build
+    assert "references/build.md" not in continue_policy
+    assert "develop-tdd" not in continue_policy
+
+
+def test_disabling_tdd_retains_dormant_generated_skill(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, "all")
+    skills = (
+        tmp_path / ".opencode/skills/develop-tdd/SKILL.md",
+        tmp_path / ".pi/skills/develop-tdd/SKILL.md",
+    )
+    enabled_content = tuple(skill.read_bytes() for skill in skills)
+    assert all(skill.is_file() for skill in skills)
+
+    write_tdd_config(tmp_path, enabled=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, "all", force=True)
+
+    assert tuple(skill.read_bytes() for skill in skills) == enabled_content
+    assert not any("TDD skill" in str(item.message) for item in caught)
+    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+        build = (root / "references/build.md").read_text(encoding="utf-8")
+        continue_policy = (root / "references/continue.md").read_text(encoding="utf-8")
+        assert "develop-tdd" not in build
+        assert "develop-tdd" not in continue_policy
+        assert "Red, Green, and Refactor" not in continue_policy
+
+
+def test_enabled_sdlc_code_index_installs_equivalent_selected_host_skills(
+    tmp_path: Path,
+) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_server="operator-index")
+    write_pinned_pi_adapter(tmp_path)
+
+    installed = install(tmp_path, "all")
+
+    opencode_skill = tmp_path / ".opencode/skills/sdlc-code-index/SKILL.md"
+    pi_skill = tmp_path / ".pi/skills/sdlc-code-index/SKILL.md"
+    assert opencode_skill in installed
+    assert pi_skill in installed
+    assert opencode_skill.read_bytes() == pi_skill.read_bytes()
+    content = opencode_skill.read_text(encoding="utf-8")
+    assert "Configured MCP server: `operator-index`" in content
+    assert "Configured provider" not in content
+    opencode_sdlc = (tmp_path / ".opencode/skills/sdlc/SKILL.md").read_bytes()
+    pi_sdlc = (tmp_path / ".pi/skills/sdlc/SKILL.md").read_bytes()
+    assert opencode_sdlc == pi_sdlc
+    assert b"When `sdlc-code-index` is available" in opencode_sdlc
+    assert b"`sdlc-code-index` is disabled" not in opencode_sdlc
+
+
+def test_disabled_sdlc_code_index_is_absent_from_fresh_install(tmp_path: Path) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=False)
+    write_pinned_pi_adapter(tmp_path)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, "all")
+
+    assert not (tmp_path / ".opencode/skills/sdlc-code-index").exists()
+    assert not (tmp_path / ".pi/skills/sdlc-code-index").exists()
+    assert not any("sdlc-code-index" in str(item.message) for item in caught)
+    opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    pi = json.loads((tmp_path / ".pi/mcp.json").read_text(encoding="utf-8"))
+    assert "sdlc-code-index" not in opencode.get("mcp", {})
+    assert "sdlc-code-index" not in pi.get("mcpServers", {})
+
+
+def test_disabling_sdlc_code_index_retains_dormant_generated_skill(tmp_path: Path) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=True)
+    write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, "all")
+    skills = (
+        tmp_path / ".opencode/skills/sdlc-code-index/SKILL.md",
+        tmp_path / ".pi/skills/sdlc-code-index/SKILL.md",
+    )
+    retained_content = (
+        b"stale OpenCode provider-specific guidance\n",
+        b"stale Pi provider-specific guidance\n",
+    )
+    for skill, content in zip(skills, retained_content, strict=True):
+        skill.write_bytes(content)
+
+    write_sdlc_code_index_config(tmp_path, enabled=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, "all", force=True)
+
+    assert tuple(skill.read_bytes() for skill in skills) == retained_content
+    messages = [str(item.message) for item in caught if "sdlc-code-index" in str(item.message)]
+    assert len(messages) == 2
+    for path in (
+        ".opencode/skills/sdlc-code-index/SKILL.md",
+        ".pi/skills/sdlc-code-index/SKILL.md",
+    ):
+        matching = [message for message in messages if path in message]
+        assert len(matching) == 1
+        assert "remains discoverable and active-capable" in matching[0]
+        assert "remove it manually" in matching[0]
+    opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    pi = json.loads((tmp_path / ".pi/mcp.json").read_text(encoding="utf-8"))
+    assert "sdlc-code-index" not in opencode.get("mcp", {})
+    assert "sdlc-code-index" not in pi.get("mcpServers", {})
+    for host_root in (".opencode", ".pi"):
+        core = (tmp_path / host_root / "skills/sdlc/SKILL.md").read_text(encoding="utf-8")
+        assert "`sdlc-code-index` is disabled" in core
+        assert "Do not load a discoverable retained copy" in core
+        assert "When `sdlc-code-index` is available" not in core
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+def test_disabled_sdlc_code_index_symlink_is_rejected_before_mutation(
+    tmp_path: Path, harness: str
+) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=False)
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    host_roots = (".opencode", ".pi") if harness == "all" else (f".{harness}",)
+    referents: list[Path] = []
+    for host_root in host_roots:
+        referent = tmp_path / f"operator-{host_root[1:]}-skill.md"
+        referent.write_bytes(b"operator skill\n")
+        skill = tmp_path / host_root / "skills/sdlc-code-index/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.symlink_to(referent)
+        referents.append(referent)
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="must not contain symlinks"):
+        install(tmp_path, harness)
+
+    assert _tree_manifest(tmp_path) == before
+    assert all(referent.read_bytes() == b"operator skill\n" for referent in referents)
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_disabled_tdd_leaves_existing_operator_skill_untouched(
+    tmp_path: Path, harness: str
+) -> None:
+    host_root = ".opencode" if harness == "opencode" else ".pi"
+    skill = tmp_path / host_root / "skills/develop-tdd/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("operator-owned TDD policy\n", encoding="utf-8")
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        install(tmp_path, harness)
+
+    assert skill.read_text(encoding="utf-8") == "operator-owned TDD policy\n"
+    assert not any("TDD skill" in str(item.message) for item in caught)
+
+
+def test_enabled_tdd_operator_skill_conflict_precedes_mutation(tmp_path: Path) -> None:
+    write_tdd_config(tmp_path, enabled=True)
+    skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("operator-owned TDD policy\n", encoding="utf-8")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError, match=r"develop-tdd[\\/]SKILL\.md"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(tmp_path) == before
+
+
 def test_install_rejects_unsupported_harness(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="unsupported harness"):
         install(tmp_path, "unknown")
@@ -379,7 +617,12 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
             "token_env": "GH_TOKEN",
         },
     }
-    assert first["mcp"] == {"output_limit_mode": "bounded-guidance"}
+    assert first["mcp"] == {
+        "output_limit_mode": "bounded-guidance",
+    }
+    assert first["skills"] == {
+        "sdlc-code-index": {"enabled": False, "mcp_server": "sdlc-code-index"}
+    }
     assert first["issues"]["tools"].split(",") == [
         "issue_id",
         "issue_create",
@@ -457,6 +700,145 @@ def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
         "enabled": True,
         "mode": "strict",
     }
+    assert config["workflow"] == {
+        "default_task_type": "bug",
+        "tdd": {"enabled": False},
+    }
+    assert config["mcp"] == {"output_limit_mode": "bounded-guidance"}
+    assert config["skills"] == {
+        "sdlc-code-index": {"enabled": False, "mcp_server": "sdlc-code-index"}
+    }
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_config_accepts_tdd_workflow_setting_and_preserves_unknown_fields(
+    tmp_path: Path, enabled: bool
+) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(
+        "workflow:\n"
+        "  custom_policy: retained\n"
+        "  tdd:\n"
+        f"    enabled: {str(enabled).lower()}\n"
+        "    custom_policy: retained\n",
+        encoding="utf-8",
+    )
+
+    assert load_config(tmp_path)["workflow"] == {
+        "default_task_type": "bug",
+        "custom_policy": "retained",
+        "tdd": {"enabled": enabled, "custom_policy": "retained"},
+    }
+
+
+def test_config_rejects_non_boolean_tdd_workflow_setting(tmp_path: Path) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("workflow:\n  tdd:\n    enabled: 1\n", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=r"workflow\.tdd\.enabled must be boolean"):
+        load_config(tmp_path)
+
+
+def test_config_rejects_unreleased_top_level_code_index_with_migration_guidance(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("code_index:\n  provider: graphify\n", encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=r"code_index.*skills\.sdlc-code-index"):
+        load_config(tmp_path)
+
+
+def test_config_defaults_to_disabled_external_code_index_skill(tmp_path: Path) -> None:
+    config = load_config(tmp_path)
+
+    assert config["mcp"] == {"output_limit_mode": "bounded-guidance"}
+    assert config["skills"]["sdlc-code-index"] == {
+        "enabled": False,
+        "mcp_server": "sdlc-code-index",
+    }
+
+
+@pytest.mark.parametrize("server_name", ["sdlc-code-index", "index_2", "a", "a-b_c-9"])
+def test_config_accepts_portable_external_code_index_server_name(
+    tmp_path: Path, server_name: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        f"skills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: {server_name}\n",
+    )
+
+    assert load_config(tmp_path)["skills"]["sdlc-code-index"] == {
+        "enabled": True,
+        "mcp_server": server_name,
+    }
+
+
+@pytest.mark.parametrize(
+    "server_name",
+    [
+        "A",
+        "-index",
+        "index-",
+        "_index",
+        "index_",
+        "index.server",
+        "index server",
+        "cvs_github",
+        "a" * 65,
+    ],
+)
+def test_config_rejects_invalid_external_code_index_server_name(
+    tmp_path: Path, server_name: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        f"skills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: {server_name}\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"skills\.sdlc-code-index\.mcp_server"):
+        load_config(tmp_path)
+
+
+def test_config_rejects_legacy_mcp_servers_before_merge(tmp_path: Path) -> None:
+    write_project_config(
+        tmp_path,
+        "mcp:\n  servers:\n    sdlc-code-index:\n      enabled: false\n",
+    )
+
+    with pytest.raises(ConfigError, match=r"mcp\.servers.*skills\.sdlc-code-index"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "yaml",
+    [
+        "version: 1\nversion: 2\n",
+        "mcp:\n  output_limit_mode: hard\n  output_limit_mode: bounded-guidance\n",
+    ],
+)
+def test_config_rejects_duplicate_yaml_keys(tmp_path: Path, yaml: str) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(yaml, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="duplicate mapping key"):
+        load_config(tmp_path)
+
+
+@pytest.mark.parametrize("yaml", ["1: root-value\n", "mcp:\n  1: nested-value\n"])
+def test_config_rejects_non_string_yaml_keys(tmp_path: Path, yaml: str) -> None:
+    config_path = tmp_path / ".harnessctl/config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text(yaml, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="mapping keys must be strings") as error:
+        load_config(tmp_path)
+    assert "root-value" not in str(error.value)
+    assert "nested-value" not in str(error.value)
 
 
 @pytest.mark.parametrize(
@@ -722,7 +1104,10 @@ def test_config_rejects_unknown_nested_keys_and_configurable_mcp_ids(
 def test_config_accepts_hard_output_limit_as_host_neutral_policy(tmp_path: Path) -> None:
     write_project_config(tmp_path, "mcp:\n  output_limit_mode: hard\n")
 
-    assert load_config(tmp_path)["mcp"] == {"output_limit_mode": "hard"}
+    assert load_config(tmp_path)["mcp"] == {
+        **DEFAULT_CONFIG["mcp"],
+        "output_limit_mode": "hard",
+    }
 
 
 def test_config_normalizes_exact_filesystem_tool_set(tmp_path: Path) -> None:
@@ -817,6 +1202,7 @@ def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None
         memory_hooks_enabled=True,
         retrieval_limit=3,
         retrieval_max_chars=2048,
+        tdd_enabled=False,
     )["references/checkpoint.md"]
     normalized = " ".join(checkpoint.split())
     assert "limit 3, 2048 chars" in normalized
@@ -882,7 +1268,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
     installed = install(tmp_path, "opencode")
 
-    assert len(installed) == 9 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + 1
+    assert len(installed) == 10 + len(SKILL_RESOURCE_TEMPLATES["sdlc"])
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
@@ -1081,6 +1467,134 @@ def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> 
     assert document["mcp"]["cvs_github"]["headers"]["Authorization"] == ("Bearer {env:GH_TOKEN}")
 
 
+def test_repository_does_not_own_codegraphcontext_tooling() -> None:
+    repository = Path(__file__).parents[1]
+    mise = tomllib.loads((repository / "mise.toml").read_text(encoding="utf-8"))
+    lock = tomllib.loads((repository / "mise.lock").read_text(encoding="utf-8"))
+
+    assert "pipx:codegraphcontext" not in mise["tools"]
+    assert "pipx:codegraphcontext" not in lock["tools"]
+    assert all("codegraphcontext" not in task for task in mise["tasks"])
+
+
+def test_install_does_not_probe_or_generate_external_code_index_server(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probed: list[str] = []
+
+    def record_probe(executable: str) -> None:
+        probed.append(executable)
+        return None
+
+    monkeypatch.setattr(install_module.shutil, "which", record_probe)
+
+    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_server="operator-index")
+    install(tmp_path, "opencode")
+
+    assert "mise" not in probed
+    assert "cgc" not in probed
+    document = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    assert "operator-index" not in document["mcp"]
+    assert "sdlc-code-index" not in document["mcp"]
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("migration", [False, True])
+def test_external_code_index_host_entry_is_never_mutated(
+    tmp_path: Path, harness: str, enabled: bool, force: bool, migration: bool
+) -> None:
+    external_value = (
+        '{\n      "command": [ "operator-index" ],\n'
+        '      "environment": {"OPERATOR_SECRET":"\\u0070reserved"},\n'
+        '      "weight": 1e+02\n    }'
+    )
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        host_content = f'{{"plugin":["operator"],"mcp":{{"sdlc-code-index":{external_value}}}}}\n'
+    else:
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        host_content = f'{{"mcpServers":{{"sdlc-code-index":{external_value}}}}}\n'
+        write_pinned_pi_adapter(tmp_path)
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(host_content, encoding="utf-8")
+    external = json.loads(external_value)
+    write_sdlc_code_index_config(tmp_path, enabled=enabled)
+    if migration:
+        write_legacy_commands(tmp_path, harness)
+
+    if migration:
+        with pytest.warns(UserWarning, match="Replacing deprecated SDLC command outputs"):
+            install(
+                tmp_path,
+                harness,
+                force=force,
+                replace_sdlc_command_set=True,
+            )
+    else:
+        install(tmp_path, harness, force=force)
+
+    rendered = host.read_text(encoding="utf-8")
+    result = json.loads(rendered)
+    assert result[container]["sdlc-code-index"] == external
+    assert external_value in rendered
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_external_code_index_host_entry_survives_owned_conflict(
+    tmp_path: Path, harness: str
+) -> None:
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        content = b'{"mcp":{"cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        content = b'{"mcpServers":{"cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_bytes(content)
+
+    with pytest.raises(FileExistsError, match="cvs_github"):
+        install(tmp_path, harness)
+
+    assert host.read_bytes() == content
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_external_code_index_host_entry_survives_install_rollback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
+) -> None:
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        content = {"mcp": {"sdlc-code-index": {"command": ["operator-index"]}}}
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        content = {"mcpServers": {"sdlc-code-index": {"command": "operator-index"}}}
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(json.dumps(content) + "\n", encoding="utf-8")
+    write_sdlc_code_index_config(tmp_path, enabled=True)
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda _root, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check_mcp",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected smoke failure"):
+        install(tmp_path, harness)
+
+    assert _tree_manifest(tmp_path) == before
+
+
 def test_opencode_plugin_version_conflicts_unless_forced(tmp_path: Path) -> None:
     host = tmp_path / ".opencode/opencode.json"
     host.parent.mkdir(parents=True)
@@ -1180,7 +1694,8 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     assert host in installed
     document = json.loads(host.read_text(encoding="utf-8"))
     assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
-    assert "mcp" not in document
+    assert "cvs_gitea" not in document.get("mcp", {})
+    assert "sdlc-code-index" not in document.get("mcp", {})
 
 
 def test_local_mcp_missing_binary_still_installs_cli_skill(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
@@ -13,6 +14,7 @@ GITLAB_MCP_URL = "https://gitlab.com/api/v4/mcp"
 GITHUB_TOOLSETS = "repos,issues,pull_requests,actions,git"
 FORGEJO_MCP_VERSION = "2.33.0"
 OUTPUT_GUARD = {"maxBytes": 51200, "maxLines": 2000, "detailsMaxBytes": 16384}
+_ENVIRONMENT_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
 
 
 @dataclass(frozen=True)
@@ -22,7 +24,7 @@ class ServerIntent:
     server_id: str
     provider: str
     transport: str
-    url: str
+    url: str | None
     token_env: str | None
     command: str | None
     args: tuple[str, ...]
@@ -30,6 +32,7 @@ class ServerIntent:
     compatibility_version: str | None
     toolsets: str | None
     requesting_routes: tuple[str, ...]
+    environment: tuple[tuple[str, str], ...] = ()
 
     def definition(self) -> tuple[object, ...]:
         """Return every field that determines host server behavior."""
@@ -44,6 +47,7 @@ class ServerIntent:
             self.oauth,
             self.compatibility_version,
             self.toolsets,
+            self.environment,
         )
 
 
@@ -65,6 +69,13 @@ def required_server_intents(config: Mapping[str, Any], harness: str) -> list[Ser
             )
         )
     return [_intent(service, route) for route, service in services]
+
+
+def recognized_server_intents(_config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
+    """Return historical generated definitions eligible for exact reconciliation."""
+    if harness not in {"opencode", "pi", "all"}:
+        raise ValueError(f"unsupported harness: {harness}")
+    return []
 
 
 def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
@@ -110,6 +121,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         FORGEJO_MCP_VERSION,
         None,
         (route,),
+        (("FORGEJO_ACCESS_TOKEN", str(service["token_env"])),),
     )
 
 
@@ -131,11 +143,18 @@ def deduplicate_server_intents(intents: list[ServerIntent]) -> list[ServerIntent
 def render_opencode_mcp(intent: ServerIntent) -> dict[str, Any]:
     """Render one exact OpenCode MCP server definition."""
     if intent.transport == "local":
-        return {
+        rendered: dict[str, Any] = {
             "type": "local",
             "command": [intent.command, *intent.args],
-            "environment": {"FORGEJO_ACCESS_TOKEN": f"{{env:{intent.token_env}}}"},
         }
+        environment = _environment_bindings(intent)
+        if environment:
+            rendered["environment"] = {
+                target: f"{{env:{source}}}" for target, source in environment
+            }
+        return rendered
+    if intent.url is None:
+        raise ConfigError(f"remote MCP intent {intent.server_id} requires a URL")
     rendered: dict[str, Any] = {"type": "remote", "url": intent.url}
     if intent.oauth:
         rendered["oauth"] = {}
@@ -151,12 +170,17 @@ def render_opencode_mcp(intent: ServerIntent) -> dict[str, Any]:
 def render_pi_mcp(intent: ServerIntent) -> dict[str, Any]:
     """Render one exact pi-mcp-adapter server definition."""
     if intent.transport == "local":
-        return {
+        rendered: dict[str, Any] = {
             "command": intent.command,
             "args": list(intent.args),
-            "env": {"FORGEJO_ACCESS_TOKEN": f"${{{intent.token_env}}}"},
             "lifecycle": "lazy",
         }
+        environment = _environment_bindings(intent)
+        if environment:
+            rendered["env"] = {target: f"${{{source}}}" for target, source in environment}
+        return rendered
+    if intent.url is None:
+        raise ConfigError(f"remote MCP intent {intent.server_id} requires a URL")
     if intent.oauth:
         return {
             "url": intent.url,
@@ -173,3 +197,25 @@ def render_pi_mcp(intent: ServerIntent) -> dict[str, Any]:
         "auth": "bearer",
         "lifecycle": "lazy",
     }
+
+
+def _environment_bindings(intent: ServerIntent) -> tuple[tuple[str, str], ...]:
+    if not isinstance(intent.command, str) or not intent.command:
+        raise ConfigError(f"local MCP intent {intent.server_id} requires a command")
+    targets: set[str] = set()
+    for target, source in intent.environment:
+        if (
+            _ENVIRONMENT_NAME.fullmatch(target) is None
+            or _ENVIRONMENT_NAME.fullmatch(source) is None
+        ):
+            raise ConfigError(
+                f"local MCP intent {intent.server_id} environment bindings "
+                "must use uppercase environment variable names"
+            )
+        if target in targets:
+            raise ConfigError(
+                f"local MCP intent {intent.server_id} environment contains "
+                f"duplicate target {target}"
+            )
+        targets.add(target)
+    return intent.environment

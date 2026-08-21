@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0K7AMAD246J091EBSVMB1SY
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00094 nested MCP config | done
+details: "hrn-00094 done. Standard mcp.servers.sdlc-code-index entry implemented with enabled/provider/config default true/codegraphcontext/{}. Python and TypeScript select provider before merging strict provider config defaults; legacy top-level code_index rejected; unrelated top-level extensions retained. Separate strict foundation provider schemas accept {} only; generated JSON Schema regenerated. Evidence: Python config 93 passed; generic-tools config/schema 130 passed; Ruff, Prettier, TypeScript checks passed. Next approved sequence item hrn-00095. No provider commands or lifecycle behavior added."
+source:
+  kind: artifact
+  ref: hrn-00094
+  revision: v1:75f87214f633b18194133a37e20adad8830906a7583801db4168e205e0f7df64
+created_at: 2026-08-21T22:33:37.869Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K6N433QYFVBJ61CRQT7YHK
+tags:
+  - build
+  - config
+  - mcp
+  - sdlc-code-index
+  - zod

@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00088"
+"type": "epic"
+"title": "Integrate Repomix as a context-packing companion"
+"status": "closed"
+"created_at": "2026-08-21T20:21:43.056Z"
+"updated_at": "2026-08-22T21:38:27.796Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00083"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "capability": "context_packing"
+  "estimate": "S"
+  "order": 5
+  "plan_status": "initiative_decomposed"
+  "provider": "repomix"
+"body": "# Integrate Repomix as a context-packing companion\n\n## Objective\n\nProject Repomix as a bounded context-packing companion under a separate logical `mcp.servers` key, never as a structural provider inside `sdlc-code-index`.\n\n## Isolated Scope\n\n- During the executable Epic plan, select a distinct stable `sdlc-*` server ID and define its strict typed configuration object and safe defaults.\n- Define sandbox, workspace, bounded-output, and source-environment options without exposing credential values or project-configurable executable commands.\n- Map the logical server to the documented operator-installed Repomix MCP command.\n- Generate sandboxed OpenCode and Pi entries without installing, downloading, probing, invoking, or packing with Repomix.\n- Teach the shared MCP-reliant guidance to use Repomix only for snapshots, packing, compression, and bounded packed-output inspection.\n- Document local/private operation, output ownership, cleanup ownership, and graph-analysis limitations.\n\n## Acceptance Direction\n\n- Repomix is not present in `mcp.servers.sdlc-code-index.providers`.\n- Its distinct logical server has complete schema defaults suitable for install-time configuration.\n- Generated entries enforce workspace sandboxing by default where documented support exists.\n- Tests validate projection and guidance without packing repository content or downloading packages.\n- Documentation makes structural graph and impact-analysis limitations explicit.\n\n## Dependencies and Order\n\nDepends on `hrn-00084` for the shared registry and skill conventions.\n\n## Non-Goals\n\n- Do not install Repomix, use implicit package download, create packed outputs, or manage cleanup.\n- Do not claim persistent graph or semantic-index capabilities.\n- Do not overload fixed ID `sdlc-code-index`.\n"
+"comments":
+  - "id": "hrn-00088-C0001"
+    "created_at": "2026-08-22T21:38:14.227Z"
+    "created_by": "tech-advisor"
+    "body": "Superseded by consolidated external-provider guide Epic hrn-00103. Repomix integration becomes documentation only; harnessctl will not generate or operate its MCP entry."

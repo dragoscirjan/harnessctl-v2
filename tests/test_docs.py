@@ -34,6 +34,7 @@ def test_documentation_set_and_root_index_exist() -> None:
         "memory.md",
         "issues.md",
         "cvs.md",
+        "code-intelligence.md",
     }
     assert {path.name for path in DOCS.glob("*.md")} == expected
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
@@ -144,13 +145,22 @@ def test_authoritative_transitions_label_all_installed_and_conceptual_commands()
 
 def test_command_template_changes_force_transition_documentation_review() -> None:
     """Snapshot command shells and progressively disclosed SDLC policy."""
-    commands = sorted(SDLC_TEMPLATES.glob("work-*.md.j2"))
+    commands = sorted(
+        SDLC_TEMPLATES.glob("work-*.md.j2"),
+        key=lambda template: template.relative_to(ROOT).as_posix(),
+    )
     assert {template.name.removesuffix(".md.j2") for template in commands} == PUBLIC_COMMANDS
-    templates = [*commands, *sorted(SDLC_SKILL_TEMPLATES.rglob("*.md.j2"))]
+    templates = [
+        *commands,
+        *sorted(
+            SDLC_SKILL_TEMPLATES.rglob("*.md.j2"),
+            key=lambda template: template.relative_to(ROOT).as_posix(),
+        ),
+    ]
     assert len(templates) == 19
     digest = hashlib.sha256()
     for template in templates:
-        digest.update(template.name.encode())
+        digest.update(template.relative_to(ROOT).as_posix().encode())
         digest.update(b"\0")
         # Normalize checkout line endings so this review guard is stable on Windows.
         digest.update(template.read_text(encoding="utf-8").encode())
@@ -159,7 +169,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "58ff5e85623cc08016682b6245b942db1bf48a9c2e509bbed931823bbe5f9e55"
+        "2b6fae4a2bc1e820dbb094d4e474071f246a852e7b05758a5de00a4eed808cee"
     )
 
 
@@ -189,6 +199,68 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     assert "enabled: false" in memory
     assert "project_id: payments-api" in memory
     assert "Minimal deep-merge override" in memory
+
+
+def test_docs_describe_configurable_tdd_behavior() -> None:
+    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
+    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
+    sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
+    normalized_sdlc = " ".join(sdlc.split())
+
+    assert "`workflow.tdd.enabled`" in configuration
+    assert "default is `false`" in configuration
+    assert "workflow:\n  tdd:\n    enabled: true" in configuration
+    for path in (
+        ".opencode/skills/develop-tdd/SKILL.md",
+        ".pi/skills/develop-tdd/SKILL.md",
+    ):
+        assert path in skills
+    assert "does not delete" in skills
+    assert "existing skill untouched and dormant" in configuration
+    assert "remains dormant" in normalized_sdlc
+    assert "`workflow.tdd.enabled`" in sdlc
+    assert "loads `develop-tdd` before implementation" in normalized_sdlc
+    assert "Red, Green, and Refactor" in normalized_sdlc
+    assert "`work-continue` resumes Build" in normalized_sdlc
+
+
+def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
+    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
+    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
+    guide = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
+    root = (ROOT / "README.md").read_text(encoding="utf-8")
+    normalized = " ".join(guide.split())
+
+    assert "`skills.sdlc-code-index.enabled`" in configuration
+    assert "default is `false`" in configuration
+    assert "`skills.sdlc-code-index.mcp_server`" in configuration
+    assert "reserved `cvs_` prefix" in configuration
+    for path in (
+        ".opencode/skills/sdlc-code-index/SKILL.md",
+        ".pi/skills/sdlc-code-index/SKILL.md",
+    ):
+        assert path in skills
+    assert "byte-equivalent" in skills
+    assert "loads `sdlc-code-index`" in " ".join(skills.split())
+    assert "never deletes it automatically" in " ".join(skills.lower().split())
+    assert "remains active-capable" in skills
+    assert "does not register or run that server" in normalized
+    assert "user-owned under normal, forced, migration, and rollback paths" in normalized
+    assert "advisory retrieval evidence, never source authority" in normalized
+    assert "Glob" in guide and "Grep" in guide
+    assert "load `sdlc-code-index`" in normalized
+    for phrase in (
+        "old top-level `code_index` key",
+        "all `mcp.servers` mappings are rejected",
+        "audit `.opencode/opencode.json` and `.pi/mcp.json` manually",
+        "old provider package may be uninstalled",
+        "separate user-authorized operation",
+        "user-owned",
+    ):
+        assert phrase in normalized
+    assert "harnessctl never projects or manages them" in " ".join(root.split())
+    assert "release-gated on `hrn-00085`" not in root
+    assert "docs/code-intelligence.md" in root
 
 
 def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:

@@ -24,6 +24,12 @@ const httpsInstanceUrl = z
 export const cvsLocalSchema = z.enum(['git', 'jj']);
 export const remoteProviderSchema = z.enum(['github', 'gitlab', 'gitea', 'forgejo']);
 export const mcpOutputLimitModeSchema = z.enum(['bounded-guidance', 'hard']);
+const externalMcpServerNameSchema = z
+  .string()
+  .regex(
+    /^(?!cvs_)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/,
+    'must be 1-64 lowercase ASCII letters, digits, underscores, or hyphens; start and end alphanumeric; cvs_ is reserved',
+  );
 
 const PROVIDER_CONTRACTS = {
   github: { tools: 'gh', url: z.literal('https://github.com') },
@@ -122,6 +128,12 @@ export const configV2Schema = z
     issues: issuesSchema,
     cvs: z.object({ local: cvsLocalSchema, remote: remoteServiceSchema }).strict(),
     mcp: z.object({ output_limit_mode: mcpOutputLimitModeSchema }).strict(),
+    skills: z
+      .object({
+        'sdlc-code-index': z.object({ enabled: z.boolean(), mcp_server: externalMcpServerNameSchema }).strict(),
+      })
+      .strict(),
+    workflow: z.looseObject({ tdd: z.looseObject({ enabled: z.boolean() }) }),
     communication: z
       .object({
         caveman: z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict(),

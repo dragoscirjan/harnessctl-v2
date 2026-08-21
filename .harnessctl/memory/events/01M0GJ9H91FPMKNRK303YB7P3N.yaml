@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M0GJ9H91FPMKNRK303YB7P3N
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00074 | plan | executable Epic plan | approved and persisted
+details: |-
+  Epic: hrn-00074
+  Command/phase: work-plan / plan
+  Item: Configurable TDD capability via workflow.tdd.enabled, default false
+  Done: Exact plan approved; Epic and ordered Tasks hrn-00075, hrn-00076, hrn-00077 created; issue validation passed
+  Decisions: Lightweight embedded design; OpenCode/Pi conditional develop-tdd install; Build-only activation; ownership-aware disable cleanup
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00074
+  revision: null
+created_at: 2026-08-20T21:47:33.025Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - plan
+  - sdlc
+  - tdd

@@ -1,0 +1,12 @@
+schema_version: 1
+id: 01M0K7AMJGWRV6JWH7G0H0JZVK
+organization_id: local
+project_id: project
+target_id: 01M0K43B9Y8T3F3AHGTPNPZXW2
+reason: "Confirmed stale duplicate: describes superseded unreleased code_index/code-index contract before corrective hrn-00084 Plan."
+source:
+  kind: user-confirmed
+  ref: hrn-00084
+  revision: v1:ef1e199db86d90a11fa0984669624327555fc26a343352dc9925cfd9e7870495
+created_at: 2026-08-21T22:33:38.128Z
+created_by: lead-engineer

@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0N81R21ZYC884V15BAH33E7
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00085
+summary: hrn-00085 | build | hrn-00096 provider contract | done
+details: "Epic hrn-00085 Build. hrn-00096 done revision v1:b08609069df7edcddf51e0cc8aea71c5bc638ee0ee5f4bfb997992b3d6d5e942. Strict CodeGraphContext defaults/validation merged provider-first across Python, TypeScript, Zod, generated schema. Validated literal environment mapping added with privacy/safety values; existing CVS projections unchanged. Focused Python 217 and generic config/schema 143 passed; Ruff, Prettier, strict TypeScript, contract drift, git diff check passed. No provider command/install/probe/execution/lifecycle. Next approved dependency: hrn-00097."
+source:
+  kind: artifact
+  ref: hrn-00096
+  revision: v1:b08609069df7edcddf51e0cc8aea71c5bc638ee0ee5f4bfb997992b3d6d5e942
+created_at: 2026-08-22T17:24:44.225Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0K91EJGBXA7JHYRT5ZFTGMN
+tags:
+  - build
+  - codegraphcontext
+  - mcp
+  - privacy
+  - sdlc

@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00080"
+"type": "bug"
+"title": "Enforce TDD when Continue resumes Build"
+"status": "done"
+"created_at": "2026-08-20T22:56:57.242Z"
+"updated_at": "2026-08-21T00:32:27.123Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00074"
+"metadata":
+  "affected_task": "hrn-00077"
+  "discovered_in": "verify"
+"body": "## Defect\n\nGiven `workflow.tdd.enabled: true` and an active checkpoint resumes the Build phase\nWhen the user invokes `work-continue`\nThen Continue can perform implementation without loading `develop-tdd` or requiring observable Red, Green, and Refactor steps.\n\n## Classification\n\nConfirmed product/design defect discovered during independent Verify review. Direct `work-build` activation is correct, but the supported Continue entry point can bypass the Epic's enabled-TDD execution acceptance. Release is blocked.\n\n## Cause\n\nThe generated SDLC registry maps `work-continue` only to `references/continue.md`. Continue may resume Build, but neither the command nor Continue policy loads the specialized Build reference. TDD guidance exists only in the Build reference.\n\n## Scope\n\n- Ensure a Continue operation that resumes Build applies the configured Build policy before implementation.\n- With TDD enabled, load `develop-tdd` and require observable Red, Green, and Refactor steps for the resumed behavior slice.\n- Keep disabled Continue output free of TDD guidance.\n- Leave Plan, Verify, Release, merge policy, and non-Build resumes unchanged.\n- Add focused template, installation, and documentation coverage without broadening the phase model.\n\n## Acceptance\n\n- [ ] Enabled `work-continue` resuming Build loads `develop-tdd` before code changes.\n- [ ] Enabled resumed Build requires observable Red, Green, and Refactor boundaries.\n- [ ] Disabled resumed Build contains no TDD instruction.\n- [ ] Plan, Verify, Release, and non-Build Continue behavior remain unchanged.\n- [ ] Generated OpenCode and Pi Continue behavior is equivalent.\n- [ ] Focused tests, `mise run quality`, and `mise run runtime-smoke` pass.\n\n## Evidence\n\n- `src/harnessctl/templates/skills/sdlc/SKILL.md.j2:8-16`\n- `src/harnessctl/templates/skills/sdlc/references/build.md.j2:9-10`\n- `src/harnessctl/templates/skills/sdlc/references/continue.md.j2:9`\n- `src/harnessctl/templates/sdlc/work-continue.md.j2:3-7`\n- `tests/test_templates.py:223-234`\n- Fresh quality and runtime-smoke gates pass but do not exercise enabled Continue-to-Build activation.\n- No credential, secret, or privacy exposure found."
+"comments":
+  - "id": "hrn-00080-C0001"
+    "created_at": "2026-08-20T23:15:31.078Z"
+    "created_by": "lead-engineer"
+    "body": "Build slice complete; Bug remains in_progress pending formal Verify. Enabled generated Continue policy now loads `references/build.md` before resumed Build implementation, which loads `develop-tdd` and requires observable Red, Green, Refactor. Disabled and non-Build Continue behavior remain free of TDD guidance; Plan/Verify/Release routing is unchanged. OpenCode/Pi generated Continue resources are byte-equivalent. Red tests failed for the missing bridge, then focused template/installer/docs tests passed; affected suite: 215 passed with 8 existing expected migration warnings. `mise run quality` passed: Python 260, Node 181, all configured static/package/release-artifact gates. `git diff --check` passed. Runtime smoke and independent review remain for `work-verify hrn-00074`."
+  - "id": "hrn-00080-C0002"
+    "created_at": "2026-08-21T00:31:42.394Z"
+    "created_by": "lead-engineer"
+    "body": "Verify acceptance passed. Enabled Continue-to-Build loads the compiled Build policy before implementation, which loads `develop-tdd` and requires observable Red, Green, Refactor. Disabled and non-Build Continue remain free of TDD enforcement; Plan/Verify/Release routing is unchanged; OpenCode/Pi resources are byte-equivalent. Fresh `mise run quality`, `mise run runtime-smoke`, temporary-index Changeset status, and independent multi-risk review passed. Bug remains in_progress pending separate closure confirmation."

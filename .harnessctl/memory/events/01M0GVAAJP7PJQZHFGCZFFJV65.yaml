@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GVAAJP7PJQZHFGCZFFJV65
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00082 Changeset added | Verify pending
+details: "Added .changeset/calm-tools-practice-tdd.md selecting @harnessctl/generic-tools patch; summary states opt-in default-disabled workflow.tdd.enabled. No versions, lockfile, adapter package files, or unrelated metadata changed. npx changeset status passes; --since=main passes using temporary index without real staging mutation. Changesets automatically projects adapter patch bumps because exact generic-tools 0.1.6 dependencies require range updates. mise run quality passed: Python 255, Node 181, all configured gates. hrn-00082 remains in_progress; formal Verify pending. No closure, commit, remote, Release, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00082
+  revision: v1:86b69a5aae1db76c606f02b5ccfabbcf0793a0e1382f1184e147a3e5d8b70e54
+created_at: 2026-08-21T00:25:16.118Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GV0S4FY8EDR5DK47VJXV28
+tags:
+  - build
+  - changeset
+  - quality
+  - sdlc
+  - tdd

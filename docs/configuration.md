@@ -21,19 +21,22 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 
 ### Issue and workflow settings
 
-| Key                          | Default                     | Current meaning                                                               |
-| ---------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `version`                    | `2`                         | Configuration contract version                                                |
-| `issues.root`                | `.harnessctl/issues`        | Filesystem-only safe project-relative canonical issue root; ignored remotely  |
-| `issues.prefix`              | `hrn-`                      | Filesystem-only local ID prefix; ignored remotely                             |
-| `issues.type`                | `filesystem`                | `filesystem`, `github`, `gitlab`, `gitea`, or `forgejo`                       |
-| `issues.tools`               | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
-| `issues.remote.url`          | None                        | Required for remote providers; rejected for filesystem                        |
-| `issues.remote.token_env`    | None                        | Required provider token environment-variable name; rejected for filesystem    |
-| `paths.root`                 | `.harnessctl`               | General harnessctl artifact root                                              |
-| `paths.tasks`                | `.harnessctl/tasks`         | Task artifact path                                                            |
-| `paths.reports`              | `.harnessctl/reports`       | Report artifact path                                                          |
-| `workflow.default_task_type` | `bug`                       | Default task classification                                                   |
+| Key                                 | Default                     | Current meaning                                                               |
+| ----------------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `version`                           | `2`                         | Configuration contract version                                                |
+| `issues.root`                       | `.harnessctl/issues`        | Filesystem-only safe project-relative canonical issue root; ignored remotely  |
+| `issues.prefix`                     | `hrn-`                      | Filesystem-only local ID prefix; ignored remotely                             |
+| `issues.type`                       | `filesystem`                | `filesystem`, `github`, `gitlab`, `gitea`, or `forgejo`                       |
+| `issues.tools`                      | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
+| `issues.remote.url`                 | None                        | Required for remote providers; rejected for filesystem                        |
+| `issues.remote.token_env`           | None                        | Required provider token environment-variable name; rejected for filesystem    |
+| `paths.root`                        | `.harnessctl`               | General harnessctl artifact root                                              |
+| `paths.tasks`                       | `.harnessctl/tasks`         | Task artifact path                                                            |
+| `paths.reports`                     | `.harnessctl/reports`       | Report artifact path                                                          |
+| `workflow.default_task_type`        | `bug`                       | Default task classification                                                   |
+| `workflow.tdd.enabled`              | `false`                     | Opt in to generated TDD skill and Build guidance                              |
+| `skills.sdlc-code-index.enabled`    | `false`                     | Opt in to the selected-host SDLC code-index retrieval skill                   |
+| `skills.sdlc-code-index.mcp_server` | `sdlc-code-index`           | External MCP server name compiled into the skill as guidance only             |
 
 The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
 `issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
@@ -57,12 +60,18 @@ cvs:
     token_env: GH_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+skills:
+  sdlc-code-index:
+    enabled: false
+    mcp_server: sdlc-code-index
 paths:
   root: .harnessctl
   tasks: .harnessctl/tasks
   reports: .harnessctl/reports
 workflow:
   default_task_type: bug
+  tdd:
+    enabled: false
 communication:
   caveman:
     enabled: true
@@ -83,6 +92,48 @@ memory:
 ```
 
 Filesystem configuration rejects `issues.remote`.
+
+### SDLC code-index settings
+
+`skills.sdlc-code-index.enabled` is a boolean and its default is `false`.
+`skills.sdlc-code-index.mcp_server` names the externally configured MCP server whose live
+tools the generated skill may use. The name must contain 1 through 64 lowercase ASCII
+characters, start and end with an alphanumeric character, use only alphanumeric
+characters, `_`, or `-` internally, and must not start with the reserved `cvs_` prefix.
+It is guidance only: harnessctl does not create, recognize, remove, install, configure,
+start, probe, index, watch, or otherwise manage that server.
+
+An enabled install generates byte-equivalent `sdlc-code-index` skills for the selected
+OpenCode and Pi hosts. A fresh disabled install writes no code-index skill. If a selected
+host already has the generated path, disabling preserves its exact bytes and warns that
+the discoverable file remains active-capable, including the manual removal path.
+Harnessctl never deletes it automatically. Enabled, disabled, forced, migration, and
+rollback installs leave every existing code-index MCP host entry unchanged.
+
+The superseded top-level `code_index` key and any `mcp.servers` mapping are rejected with
+explicit migration guidance. Move only `enabled` and the intended external server name
+to `skills.sdlc-code-index`; then audit host MCP files manually because their entries are
+user-owned. See [code intelligence](code-intelligence.md) for migration and lifecycle
+boundaries.
+
+### TDD settings
+
+`workflow.tdd.enabled` is a boolean and its default is `false`. The default preserves
+existing Build behavior and does not install a TDD skill. Enable it with a partial
+version 2 override:
+
+```yaml
+workflow:
+  tdd:
+    enabled: true
+```
+
+The setting is applied when harnessctl installs the selected host outputs; changing the
+file does not toggle an already installed skill at runtime. Enabled installs generate
+the canonical `develop-tdd` skill for each selected host and compile TDD instructions
+into Build and Build-resuming Continue. Disabling the setting and reinstalling compiles
+those instructions out but leaves any existing skill untouched and dormant. See
+[generated skills](skills.md) for paths and behavior.
 
 ### Caveman settings
 

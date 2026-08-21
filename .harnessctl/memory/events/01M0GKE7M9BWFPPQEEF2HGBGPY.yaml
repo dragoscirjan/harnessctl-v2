@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0GKE7M9BWFPPQEEF2HGBGPY
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00076 TDD activation implemented | focused checks pass
+details: Branch feat/hrn-00074-configurable-tdd. hrn-00075 done. Canonical develop-tdd packaged; workflow.tdd.enabled conditionally installs OpenCode/Pi skill and compiles Build guidance. Disabled reinstall deletes exact generated files transactionally; divergent content warned/preserved. Templates+installer 200 passed; isolated wheel artifact 1 passed; Ruff and git diff check passed. hrn-00076 remains in_progress; hrn-00077 not started.
+source:
+  kind: artifact
+  ref: hrn-00076
+  revision: v1:a345686de7cbcd12cd911fdefa11fa739ec1bb477467ea080f7d015f1534ce9b
+created_at: 2026-08-20T22:07:35.561Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GJTQH8VEX1ET4KDBT3YMKH
+tags:
+  - build
+  - installer
+  - sdlc
+  - tdd

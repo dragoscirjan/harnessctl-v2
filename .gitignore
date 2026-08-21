@@ -229,3 +229,4 @@ tmp/
 .harnessctl/cache/
 .pi/npm/node_modules/
 .opencode/node_modules/
+/.harnessctl/cache/

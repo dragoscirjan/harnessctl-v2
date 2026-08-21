@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NPKMB909WREDJ99THSPYZD
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00104
+summary: hrn-00104 | plan | opt-in repository intelligence redesign | approved and decomposed
+details: "Initiative hrn-00104 revision v1:5fca1e4cc482ad6d7538fe107f9a0ddcb58062cd5d01127762cf91c05e24f072. Contract: skills.sdlc-code-index enabled=false, mcp_server=sdlc-code-index; skill guidance only; zero code-index host-MCP/provider lifecycle ownership. Implementation Epic hrn-00105 revision v1:8561bcf13acfa6b025d0c7e96e76b68803d371c425c1a4ac91cd0660f606bc82 blocks guide Epic hrn-00103 revision v1:071b07cba266da71319262aab14fadf907401351c463a5644052520e1d4b6af7. Privacy Bug hrn-00102 moved to hrn-00105 and remains in_progress; remediation removes unsafe adapter. hrn-00083 and hrn-00085-00090 closed as superseded; hrn-00084/completed descendants preserved history. No source, tests, provider runtime, Build, Verify, Release, commit, or remote action performed."
+source:
+  kind: artifact
+  ref: hrn-00104
+  revision: v1:5fca1e4cc482ad6d7538fe107f9a0ddcb58062cd5d01127762cf91c05e24f072
+created_at: 2026-08-22T21:39:10.313Z
+created_by: tech-advisor
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - code-index
+  - initiative
+  - mcp
+  - plan
+  - sdlc

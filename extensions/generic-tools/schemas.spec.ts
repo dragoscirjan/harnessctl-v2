@@ -31,6 +31,10 @@ const validConfig = {
     },
   },
   mcp: { output_limit_mode: 'bounded-guidance' },
+  skills: {
+    'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
+  },
+  workflow: { default_task_type: 'bug', tdd: { enabled: false } },
   communication: { caveman: { enabled: true, mode: 'strict' } },
   memory: {
     enabled: true,
@@ -102,6 +106,57 @@ describe('canonical Zod schemas', () => {
       expect(contract.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
       expect(contract.$id).toBe(id);
     }
+  });
+
+  it('enforces the TDD workflow boolean while retaining compatible extension fields', () => {
+    const compatible = {
+      ...validConfig,
+      workflow: {
+        ...validConfig.workflow,
+        custom_policy: 'retained',
+        tdd: { enabled: true, custom_policy: 'retained' },
+      },
+    };
+    const invalid = {
+      ...compatible,
+      workflow: { ...compatible.workflow, tdd: { enabled: 1 } },
+    };
+    expect(configV2Schema.safeParse(compatible).success).toBe(true);
+    expect(configV2Schema.safeParse(invalid).success).toBe(false);
+
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const contract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+    ) as object;
+    const validate = ajv.compile(contract);
+    expect(validate(compatible)).toBe(true);
+    expect(validate(invalid)).toBe(false);
+  });
+
+  it('enforces the provider-neutral code-index skill contract in Zod and JSON Schema', () => {
+    const valid = validConfig;
+    const invalid = [
+      { ...valid, skills: { 'sdlc-code-index': { enabled: 1, mcp_server: 'sdlc-code-index' } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'cvs_github' } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'Index' } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'index-' } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'a'.repeat(65) } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'index', provider: 'graphify' } } },
+      { ...valid, skills: { other: { enabled: false, mcp_server: 'index' } } },
+    ];
+
+    expect(configV2Schema.safeParse(valid).success).toBe(true);
+    for (const config of invalid) expect(configV2Schema.safeParse(config).success).toBe(false);
+
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    addFormats(ajv);
+    const contract = JSON.parse(
+      readFileSync(join(import.meta.dirname, 'contracts', 'config-v2.schema.json'), 'utf8'),
+    ) as object;
+    const validate = ajv.compile(contract);
+    expect(validate(valid)).toBe(true);
+    for (const config of invalid) expect(validate(config)).toBe(false);
   });
 
   it('keeps generated contracts synchronized with canonical Zod schemas', () => {
@@ -319,7 +374,7 @@ describe('canonical Zod schemas', () => {
   });
 
   it('accepts hard output policy in runtime and portable schemas', () => {
-    const document = { ...validConfig, mcp: { output_limit_mode: 'hard' } };
+    const document = { ...validConfig, mcp: { ...validConfig.mcp, output_limit_mode: 'hard' } };
     expect(configV2Schema.safeParse(document).success).toBe(true);
     expect(configContractValidator()(document)).toBe(true);
   });

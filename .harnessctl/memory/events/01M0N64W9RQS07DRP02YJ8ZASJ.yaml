@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0N64W9RQS07DRP02YJ8ZASJ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | Verify defects repaired | quality passes
+details: "Bugs hrn-00099, hrn-00100, hrn-00101 repaired test-first and user-confirmed done. Final revisions: hrn-00099 v1:db1fe821c06ee219288962b9ec60afb2d8c65448f2e56707275c8388c5d6577a; hrn-00100 v1:6fa8746c7a4d0999f56b9d63ce02d8961163458bab5538600c9d1e61d1099711; hrn-00101 v1:50bec63ab55065ef43f0c03fc8191ea464f5f705713e4807acc72abb3203dd22. Repairs protect present null MCP conflicts, align Python/TypeScript duplicate and non-string YAML key rejection with sanitized errors, and dispatch Python structural config through distinct provider validators. `mise run quality` passed: Python 300; generic Node 193; OpenCode 2; Pi 3; release artifacts and all static/package gates. `git diff --check` and issue validation passed. Epic remains open. No runtime smoke, independent Verify rerun, provider adapter, Release, commit, remote, lifecycle, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00084
+  revision: v1:ef1e199db86d90a11fa0984669624327555fc26a343352dc9925cfd9e7870495
+created_at: 2026-08-22T16:51:29.720Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0N5WCKNWE73BRSBKDCTSJ13
+tags:
+  - build
+  - defect-repair
+  - hrn-00084
+  - sdlc

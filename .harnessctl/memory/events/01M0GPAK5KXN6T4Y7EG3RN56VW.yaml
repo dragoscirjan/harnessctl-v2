@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GPAK5KXN6T4Y7EG3RN56VW
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | verify | hrn-00079 recurrence and hrn-00080 block Release | Build selected
+details: "Branch feat/hrn-00074-configurable-tdd. Fresh mise run quality passed: Python 257, Node 181, all configured gates. Fresh mise run runtime-smoke passed all package entrypoints under Node+Bun. Independent review confirmed hrn-00079 final check-to-unlink race and stale marker reclamation; active Bug updated. Confirmed enabled work-continue Build resume bypasses develop-tdd; hrn-00080 created. User selected Build repair both. hrn-00077 and hrn-00079 remain in_progress; hrn-00080 open; Release blocked. No repair, closure, commit, remote, Plan, Build, or Release in Verify."
+source:
+  kind: artifact
+  ref: hrn-00077
+  revision: v1:12554468f6c4b88827e284259b9bdf713c9f99739354fabfd3b2eb475ab8ac2e
+created_at: 2026-08-20T22:58:02.035Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GNQDC0S09ZDYH76J091KXK
+tags:
+  - blocked
+  - continue
+  - installer
+  - tdd
+  - verify

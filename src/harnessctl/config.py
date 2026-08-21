@@ -9,6 +9,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import yaml
+from yaml.constructor import ConstructorError
+from yaml.nodes import MappingNode
 
 FILESYSTEM_ISSUE_TOOLS = (
     "issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,"
@@ -24,6 +26,8 @@ REMOTE_ISSUE_PROVIDERS = {
 }
 CVS_LOCALS = frozenset({"git", "jj"})
 MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
+CODE_INDEX_SKILL_ID = "sdlc-code-index"
+_MCP_SERVER_NAME = re.compile(r"[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?")
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
@@ -43,12 +47,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
     },
     "mcp": {"output_limit_mode": "bounded-guidance"},
+    "skills": {
+        CODE_INDEX_SKILL_ID: {
+            "enabled": False,
+            "mcp_server": CODE_INDEX_SKILL_ID,
+        }
+    },
     "paths": {
         "root": ".harnessctl",
         "tasks": ".harnessctl/tasks",
         "reports": ".harnessctl/reports",
     },
-    "workflow": {"default_task_type": "bug"},
+    "workflow": {"default_task_type": "bug", "tdd": {"enabled": False}},
     "communication": {"caveman": {"enabled": True, "mode": "strict"}},
     "memory": {
         "enabled": False,
@@ -70,6 +80,32 @@ class ConfigError(ValueError):
     """Invalid harnessctl configuration."""
 
 
+class _ConfigLoader(yaml.SafeLoader):
+    """Safe YAML loader that rejects ambiguous or non-string mapping keys."""
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[str, Any]:
+        self.flatten_mapping(node)
+        mapping: dict[str, Any] = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, str):
+                raise ConstructorError(
+                    None,
+                    None,
+                    "mapping keys must be strings",
+                    key_node.start_mark,
+                )
+            if key in mapping:
+                raise ConstructorError(
+                    None,
+                    None,
+                    "duplicate mapping key",
+                    key_node.start_mark,
+                )
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
 def load_config(cwd: Path) -> dict[str, Any]:
     """Load, migrate, and validate project config without mutating it."""
     path = cwd / ".harnessctl/config.yaml"
@@ -80,14 +116,29 @@ def load_config(cwd: Path) -> dict[str, Any]:
     except OSError as error:
         raise ConfigError(f"unable to read {path}: {error}") from error
     try:
-        value = yaml.safe_load(content)
+        value = yaml.load(content, Loader=_ConfigLoader)
     except yaml.YAMLError as error:
-        raise ConfigError(f"unable to read {path}: {error}") from error
+        problem = getattr(error, "problem", None) or "malformed YAML"
+        mark = getattr(error, "problem_mark", None)
+        location = ""
+        if mark is not None:
+            location = f" at line {mark.line + 1}, column {mark.column + 1}"
+        raise ConfigError(f"unable to read {path}: {problem}{location}") from error
     if not isinstance(value, dict):
         raise ConfigError("configuration root must be a YAML mapping")
     version = value.get("version")
     if version not in (None, 1, 2):
         raise ConfigError(f"unsupported configuration version: {version}")
+    if "code_index" in value:
+        raise ConfigError(
+            "code_index is no longer supported; configure skills.sdlc-code-index instead"
+        )
+    source_mcp = value.get("mcp")
+    if isinstance(source_mcp, dict) and "servers" in source_mcp:
+        raise ConfigError(
+            "mcp.servers is no longer supported; configure skills.sdlc-code-index and "
+            "manage external MCP servers in the host configuration"
+        )
     _require_explicit_remote_configuration(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
@@ -145,6 +196,28 @@ def _validate(config: dict[str, Any]) -> None:
     _allowed_keys(mcp, {"output_limit_mode"}, "mcp")
     if mcp.get("output_limit_mode") not in MCP_OUTPUT_LIMIT_MODES:
         raise ConfigError("mcp.output_limit_mode must be bounded-guidance or hard")
+
+    skills = _mapping(config, "skills")
+    _allowed_keys(skills, {CODE_INDEX_SKILL_ID}, "skills")
+    code_index = _mapping(skills, CODE_INDEX_SKILL_ID)
+    namespace = f"skills.{CODE_INDEX_SKILL_ID}"
+    _allowed_keys(code_index, {"enabled", "mcp_server"}, namespace)
+    if not isinstance(code_index.get("enabled"), bool):
+        raise ConfigError(f"{namespace}.enabled must be boolean")
+    mcp_server = code_index.get("mcp_server")
+    if (
+        not isinstance(mcp_server, str)
+        or _MCP_SERVER_NAME.fullmatch(mcp_server) is None
+        or mcp_server.startswith("cvs_")
+    ):
+        raise ConfigError(
+            f"{namespace}.mcp_server must be 1-64 lowercase ASCII letters, digits, "
+            "underscores, or hyphens; start and end alphanumeric; cvs_ is reserved"
+        )
+
+    tdd = _mapping(_mapping(config, "workflow"), "tdd")
+    if not isinstance(tdd.get("enabled"), bool):
+        raise ConfigError("workflow.tdd.enabled must be boolean")
 
     caveman = _mapping(_mapping(config, "communication"), "caveman")
     if not isinstance(caveman.get("enabled"), bool):

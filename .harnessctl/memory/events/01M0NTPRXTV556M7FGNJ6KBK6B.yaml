@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NTPRXTV556M7FGNJ6KBK6B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00107 explicit code-index loading | evidence ready
+details: Bug hrn-00107 in_progress revision v1:b8b8c1bb56cbd8d03a227550c177d5c445ffc7593988bd17a580c135b5751c2d. Core SDLC conditionally loads available sdlc-code-index for relevant relationship-aware retrieval or impact analysis; unavailable/unsuitable fallback uses source, Glob, Grep, reads. Canonical, OpenCode/Pi parity, wheel/sdist, docs covered. Affected suites 249 pass; full quality 309 Python + 202 Node pass; runtime smoke, issue/memory validation, diff check pass. Awaiting separate user closure confirmation. Epic open. No provider, remote, destructive, Verify, Release, commit, or push action.
+source:
+  kind: artifact
+  ref: hrn-00107
+  revision: v1:b8b8c1bb56cbd8d03a227550c177d5c445ffc7593988bd17a580c135b5751c2d
+created_at: 2026-08-22T22:50:47.610Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NRTTAXJ48QHTKA60P9WNC0
+tags:
+  - build
+  - code-index
+  - evidence-ready
+  - sdlc

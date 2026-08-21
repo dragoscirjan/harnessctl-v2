@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NRRBGZ5VAXFXWRBVE7C915
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00106 provider-neutral skill | evidence ready
+details: "Task hrn-00106 remains in_progress pending separate closure confirmation and formal Verify. Neutral mcp_server-only skill, dormant-file warnings, package artifacts, docs, migration, Changeset complete. Quality pass: Python 309; Node 202; release artifacts 2; package/type/lint/format/dead-code/duplication/action/shell/Mermaid gates. Runtime smoke passed Node+Bun. Task/Epic/memory validation and diff check pass. No external provider, remote, release, commit, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00106
+  revision: v1:e8eb3e978ea99921a0d846baa2c72d4de3f523a7520352bf748dae77dce784e6
+created_at: 2026-08-22T22:16:42.271Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NR6TCXKBR57DWQ2CC7EAD6
+tags:
+  - build
+  - code-index
+  - evidence
+  - skill

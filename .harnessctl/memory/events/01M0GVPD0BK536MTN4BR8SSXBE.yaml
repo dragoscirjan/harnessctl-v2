@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M0GVPD0BK536MTN4BR8SSXBE
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | verify | all acceptance and release gates pass | closures pending
+details: "Branch feat/hrn-00074-configurable-tdd. Revised disabled semantics verified: Build/Continue do not load/enforce TDD; fresh disabled installs omit skill; disabled reinstall retains dormant skill bytes; enabled OpenCode/Pi install byte-equivalent canonical skill; Build and Build-resuming Continue enforce Red-Green-Refactor. Python/TS/generated schema/package/docs agree. mise run quality passed: Python 255, Node 181, all configured gates; 8 established migration warnings only. mise run runtime-smoke passed all package entrypoints under Node/Bun. Temporary-index npx changeset status --since=main passed: direct generic-tools patch plus policy-driven adapter patches. Independent multi-risk review found no blocker. hrn-00077 and hrn-00080 acceptance mapped; both remain in_progress pending separate closure consent. Epic remains open. Release must stage intended modified/untracked artifacts. No edit, commit, remote, Release, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00077
+  revision: v1:9d59a1ea8626087a1ede6c2c4657dc0c0f1936a242571e2edcb6b15e730edd44
+created_at: 2026-08-21T00:31:51.819Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GVAAJP7PJQZHFGCZFFJV65
+tags:
+  - changeset
+  - quality
+  - release-ready
+  - runtime-smoke
+  - tdd
+  - verify

@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0GTFPTDBYC7PMJ445HC82AA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00081 cleanup removal complete | Verify pending
+details: "Branch feat/hrn-00074-configurable-tdd. Removed TDD ownership marker, disabled cleanup/warnings/claims, and specialized rollback. Disabled reinstall leaves existing skills untouched/dormant; fresh disabled creates no skill; Build/Continue compile TDD out. Enabled OpenCode/Pi behavior retained. Focused TDD 9 passed; affected Python 211 passed; mise run quality passed: Python 255, Node 181, all configured gates. hrn-00081 remains in_progress; runtime smoke and independent review pending work-verify hrn-00074. No closure, commit, remote, Release, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00081
+  revision: v1:c17d90c19f009b1ffb82a936ef800c9010221c3fa10453c0033fdc9e39ab6c4a
+created_at: 2026-08-21T00:10:43.917Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GT24407JTYR9MQ5HXFG6B5
+tags:
+  - build
+  - quality
+  - sdlc
+  - tdd

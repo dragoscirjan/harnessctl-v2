@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NTT0R5KEZ5JQPVZXZWWFBD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00107 explicit code-index loading | done
+details: User confirmed closure. Bug hrn-00107 done revision v1:00ca03a3cc717e496cb1225173fa0bc203641e2f03137a14eb9e889d9a1517bc. Core SDLC conditionally loads available sdlc-code-index for relevant relationship-aware retrieval or impact analysis; fallback uses source, Glob, Grep, reads. Canonical, live OpenCode/Pi, wheel/sdist, docs covered. Affected suites 249 pass; full quality 309 Python + 202 Node pass; runtime smoke and validations pass. Epic remains open; next formal Verify. No provider, remote, destructive, Release, commit, or push action.
+source:
+  kind: artifact
+  ref: hrn-00107
+  revision: v1:00ca03a3cc717e496cb1225173fa0bc203641e2f03137a14eb9e889d9a1517bc
+created_at: 2026-08-22T22:52:33.925Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NTPRXTV556M7FGNJ6KBK6B
+tags:
+  - build
+  - code-index
+  - done
+  - sdlc

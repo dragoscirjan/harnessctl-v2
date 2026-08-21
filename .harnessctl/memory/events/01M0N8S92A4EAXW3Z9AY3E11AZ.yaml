@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0N8S92A4EAXW3Z9AY3E11AZ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00085
+summary: hrn-00085 | build | CodeGraphContext children complete | quality passes
+details: "Tasks hrn-00096, hrn-00097, hrn-00098 done. Strict CodeGraphContext provider contract and privacy-safe literal env mapping; fixed mise-backed 0.6.5 adapter and ownership-safe reconciliation; retrieval-only skill/docs/artifact integration. Focused: Python adapter/install 222; guidance/docs/artifacts 65. `mise run quality` passed: Python 321, generic Node 202, OpenCode 2, Pi 3, all package/contract/static gates. `git diff --check` and issue/memory validation passed. Operator separately authorized mise lock/install; no MCP start/index/watch/delete. Build performed no Verify runtime handshake, independent review, Release, commit, push, or remote Git action. Epic hrn-00085 remains open pending Verify."
+source:
+  kind: artifact
+  ref: hrn-00098
+  revision: v1:1916c716a250d992b041fc9d35d010d29251999eed5088c102fe271353964d0d
+created_at: 2026-08-22T17:37:35.306Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0N8FEV54ATTE294RPF9KXMG
+tags:
+  - build
+  - codegraphcontext
+  - mcp
+  - quality
+  - sdlc

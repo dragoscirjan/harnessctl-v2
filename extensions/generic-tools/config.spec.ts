@@ -40,13 +40,18 @@ describe('configuration tools', () => {
             token_env: 'GH_TOKEN',
           },
         },
-        mcp: { output_limit_mode: 'bounded-guidance' },
+        mcp: {
+          output_limit_mode: 'bounded-guidance',
+        },
+        skills: {
+          'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
+        },
         paths: {
           root: '.harnessctl',
           tasks: '.harnessctl/tasks',
           reports: '.harnessctl/reports',
         },
-        workflow: { default_task_type: 'bug' },
+        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
         communication: { caveman: { enabled: true, mode: 'strict' } },
         memory: {
           enabled: false,
@@ -101,6 +106,8 @@ describe('configuration tools', () => {
       expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
       expect(getConfigValue(cwd, 'issues.root')).toBe('.harnessctl/issues');
       expect(getConfigValue(cwd, 'issues.prefix')).toBe('hrn-');
+      expect(getConfigValue(cwd, 'skills.sdlc-code-index.enabled')).toBe(false);
+      expect(getConfigValue(cwd, 'skills.sdlc-code-index.mcp_server')).toBe('sdlc-code-index');
       const first = readConfig(cwd);
       if (first instanceof ConfigError) throw first;
       (first.paths as Record<string, unknown>).tasks = 'mutated';
@@ -125,6 +132,9 @@ describe('configuration tools', () => {
         version: 2,
         issues: { root: '.harnessctl/issues', prefix: 'hrn-' },
         paths: { tasks: '.harnessctl/tasks' },
+        mcp: { output_limit_mode: 'bounded-guidance' },
+        skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' } },
+        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
         communication: { caveman: { enabled: true, mode: 'strict' } },
         memory: {
           enabled: true,
@@ -136,6 +146,93 @@ describe('configuration tools', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
+  });
+
+  it.each([true, false])('accepts workflow.tdd.enabled=%s and preserves unknown workflow fields', (enabled) => {
+    expect(
+      readConfigFromText(
+        `version: 2\nworkflow:\n  custom_policy: retained\n  tdd:\n    enabled: ${String(enabled)}\n    custom_policy: retained\n`,
+      ),
+    ).toMatchObject({
+      workflow: {
+        default_task_type: 'bug',
+        custom_policy: 'retained',
+        tdd: { enabled, custom_policy: 'retained' },
+      },
+    });
+  });
+
+  it('rejects a non-boolean workflow.tdd.enabled value', () => {
+    expect(() => readConfigFromText('version: 2\nworkflow:\n  tdd:\n    enabled: 1\n')).toThrow(
+      /workflow\.tdd\.enabled/u,
+    );
+  });
+
+  it.each([
+    'credential: root-secret-value\ncredential: replacement-value\n',
+    'mcp:\n  credential: nested-secret-value\n  credential: replacement-value\n',
+  ])('rejects duplicate YAML mapping keys without exposing submitted values', (yaml) => {
+    let error: unknown;
+    try {
+      readConfigFromText(yaml);
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toBeInstanceOf(ConfigError);
+    expect(String(error)).toMatch(/DUPLICATE_KEY.*line \d+, column \d+/u);
+    expect(String(error)).not.toContain('root-secret-value');
+    expect(String(error)).not.toContain('nested-secret-value');
+    expect(String(error)).not.toContain('replacement-value');
+  });
+
+  it.each(['1: root-value\n', 'mcp:\n  1: nested-value\n'])('rejects non-string YAML mapping keys', (yaml) => {
+    expect(() => readConfigFromText(yaml)).toThrow(ConfigError);
+  });
+
+  it('rejects the unreleased top-level code_index key with migration guidance', () => {
+    expect(() => readConfigFromText('version: 2\ncode_index:\n  provider: graphify\n')).toThrow(
+      /code_index.*skills\.sdlc-code-index/u,
+    );
+  });
+
+  it('defaults to a disabled provider-neutral code-index skill', () => {
+    const config = readConfigFromText('version: 2\n');
+
+    expect(config.mcp).toEqual({ output_limit_mode: 'bounded-guidance' });
+    expect(config.skills).toEqual({
+      'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
+    });
+  });
+
+  it.each(['sdlc-code-index', 'index_2', 'a', 'a-b_c-9'])(
+    'accepts portable external MCP server name %s',
+    (mcpServer) => {
+      expect(
+        readConfigFromText(
+          `version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`,
+        ),
+      ).toMatchObject({
+        skills: { 'sdlc-code-index': { enabled: true, mcp_server: mcpServer } },
+      });
+    },
+  );
+
+  it.each(['A', '-index', 'index-', '_index', 'index_', 'index.server', 'index server', 'cvs_github', 'a'.repeat(65)])(
+    'rejects invalid external MCP server name %s',
+    (mcpServer) => {
+      expect(() =>
+        readConfigFromText(
+          `version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`,
+        ),
+      ).toThrow(/skills\["sdlc-code-index"\]\.mcp_server/u);
+    },
+  );
+
+  it('rejects legacy mcp.servers before default merge', () => {
+    expect(() =>
+      readConfigFromText('version: 2\nmcp:\n  servers:\n    sdlc-code-index:\n      enabled: false\n'),
+    ).toThrow(/mcp\.servers.*skills\.sdlc-code-index/u);
   });
 
   it.each([

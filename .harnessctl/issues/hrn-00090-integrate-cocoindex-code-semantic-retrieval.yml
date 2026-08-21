@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00090"
+"type": "epic"
+"title": "Integrate CocoIndex Code semantic retrieval"
+"status": "closed"
+"created_at": "2026-08-21T20:21:43.281Z"
+"updated_at": "2026-08-22T21:38:28.107Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00083"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "capability": "semantic_retrieval"
+  "estimate": "M"
+  "order": 7
+  "plan_status": "initiative_decomposed"
+  "provider": "cocoindex-code"
+"body": "# Integrate CocoIndex Code semantic retrieval\n\n## Objective\n\nProject CocoIndex Code as a separate incremental semantic-retrieval logical server alongside, not inside, the structural `sdlc-code-index` provider slot.\n\n## Isolated Scope\n\n- During executable Epic planning, select a distinct stable `sdlc-*` server ID and define strict typed defaults for local/full versus cloud/slim mode, telemetry opt-out, path/language filters, pagination, and source environment-variable names.\n- Keep executable command, arguments, fixed ID, target environment names, and credentials code-owned.\n- Map the logical server to the documented operator-installed CocoIndex Code MCP command.\n- Generate exact OpenCode and Pi entries without installing, probing, invoking, initializing, indexing, or operating a daemon.\n- Add semantic search guidance that distinguishes retrieval relevance from structural caller/callee or impact evidence and retains source verification.\n- Document embeddings, telemetry, privacy, data egress, and operator-owned indexing lifecycle.\n\n## Acceptance Direction\n\n- CocoIndex Code is not present in `mcp.servers.sdlc-code-index.providers`.\n- Its distinct logical server has complete schema defaults suitable for install-time configuration.\n- Local defaults require no external model API when the operator selects a documented full local installation.\n- Telemetry behavior and opt-out source environment-variable names are explicit.\n- Tests validate projection and guidance without running initialization, indexing, daemon, or MCP commands.\n- Semantic retrieval is never represented as structural graph evidence.\n\n## Dependencies and Order\n\nDepends on `hrn-00084`; planned after CodeGraphContext.\n\n## Non-Goals\n\n- Do not install CocoIndex Code, embeddings, or daemon dependencies.\n- Do not initialize, refresh, or delete indexes.\n- Do not overload fixed ID `sdlc-code-index`.\n"
+"comments":
+  - "id": "hrn-00090-C0001"
+    "created_at": "2026-08-22T21:38:14.534Z"
+    "created_by": "tech-advisor"
+    "body": "Superseded by consolidated external-provider guide Epic hrn-00103. CocoIndex integration becomes documentation only; harnessctl will not generate or operate its MCP entry."

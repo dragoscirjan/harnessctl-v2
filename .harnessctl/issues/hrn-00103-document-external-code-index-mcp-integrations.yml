@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00103"
+"type": "epic"
+"title": "Document external code-index MCP integrations"
+"status": "open"
+"created_at": "2026-08-22T21:33:10.462Z"
+"updated_at": "2026-08-22T21:37:48.042Z"
+"created_by": "tech-advisor"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00104"
+"depends_on":
+  - "hrn-00105"
+"metadata":
+  "capability": "documentation"
+  "estimate": "M"
+  "order": 3
+  "plan_status": "initiative_decomposed"
+  "risk": "medium"
+"body": "# Document external code-index MCP integrations\n\n## Objective\n\nPublish one consolidated, sourced, versioned guide that helps users integrate external repository-intelligence MCP servers with the provider-neutral `sdlc-code-index` skill without making harnessctl responsible for those runtimes.\n\n## Scope\n\nCover CodeGraphContext, GitNexus, Graphify, Repomix, FastCode, and CocoIndex where current authoritative information is available. For each provider, document:\n\n- Current supported release/source and license constraints.\n- External installation and update procedure owned by the user.\n- OpenCode and Pi MCP configuration examples using a user-selected server name.\n- Mapping that server name to `skills.sdlc-code-index.mcp_server`.\n- Setup, indexing, watch/update, storage, removal, and process lifecycle responsibilities.\n- Credential, source-retention, telemetry, remote-service, model, database, and sandbox/privacy implications.\n- Tool/capability limitations, stale-index risks, and source-verification expectations.\n\nExamples are instructions only. Harnessctl does not execute commands, generate provider entries, probe installations, or claim ownership of external files and processes.\n\n## Acceptance\n\n- The guide follows implementation Epic `hrn-00105` and uses the final strict disabled-by-default skill contract.\n- Commands and configuration examples are sourced against named versions and clearly distinguish verified facts from provider-specific caveats.\n- OpenCode and Pi examples preserve user ownership and explain that `mcp_server` is guidance text, not a host-entry reconciliation key.\n- Every provider section includes licensing, lifecycle, storage/privacy/telemetry, limitations, and removal guidance or explicitly states when reliable information is unavailable.\n- The guide warns users to audit and manually remove prior generated `sdlc-code-index` MCP entries from unreleased builds.\n- Generated skill instructions stay concise and provider-neutral; detailed provider setup remains in documentation.\n- Documentation inventory, links, package artifacts, Changeset metadata, formatting, quality, and independent review pass.\n\n## Dependencies And Order\n\nDepends on `hrn-00105`; the final schema, migration, and zero-host-mutation behavior must be stable first. A separate executable `work-plan hrn-00103` must define research freshness and documentation tasks before Build.\n\n## Non-Goals\n\n- Installing, starting, indexing, probing, testing, or removing provider runtimes on behalf of users.\n- Recommending a default provider runtime.\n- Provider-specific schema fields or generated host MCP configuration.\n- Guaranteeing third-party availability, licensing continuity, privacy, or compatibility beyond cited evidence."
+"comments": []

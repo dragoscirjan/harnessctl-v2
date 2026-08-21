@@ -59,11 +59,18 @@ def _memory_config() -> dict[str, object]:
     return config
 
 
-def _sdlc_context(*, memory_enabled: bool = True) -> dict[str, object]:
+def _sdlc_context(
+    *,
+    memory_enabled: bool = True,
+    tdd_enabled: bool = False,
+    code_index_enabled: bool = True,
+) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
         "retrieval_limit": 3,
         "retrieval_max_chars": 2048,
+        "tdd_enabled": tdd_enabled,
+        "code_index_enabled": code_index_enabled,
     }
 
 
@@ -171,10 +178,23 @@ def test_core_skill_preserves_universal_invariants_and_budget() -> None:
         "Remote and destructive actions need fresh action-specific consent",
         "switch route after attempted mutation",
         "Execute only this command's phase",
+        "When `sdlc-code-index` is available",
+        "relationship-aware codebase retrieval or impact analysis is relevant",
+        "continue with direct source discovery, Glob, Grep, and file reads",
     ):
         assert phrase in normalized
     for field in ("Epic:", "Phase:", "Done:", "Evidence:", "Next:", "Blockers:", "Checkpoint:"):
         assert field in skill
+
+
+def test_core_skill_does_not_load_retained_code_index_when_disabled() -> None:
+    skill = render_skill("sdlc", **_sdlc_context(code_index_enabled=False))
+    normalized = " ".join(skill.split())
+
+    assert "`sdlc-code-index` is disabled" in normalized
+    assert "Do not load a discoverable retained copy" in normalized
+    assert "continue with direct source discovery, Glob, Grep, and file reads" in normalized
+    assert "When `sdlc-code-index` is available" not in normalized
 
 
 @pytest.mark.parametrize("command", COMMANDS)
@@ -217,6 +237,72 @@ def test_checkpoint_reference_compiles_memory_policy_by_configuration() -> None:
     assert "Memory checkpoint unavailable" not in enabled
     assert "Memory checkpoint unavailable" in disabled
     assert "memory_store" not in disabled
+
+
+def test_build_reference_compiles_tdd_policy_by_configuration() -> None:
+    enabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=True))[
+        "references/build.md"
+    ]
+    disabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=False))[
+        "references/build.md"
+    ]
+
+    assert "Load `develop-tdd` before implementation" in enabled
+    assert "Red, Green, and Refactor" in enabled
+    assert "develop-tdd" not in disabled
+    assert "Red, Green, and Refactor" not in disabled
+
+
+def test_continue_reference_compiles_tdd_build_resume_by_configuration() -> None:
+    enabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=True))[
+        "references/continue.md"
+    ]
+    disabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=False))[
+        "references/continue.md"
+    ]
+
+    assert "load `references/build.md` before implementation" in enabled
+    assert "loads `develop-tdd`" in enabled
+    assert "Red, Green, and Refactor" in enabled
+    assert "non-Build resumes" in enabled
+    assert "references/build.md" not in disabled
+    assert "develop-tdd" not in disabled
+    for phase in ("plan", "verify", "release"):
+        assert f"references/{phase}.md" not in enabled
+
+
+def test_develop_tdd_skill_preserves_canonical_cycle_and_rules() -> None:
+    skill = render_skill("develop-tdd")
+
+    for phrase in (
+        "Red-Green-Refactor",
+        "Write failing tests first",
+        "fail for the **right reason**",
+        "minimum code",
+        "No behavior changes",
+        "one test (or a small batch)",
+    ):
+        assert phrase in skill
+
+
+def test_sdlc_code_index_skill_preserves_retrieval_and_authority_boundaries() -> None:
+    skill = render_skill("sdlc-code-index", mcp_server="operator-index")
+
+    for phrase in (
+        "Configured MCP server: `operator-index`",
+        "advisory retrieval evidence, never source authority",
+        "missing, stale, incomplete, or unsuitable",
+        "Glob for file discovery and Grep for exact text search",
+        "Read the source files",
+        "Never invent tool names, parameters, or response fields",
+        "operator owns installation, setup, startup, indexing, watching",
+        "models, credentials, storage, data, and removal",
+        "Do not invoke mutation or deletion operations",
+    ):
+        assert phrase in skill
+    for provider in ("CodeGraphContext", "GitNexus", "Graphify"):
+        assert provider not in skill
+    assert "{{" not in skill
 
 
 def test_phase_references_preserve_rare_but_required_boundaries() -> None:

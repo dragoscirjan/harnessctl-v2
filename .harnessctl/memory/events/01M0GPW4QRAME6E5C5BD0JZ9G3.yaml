@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GPW4QRAME6E5C5BD0JZ9G3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00079 atomic cleanup repair complete | Verify pending
+details: "Branch feat/hrn-00074-configurable-tdd. hrn-00079 repair atomically claims generated TDD skill+marker before private validation/deletion; preserves concurrent public replacements; retires valid stale markers for modified/missing skills; rollback excludes concurrent paths. Red: 4 expected failures across OpenCode/Pi. Green: TDD installer 14 passed; docs 9 passed; mise run quality passed with Python 259 and Node 181 plus configured static/package gates; git diff --check passed. hrn-00079 remains in_progress; runtime smoke and independent review pending work-verify hrn-00074. hrn-00080 remains open and unstarted; Release blocked."
+source:
+  kind: artifact
+  ref: hrn-00079
+  revision: v1:5907f03c4e9cbf9e80e37a4e64b148a970ead6b7d71b3f0ce371f2c1425fc943
+created_at: 2026-08-20T23:07:37.080Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GPAK5KXN6T4Y7EG3RN56VW
+tags:
+  - build
+  - cleanup
+  - quality
+  - sdlc
+  - tdd

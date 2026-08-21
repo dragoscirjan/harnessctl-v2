@@ -12,7 +12,9 @@ from harnessctl.mcp import (
     GITHUB_TOOLSETS,
     GITLAB_MCP_URL,
     OUTPUT_GUARD,
+    ServerIntent,
     deduplicate_server_intents,
+    recognized_server_intents,
     render_opencode_mcp,
     render_pi_mcp,
     required_server_intents,
@@ -106,6 +108,102 @@ def test_local_forge_projection_maps_only_token_name(provider: str) -> None:
     }
 
 
+def test_provider_neutral_local_projection_omits_optional_url_and_empty_environment() -> None:
+    intent = ServerIntent(
+        "sdlc-code-index",
+        "fixture",
+        "local",
+        None,
+        None,
+        "fixture-mcp",
+        ("serve",),
+        False,
+        None,
+        None,
+        ("code-index",),
+    )
+
+    assert intent.server_id == "sdlc-code-index"
+    assert render_opencode_mcp(intent) == {
+        "type": "local",
+        "command": ["fixture-mcp", "serve"],
+    }
+    assert render_pi_mcp(intent) == {
+        "command": "fixture-mcp",
+        "args": ["serve"],
+        "lifecycle": "lazy",
+    }
+
+
+def test_provider_neutral_local_projection_maps_deterministic_environment_names() -> None:
+    intent = ServerIntent(
+        "sdlc-code-index",
+        "fixture",
+        "local",
+        None,
+        None,
+        "fixture-mcp",
+        ("serve",),
+        False,
+        None,
+        None,
+        ("code-index",),
+        (("FIXTURE_TOKEN", "SOURCE_TOKEN"), ("FIXTURE_CACHE", "SOURCE_CACHE")),
+    )
+
+    assert render_opencode_mcp(intent)["environment"] == {
+        "FIXTURE_TOKEN": "{env:SOURCE_TOKEN}",
+        "FIXTURE_CACHE": "{env:SOURCE_CACHE}",
+    }
+    assert render_pi_mcp(intent)["env"] == {
+        "FIXTURE_TOKEN": "${SOURCE_TOKEN}",
+        "FIXTURE_CACHE": "${SOURCE_CACHE}",
+    }
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+def test_external_code_index_skill_generates_no_owned_mcp_intents(harness: str) -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["mcp"] = {"output_limit_mode": "bounded-guidance"}
+    config["skills"] = {"sdlc-code-index": {"enabled": True, "mcp_server": "operator-index"}}
+
+    desired = required_server_intents(config, harness)
+
+    assert all(intent.server_id != "operator-index" for intent in desired)
+    assert all(intent.server_id != "sdlc-code-index" for intent in desired)
+    assert recognized_server_intents(config, harness) == []
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        (("not-uppercase", "SOURCE_TOKEN"),),
+        (("FIXTURE_TOKEN", "not-uppercase"),),
+        (("FIXTURE_TOKEN", "SOURCE_TOKEN"), ("FIXTURE_TOKEN", "OTHER_TOKEN")),
+    ],
+)
+def test_provider_neutral_local_projection_rejects_invalid_environment_bindings(
+    environment: tuple[tuple[str, str], ...],
+) -> None:
+    intent = ServerIntent(
+        "sdlc-code-index",
+        "fixture",
+        "local",
+        None,
+        None,
+        "fixture-mcp",
+        (),
+        False,
+        None,
+        None,
+        ("code-index",),
+        environment,
+    )
+
+    with pytest.raises(ConfigError, match="environment"):
+        render_opencode_mcp(intent)
+
+
 def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
     intent = _intent("github", token_env="GH_TOKEN")
     duplicate = replace(intent, requesting_routes=("issues",))
@@ -158,6 +256,211 @@ def test_owned_conflict_requires_force_and_force_is_narrow(tmp_path: Path) -> No
     assert document["mcpServers"]["operator"] == {}
     assert document["settings"]["operator"] is True
     assert document["settings"]["outputGuard"] == OUTPUT_GUARD
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_owned_entry_switch_requires_force_and_replaces_only_fixed_id(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    old = {"command": ["fixture-old", "serve"]}
+    new = {"command": ["fixture-new", "serve"]}
+    external_raw = (
+        '{"command": [ "operator" ],'
+        '"marker":"__harnessctl_preserved_json_member_0__","weight":1e+02}'
+    )
+    path.write_text(
+        f'{{"operator":true,"{container_name}":'
+        f'{{"sdlc-code-index":{json.dumps(old)},"operator":{external_raw}}}}}',
+        encoding="utf-8",
+    )
+    recognized = {"sdlc-code-index": (old, new)}
+
+    with pytest.raises(FileExistsError, match="sdlc-code-index"):
+        _merge_host_json(
+            path,
+            container_name,
+            {"sdlc-code-index": new},
+            recognized=recognized,
+            force=False,
+        )
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {"sdlc-code-index": new},
+        recognized=recognized,
+        force=True,
+    )
+
+    assert merged is not None
+    document = json.loads(merged)
+    assert document["operator"] is True
+    assert document[container_name] == {
+        "sdlc-code-index": new,
+        "operator": {
+            "command": ["operator"],
+            "marker": "__harnessctl_preserved_json_member_0__",
+            "weight": 100,
+        },
+    }
+    assert external_raw in merged
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_present_null_owned_entry_requires_force(tmp_path: Path, container_name: str) -> None:
+    path = tmp_path / "host.json"
+    expected = {"command": ["fixture-mcp", "serve"]}
+    path.write_text(
+        json.dumps({container_name: {"sdlc-code-index": None}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FileExistsError, match="sdlc-code-index"):
+        _merge_host_json(
+            path,
+            container_name,
+            {"sdlc-code-index": expected},
+            force=False,
+        )
+
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {"sdlc-code-index": expected},
+        force=True,
+    )
+
+    assert merged is not None
+    assert json.loads(merged)[container_name]["sdlc-code-index"] == expected
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_owned_entry_comparison_distinguishes_booleans_from_numbers(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    expected = {"weight": 0}
+    path.write_text(
+        json.dumps({container_name: {"sdlc-code-index": {"weight": False}}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FileExistsError, match="sdlc-code-index"):
+        _merge_host_json(
+            path,
+            container_name,
+            {"sdlc-code-index": expected},
+            force=False,
+        )
+
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {"sdlc-code-index": expected},
+        force=True,
+    )
+
+    assert merged is not None
+    assert json.loads(merged)[container_name]["sdlc-code-index"] == expected
+    assert '"weight": false' not in merged
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_disabled_owned_entry_removes_only_exact_recognized_definition(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    generated = {"command": ["fixture-mcp", "serve"]}
+    external_raw = (
+        '{"command": [ "operator" ],'
+        '"marker":"__harnessctl_preserved_json_member_0__","weight":1e+02}'
+    )
+    path.write_text(
+        f'{{"operator":true,"{container_name}":'
+        f'{{"sdlc-code-index":{json.dumps(generated)},"operator":{external_raw}}}}}',
+        encoding="utf-8",
+    )
+
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {},
+        recognized={"sdlc-code-index": (generated,)},
+        force=False,
+    )
+
+    assert merged is not None
+    document = json.loads(merged)
+    assert document["operator"] is True
+    assert document[container_name] == {
+        "operator": {
+            "command": ["operator"],
+            "marker": "__harnessctl_preserved_json_member_0__",
+            "weight": 100,
+        }
+    }
+    assert external_raw in merged
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_disabled_owned_entry_preserves_and_reports_modified_content(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    generated = {"command": ["fixture-mcp", "serve"]}
+    modified = {"command": ["operator-mcp", "serve"]}
+    original = json.dumps({container_name: {"sdlc-code-index": modified}})
+    path.write_text(original, encoding="utf-8")
+
+    with pytest.warns(UserWarning, match="preserving modified MCP ID sdlc-code-index"):
+        merged = _merge_host_json(
+            path,
+            container_name,
+            {},
+            recognized={"sdlc-code-index": (generated,)},
+            force=False,
+        )
+
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_recognized_entry_comparison_distinguishes_booleans_from_numbers(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    modified = {"weight": False}
+    original = json.dumps({container_name: {"sdlc-code-index": modified}})
+    path.write_text(original, encoding="utf-8")
+
+    with pytest.warns(UserWarning, match="preserving modified MCP ID sdlc-code-index"):
+        merged = _merge_host_json(
+            path,
+            container_name,
+            {},
+            recognized={"sdlc-code-index": ({"weight": 0},)},
+            force=False,
+        )
+
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
+
+
+def test_disabled_recognition_does_not_create_empty_pi_configuration(tmp_path: Path) -> None:
+    path = tmp_path / "mcp.json"
+    generated = {"command": "fixture-mcp", "args": ["serve"], "lifecycle": "lazy"}
+
+    assert (
+        _merge_pi_json(
+            path,
+            [],
+            recognized={"sdlc-code-index": (generated,)},
+            force=False,
+        )
+        is None
+    )
+    assert not path.exists()
 
 
 @pytest.mark.parametrize(

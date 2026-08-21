@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0K7FBJX04B79TW4Q1XC1MKP
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00095 fixed MCP identity | done
+details: "hrn-00094 and hrn-00095 done. Fixed structural MCP ID is sdlc-code-index, shared from canonical config; installer reads only validated mcp.servers.sdlc-code-index. Provider-neutral optional URL/env rendering and exact CVS projections preserved. Inert reconciliation fixtures cover conflict, force switch, exact removal, modified preservation/reporting, unrelated JSON, and rollback. Evidence: MCP projection + installer 190 passed; Ruff/format passed. Next approved item hrn-00093. No compatibility alias, real provider command, or lifecycle operation added."
+source:
+  kind: artifact
+  ref: hrn-00095
+  revision: v1:fa763473f753b799ecb4c48dce52750e9aaf24b7f0b599550b279979a1fe76e0
+created_at: 2026-08-21T22:36:12.765Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K7AMAD246J091EBSVMB1SY
+tags:
+  - build
+  - mcp
+  - reconciliation
+  - sdlc-code-index

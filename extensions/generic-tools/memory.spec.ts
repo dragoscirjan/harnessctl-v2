@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { stringify } from 'yaml';
+import { parseDocument, stringify } from 'yaml';
 import {
   MemoryConflictError,
   MemoryError,
@@ -55,8 +55,9 @@ function fixture(): string {
   const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-memory-'));
   createConfig(cwd);
   const path = join(cwd, '.harnessctl', 'config.yaml');
-  const config = readFileSync(path, 'utf8').replace('enabled: false', 'enabled: true');
-  writeFileSync(path, config, 'utf8');
+  const config = parseDocument(readFileSync(path, 'utf8'));
+  config.setIn(['memory', 'enabled'], true);
+  writeFileSync(path, config.toString(), 'utf8');
   return cwd;
 }
 

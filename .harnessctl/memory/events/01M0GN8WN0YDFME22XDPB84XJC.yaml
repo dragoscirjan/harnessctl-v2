@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GN8WN0YDFME22XDPB84XJC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | verify | hrn-00079 cleanup defect blocks Release | Build repair selected
+details: "Branch feat/hrn-00074-configurable-tdd. Fresh mise run quality passed: Python 254, Node 181, package/static gates. mise run runtime-smoke passed Node+Bun. Independent review and direct reproduction confirmed disabled cleanup deletes byte-identical operator TDD skill because bytes imply ownership; deletion lacks revalidation. hrn-00079 open; user selected Build repair. hrn-00077 remains in_progress. Release blocked."
+source:
+  kind: artifact
+  ref: hrn-00079
+  revision: v1:61739baa36d8a3d446d2472ce0e6fb33b9100a38d962fd5f8c2cec3721244541
+created_at: 2026-08-20T22:39:37.632Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GMMX6A3G2W791HHVF4HAVD
+tags:
+  - defect
+  - installer
+  - ownership
+  - tdd
+  - verify

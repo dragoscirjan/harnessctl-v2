@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0GKVX9K13NS98FP63GC36FD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00074
+summary: hrn-00074 | build | hrn-00077 docs and focused coverage complete | Verify pending
+details: Branch feat/hrn-00074-configurable-tdd. hrn-00075 and hrn-00076 done; hrn-00077 in_progress. Config, host parity/lifecycle, package, and required docs have focused evidence. Python/docs/template/installer/wheel 210 passed; TS config/schema 117 passed; typecheck, Ruff, Prettier, git diff check passed. Full quality and runtime-smoke gates not run; reserved for Verify.
+source:
+  kind: artifact
+  ref: hrn-00077
+  revision: v1:f2236755b6990d7b74616ae620cb5a2d490acc5e7e0514cfb9268df4466a410c
+created_at: 2026-08-20T22:15:03.731Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0GKE7M9BWFPPQEEF2HGBGPY
+tags:
+  - build
+  - docs
+  - sdlc
+  - tdd
+  - verification-pending

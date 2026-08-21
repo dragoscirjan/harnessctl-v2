@@ -15,6 +15,8 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
 - [Issues](issues.md): canonical filesystem workflow and remote CLI/MCP capabilities.
 - [CVS and MCP providers](cvs.md): Git/Jujutsu, per-operation remote capability selection, generated
   OpenCode/Pi configuration, consent, and security boundaries.
+- [Code intelligence](code-intelligence.md): opt-in external MCP retrieval, source
+  authority, fallback, migration, and user-owned lifecycle boundaries.
 
 ## Authority and status
 

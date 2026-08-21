@@ -1,0 +1,19 @@
+"version": 1
+"id": "hrn-00078"
+"type": "bug"
+"title": "Make memory test fixture enable memory explicitly"
+"status": "done"
+"created_at": "2026-08-20T22:24:13.102Z"
+"updated_at": "2026-08-20T22:29:55.356Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00074"
+"metadata":
+  "affected_task": "hrn-00077"
+  "discovered_in": "verify"
+"body": "## Defect\n\nGiven `DEFAULT_CONFIG` now emits `workflow.tdd.enabled: false` before `memory.enabled: false`\nWhen `memory.spec.ts` enables memory by replacing the first `enabled: false`\nThen it enables TDD instead, leaves memory disabled, and five cache assertions fail.\n\n## Classification\n\nDeterministic change-related test-fixture defect. Production memory/cache files are unchanged. Full quality and Release are blocked until repaired and reverified.\n\n## Scope\n\n- Make the memory test fixture enable `memory.enabled` explicitly without depending on YAML key order.\n- Do not alter production behavior unless new evidence requires replanning.\n\n## Acceptance\n\n- [ ] `extensions/generic-tools/memory.spec.ts` passes all 20 tests.\n- [ ] `mise run quality` passes.\n- [ ] Fixture remains correct when another feature adds an `enabled` key before memory configuration.\n\n## Evidence\n\n- `extensions/generic-tools/memory.spec.ts:54-60`\n- `extensions/generic-tools/config.ts:39-48`\n- `npx vitest run extensions/generic-tools/memory.spec.ts --config vitest.config.ts`: 5 failed, 15 passed.\n- `mise run quality`: failed in the same five tests; Python 254 passed and TDD config/schema tests passed."
+"comments":
+  - "id": "hrn-00078-C0001"
+    "created_at": "2026-08-20T22:28:36.264Z"
+    "created_by": "lead-engineer"
+    "body": "Build repair complete on `feat/hrn-00074-configurable-tdd`. `memory.spec.ts` now parses generated YAML and sets `memory.enabled` by explicit path, independent of earlier unrelated `enabled` keys; production code is unchanged. Acceptance evidence: targeted memory suite 20/20 passed; `mise run quality` passed, including Python 254 tests and Node 181 tests; `git diff --check` passed. Bug remains `in_progress`; no closure transition requested. Formal runtime smoke and independent review remain for `work-verify hrn-00074`."
