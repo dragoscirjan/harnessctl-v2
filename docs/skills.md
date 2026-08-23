@@ -6,13 +6,14 @@ boundary. Tool availability comes from separately loaded host adapters.
 
 ## Current implementation
 
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers seven
+[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers eight
 skill templates.
 
 | Skill           | Configuration                                           | Installation                                                | Purpose                                                              |
 | --------------- | ------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
 | Caveman         | `communication.caveman.enabled` and `mode`              | OpenCode when enabled; always `.pi/skills/caveman/SKILL.md` | Concise communication without losing exact technical substance       |
 | SDLC code index | `skills.sdlc-code-index`                                | Each selected harness only when enabled                     | Relationship-aware retrieval with source verification and fallback   |
+| SDLC code       | None                                                    | Always under each selected harness's `skills/` directory    | Build-only clean-code policy plus conditional ecosystem references   |
 | Memory          | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; always `.pi/skills/memory/SKILL.md`  | Safe retrieval and persistence of curated repository knowledge       |
 | Issue tracking  | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance           |
 | CVS             | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
@@ -25,14 +26,36 @@ therefore remain available even when memory is disabled. Older local plugin shim
 retired. The memory skill receives only compiled retrieval limits and repository root,
 not the whole configuration.
 
+`sdlc-code` is always installed as byte-equivalent OpenCode and Pi trees containing one
+generic policy and 26 bundled references. Build loads the root once, then reads only
+references relevant to the confirmed files and repository context. Explicit repository
+policy and approved scope take precedence, followed by detected runtime, compiler,
+framework, version, and existing-tool constraints; ecosystem references and generic
+defaults apply only when higher-priority evidence is silent. Named tools are alternatives,
+not cumulative installation requirements, and no dependency or configuration is added
+unless the approved task requires it.
+
+Dispatch uses file content, manifests, lockfiles, tool configuration, shebangs, and
+embedded-language declarations rather than extension alone. Ambiguous `.h` and `.sh`
+files require repository evidence. TSX combines TypeScript with React guidance only when
+React is established; Vue and Svelte select JavaScript or TypeScript from their script
+declarations. Documentation, data, configuration, markup, styles, and IaC receive only
+relevant guidance, not class-oriented rules by default. Harnessctl neither depends on nor
+modifies global skills under `~/.config/opencode`.
+
+GDScript dispatch uses `.gd` files plus Godot project evidence such as `project.godot` and
+the supported engine version. Its overlay treats GDScript as distinct from Python, preserves
+Godot lifecycle and resource ownership semantics, and follows existing diagnostics and test
+tooling rather than installing a new Godot toolchain.
+
 TDD is disabled by default. When enabled, OpenCode and Pi receive byte-equivalent
 canonical skills at `.opencode/skills/develop-tdd/SKILL.md` and
 `.pi/skills/develop-tdd/SKILL.md`. Build guidance then loads `develop-tdd` before
 implementation and requires observable Red, Green, and Refactor steps. No TDD skill or
 instruction is generated on a fresh disabled install. Disabling TDD does not delete,
 modify, warn about, or track ownership of an existing skill. A skill left by an earlier
-enabled install remains available for manual use but is dormant: generated Build and
-Build-resuming Continue guidance neither loads nor enforces it.
+enabled install remains available for manual use but is dormant: the Build reference
+still loads `sdlc-code`, but its compiled policy does not load or enforce `develop-tdd`.
 
 SDLC code indexing is disabled by default. Enabled OpenCode and Pi selections receive
 byte-equivalent canonical skills at `.opencode/skills/sdlc-code-index/SKILL.md` and

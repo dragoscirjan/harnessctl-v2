@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M0Q7MEQX91Y9QK993PD3VAEJ
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00115 | Plan | executable Epic plan | approved and issue set validated
+details: "Standalone Epic approved. Children: hrn-00116 -> hrn-00117 -> hrn-00118. Architecture: portable always-installed sdlc-code root plus bundled lazy language references; Build/Continue-to-Build activation; repository policy and detected compatibility precede overlays and generic defaults. No blockers. No Build, Verify, or Release performed. Next recommended: work-build hrn-00115."
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00115
+  revision: v1:a420071ef9c6fd666f3e18fbe473fb23fbbe717a8ee858f2c272ad2dc05dfe22
+created_at: 2026-08-23T11:55:57.565Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00115
+  - sdlc
+  - sdlc-code
+  - work-plan

@@ -133,6 +133,15 @@ def test_rendered_prompts_share_the_canonical_body() -> None:
 
 
 @pytest.mark.parametrize("command", TEMPLATES)
+def test_opencode_prompts_separate_frontmatter_from_body(command: str) -> None:
+    opencode = render_prompt(command, "opencode")
+    pi = render_prompt(command, "pi")
+
+    assert "\n---\n\n# Work " in opencode
+    assert opencode.endswith(pi)
+
+
+@pytest.mark.parametrize("command", TEMPLATES)
 def test_enabled_memory_does_not_claim_unverified_completion(command: str) -> None:
     assert command in TEMPLATES
     rendered = render_skill("sdlc", **_sdlc_context(memory_enabled=True))
@@ -158,8 +167,10 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     write_pinned_pi_adapter(tmp_path)
     installed = install(tmp_path, "all")
 
-    resource_count = len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + 1
-    assert len(installed) == len(TEMPLATES) * 2 + 9 + resource_count * 2
+    skill_tree_count = sum(
+        len(SKILL_RESOURCE_TEMPLATES[skill]) + 1 for skill in ("sdlc", "sdlc-code")
+    )
+    assert len(installed) == len(TEMPLATES) * 2 + 9 + skill_tree_count * 2
     for command in TEMPLATES:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
         assert (tmp_path / f".pi/prompts/{command}.md").exists()
@@ -175,6 +186,10 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     assert opencode_sdlc == pi_sdlc
     assert b"`sdlc-code-index` is disabled" in opencode_sdlc
     assert b"Do not load a discoverable retained copy" in opencode_sdlc
+    assert _tree_manifest(tmp_path / ".opencode/skills/sdlc-code") == _tree_manifest(
+        tmp_path / ".pi/skills/sdlc-code"
+    )
+    assert len(SKILL_RESOURCE_TEMPLATES["sdlc-code"]) == 26
 
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
@@ -408,7 +423,7 @@ def test_disabled_tdd_is_absent_from_fresh_install(tmp_path: Path) -> None:
     )
     assert "develop-tdd" not in build
     assert "Red, Green, and Refactor" not in build
-    assert "references/build.md" not in continue_policy
+    assert "references/build.md" in continue_policy
     assert "develop-tdd" not in continue_policy
 
 
@@ -1322,7 +1337,9 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> None:
     installed = install(tmp_path, "opencode")
 
-    assert len(installed) == 10 + len(SKILL_RESOURCE_TEMPLATES["sdlc"])
+    assert len(installed) == (
+        11 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + len(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
+    )
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
@@ -1364,24 +1381,49 @@ def test_all_install_produces_byte_equivalent_sdlc_skill_trees(tmp_path: Path) -
     assert _tree_manifest(opencode) == _tree_manifest(pi)
 
 
-def test_nested_sdlc_resource_conflict_and_force_are_transactional(tmp_path: Path) -> None:
-    target = tmp_path / ".opencode/skills/sdlc/references/checkpoint.md"
+def test_committed_sdlc_code_trees_match_current_installer_render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    config = load_config(project_root)
+    monkeypatch.setattr("harnessctl.install.load_config", lambda _root: config)
+    write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, "all")
+
+    for host_path in (".opencode/skills/sdlc-code", ".pi/skills/sdlc-code"):
+        assert _tree_manifest(project_root / host_path) == _tree_manifest(tmp_path / host_path)
+
+
+@pytest.mark.parametrize(
+    ("skill", "reference", "heading"),
+    (("sdlc", "checkpoint.md", "# Workflow checkpoint"), ("sdlc-code", "py.md", "# Python")),
+)
+def test_nested_skill_resource_conflict_and_force_are_transactional(
+    tmp_path: Path, skill: str, reference: str, heading: str
+) -> None:
+    target = tmp_path / f".opencode/skills/{skill}/references/{reference}"
     target.parent.mkdir(parents=True)
     target.write_bytes(b"operator checkpoint\x00")
     before = _tree_manifest(tmp_path)
 
-    with pytest.raises(FileExistsError, match="checkpoint.md"):
+    with pytest.raises(FileExistsError, match=reference):
         install(tmp_path, "opencode")
     assert _tree_manifest(tmp_path) == before
 
     install(tmp_path, "opencode", force=True)
-    assert target.read_text(encoding="utf-8").startswith("# Workflow checkpoint")
+    assert target.read_text(encoding="utf-8").startswith(heading)
 
 
-def test_nested_sdlc_resource_symlink_is_rejected_without_mutation(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("skill", "reference"), (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md"))
+)
+def test_nested_skill_resource_symlink_is_rejected_without_mutation(
+    tmp_path: Path, skill: str, reference: str
+) -> None:
     referent = tmp_path / "operator-checkpoint.md"
     referent.write_bytes(b"operator checkpoint\n")
-    target = tmp_path / ".opencode/skills/sdlc/references/checkpoint.md"
+    target = tmp_path / f".opencode/skills/{skill}/references/{reference}"
     target.parent.mkdir(parents=True)
     target.symlink_to(referent)
     before = _tree_manifest(tmp_path)
@@ -1393,18 +1435,21 @@ def test_nested_sdlc_resource_symlink_is_rejected_without_mutation(tmp_path: Pat
     assert referent.read_bytes() == b"operator checkpoint\n"
 
 
-def test_nested_sdlc_resource_failure_restores_exact_tree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    ("skill", "reference"), (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md"))
+)
+def test_nested_skill_resource_failure_restores_exact_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skill: str, reference: str
 ) -> None:
     before = _tree_manifest(tmp_path)
     original_write = install_module.write_atomic
 
-    def fail_on_checkpoint(target: Path, content: str) -> None:
-        if target.as_posix().endswith("/sdlc/references/checkpoint.md"):
+    def fail_on_reference(target: Path, content: str) -> None:
+        if target.as_posix().endswith(f"/{skill}/references/{reference}"):
             raise OSError("injected nested resource failure")
         original_write(target, content)
 
-    monkeypatch.setattr(install_module, "write_atomic", fail_on_checkpoint)
+    monkeypatch.setattr(install_module, "write_atomic", fail_on_reference)
     with pytest.raises(OSError, match="injected nested resource failure"):
         install(tmp_path, "opencode")
 

@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00116"
+"type": "task"
+"title": "Author the canonical sdlc-code policy and conditional references"
+"status": "done"
+"created_at": "2026-08-23T11:54:08.015Z"
+"updated_at": "2026-08-23T12:10:35.021Z"
+"created_by": "OpenCode"
+"parent": "hrn-00115"
+"metadata":
+  "estimate": "M"
+  "order": 1
+"body": "# Author the canonical sdlc-code policy and conditional references\n\n## Objective\n\nCreate the portable generic coding policy and dependency-free conditional references approved by Epic `hrn-00115`.\n\n## Scope\n\n- Adapt relevant readability, simplicity, design, error-handling, and quality principles from the audited `clean-code` skill.\n- Add repository-policy, compatibility, existing-tooling, and relevance precedence.\n- Define detection using target files, extensions, shebangs, manifests, embedded-language declarations, and repository evidence.\n- Classify all 25 audited `lang-*` subjects as language, framework, shell, artifact, data/configuration, documentation, or IaC references.\n- Preserve useful ecosystem-specific safety and idioms while replacing unconditional versions and tools with compatibility-aware defaults.\n- Define multi-reference dispatch for TSX, JSX, Vue, Svelte, and other composite contexts.\n\n## Acceptance Criteria\n\n- Every audited source skill is mapped to a bundled reference or explicitly excluded with rationale.\n- Root guidance loads generic policy once and reads only relevant references.\n- References contain no backlink requiring another skill.\n- Repository policy and detected compatibility constraints override generic or ecosystem defaults.\n- Tool alternatives include selection criteria and never imply cumulative installation.\n- Documentation/data/configuration/IaC references do not inherit irrelevant class-oriented rules.\n- Ambiguous `.h`, `.sh`, embedded scripts, and similar cases require contextual evidence.\n\n## Dependencies And Estimate\n\nFirst Epic Task; no dependency. Estimate `M`.\n\n## Non-Goals\n\nNo renderer, installer, Build hook, global-skill mutation, dependency installation, HLD, or LLD work."
+"comments":
+  - "id": "hrn-00116-C0001"
+    "created_at": "2026-08-23T12:08:18.112Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented under `src/harnessctl/templates/skills/sdlc-code/`: one root policy plus 25 one-to-one conditional references. Evidence: exact inventory, dispatch mapping, Jinja parse, newline, dependency/backlink, compatibility wording, and React evidence checks passed; `uv run pytest tests/test_templates.py` passed 53 tests; independent review approved after JSX/TSX dispatch fixes. Task remains `in_progress` pending explicit completion transition. No renderer, installer, Build hook, docs, Changeset, Verify, Release, commit, remote, destructive, or global-skill work performed."

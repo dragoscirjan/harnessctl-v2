@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0Q8GDJFB2Y8360CPQ7C3QFG
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00115 | Build | hrn-00116 | done
+details: "Authored `src/harnessctl/templates/skills/sdlc-code/SKILL.md.j2` plus 25 dependency-free conditional references. Exact inventory, dispatch, Jinja, newline, backlink, compatibility, and React-evidence checks passed. `uv run pytest tests/test_templates.py`: 53 passed. Independent review: no findings after JSX/TSX evidence fix. User confirmed hrn-00116 transition to done. hrn-00117 not started. No Verify, Release, commit, remote, destructive, installer, Build-hook, docs, Changeset, or global-skill work."
+source:
+  kind: artifact
+  ref: hrn-00116
+  revision: v1:272d0313c28a07fd6825f552187239aff86330d2bfebdb0da56023baeb2fd5a3
+created_at: 2026-08-23T12:11:13.871Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00115
+  - hrn-00116
+  - sdlc
+  - sdlc-code
+  - work-build

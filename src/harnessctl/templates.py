@@ -73,6 +73,7 @@ DESCRIPTIONS = {
 }
 SKILL_TEMPLATES = {
     "caveman": "skills/caveman/SKILL.md.j2",
+    "sdlc-code": "skills/sdlc-code/SKILL.md.j2",
     "sdlc-code-index": "skills/sdlc-code-index/SKILL.md.j2",
     "cvs": "skills/cvs/SKILL.md.j2",
     "develop-tdd": "skills/develop-tdd/SKILL.md.j2",
@@ -81,6 +82,34 @@ SKILL_TEMPLATES = {
     "sdlc": "skills/sdlc/SKILL.md.j2",
 }
 SKILL_RESOURCE_TEMPLATES = {
+    "sdlc-code": {
+        "references/cpp.md": "skills/sdlc-code/references/cpp.md.j2",
+        "references/cs.md": "skills/sdlc-code/references/cs.md.j2",
+        "references/css.md": "skills/sdlc-code/references/css.md.j2",
+        "references/ex.md": "skills/sdlc-code/references/ex.md.j2",
+        "references/fish.md": "skills/sdlc-code/references/fish.md.j2",
+        "references/gdscript.md": "skills/sdlc-code/references/gdscript.md.j2",
+        "references/go.md": "skills/sdlc-code/references/go.md.j2",
+        "references/html.md": "skills/sdlc-code/references/html.md.j2",
+        "references/java.md": "skills/sdlc-code/references/java.md.j2",
+        "references/js.md": "skills/sdlc-code/references/js.md.j2",
+        "references/json.md": "skills/sdlc-code/references/json.md.j2",
+        "references/jsx.md": "skills/sdlc-code/references/jsx.md.j2",
+        "references/lua.md": "skills/sdlc-code/references/lua.md.j2",
+        "references/md.md": "skills/sdlc-code/references/md.md.j2",
+        "references/ps1.md": "skills/sdlc-code/references/ps1.md.j2",
+        "references/py.md": "skills/sdlc-code/references/py.md.j2",
+        "references/rs.md": "skills/sdlc-code/references/rs.md.j2",
+        "references/sh.md": "skills/sdlc-code/references/sh.md.j2",
+        "references/svelte.md": "skills/sdlc-code/references/svelte.md.j2",
+        "references/swift.md": "skills/sdlc-code/references/swift.md.j2",
+        "references/tf.md": "skills/sdlc-code/references/tf.md.j2",
+        "references/ts.md": "skills/sdlc-code/references/ts.md.j2",
+        "references/tsx.md": "skills/sdlc-code/references/tsx.md.j2",
+        "references/vue.md": "skills/sdlc-code/references/vue.md.j2",
+        "references/yaml.md": "skills/sdlc-code/references/yaml.md.j2",
+        "references/zig.md": "skills/sdlc-code/references/zig.md.j2",
+    },
     "sdlc": {
         "references/plan.md": "skills/sdlc/references/plan.md.j2",
         "references/plan-initiative.md": "skills/sdlc/references/plan-initiative.md.j2",
@@ -95,7 +124,7 @@ SKILL_RESOURCE_TEMPLATES = {
         "references/continue.md": "skills/sdlc/references/continue.md.j2",
         "references/continue-reconcile.md": "skills/sdlc/references/continue-reconcile.md.j2",
         "references/checkpoint.md": "skills/sdlc/references/checkpoint.md.j2",
-    }
+    },
 }
 
 
@@ -119,7 +148,7 @@ def render_prompt(
     context = _render_context(command, harness, config)
     body = environment.get_template(template_name).render(**context).rstrip("\n") + "\n"
     if harness == "opencode":
-        return f"---\ndescription: {DESCRIPTIONS[command]}\n---\n" + body
+        return f"---\ndescription: {DESCRIPTIONS[command]}\n---\n\n" + body
     if harness == "pi":
         return body
     raise ValueError(f"unsupported harness: {harness}")

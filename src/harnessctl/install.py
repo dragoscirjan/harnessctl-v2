@@ -167,6 +167,13 @@ def install(
         _append_skill_tree(
             rendered_targets,
             root,
+            OPENCODE_SKILLS / "sdlc-code",
+            "sdlc-code",
+            {},
+        )
+        _append_skill_tree(
+            rendered_targets,
+            root,
             OPENCODE_SKILLS / "sdlc",
             "sdlc",
             sdlc_context,
@@ -240,6 +247,13 @@ def install(
                 (_target(root, OPENCODE_SKILLS / CODE_INDEX_SKILL), code_index_skill_content)
             )
     if harness in ("pi", "all"):
+        _append_skill_tree(
+            rendered_targets,
+            root,
+            Path(".pi/skills/sdlc-code"),
+            "sdlc-code",
+            {},
+        )
         _append_skill_tree(
             rendered_targets,
             root,
@@ -1041,7 +1055,7 @@ def _smoke_check_pi(
     actual_commands = {path.stem for path in command_directory.glob("*.md") if path.is_file()}
     if not set(COMMANDS) <= actual_commands:
         raise RuntimeError("Pi command smoke check failed")
-    for skill in ("cvs", "issue-tracking", "caveman", "memory", "sdlc"):
+    for skill in ("cvs", "issue-tracking", "caveman", "memory", "sdlc", "sdlc-code"):
         skill_path = _target(root, Path(f".pi/skills/{skill}/SKILL.md"))
         if not skill_path.is_file():
             raise RuntimeError(f"Pi {skill} skill smoke check failed")
@@ -1239,6 +1253,13 @@ def _smoke_check(root: Path, *, check_memory: bool, check_tdd: bool) -> None:
     ):
         if not (root / OPENCODE_SKILLS / "sdlc" / relative).is_file():
             raise RuntimeError(f"OpenCode SDLC resource smoke check failed: {relative}")
+
+    sdlc_code_skill = root / OPENCODE_SKILLS / "sdlc-code/SKILL.md"
+    if not sdlc_code_skill.is_file():
+        raise RuntimeError("OpenCode sdlc-code skill smoke check failed")
+    for relative in render_skill_resources("sdlc-code"):
+        if not (root / OPENCODE_SKILLS / "sdlc-code" / relative).is_file():
+            raise RuntimeError(f"OpenCode sdlc-code resource smoke check failed: {relative}")
 
     if check_tdd and not (root / OPENCODE_SKILLS / TDD_SKILL).is_file():
         raise RuntimeError("OpenCode develop-tdd skill smoke check failed")

@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-00119"
+"type": "bug"
+"title": "Fix generated OpenCode command frontmatter formatting"
+"status": "done"
+"created_at": "2026-08-23T12:50:53.782Z"
+"updated_at": "2026-08-23T13:20:47.860Z"
+"created_by": "OpenCode"
+"parent": "hrn-00115"
+"metadata":
+  "severity": "medium"
+  "source": "work-verify hrn-00115"
+"body": "# Fix generated OpenCode command frontmatter formatting\n\n## Defect\n\nGenerated OpenCode commands omit the blank line between YAML frontmatter and the Markdown heading. Prettier rejects all five committed `work-*` commands, so the full repository quality gate fails.\n\n## Evidence\n\n- `src/harnessctl/templates.py:150` joins the closing frontmatter delimiter directly to the rendered command body.\n- `.opencode/commands/work-build.md`, `work-continue.md`, `work-plan.md`, `work-release.md`, and `work-verify.md` each lost the separator line after installer regeneration.\n- `mise run quality` failed in `node-format` on exactly those five files during `work-verify hrn-00115`.\n- Existing renderer coverage checks command body parity but does not enforce valid frontmatter spacing.\n\n## Impact\n\nEpic `hrn-00115` cannot pass Verify or proceed to Release. Regenerating commands through the supported installer produces repository-format-invalid output.\n\n## Likely Cause\n\nThe OpenCode command wrapper in `src/harnessctl/templates.py` ends with one newline instead of the blank-line separator expected by the repository Markdown formatter.\n\n## Acceptance Criteria\n\n- OpenCode command rendering emits valid YAML frontmatter followed by the repository-required blank line.\n- All five repository-local `.opencode/commands/work-*.md` files are regenerated from the corrected renderer.\n- A structural regression test fails if frontmatter and command body are not separated correctly.\n- Focused renderer/installer checks, full `mise run quality`, and `git diff --check` pass.\n- Pi command behavior and command semantics remain unchanged.\n\n## Boundaries\n\nCorrect only renderer formatting, generated outputs, and focused regression coverage. Do not change command semantics, Epic architecture, global skills, or enter Release."
+"comments":
+  - "id": "hrn-00119-C0001"
+    "created_at": "2026-08-23T12:59:09.963Z"
+    "created_by": "OpenCode"
+    "body": "Build fix implemented. `src/harnessctl/templates.py` now emits a blank line after OpenCode YAML frontmatter; all five `.opencode/commands/work-*.md` outputs restored; all-command structural test preserves Pi/body parity. Evidence: 6 focused renderer tests passed; repository Prettier passed; focused Ruff check/format passed; `git diff --check` passed. Independent review approved with no code findings. Status remains in_progress because acceptance requires fresh full `mise run quality`, reserved for Verify by approved Build boundary."
+  - "id": "hrn-00119-C0002"
+    "created_at": "2026-08-23T13:20:35.183Z"
+    "created_by": "OpenCode"
+    "body": "Verify passed. Fresh `mise run quality` completed successfully: Python 349 passed with 8 expected migration warnings; core Node 197 passed; OpenCode adapter 2 passed; Pi adapter 3 passed; format/lint/type/package/artifact/runtime checks passed. `git diff --check` passed. Independent final review found no issues and mapped frontmatter formatting, all five generated commands, structural regression coverage, Pi/body parity, and unchanged command semantics. User confirmed `in_progress -> done`."

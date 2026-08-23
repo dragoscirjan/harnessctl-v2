@@ -186,7 +186,7 @@ def test_pi_install_adds_specialized_issue_skill(
         "github", "gh", "https://github.com", "GH_TOKEN"
     )
     assert not (tmp_path / ".opencode").exists()
-    assert len(list(tmp_path.rglob("SKILL.md"))) == 5
+    assert len(list(tmp_path.rglob("SKILL.md"))) == 6
 
 
 def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> None:

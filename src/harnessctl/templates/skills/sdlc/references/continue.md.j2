@@ -8,6 +8,4 @@ Validate checkpoint against current issue hierarchy/status, specs/plans, source/
 
 Resume exactly one current Plan/Build/Verify/Release phase and one confirmed next step. Record public command `work-continue` plus resumed phase. After step, verify/checkpoint only that result; stop with same-phase recommendation or separate next command. Pending Next enters checkpoint only after confirmation. Never execute next step or combine phases.
 
-{% if tdd_enabled %}
-When `work-continue` resumes Build, load `references/build.md` before implementation and follow it as current phase policy. Its compiled TDD rule loads `develop-tdd` and requires observable Red, Green, and Refactor boundaries. Do not apply this rule to non-Build resumes.
-{% endif %}
+When `work-continue` resumes Build, load `references/build.md` before implementation and follow it as current phase policy, including its compiled coding and optional TDD rules. Do not apply this rule to non-Build resumes.

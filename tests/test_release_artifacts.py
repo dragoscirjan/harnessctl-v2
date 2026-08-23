@@ -143,6 +143,18 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         )
         == 13
     )
+    assert "templates/skills/sdlc-code/SKILL.md.j2" in expected_resources
+    assert (
+        len(
+            {
+                path
+                for path in expected_resources
+                if path.startswith("templates/skills/sdlc-code/references/")
+                and path.endswith(".md.j2")
+            }
+        )
+        == 26
+    )
     assert "templates/skills/issue-tracking/SKILL.md.j2" in expected_resources
     assert "templates/skills/cvs/SKILL.md.j2" in expected_resources
     assert "templates/skills/develop-tdd/SKILL.md.j2" in expected_resources
@@ -269,6 +281,18 @@ disabled_sdlc = render_skill(
 assert '`sdlc-code-index` is disabled' in disabled_sdlc
 assert 'Do not load a discoverable retained copy' in disabled_sdlc
 assert 'Red-Green-Refactor' in render_skill('develop-tdd')
+sdlc_code = render_skill('sdlc-code')
+sdlc_code_resources = render_skill_resources('sdlc-code')
+assert 'Apply this root once' in sdlc_code
+assert 'JSX syntax alone does not prove React' in sdlc_code
+assert len(sdlc_code_resources) == 26
+assert 'pyproject.toml' in sdlc_code_resources['references/py.md']
+assert (
+    'GDScript is a distinct language, not Python'
+    in sdlc_code_resources['references/gdscript.md']
+)
+assert 'A `.h` extension alone is insufficient' in sdlc_code_resources['references/cpp.md']
+assert 'repository evidence establishes React' in sdlc_code_resources['references/tsx.md']
 sdlc_code_index = render_skill(
     'sdlc-code-index', mcp_server='operator-index'
 )
@@ -422,6 +446,12 @@ for provider, connection in providers.items():
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
     assert not (disabled_opencode / ".opencode/skills/sdlc-code-index").exists()
     assert not (disabled_pi / ".pi/skills/sdlc-code-index").exists()
+    for project, relative in (
+        (disabled_opencode, Path(".opencode/skills/sdlc-code")),
+        (disabled_pi, Path(".pi/skills/sdlc-code")),
+    ):
+        assert (project / relative / "SKILL.md").is_file()
+        assert len(list((project / relative / "references").glob("*.md"))) == 26
     assert "Do not load a discoverable retained copy" in (
         disabled_opencode / ".opencode/skills/sdlc/SKILL.md"
     ).read_text(encoding="utf-8")
@@ -479,6 +509,17 @@ for provider, connection in providers.items():
     pi_sdlc = (enabled_all / ".pi/skills/sdlc/SKILL.md").read_bytes()
     assert opencode_sdlc == pi_sdlc
     assert b"When `sdlc-code-index` is available" in opencode_sdlc
+    opencode_code = enabled_all / ".opencode/skills/sdlc-code"
+    pi_code = enabled_all / ".pi/skills/sdlc-code"
+    assert {
+        path.relative_to(opencode_code): path.read_bytes()
+        for path in opencode_code.rglob("*")
+        if path.is_file()
+    } == {
+        path.relative_to(pi_code): path.read_bytes()
+        for path in pi_code.rglob("*")
+        if path.is_file()
+    }
     remote_skill = remote_opencode / ".opencode/skills/issue-tracking/SKILL.md"
     assert "Use GitHub CLI `gh` or live tools under `cvs_github`" in remote_skill.read_text(
         encoding="utf-8"

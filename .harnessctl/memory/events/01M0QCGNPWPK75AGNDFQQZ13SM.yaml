@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M0QCGNPWPK75AGNDFQQZ13SM
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00115 | Verify | acceptance | passed
+details: "Fresh `mise run quality` passed: Python 349, core Node 197, OpenCode adapter 2, Pi adapter 3; format/lint/type/package/artifact/runtime checks passed; 8 expected migration warnings. `git diff --check` passed. Independent final review: no findings; Epic acceptance approved; no Changeset required because no published npm workspace changed. User confirmed hrn-00119 and hrn-00120 done. Epic remains open. No Plan, Build, Release, commit, remote, destructive, or global-skill work."
+source:
+  kind: artifact
+  ref: hrn-00115
+  revision: v1:ab274b0dfbc6eb5ad2b09259acdd0670e4df5c07d9c26bde931aeaa787d4e010
+created_at: 2026-08-23T13:21:16.508Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0QAV8A1ZAQWDECJET44YXR0
+tags:
+  - hrn-00115
+  - hrn-00119
+  - hrn-00120
+  - sdlc
+  - sdlc-code
+  - work-verify

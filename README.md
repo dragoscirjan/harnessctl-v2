@@ -172,9 +172,13 @@ Implemented in `src/harnessctl/`:
 - Packaged command, skill, and reference templates included in built wheels.
 - Opt-in, provider-neutral `sdlc-code-index` retrieval guidance with local source
   verification and Glob/Grep fallback when index evidence is unavailable or unsuitable.
+- Always-installed `sdlc-code` Build guidance with generic clean-code policy and 26
+  lazily selected language, framework, shell, artifact, and IaC references.
 
-The current registry installs five compact command shells plus one SDLC core skill and
-13 progressively disclosed references under both OpenCode and Pi. See the
+The current registry installs five compact command shells, the SDLC core with 13
+progressively disclosed references, and a byte-equivalent `sdlc-code` tree under both
+OpenCode and Pi. Build loads `sdlc-code`; Plan, Verify, Release, and non-Build Continue
+do not. See the
 [SDLC guide](docs/sdlc.md) for the exact command set, budgets, and host boundaries.
 
 Enabled code intelligence installs the same generated `sdlc-code-index` skill for selected
@@ -343,6 +347,14 @@ uv run python -m harnessctl.install --cwd . --harness all --force
 
 Pi installs require per-package interactive consent. Noninteractive automation must use
 `--allow-pi-package-install`; the legacy adapter-only flag remains an alias.
+
+The installer writes `sdlc-code` to `.opencode/skills/sdlc-code/`,
+`.pi/skills/sdlc-code/`, or both. Reinstall with `--force` to replace generated files,
+then restart or reload the selected host so it discovers the updated skill. To roll back,
+install the prior harnessctl version or revision with `--force`, then remove the generated
+`.opencode/skills/sdlc-code/` and `.pi/skills/sdlc-code/` directories for the selected
+hosts because an older installer cannot recognize or delete them. Harnessctl does not
+read, modify, or own global skills under `~/.config/opencode`.
 
 ## Development commands
 
