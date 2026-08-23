@@ -1619,7 +1619,10 @@ def test_external_code_index_host_entry_is_never_mutated(
         host_content = f'{{"mcpServers":{{"sdlc-code-index":{external_value}}}}}\n'
         write_pinned_pi_adapter(tmp_path)
     host.parent.mkdir(parents=True, exist_ok=True)
-    host.write_text(host_content, encoding="utf-8")
+    if harness == "pi":
+        host.write_bytes(host_content.replace("\n", "\r\n").encode("utf-8"))
+    else:
+        host.write_text(host_content, encoding="utf-8")
     external = json.loads(external_value)
     write_sdlc_code_index_config(tmp_path, enabled=enabled)
     if migration:

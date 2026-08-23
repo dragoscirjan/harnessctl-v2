@@ -1062,7 +1062,7 @@ def _smoke_check_pi(
     for target, expected in rendered_targets:
         if target == root / ".pi" or root / ".pi" not in target.parents:
             continue
-        if target.read_text(encoding="utf-8") != expected:
+        if target.read_bytes() != expected.encode("utf-8"):
             raise RuntimeError(f"Pi owned-file smoke check failed for {target}")
     configured = _inspect_pi_packages(root).configured
     missing = [source for source in required_packages if source not in configured]
