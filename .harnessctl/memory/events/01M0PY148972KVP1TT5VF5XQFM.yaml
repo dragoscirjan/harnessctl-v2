@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0PY148972KVP1TT5VF5XQFM
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00103
+summary: hrn-00103 | verify | provider guide acceptance | failed
+details: "Epic acceptance incomplete: hrn-00111 and hrn-00112 remain in_progress; hrn-00113 and hrn-00114 remain open; `docs/code-intelligence-providers.md` absent. hrn-00111 records a quarantined read-only GitNexus `list_repos` call, so literal no-provider-command acceptance cannot pass without explicit Plan decision; no claim contamination observed, external retention/state impact unproven. Focused docs 13 passed; issue graph and diff check valid; two independent reviews requested changes. User selected return to Plan. No repair, issue status change, provider/network action, Build, Release, remote, commit, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00103
+  revision: v1:b9a2618fd5379c9a76a5982443cdf0db92aba41818e9bbe883dd0bae00d7191f
+created_at: 2026-08-23T09:08:07.049Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0P2BQ53VQ234DRF1ZDQVECP
+tags:
+  - acceptance-exception
+  - code-index
+  - failed
+  - provider-guide
+  - verify

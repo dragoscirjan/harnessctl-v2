@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00089"
+"type": "epic"
+"title": "Evaluate and integrate FastCode conditionally"
+"status": "closed"
+"created_at": "2026-08-21T20:21:43.168Z"
+"updated_at": "2026-08-22T21:38:27.948Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00083"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "estimate": "L"
+  "external_blocker": "valid_license_artifact"
+  "order": 6
+  "plan_status": "initiative_decomposed"
+  "provider": "fastcode"
+"body": "# Evaluate and integrate FastCode conditionally\n\n## Objective\n\nDetermine whether FastCode can be safely projected as a separate experimental model-backed logical server without making it a structural `sdlc-code-index` provider.\n\n## Isolated Scope\n\n- Require a valid commercial-friendly repository license artifact before executable implementation planning proceeds.\n- If unblocked, select a distinct stable `sdlc-*` server ID and define strict typed defaults for safe model endpoint, source environment-variable names, local/remote privacy mode, and bounded paths.\n- Keep executable command, arguments, fixed ID, target environment names, and credential values code-owned.\n- Generate OpenCode and Pi entries without cloning, installing, probing, invoking, indexing, or operating FastCode.\n- Add model-backed repository Q&A guidance with explicit source-verification and data-egress boundaries.\n\n## Acceptance Direction\n\n- The Epic remains externally blocked while a valid compatible license artifact is absent.\n- FastCode is not present in `mcp.servers.sdlc-code-index.providers` and never becomes the default structural provider implicitly.\n- If unblocked, its separate logical server has complete typed defaults across Python, TypeScript, Zod, and generated schema.\n- Credential values are never stored; only validated source environment-variable names may be configured.\n- Local-model and remote-model privacy differences are documented.\n- Tests use inert fixtures and never call a model or third-party process.\n\n## Dependencies and Order\n\nDepends on `hrn-00084`; later experimental Epic. External blocker: valid commercial-friendly license artifact.\n\n## Non-Goals\n\n- Do not clone or install FastCode, create environments, download models, index repositories, or send source to a model.\n- Do not treat README license text as a valid license artifact.\n- Do not overload fixed ID `sdlc-code-index`.\n"
+"comments":
+  - "id": "hrn-00089-C0001"
+    "created_at": "2026-08-22T21:38:14.376Z"
+    "created_by": "tech-advisor"
+    "body": "Superseded by consolidated external-provider guide Epic hrn-00103. FastCode remains subject to license and privacy caveats in sourced guidance; harnessctl will not generate or operate its MCP entry."

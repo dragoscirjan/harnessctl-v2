@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NYZCDFSVRQGS6HMFZMJ8M9
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | verify | memory rollback and docs acceptance failed | routed
+details: Formal Verify failed. Focused acceptance 296 passed; independent reviews found memory-enabled warning failure leaves six created directories because mutation_started stays false, and docs overstate disabled install as no host MCP inspection/change despite generic CVS/issues projection. Reopened hrn-00108 in_progress revision v1:ff7a2b76675db21e6bdc4baa6f8220c75d5339e91a0da13ff58806984a80d574; created hrn-00109 open revision v1:1fa77c387178941e2c5862fe0cd70939c698c6b939ab73ea0d2f1454015f1045. Issue/memory validation and diff check Green. Epic open. No repair, provider, Plan, Build, Release, remote/destructive action, commit, or push.
+source:
+  kind: discussion
+  ref: work-verify hrn-00105
+  revision: null
+created_at: 2026-08-23T00:05:24.015Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0NYH4GQ69JSTVGQAWV7K0J3
+tags:
+  - code-index
+  - defect-routed
+  - failed
+  - verify

@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00096"
+"type": "task"
+"title": "Define the CodeGraphContext provider contract and safety mapping"
+"status": "done"
+"created_at": "2026-08-21T23:01:52.935Z"
+"updated_at": "2026-08-22T17:24:25.665Z"
+"created_by": "tech-advisor"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00085"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "estimate": "M"
+  "order": 1
+  "plan": "approved"
+  "risk": "high"
+"body": "# Define the CodeGraphContext provider contract and safety mapping\n\n## Objective\n\nReplace the empty CodeGraphContext provider branch with the approved strict, privacy-safe configuration contract and deterministic code-owned environment mapping.\n\n## Scope\n\n- Add defaults `database: ladybugdb`, `index_source: false`, and `ignore_project_env: true` under `mcp.servers.sdlc-code-index.config` when provider is `codegraphcontext`.\n- Implement matching Python validation/default merge, TypeScript Zod/default merge, and generated JSON Schema.\n- Select the provider before merging its defaults so no config leaks across provider switches.\n- Extend provider-neutral server intent rendering with explicit code-owned literal environment values, separate from source-environment references.\n- Map accepted fields and fixed safety values deterministically for OpenCode and Pi.\n\n## Acceptance Criteria\n\n- `database` accepts only literal `ladybugdb`.\n- `index_source` accepts only booleans and defaults to `false`.\n- `ignore_project_env` accepts only literal `true`.\n- Unknown fields, nulls, arrays, commands, args, IDs, arbitrary environment, credentials, remote database values, and allowed roots fail in Python, Zod, and generated schema.\n- Partial CodeGraphContext config receives only CodeGraphContext defaults; switching providers cannot retain stale fields.\n- Mapping emits `CGC_RUNTIME_DB_TYPE`, `INDEX_SOURCE`, and `CGC_IGNORE_PROJECT_ENV`, plus fixed `ALLOW_DB_DELETION=false`, `ENABLE_AUTO_WATCH=false`, `SCIP_INDEXER=false`, and `ENABLE_VECTOR_RESOLVE=false`.\n- Literal environment values are validated, deterministic, and cannot collide with source-environment mappings.\n- Existing CVS OpenCode/Pi projections remain byte-equivalent.\n- Focused Python/Node/schema tests and formatting/type checks pass.\n\n## Dependencies and Order\n\nBlocked by `hrn-00084`. First implementation Task in `hrn-00085`; blocks the mise-backed adapter Task.\n\n## Artifacts\n\nPython config/intents and tests; TypeScript config/Zod/generated JSON Schema and tests.\n\n## Estimate\n\nM. High risk because this changes shared config normalization and host environment projection.\n\n## Non-Goals\n\nNo real command, repository tool installation, provider execution, credentials, remote database, lifecycle operation, skill/docs integration, or release action.\n"
+"comments":
+  - "id": "hrn-00096-C0001"
+    "created_at": "2026-08-22T17:23:08.450Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Added strict CodeGraphContext defaults `database: ladybugdb`, `index_source: false`, `ignore_project_env: true` across Python, TypeScript, Zod, generated JSON Schema, and provider-first merge. Unsafe/unknown/null/remote config fails; graphify/gitnexus remain strict empty and provider switching drops CodeGraphContext defaults. Added validated deterministic literal environment support separate from source-env references, collision checks, and code-owned mapping for CGC runtime/privacy/safety variables. Existing CVS projections remain exact. Evidence: Python installer/MCP 217 passed; generic config/schema 143 passed; Ruff, Prettier, strict TypeScript, generated-contract drift checks passed. No real command, provider install, probe, execution, or lifecycle action. Closure pending separate confirmation."

@@ -22,6 +22,7 @@ Load a conditional reference only when its named condition occurs. Never preload
 - Before reads, tools, execution, or mutation, show one bounded action set. Classify each item **Required**, **Recommended**, **Optional**, or **Not needed** with a terse reason. User may change it. Confirm the revised set. Approval covers only that set.
 - A declined safety requirement stays Required: find a safe alternative or stop. Remote and destructive actions need fresh action-specific consent immediately before invocation.
 - Use configured capabilities only. Never guess syntax, read secrets, edit canonical authority files directly, switch route after attempted mutation, or infer success.
+- When `sdlc-code-index` is available and relationship-aware codebase retrieval or impact analysis is relevant, load it before retrieval. If unavailable or unsuitable, continue with direct source discovery, Glob, Grep, and file reads.
 - Execute only this command's phase. Stop at its boundary; recommend another invocation for another phase.
 
 ## Compact result

@@ -6,17 +6,18 @@ boundary. Tool availability comes from separately loaded host adapters.
 
 ## Current implementation
 
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers six
+[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers seven
 skill templates.
 
-| Skill          | Configuration                                           | Installation                                                | Purpose                                                              |
-| -------------- | ------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
-| Caveman        | `communication.caveman.enabled` and `mode`              | OpenCode when enabled; always `.pi/skills/caveman/SKILL.md` | Concise communication without losing exact technical substance       |
-| Memory         | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; always `.pi/skills/memory/SKILL.md`  | Safe retrieval and persistence of curated repository knowledge       |
-| Issue tracking | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance           |
-| CVS            | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
-| SDLC           | Memory availability, retrieval bounds, and TDD setting  | Always under each selected harness's `skills/` directory    | Epic-first core policy plus progressively disclosed phase references |
-| TDD            | `workflow.tdd.enabled`                                  | Each selected harness only when enabled                     | Red-Green-Refactor development guidance                              |
+| Skill           | Configuration                                           | Installation                                                | Purpose                                                              |
+| --------------- | ------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| Caveman         | `communication.caveman.enabled` and `mode`              | OpenCode when enabled; always `.pi/skills/caveman/SKILL.md` | Concise communication without losing exact technical substance       |
+| SDLC code index | `skills.sdlc-code-index`                                | Each selected harness only when enabled                     | Relationship-aware retrieval with source verification and fallback   |
+| Memory          | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; always `.pi/skills/memory/SKILL.md`  | Safe retrieval and persistence of curated repository knowledge       |
+| Issue tracking  | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory    | Provider-exclusive local or remote issue workflow guidance           |
+| CVS             | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory    | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
+| SDLC            | Memory availability, retrieval bounds, and TDD setting  | Always under each selected harness's `skills/` directory    | Epic-first core policy plus progressively disclosed phase references |
+| TDD             | `workflow.tdd.enabled`                                  | Each selected harness only when enabled                     | Red-Green-Refactor development guidance                              |
 
 Memory requires caveman. Every OpenCode installation registers
 `@harnessctl/opencode-tools@latest` in `.opencode/opencode.json`; config and issue tools
@@ -32,6 +33,28 @@ instruction is generated on a fresh disabled install. Disabling TDD does not del
 modify, warn about, or track ownership of an existing skill. A skill left by an earlier
 enabled install remains available for manual use but is dormant: generated Build and
 Build-resuming Continue guidance neither loads nor enforces it.
+
+SDLC code indexing is disabled by default. Enabled OpenCode and Pi selections receive
+byte-equivalent canonical skills at `.opencode/skills/sdlc-code-index/SKILL.md` and
+`.pi/skills/sdlc-code-index/SKILL.md`. The skill receives only the validated external MCP
+server name. It treats results as advisory retrieval evidence, verifies findings against
+repository sources, and uses Glob/Grep when the service is unavailable, stale,
+incomplete, or unsuitable. It grants no installation, setup, startup, indexing,
+watching, mutation, deletion, model, credential, storage, or lifecycle authority.
+When code indexing is enabled, the always-installed SDLC core loads `sdlc-code-index` when
+the skill is available and relationship-aware codebase retrieval or impact analysis is
+relevant. When disabled, the compiled core explicitly refuses to load a discoverable
+retained copy and continues with direct source discovery, Glob, Grep, and file reads.
+
+A fresh disabled install creates no code-index skill. Code-index configuration does not
+inspect or change code-index MCP entries; unrelated generic CVS and issue MCP projection
+remains active and unchanged. Disabling after an enabled install does not delete or
+modify the existing skill. Instead, harnessctl emits one warning for each selected host
+whose discoverable file remains active-capable, naming
+`.opencode/skills/sdlc-code-index/SKILL.md` or
+`.pi/skills/sdlc-code-index/SKILL.md` for manual removal. Harnessctl never deletes it
+automatically. Every external MCP registration, process, package, index, credential, and
+data store remains user-owned.
 
 All five compact SDLC command shells are rendered under `.opencode/commands/` or the
 official Pi `.pi/prompts/` path. Each shell loads the SDLC skill and exactly one normal
@@ -86,4 +109,5 @@ or install provider CLIs or external GPL `forgejo-mcp` 2.33.0.
 Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for generated skills.
 Issue guidance is written to `.opencode/skills/issue-tracking/SKILL.md` or
 `.pi/skills/issue-tracking/SKILL.md`.
-See [issues](issues.md) and [CVS and MCP providers](cvs.md).
+See [issues](issues.md), [CVS and MCP providers](cvs.md), and
+[code intelligence](code-intelligence.md).

@@ -388,6 +388,27 @@
       "required": ["output_limit_mode"],
       "additionalProperties": false
     },
+    "skills": {
+      "type": "object",
+      "properties": {
+        "sdlc-code-index": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mcp_server": {
+              "type": "string",
+              "pattern": "^(?!cvs_)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+            }
+          },
+          "required": ["enabled", "mcp_server"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["sdlc-code-index"],
+      "additionalProperties": false
+    },
     "workflow": {
       "type": "object",
       "properties": {
@@ -502,6 +523,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["version", "issues", "cvs", "mcp", "workflow", "communication", "memory"],
+  "required": ["version", "issues", "cvs", "mcp", "skills", "workflow", "communication", "memory"],
   "additionalProperties": {}
 }

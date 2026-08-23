@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NYH4GQ69JSTVGQAWV7K0J3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00108 warning rollback repair | done
+details: "Warning-as-error rollback repair verified: OpenCode/Pi/all exact-tree tests Green; quality 330 Python/202 Node and all gates, runtime smoke, validation, diff check Green; independent review approved. User confirmed closure; hrn-00108 done revision v1:13a512561a99296886c9d004b87a3bdffaea3e0733d5050da8bd9eb8198da1c8. Epic remains open; all children done. No provider, Verify, Release, remote/destructive action, commit, or push."
+source:
+  kind: artifact
+  ref: hrn-00108-C0003; src/harnessctl/install.py; tests/test_install.py
+  revision: null
+created_at: 2026-08-22T23:57:37.175Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NYFVATM2NSP189TK41Y6YN
+tags:
+  - build
+  - code-index
+  - done
+  - rollback

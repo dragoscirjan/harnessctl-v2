@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0K3G5FSGG3Q2DMS3RGYH3FH
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00092 MCP foundation implemented | quality passes
+details: Branch feat/hrn-00084-code-intelligence-foundation. Local ServerIntent supports optional URL and validated ordered environment-name bindings; OpenCode/Pi omit empty env maps; existing CVS projections unchanged. Fixed code_index reconciliation supports force-protected switch, exact recognized disabled removal, modified preservation warning, unrelated JSON retention, and transactional rollback through inert fixtures. Focused projection 21 and affected Python 182 pass; mise run quality passes (Python 278, Node 189); Ruff and git diff --check pass. hrn-00091 done; hrn-00092 remains in_progress; hrn-00093 not started. No real provider command, probe, execution, package lifecycle, skill, runtime-smoke Verify, commit, remote, or Release work.
+source:
+  kind: artifact
+  ref: hrn-00092
+  revision: null
+created_at: 2026-08-21T21:26:44.985Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K2D64DPEQ8E415Y2W1VQ71
+tags:
+  - build
+  - code-index
+  - foundation
+  - mcp

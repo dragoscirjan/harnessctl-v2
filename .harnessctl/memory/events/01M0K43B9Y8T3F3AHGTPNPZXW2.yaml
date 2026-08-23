@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0K43B9Y8T3F3AHGTPNPZXW2
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00093 shared code-index skill implemented | quality passes
+details: "Branch feat/hrn-00084-code-intelligence-foundation. hrn-00091 config and hrn-00092 MCP foundation are done. hrn-00093 Build registered and packaged the provider-neutral code-index skill, conditionally installs byte-equivalent selected-host OpenCode/Pi bytes, preserves dormant bytes when disabled, and documents advisory evidence, local source verification, Glob/Grep fallback, operator lifecycle ownership, and hrn-00085 release gate. Added template/install/docs/release artifact/isolated wheel and aggregate inventory tests plus generic-tools patch Changeset. Focused template/install/docs 226 and release artifacts 2 pass. Canonical mise run quality passes: Python 283, generic Node 184, OpenCode 2, Pi 3, static/format/package/Mermaid checks; git diff --check passes. hrn-00093 remains in_progress for formal Verify and independent review. No real provider command/probe/catalogue/lifecycle, runtime smoke, commit, remote, or Release action performed."
+source:
+  kind: artifact
+  ref: hrn-00093
+  revision: v1:737048251fad19e429602c51b0f5cd6ad71bd15292cae29d2520235edfda1425
+created_at: 2026-08-21T21:37:13.534Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K3G5FSGG3Q2DMS3RGYH3FH
+tags:
+  - build
+  - code-index
+  - packaging
+  - quality
+  - skill

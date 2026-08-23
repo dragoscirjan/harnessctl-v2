@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0N5JJKBZVF83Q7BVS2A9D4Q
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00099 null conflict | focused green
+details: "YOLO corrective Build active for Verify Bugs hrn-00099, hrn-00100, hrn-00101. hrn-00099 implementation distinguishes absent MCP ID from present null/divergent value; unforced replacement fails, forced replacement stays narrow. Evidence: tests/test_mcp_projection.py 23 passed; hrn-00099-C0001. Full quality and closure pending. No Verify, Release, remote, provider lifecycle, commit, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00099
+  revision: v1:aefa81b5e0ec4a82f7a2bfbabda9a680c4b1e910989760935c4645d10c0ad159
+created_at: 2026-08-22T16:41:29.963Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K7T8C5Y7PYT5VQ9YNY2Z38
+tags:
+  - bug
+  - build
+  - mcp
+  - reconciliation

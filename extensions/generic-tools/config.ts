@@ -31,6 +31,9 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     },
   },
   mcp: { output_limit_mode: 'bounded-guidance' },
+  skills: {
+    'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
+  },
   paths: {
     root: '.harnessctl',
     tasks: '.harnessctl/tasks',
@@ -70,12 +73,32 @@ function assertConfigDocument(value: unknown): ConfigDocument {
   return value as ConfigDocument;
 }
 
+function assertStringMappingKeys(value: unknown, seen = new Set<object>()): void {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return;
+  seen.add(value);
+
+  if (value instanceof Map) {
+    for (const [key, nested] of value) {
+      if (typeof key !== 'string') throw new ConfigError('Malformed YAML: mapping keys must be strings.');
+      assertStringMappingKeys(nested, seen);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const nested of value) assertStringMappingKeys(nested, seen);
+  }
+}
+
 export function parseConfig(content: string): ConfigDocument {
   const document = parseDocument(content);
   if (document.errors.length > 0) {
-    throw new ConfigError(`Malformed YAML: ${document.errors[0]?.message}`);
+    const error = document.errors[0];
+    const position = error?.linePos?.[0];
+    const location = position === undefined ? '' : ` at line ${position.line}, column ${position.col}`;
+    throw new ConfigError(`Malformed YAML: ${error?.code ?? 'PARSE_ERROR'}${location}.`);
   }
 
+  assertStringMappingKeys(document.toJS({ mapAsMap: true }));
   return validateAndMigrateConfig(assertConfigDocument(document.toJS()));
 }
 
@@ -83,6 +106,14 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
   const version = value.version;
   if (version !== undefined && version !== 1 && version !== 2)
     throw new ConfigError(`Unsupported configuration version: ${String(version)}`);
+  if (Object.prototype.hasOwnProperty.call(value, 'code_index'))
+    throw new ConfigError(
+      'Invalid configuration: code_index is no longer supported; configure skills.sdlc-code-index instead.',
+    );
+  if (isMapping(value.mcp) && Object.prototype.hasOwnProperty.call(value.mcp, 'servers'))
+    throw new ConfigError(
+      'Invalid configuration: mcp.servers is no longer supported; configure skills.sdlc-code-index and manage external MCP servers in the host configuration.',
+    );
 
   assertRemoteConfigurationExplicit(value);
   const config = deepMerge(DEFAULT_CONFIG, value);

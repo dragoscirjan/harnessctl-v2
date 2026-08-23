@@ -1,0 +1,33 @@
+"version": 1
+"id": "hrn-00112"
+"type": "task"
+"title": "Research repository-context and indexing MCP providers"
+"status": "done"
+"created_at": "2026-08-23T00:43:13.990Z"
+"updated_at": "2026-08-23T09:22:13.080Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00103"
+"depends_on":
+  - "hrn-00110"
+"documents":
+  - ".harnessctl/tasks/hrn-00112/research.md"
+"metadata":
+  "capability": "provider-research"
+  "estimate": "M"
+  "order": 3
+  "providers":
+    - "Repomix"
+    - "FastCode"
+    - "CocoIndex"
+  "risk": "medium"
+"body": "# Research repository-context and indexing MCP providers\n\n## Objective\n\nProduce current, source-backed evidence for Repomix, FastCode, and CocoIndex using the approved provider evidence and freshness policy, including whether each exposes an applicable MCP integration.\n\n## Scope\n\nFor each provider, research status/version, license, installation/update, MCP applicability, OpenCode and Pi configuration where supported, server-name mapping, lifecycle/storage, credentials/privacy/telemetry, capabilities/limitations, stale-index behavior, removal, and authoritative sources.\n\n## Acceptance\n\n- Each provider has a completed evidence matrix following `hrn-00110`.\n- The research explicitly determines whether an applicable MCP integration exists; unsupported or ambiguous applicability is stated rather than inferred.\n- Operational claims cite official sources with URL, access date, and release/tag/commit where available.\n- Any OpenCode/Pi example remains user-owned and maps only the chosen server name into `skills.sdlc-code-index.mcp_server`.\n- Privacy, telemetry, credentials, retention, storage, model, database, sandbox, and remote-service behavior is stated only when sourced; unknowns remain explicit.\n- Conflicting, stale, or unavailable evidence is recorded without inference.\n- No provider command is executed and no provider-owned state is changed.\n\n## Dependencies\n\nDepends on `hrn-00110`.\n\n## Artifacts\n\nStructured research records and source citations for the Repomix, FastCode, and CocoIndex sections of `docs/code-intelligence-providers.md`.\n\n## Estimate\n\nM.\n\n## Non-Goals\n\n- Authoring the final consolidated guide.\n- Treating a non-MCP tool as an MCP integration without evidence.\n- Selecting a default provider or running provider software."
+"comments":
+  - "id": "hrn-00112-C0001"
+    "created_at": "2026-08-23T01:20:11.376Z"
+    "created_by": "lead-engineer"
+    "body": "Build evidence: completed and linked `.harnessctl/tasks/hrn-00112/research.md` for Repomix v1.18.0, FastCode v1.0.1, and `cocoindex-code` v0.2.41. Handoff contains the comparison matrix, 39/39 required provider headings, 28 citation records, explicit security/privacy statuses, unresolved Verify gaps, host mapping boundaries, and no-provider-mutation statement. Rechecked 48 official source URLs successfully on 2026-08-23, including FastCode's expected root-license 404. Reference/date structure, Prettier, `git diff --check`, issue validation, and focused docs suite passed (`11 passed`). No provider command, MCP handshake, index/config mutation, commit, or remote mutation occurred."
+  - "id": "hrn-00112-C0002"
+    "created_at": "2026-08-23T08:44:11.906Z"
+    "created_by": "lead-engineer"
+    "body": "Corrected Build evidence superseding the premature completion comment: `.harnessctl/tasks/hrn-00112/research.md` covers Repomix, FastCode, and CocoIndex with exact 39 provider headings, policy matrix, 82 narrow citation records, explicit Unknown/Ambiguous handling, and three user-owned Pi adapter examples pinned to separately maintained `pi-mcp-adapter` 2.26.0. Review corrections removed negative inference about Repomix persistence, unsupported ownership claims, unversioned release attribution, and recommendation language; FastCode license remains explicitly Ambiguous. Added structural/citation/privacy tests; docs suite 13 passed; Ruff, Prettier, and `git diff --check` passed. Two independent local-only audits approved. No provider command, live handshake, provider state mutation, remote, commit, Verify, or Release action occurred in the corrected work."

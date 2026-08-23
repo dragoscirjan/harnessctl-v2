@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00113"
+"type": "task"
+"title": "Author the consolidated external code-index integration guide"
+"status": "done"
+"created_at": "2026-08-23T00:43:41.604Z"
+"updated_at": "2026-08-23T09:44:13.398Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00103"
+"depends_on":
+  - "hrn-00111"
+  - "hrn-00112"
+"metadata":
+  "capability": "documentation-authoring"
+  "estimate": "M"
+  "order": 4
+  "risk": "medium"
+"body": "# Author the consolidated external code-index integration guide\n\n## Objective\n\nTurn the approved policy and research into one provider-neutral, source-backed guide and required public documentation artifacts.\n\n## Scope\n\n- Create `docs/code-intelligence-providers.md` with the common matrix and six provider sections.\n- Include user-owned OpenCode/Pi examples only where applicable evidence exists and map only the selected server name.\n- Document lifecycle, credentials, storage, indexes, processes, privacy/security, limitations, stale-index handling, migration, cleanup, and removal.\n- Carry the approved `hrn-00111` exception as a disclosed evidence limitation without using quarantined output or implying another provider call is authorized.\n- Update `docs/code-intelligence.md`, `docs/README.md`, and root indexes as needed.\n- Add/update public-guide, documentation-inventory, link, and package assertions required by the guide. Research-artifact structural guards remain owned by `hrn-00111` and `hrn-00112`.\n- Create a Changeset only if Build changes a published package. Documentation/tests/repository-only work records the `.changeset/README.md` exemption instead.\n- Do not change skill templates or generated skills.\n\n## Acceptance\n\n- Every provider has a sourced section or explicit applicability/evidence limitation.\n- Content follows `hrn-00110`, the Epic-approved nonprecedential exception, and research from `hrn-00111`/`hrn-00112`.\n- Quarantined GitNexus output is absent from claims, citations, search inputs, corroboration, qualifications, matrices, and guide wording; unobservable provider-side effects remain `Unknown`.\n- Examples match closed Epic `hrn-00105`; `mcp_server` is guidance, not ownership.\n- No provider is endorsed and unsupported integration is not implied.\n- Migration warns users to audit/remove prior generated entries from unreleased builds.\n- Public-guide, documentation-inventory, link, and package assertions include the guide where required; research-artifact structural guards remain outside this Task's ownership.\n- Changeset policy is correctly applied: smallest valid Changeset for published-package impact, otherwise documented exemption.\n- Provider-neutral skill templates and generated artifacts remain unchanged.\n- No provider command or live handshake occurs.\n\n## Dependencies\n\nDepends on `hrn-00111` and `hrn-00112`.\n\n## Artifacts\n\nProvider guide; updated docs/indexes; required public-guide/docs/package tests; conditionally required Changeset or recorded exemption.\n\n## Rollback Scope\n\nRemove exactly the guide, links/index entries, public-guide/docs/package assertions, and any conditionally required Changeset introduced by this Task. Do not remove research structural guards, touch skill artifacts, or mutate external MCP registrations, packages, processes, indexes, credentials, or data.\n\n## Estimate\n\nM.\n\n## Non-Goals\n\nLive provider validation; research-artifact structural-test ownership; skill-template/generated-skill edits; provider-specific schema/reconciliation; default-provider selection; claims based on quarantined output."
+"comments":
+  - "id": "hrn-00113-C0001"
+    "created_at": "2026-08-23T09:44:01.134Z"
+    "created_by": "lead-engineer"
+    "body": "Build evidence: created `docs/code-intelligence-providers.md`; linked it from root/docs/provider-neutral indexes; added exact docs inventory, six-provider/13-heading, matrix, citation-resolution, exception, Pi adapter, critical-fact, migration, and neutrality guards in `tests/test_docs.py`. Corrected review findings by removing the unsupported `read-only` characterization, naming the Plan-authorized nonprecedential GitNexus exception, enforcing exact provider order/count, and resolving every source label. Focused docs suite: 14 passed. Ruff, Prettier, and `git diff --check`: passed. Independent correctness and security/privacy re-reviews: approved, no findings. `.changeset/README.md` exempts documentation/tests/repository-only changes; no published package, skill template, generated skill, provider, network, or live-handshake action occurred. External freshness remains for Task `hrn-00114` and formal Verify."

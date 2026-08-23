@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0N77X6PG048MX9VM91CE1K9
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | verify | foundation acceptance | passed
+details: "Every Epic acceptance criterion mapped to current source, tests, docs, package, and release evidence in hrn-00084-C0001. Fresh `mise run quality` passed: Python 300; generic Node 193; OpenCode 2; Pi 3; release artifacts and all static/package gates. Fresh `mise run runtime-smoke` passed Node and Bun loading generic-tools, opencode-tools, pi-tools. Independent review round 2 found no findings and confirmed TypeScript YAML error redaction, explicit-null conflict safety, provider-specific validation, schema/default parity, reconciliation, skill boundaries, packaging, docs, Changeset, and lifecycle non-ownership. Epic/children and memory validation passed; `git diff --check` clean. Accepted-Low redundant `.gitignore` rule deferred without behavior impact. Epic remains open; release blocked until hrn-00085 default CodeGraphContext adapter."
+source:
+  kind: artifact
+  ref: hrn-00084
+  revision: v1:0e566e071bca342b1ab6c1a9d00b5f90fb8d802c43ced88710d220eab0ee129c
+created_at: 2026-08-22T17:10:37.526Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0N6YXZRTJ0J6RCC6XSQA1KV
+tags:
+  - acceptance
+  - hrn-00084
+  - sdlc
+  - verify

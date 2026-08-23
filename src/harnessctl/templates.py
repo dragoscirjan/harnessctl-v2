@@ -73,6 +73,7 @@ DESCRIPTIONS = {
 }
 SKILL_TEMPLATES = {
     "caveman": "skills/caveman/SKILL.md.j2",
+    "sdlc-code-index": "skills/sdlc-code-index/SKILL.md.j2",
     "cvs": "skills/cvs/SKILL.md.j2",
     "develop-tdd": "skills/develop-tdd/SKILL.md.j2",
     "issue-tracking": "skills/issue-tracking/SKILL.md.j2",

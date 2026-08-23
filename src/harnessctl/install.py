@@ -17,11 +17,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import ConfigError, load_config
+from .config import CODE_INDEX_SKILL_ID, ConfigError, load_config
 from .mcp import (
     OUTPUT_GUARD,
     ServerIntent,
     deduplicate_server_intents,
+    recognized_server_intents,
     render_opencode_mcp,
     render_pi_mcp,
     required_server_intents,
@@ -79,6 +80,7 @@ RETIRED_SDLC_COMMANDS = tuple(
     command for command in LEGACY_SDLC_COMMANDS if command not in OVERLAPPING_SDLC_COMMANDS
 )
 OPENCODE_SKILLS = Path(".opencode/skills")
+CODE_INDEX_SKILL = Path("sdlc-code-index/SKILL.md")
 TDD_SKILL = Path("develop-tdd/SKILL.md")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
@@ -122,10 +124,25 @@ def install(
 
     intents = deduplicate_server_intents(required_server_intents(config, harness))
     intents = _available_server_intents(intents)
+    recognized_intents = recognized_server_intents(config, harness)
     rendered_targets: list[tuple[Path, str]] = []
     command_targets: dict[Path, tuple[str, str]] = {}
     retired_targets: list[Path] = []
     conflicts: list[Path] = []
+    code_index = config["skills"][CODE_INDEX_SKILL_ID]
+    code_index_enabled = bool(code_index["enabled"])
+    code_index_skill_content = (
+        render_skill("sdlc-code-index", mcp_server=code_index["mcp_server"])
+        if code_index_enabled
+        else ""
+    )
+    dormant_code_index_skills: list[Path] = []
+    if not code_index_enabled:
+        for selected_harness in harnesses:
+            skill_root = OPENCODE_SKILLS if selected_harness == "opencode" else Path(".pi/skills")
+            relative_skill = skill_root / CODE_INDEX_SKILL
+            if _target(root, relative_skill).is_file():
+                dormant_code_index_skills.append(relative_skill)
     tdd_enabled = bool(config["workflow"]["tdd"]["enabled"])
     tdd_skill_content = render_skill("develop-tdd")
     sdlc_context = {
@@ -133,6 +150,7 @@ def install(
         "retrieval_limit": config["memory"]["retrieval"]["limit"],
         "retrieval_max_chars": config["memory"]["retrieval"]["max_chars"],
         "tdd_enabled": tdd_enabled,
+        "code_index_enabled": code_index_enabled,
     }
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
@@ -217,6 +235,10 @@ def install(
             )
         if tdd_enabled:
             rendered_targets.append((_target(root, OPENCODE_SKILLS / TDD_SKILL), tdd_skill_content))
+        if code_index_enabled:
+            rendered_targets.append(
+                (_target(root, OPENCODE_SKILLS / CODE_INDEX_SKILL), code_index_skill_content)
+            )
     if harness in ("pi", "all"):
         _append_skill_tree(
             rendered_targets,
@@ -278,6 +300,10 @@ def install(
             rendered_targets.append(
                 (_target(root, Path(".pi/skills") / TDD_SKILL), tdd_skill_content)
             )
+        if code_index_enabled:
+            rendered_targets.append(
+                (_target(root, Path(".pi/skills") / CODE_INDEX_SKILL), code_index_skill_content)
+            )
     if config["memory"]["enabled"]:
         rendered_targets.append(
             (
@@ -290,6 +316,7 @@ def install(
         opencode_content = _merge_opencode_json(
             opencode_path,
             intents,
+            recognized=_recognized_mcp_definitions(recognized_intents, render_opencode_mcp),
             force=force,
         )
         if opencode_content is not None:
@@ -299,9 +326,15 @@ def install(
     pi_executable: str | None = None
     required_pi_packages: tuple[str, ...] = ()
     if harness in ("pi", "all"):
-        if intents:
+        recognized_pi = _recognized_mcp_definitions(recognized_intents, render_pi_mcp)
+        if intents or recognized_pi:
             pi_mcp_path = _target(root, PI_MCP_CONFIG)
-            pi_content = _merge_pi_json(pi_mcp_path, intents, force=force)
+            pi_content = _merge_pi_json(
+                pi_mcp_path,
+                intents,
+                recognized=recognized_pi,
+                force=force,
+            )
             if pi_content is not None:
                 rendered_targets.append((pi_mcp_path, pi_content))
         required_pi_packages = (PI_TOOLS, *((PI_ADAPTER,) if intents else ()))
@@ -415,6 +448,7 @@ def install(
             mutation_started = True
             target.unlink()
         if config["memory"]["enabled"]:
+            mutation_started = True
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
         if harness in ("opencode", "all"):
             _smoke_check(
@@ -425,6 +459,13 @@ def install(
         if harness in ("pi", "all"):
             _smoke_check_pi(root, required_pi_packages, rendered_targets)
         _smoke_check_mcp(root, harness, intents)
+        for relative_skill in dormant_code_index_skills:
+            warnings.warn(
+                f"sdlc-code-index is disabled, but {relative_skill.as_posix()} remains "
+                "discoverable and active-capable; remove it manually to deactivate it",
+                UserWarning,
+                stacklevel=2,
+            )
     except BaseException as error:
         rollback_errors: list[BaseException] = []
         for source in reversed(installed_pi_packages):
@@ -497,6 +538,22 @@ def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return value
 
 
+def _json_values_equal(left: Any, right: Any) -> bool:
+    """Compare JSON values without Python's bool-number coercion."""
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            _json_values_equal(left[key], right[key]) for key in left
+        )
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            _json_values_equal(left_item, right_item)
+            for left_item, right_item in zip(left, right, strict=True)
+        )
+    return left == right
+
+
 def _load_json_object(path: Path, label: str) -> tuple[dict[str, Any], bytes | None]:
     if path.is_symlink():
         raise ValueError(f"{label} must not be a symlink: {path}")
@@ -514,41 +571,126 @@ def _load_json_object(path: Path, label: str) -> tuple[dict[str, Any], bytes | N
     return loaded, original
 
 
+def _raw_json_object_members(source: str) -> dict[str, str]:
+    """Return each object member's exact JSON value text."""
+    decoder = json.JSONDecoder()
+    length = len(source)
+
+    def skip_whitespace(index: int) -> int:
+        while index < length and source[index].isspace():
+            index += 1
+        return index
+
+    index = skip_whitespace(0)
+    if index >= length or source[index] != "{":
+        return {}
+    index += 1
+    members: dict[str, str] = {}
+    while True:
+        index = skip_whitespace(index)
+        if index < length and source[index] == "}":
+            return members
+        key, index = decoder.raw_decode(source, index)
+        if not isinstance(key, str):
+            raise ValueError("JSON object member name must be a string")
+        index = skip_whitespace(index)
+        if index >= length or source[index] != ":":
+            raise ValueError("JSON object member must contain a colon")
+        value_start = skip_whitespace(index + 1)
+        _, value_end = decoder.raw_decode(source, value_start)
+        members[key] = source[value_start:value_end]
+        index = skip_whitespace(value_end)
+        if index < length and source[index] == ",":
+            index += 1
+            continue
+        if index < length and source[index] == "}":
+            return members
+        raise ValueError("JSON object members must be separated by commas")
+
+
+def _dump_json_preserving_unchanged_members(
+    document: dict[str, Any], original: bytes | None, container_name: str
+) -> str:
+    """Render JSON while preserving exact values of untouched container members."""
+    rendered = json.dumps(document, indent=2, ensure_ascii=False)
+    if original is None:
+        return rendered + "\n"
+    container = document.get(container_name)
+    if not isinstance(container, dict):
+        return rendered + "\n"
+
+    top_level = _raw_json_object_members(original.decode("utf-8"))
+    raw_container = top_level.get(container_name)
+    if raw_container is None:
+        return rendered + "\n"
+    raw_members = _raw_json_object_members(raw_container)
+    preserved = {
+        key: raw_value
+        for key, raw_value in raw_members.items()
+        if key in container
+        and _json_values_equal(
+            json.loads(raw_value, object_pairs_hook=_reject_duplicate_members), container[key]
+        )
+    }
+    if not preserved:
+        return rendered + "\n"
+
+    staged = dict(document)
+    staged_container = dict(container)
+    staged[container_name] = staged_container
+    replacements: list[tuple[str, str]] = []
+    for index, (key, raw_value) in enumerate(preserved.items()):
+        sentinel = f"__harnessctl_preserved_json_member_{index}__"
+        while sentinel in rendered:
+            sentinel += "_"
+        staged_container[key] = sentinel
+        replacements.append((json.dumps(sentinel), raw_value))
+
+    rendered = json.dumps(staged, indent=2, ensure_ascii=False)
+    for sentinel, raw_value in replacements:
+        rendered = rendered.replace(sentinel, raw_value, 1)
+    return rendered + "\n"
+
+
 def _merge_host_json(
     path: Path,
     container_name: str,
     required: Mapping[str, Mapping[str, Any]],
     *,
+    recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
     force: bool,
 ) -> str | None:
     """Merge only fixed IDs, preserving unrelated top-level and sibling values."""
-    if not required:
+    recognized = recognized or {}
+    if not required and not recognized:
         return None
     document, original = _load_json_object(path, "host MCP configuration")
     container = document.get(container_name)
     if container is None:
+        if not required:
+            return None
         container = {}
         document[container_name] = container
     if not isinstance(container, dict):
         raise ValueError(f"{container_name} must be a JSON object in {path}")
     changed = original is None
-    for server_id, expected in required.items():
-        current = container.get(server_id)
-        if current == expected:
-            continue
-        if current is not None and not force:
-            raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
-        container[server_id] = dict(expected)
-        changed = True
+    changed |= _reconcile_owned_mcp_entries(
+        container,
+        required,
+        recognized,
+        path=path,
+        force=force,
+    )
     if not changed:
         return None
-    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+    return _dump_json_preserving_unchanged_members(document, original, container_name)
 
 
 def _merge_opencode_json(
     path: Path,
     intents: list[ServerIntent],
     *,
+    recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
     force: bool,
 ) -> str | None:
     """Register harnessctl tools and merge owned MCP IDs into OpenCode config."""
@@ -579,65 +721,123 @@ def _merge_opencode_json(
         changed = True
 
     required = {intent.server_id: render_opencode_mcp(intent) for intent in intents}
-    if required:
+    recognized = recognized or {}
+    if required or recognized:
         container = document.get("mcp")
         if container is None:
-            container = {}
-            document["mcp"] = container
-        if not isinstance(container, dict):
+            if not required:
+                container = None
+            else:
+                container = {}
+                document["mcp"] = container
+        if container is not None and not isinstance(container, dict):
             raise ValueError(f"mcp must be a JSON object in {path}")
-        for server_id, expected in required.items():
-            current = container.get(server_id)
-            if current == expected:
-                continue
-            if current is not None and not force:
-                raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
-            container[server_id] = dict(expected)
-            changed = True
+        if container is not None:
+            changed |= _reconcile_owned_mcp_entries(
+                container,
+                required,
+                recognized,
+                path=path,
+                force=force,
+            )
 
     if not changed:
         return None
-    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+    return _dump_json_preserving_unchanged_members(document, original, "mcp")
 
 
-def _merge_pi_json(path: Path, intents: list[ServerIntent], *, force: bool) -> str | None:
+def _merge_pi_json(
+    path: Path,
+    intents: list[ServerIntent],
+    *,
+    recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
+    force: bool,
+) -> str | None:
     """Merge Pi servers and the sole harnessctl-owned adapter setting."""
-    if not intents:
+    recognized = recognized or {}
+    if not intents and not recognized:
         return None
     document, original = _load_json_object(path, "Pi MCP configuration")
     servers = document.get("mcpServers")
-    if servers is None:
+    if servers is None and intents:
         servers = {}
         document["mcpServers"] = servers
-    if not isinstance(servers, dict):
+    if servers is not None and not isinstance(servers, dict):
         raise ValueError(f"mcpServers must be a JSON object in {path}")
     settings = document.get("settings")
-    if settings is None:
+    if settings is None and intents:
         settings = {}
         document["settings"] = settings
-    if not isinstance(settings, dict):
+    if settings is not None and not isinstance(settings, dict):
         raise ValueError(f"settings must be a JSON object in {path}")
 
-    changed = original is None
-    for intent in intents:
-        expected = render_pi_mcp(intent)
-        current = servers.get(intent.server_id)
-        if current != expected:
-            if current is not None and not force:
-                raise FileExistsError(
-                    f"conflicting harnessctl-owned MCP ID {intent.server_id} in {path}"
-                )
-            servers[intent.server_id] = expected
+    changed = original is None and bool(intents)
+    if servers is not None:
+        required = {intent.server_id: render_pi_mcp(intent) for intent in intents}
+        changed |= _reconcile_owned_mcp_entries(
+            servers,
+            required,
+            recognized,
+            path=path,
+            force=force,
+        )
+    if intents:
+        assert settings is not None
+        current_guard = settings.get("outputGuard")
+        if current_guard != OUTPUT_GUARD:
+            if current_guard is not None and not force:
+                raise FileExistsError(f"conflicting settings.outputGuard in {path}")
+            settings["outputGuard"] = dict(OUTPUT_GUARD)
             changed = True
-    current_guard = settings.get("outputGuard")
-    if current_guard != OUTPUT_GUARD:
-        if current_guard is not None and not force:
-            raise FileExistsError(f"conflicting settings.outputGuard in {path}")
-        settings["outputGuard"] = dict(OUTPUT_GUARD)
-        changed = True
     if not changed:
         return None
-    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+    return _dump_json_preserving_unchanged_members(document, original, "mcpServers")
+
+
+def _recognized_mcp_definitions(
+    intents: list[ServerIntent],
+    renderer: Callable[[ServerIntent], Mapping[str, Any]],
+) -> dict[str, tuple[Mapping[str, Any], ...]]:
+    definitions: dict[str, list[Mapping[str, Any]]] = {}
+    for intent in intents:
+        rendered = renderer(intent)
+        server_definitions = definitions.setdefault(intent.server_id, [])
+        if not any(_json_values_equal(rendered, value) for value in server_definitions):
+            server_definitions.append(rendered)
+    return {server_id: tuple(values) for server_id, values in definitions.items()}
+
+
+def _reconcile_owned_mcp_entries(
+    container: dict[str, Any],
+    required: Mapping[str, Mapping[str, Any]],
+    recognized: Mapping[str, tuple[Mapping[str, Any], ...]],
+    *,
+    path: Path,
+    force: bool,
+) -> bool:
+    changed = False
+    for server_id, expected in required.items():
+        current = container.get(server_id)
+        if _json_values_equal(current, expected):
+            continue
+        if server_id in container and not force:
+            raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
+        container[server_id] = dict(expected)
+        changed = True
+    for server_id, definitions in recognized.items():
+        if server_id in required or server_id not in container:
+            continue
+        current = container[server_id]
+        if any(_json_values_equal(current, definition) for definition in definitions):
+            del container[server_id]
+            changed = True
+            continue
+        warnings.warn(
+            f"preserving modified MCP ID {server_id} in {path}",
+            UserWarning,
+            stacklevel=3,
+        )
+    return changed
 
 
 def _inspect_pi_packages(root: Path) -> _PiPackageState:
@@ -814,12 +1014,16 @@ def _smoke_check_mcp(root: Path, harness: str, intents: list[ServerIntent]) -> N
             _target(root, OPENCODE_CONFIG), "OpenCode MCP configuration"
         )
         for intent in intents:
-            if document.get("mcp", {}).get(intent.server_id) != render_opencode_mcp(intent):
+            if not _json_values_equal(
+                document.get("mcp", {}).get(intent.server_id), render_opencode_mcp(intent)
+            ):
                 raise RuntimeError(f"OpenCode MCP smoke check failed for {intent.server_id}")
     if harness in ("pi", "all") and intents:
         document, _ = _load_json_object(_target(root, PI_MCP_CONFIG), "Pi MCP configuration")
         for intent in intents:
-            if document.get("mcpServers", {}).get(intent.server_id) != render_pi_mcp(intent):
+            if not _json_values_equal(
+                document.get("mcpServers", {}).get(intent.server_id), render_pi_mcp(intent)
+            ):
                 raise RuntimeError(f"Pi MCP smoke check failed for {intent.server_id}")
         if document.get("settings", {}).get("outputGuard") != OUTPUT_GUARD:
             raise RuntimeError("Pi settings.outputGuard smoke check failed")

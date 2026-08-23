@@ -1,0 +1,27 @@
+schema_version: 1
+id: 01M0K5YGZ019CB3JDM5C01N6A0
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00083
+summary: hrn-00083 | plan | nested MCP registry revision | approved and validated
+details: "Initiative hrn-00083 revision v1:4bc0dbd78c6875641023820c6d622bc63adc9abc7adf15b3f849ef6cf31507ce. Config direction: mcp.servers; primary structural slot, fixed host ID, and generated skill sdlc-code-index; one active structural provider selected from codegraphcontext, gitnexus, graphify; strict safe typed per-provider defaults; companion, semantic, experimental capabilities use separate logical servers. MCP-first retrieval requires source verification and Glob/Grep/read fallback. Commands, args, IDs, target env names, credentials, install, setup, indexing, processes, updates, removal remain code/operator-owned. Unreleased code_index/code-index names replaced atomically without alias. Epics hrn-00084 through hrn-00090 revised and issue validation passes. hrn-00084 requires separate corrective Plan before Build resumes."
+source:
+  kind: artifact
+  ref: hrn-00083
+  revision: v1:4bc0dbd78c6875641023820c6d622bc63adc9abc7adf15b3f849ef6cf31507ce
+created_at: 2026-08-21T22:09:32.640Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0JZYB5JNEDQJET63HPG327Q
+tags:
+  - code-index
+  - initiative
+  - mcp
+  - opencode
+  - pi
+  - plan
+  - sdlc-code-index

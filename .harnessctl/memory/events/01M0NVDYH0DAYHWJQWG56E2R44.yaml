@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NVDYH0DAYHWJQWG56E2R44
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | verify | acceptance failed; repairs routed
+details: "Formal Verify mapped current acceptance and ran independent correctness/compatibility and security/privacy reviews. Quality, runtime smoke, issue/memory validation, and diff check were Green, but acceptance failed: hrn-00102 reopened for host MCP JSON byte-preservation violation and incorrect Pi test path; hrn-00107 reopened because disabled retained discoverable skills can be loaded by core SDLC and docs assign unsafe runtime-handshake authority; hrn-00108 created for dormant warning path validation occurring after transaction commit. Next: separate work-build hrn-00105. No repair, provider execution, Release, remote/destructive action, commit, or push."
+source:
+  kind: discussion
+  ref: hrn-00105 formal Verify
+  revision: null
+created_at: 2026-08-22T23:03:27.008Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0NTT0R5KEZ5JQPVZXZWWFBD
+tags:
+  - defects
+  - failed
+  - sdlc
+  - verify

@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00091"
+"type": "task"
+"title": "Add the provider-neutral code-index configuration contract"
+"status": "done"
+"created_at": "2026-08-21T20:57:31.308Z"
+"updated_at": "2026-08-21T21:09:27.340Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00084"
+"metadata":
+  "estimate": "S"
+  "order": 1
+  "plan_status": "approved"
+"body": "# Add the provider-neutral code-index configuration contract\n\n## Objective\n\nAdd the shared config-v2 selection contract without projecting a provider command.\n\n## Scope\n\n- Add `code_index.enabled` default `true` and `code_index.provider` default `codegraphcontext` to Python and TypeScript defaults.\n- Validate `enabled` as boolean and structural provider as `codegraphcontext`, `gitnexus`, or `graphify`.\n- Update canonical Zod and generated JSON Schema contracts.\n- Preserve recursive partial-v2 migration and compatible unknown top-level fields.\n- Add focused Python and TypeScript config/schema tests and generated-contract drift coverage.\n\n## Acceptance Criteria\n\n- Missing and partial config normalize to enabled CodeGraphContext selection.\n- Explicit enabled/disabled values and all planned structural providers validate consistently in Python, TypeScript, and JSON Schema.\n- Invalid booleans/providers fail with field-specific errors.\n- Existing config-v2 overlays and unknown compatible top-level fields remain intact.\n- Configuration exposes no command, arguments, server ID, target environment name, credential value, or third-party lifecycle setting.\n\n## Dependencies and Order\n\nFirst Task; no dependency. Estimate S.\n\n## Non-Goals\n\n- No MCP intent, host JSON, skill installation, or provider command mapping.\n- Repomix, CocoIndex Code, and FastCode are not structural provider values in this contract.\n"
+"comments":
+  - "id": "hrn-00091-C0001"
+    "created_at": "2026-08-21T21:07:30.843Z"
+    "created_by": "lead-engineer"
+    "body": "Build slice implemented on `feat/hrn-00084-code-intelligence-foundation`. Added `code_index.enabled=true` and `code_index.provider=codegraphcontext` to Python/TypeScript defaults; strict provider-neutral validation accepts only `codegraphcontext`, `gitnexus`, or `graphify`; regenerated config-v2 JSON Schema. Missing/partial configs, both boolean values, all providers, unknown top-level compatibility, field-specific failures, and rejection of command/lifecycle fields are covered. Focused checks: Python 12 passed; TypeScript config/schema 125 passed; generic-tools typecheck passed. `mise run quality` passed: Python 265, Node 189, package/static/contract gates green; `git diff --check` passed. No MCP intent, host projection, skill, provider command, or third-party lifecycle behavior added. Task remains `in_progress`; no transition requested."

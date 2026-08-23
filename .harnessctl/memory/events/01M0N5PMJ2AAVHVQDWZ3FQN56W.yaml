@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0N5PMJ2AAVHVQDWZ3FQN56W
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | hrn-00100 YAML parity | focused green
+details: "YOLO corrective Build active. hrn-00099 explicit-null MCP conflict fix remains focused green (23 tests). hrn-00100 now rejects duplicate/non-string YAML mapping keys before merge in Python and TypeScript; Python errors omit source values. Evidence: Python focused 4 passed; generic-tools config 84 passed; strict TypeScript passed; hrn-00100-C0001. hrn-00101 and full quality/closure pending. No Verify, Release, remote, provider lifecycle, commit, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00100
+  revision: v1:e79a6d3cec9da097149bd4b80f1d4f21dafcacdb06d4ae08f382bf05172642c9
+created_at: 2026-08-22T16:43:43.042Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0N5JJKBZVF83Q7BVS2A9D4Q
+tags:
+  - bug
+  - build
+  - config
+  - parity
+  - yaml

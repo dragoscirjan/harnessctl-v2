@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NY1FKEQAEKV1KARE6FYFF6
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | verify | warning rollback acceptance failed | routed
+details: Formal Verify failed. Focused acceptance 293 passed; independent review ran 327 Python/202 Node and found disabled dormant warning emission outside rollback boundary. With warnings promoted to errors, install raises after writes commit. Reopened hrn-00108 in_progress revision v1:ff892557151935d92ac534f79a3ce8f8473d30f28521c57dfbbb13c1c1c748bf; evidence comment hrn-00108-C0002. Epic remains open. Issue/memory validation and git diff --check Green. No repair, provider execution, Plan, Build, Release, remote/destructive action, commit, or push.
+source:
+  kind: discussion
+  ref: work-verify hrn-00105
+  revision: null
+created_at: 2026-08-22T23:49:04.238Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0NX5003VTSSV6PMCK0AY447
+tags:
+  - code-index
+  - defect-routed
+  - failed
+  - verify

@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0K7T8C5Y7PYT5VQ9YNY2Z38
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | build | corrective foundation tasks complete | quality passes
+details: "YOLO Build completed approved sequence hrn-00094 -> hrn-00095 -> hrn-00093. Nested mcp.servers.sdlc-code-index contract uses strict provider-discriminated Python/Zod/generated-schema validation, discriminator-first defaults, explicit legacy code_index rejection. Fixed MCP ID and generated skill/path are sdlc-code-index; enabled OpenCode/Pi bytes match; disabled fresh omission and dormant retention pass; guidance preserves advisory/source/fallback/operator boundaries. hrn-00094 done v1:75f87214f633b18194133a37e20adad8830906a7583801db4168e205e0f7df64; hrn-00095 done v1:fa763473f753b799ecb4c48dce52750e9aaf24b7f0b599550b279979a1fe76e0; hrn-00093 done v1:4e41cb3213356c35f6c2c15d9f41ba4aa2ff92e620c8a37f7a79a351d5488500 after explicit user closure confirmation. Evidence: focused 231 passed; release artifacts 2 passed; mise run quality passed with Python 288, generic Node 189, OpenCode 2, Pi 3, all static/package gates; git diff --check passed. No runtime-smoke Verify, independent review, real provider command/lifecycle, Release, commit, remote, or destructive action. Epic remains open; hrn-00085 remains release gate."
+source:
+  kind: artifact
+  ref: hrn-00084
+  revision: v1:ef1e199db86d90a11fa0984669624327555fc26a343352dc9925cfd9e7870495
+created_at: 2026-08-21T22:42:09.925Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0K7FBJX04B79TW4Q1XC1MKP
+tags:
+  - build
+  - code-index
+  - mcp
+  - quality
+  - sdlc

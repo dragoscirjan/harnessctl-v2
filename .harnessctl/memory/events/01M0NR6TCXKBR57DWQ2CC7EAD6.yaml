@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0NR6TCXKBR57DWQ2CC7EAD6
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | build | hrn-00102 unsafe adapter removal | done
+details: "Bug hrn-00102 done revision v1:1c16301940eb113e8ca13412ec57c04a1ce7a765292bb511ffe8afe8c6b224a3. Provider-owned mcp.servers contract replaced by disabled opt-in skills.sdlc-code-index; CodeGraphContext desired/recognized intents, command/env projection, runtime ownership, mise declaration/lock removed. External host MCP entries preserved enabled/disabled/force/rollback. Focused Python 211; Node config/schema 138; TypeScript, Ruff, Prettier, schema drift, diff check pass. Next confirmed dependency: hrn-00106."
+source:
+  kind: artifact
+  ref: hrn-00102
+  revision: v1:1c16301940eb113e8ca13412ec57c04a1ce7a765292bb511ffe8afe8c6b224a3
+created_at: 2026-08-22T22:07:07.677Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NQCM3D673WYK33QQ9EP5KW
+tags:
+  - build
+  - code-index
+  - migration
+  - privacy

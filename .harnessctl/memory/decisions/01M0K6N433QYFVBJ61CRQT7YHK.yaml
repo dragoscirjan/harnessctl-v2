@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0K6N433QYFVBJ61CRQT7YHK
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | plan | corrective MCP standard | approved and decomposed
+details: "Epic hrn-00084 revision v1:ef1e199db86d90a11fa0984669624327555fc26a343352dc9925cfd9e7870495. Approved sequence: hrn-00094 -> hrn-00095 -> hrn-00093. Standard entry: mcp.servers.sdlc-code-index with enabled, provider, config; default enabled/codegraphcontext/{}. Every provider config value requires Python validation, strict Zod, generated JSON Schema, defaults, and code-owned mapping. Provider-aware merge prevents cross-provider leakage; legacy top-level code_index rejected. Fixed host ID and skill sdlc-code-index. No compatibility alias, multiplexer, configurable command/args/IDs/env targets/credentials, or third-party lifecycle ownership. Release blocked on hrn-00085. Issue validation passed; no Build performed."
+source:
+  kind: artifact
+  ref: hrn-00084
+  revision: v1:ef1e199db86d90a11fa0984669624327555fc26a343352dc9925cfd9e7870495
+created_at: 2026-08-21T22:21:53.123Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0K5YGZ019CB3JDM5C01N6A0
+tags:
+  - code-index
+  - mcp
+  - plan
+  - sdlc-code-index
+  - zod

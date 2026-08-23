@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00095"
+"type": "task"
+"title": "Rename and reconcile the shared structural MCP identity"
+"status": "done"
+"created_at": "2026-08-21T22:19:09.983Z"
+"updated_at": "2026-08-21T22:36:04.829Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00084"
+"depends_on":
+  - "hrn-00094"
+"metadata":
+  "estimate": "S"
+  "order": 5
+  "plan_status": "approved"
+  "risk": "high"
+"body": "# Rename and reconcile the shared structural MCP identity\n\n## Objective\n\nReplace the unreleased fixed `code_index` identity with `sdlc-code-index` and preserve safe provider-neutral host reconciliation.\n\n## Scope\n\n- Rename the code-owned structural MCP constant and all intent routes to fixed ID `sdlc-code-index`.\n- Read enabled/provider/config only from validated `mcp.servers.sdlc-code-index` configuration.\n- Preserve provider-neutral local intent rendering: optional URL, deterministic validated source-to-target environment-name mappings, and empty environment omission.\n- Preserve existing CVS OpenCode and Pi projections byte-for-byte.\n- Reconcile desired and recognized definitions at `sdlc-code-index`: conflict protection, force-selected replacement, exact generated removal, modified operator-content preservation/reporting, unrelated JSON preservation, and transactional rollback.\n- Use inert fixture definitions only; foundation still provides no real structural-provider command.\n- Replace old identity assertions without adding a compatibility alias or claiming/removing old operator content.\n\n## Acceptance Criteria\n\n- Both supported hosts project equivalent semantics under exact fixed map key `sdlc-code-index`.\n- Project configuration cannot override command, arguments, server ID, target environment names, or credential values.\n- Provider switch without force fails before mutation; force replaces only `sdlc-code-index`.\n- Disabled reconciliation removes only exact recognized generated content and preserves/reports divergent content.\n- Unrelated host JSON and exact rollback behavior remain covered.\n- GitHub, GitLab, Gitea, and Forgejo projection regressions remain byte-exact.\n- Tests invoke no provider executable, package manager, setup, indexing, or lifecycle command.\n\n## Dependencies and Order\n\nDepends on `hrn-00094`. Second corrective Task. Estimate S with high ownership/reconciliation risk. Blocks `hrn-00093`.\n\n## Non-Goals\n\n- No real CodeGraphContext, GitNexus, or Graphify command mapping.\n- No alias or migration cleanup for the unreleased `code_index` host ID.\n- No normalized provider tool catalogue or MCP multiplexer.\n"
+"comments":
+  - "id": "hrn-00095-C0001"
+    "created_at": "2026-08-21T22:35:19.027Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Fixed structural MCP identity is now sdlc-code-index, shared from canonical config; installer reads only validated mcp.servers.sdlc-code-index. Updated inert projection/reconciliation/rollback fixtures without alias or real provider intent. Evidence: test_mcp_projection.py + test_install.py 190 passed; Ruff and format checks passed."

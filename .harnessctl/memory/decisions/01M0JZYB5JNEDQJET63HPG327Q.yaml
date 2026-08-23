@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0JZYB5JNEDQJET63HPG327Q
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00083
+summary: hrn-00083 | plan | Initiative plus seven Epics | approved and persisted
+details: Initiative hrn-00083. First shared Epic hrn-00084 blocks provider Epics hrn-00085 CGC default, hrn-00086 GitNexus noncommercial opt-in, hrn-00087 Graphify, hrn-00088 Repomix companion, hrn-00089 FastCode license-blocked, hrn-00090 CocoIndex semantic retrieval. Harnessctl only validates config and projects documented MCP entries plus generated skill into OpenCode/Pi. Third-party install, setup, indexing, execution, update, removal, databases, daemons, models, credentials remain operator-owned. All issues validate.
+source:
+  kind: artifact
+  ref: hrn-00083
+  revision: null
+created_at: 2026-08-21T20:24:35.250Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - code-index
+  - initiative
+  - mcp
+  - opencode
+  - pi
+  - plan

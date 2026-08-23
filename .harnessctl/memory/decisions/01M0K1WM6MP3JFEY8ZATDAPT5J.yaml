@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0K1WM6MP3JFEY8ZATDAPT5J
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00084
+summary: hrn-00084 | plan | executable shared code-intelligence foundation | approved
+details: "Epic hrn-00084 approved with lightweight embedded design. Default final contract: code_index.enabled=true, provider=codegraphcontext; structural enum codegraphcontext/gitnexus/graphify; stable MCP ID code_index; projection-only, no third-party lifecycle. Tasks: hrn-00091 config contract; hrn-00092 generic local MCP projection and exact owned-entry reconciliation depends hrn-00091; hrn-00093 shared skill/package/docs depends hrn-00092. Foundation has no real provider command and cannot release before hrn-00085 default CGC adapter. All issues validate."
+source:
+  kind: artifact
+  ref: hrn-00084
+  revision: null
+created_at: 2026-08-21T20:58:36.117Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - code-index
+  - foundation
+  - mcp
+  - opencode
+  - pi
+  - plan

@@ -27,3 +27,7 @@ memory:
     include_superseded: false
   repository:
     root: .harnessctl/memory
+skills:
+  sdlc-code-index:
+    enabled: true
+    mcp_server: sdlc_code_index

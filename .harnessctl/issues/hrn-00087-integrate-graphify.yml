@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00087"
+"type": "epic"
+"title": "Integrate Graphify"
+"status": "closed"
+"created_at": "2026-08-21T20:21:42.927Z"
+"updated_at": "2026-08-22T21:38:27.636Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00083"
+"depends_on":
+  - "hrn-00084"
+"metadata":
+  "estimate": "M"
+  "order": 4
+  "plan_status": "initiative_decomposed"
+  "provider": "graphify"
+"body": "# Integrate Graphify\n\n## Objective\n\nProject Graphify as a portable local structural provider selected by `mcp.servers.sdlc-code-index` for OpenCode and Pi.\n\n## Isolated Scope\n\n- Define strict `providers.graphify` typed options and documented defaults for safe graph paths, code-only mode, and other non-secret controls.\n- Keep executable command, arguments, fixed ID, target environment names, and credentials code-owned.\n- Map the selected provider to its documented operator-installed MCP serving command.\n- Generate exact fixed-ID `sdlc-code-index` OpenCode and Pi entries without installing, probing, extracting, or serving a graph.\n- Specialize the `sdlc-code-index` skill for portable graph queries, confidence-aware relationships, source verification, and stale/unavailable fallback.\n- Document operator-owned extraction, graph refresh, optional semantic/model processing, privacy, and code-only local mode.\n\n## Acceptance Direction\n\n- Missing Graphify options normalize consistently in Python, TypeScript, Zod, and generated schema.\n- Code-only defaults require no model credential.\n- Host entries use fixed ID `sdlc-code-index` and equivalent supported semantics.\n- Tests validate configuration and projection without extracting or serving a graph.\n- Documentation distinguishes deterministic code extraction from optional semantic processing.\n\n## Dependencies and Order\n\nDepends on `hrn-00084`; planned after CodeGraphContext.\n\n## Non-Goals\n\n- Do not install Graphify, run extraction, own graph output, start servers, or make commands project-configurable.\n- Do not guarantee relationship precision beyond independently verified provider behavior.\n"
+"comments":
+  - "id": "hrn-00087-C0001"
+    "created_at": "2026-08-22T21:38:14.065Z"
+    "created_by": "tech-advisor"
+    "body": "Superseded by consolidated external-provider guide Epic hrn-00103. Graphify remains user-installed and user-configured; harnessctl will not generate or operate its MCP entry."

@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00097"
+"type": "task"
+"title": "Project the mise-backed CodeGraphContext MCP adapter"
+"status": "done"
+"created_at": "2026-08-21T23:02:35.764Z"
+"updated_at": "2026-08-22T17:32:04.914Z"
+"created_by": "tech-advisor"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00085"
+"depends_on":
+  - "hrn-00096"
+"metadata":
+  "estimate": "M"
+  "order": 2
+  "plan": "approved"
+  "risk": "high"
+"body": "# Project the mise-backed CodeGraphContext MCP adapter\n\n## Objective\n\nProject the validated CodeGraphContext selection as the real fixed-ID local MCP server through a repository-declared mise/uvx tool, without making harnessctl own provider installation or lifecycle.\n\n## Scope\n\n- Add `[tools.\"pipx:codegraphcontext\"]` version `0.6.5` to `mise.toml`; add no dedicated mise task.\n- During Build, request fresh network/package-install consent before using mise to resolve/install the repository tool and update its lockfile.\n- Add desired and recognized CodeGraphContext server intents for fixed ID `sdlc-code-index`.\n- Emit code-owned OpenCode command `['mise', 'exec', '--', 'cgc', 'mcp', 'start']` and Pi command/args equivalent.\n- Attach only the validated deterministic environment produced by `hrn-00096`.\n- Reuse existing fixed-entry reconciliation and transactional installer behavior without executable probing.\n\n## Acceptance Criteria\n\n- Repository tooling pins CodeGraphContext `0.6.5` via mise's `pipx:` backend and existing mise-managed uv/uvx path.\n- Harnessctl install does not run mise, uv, cgc, setup, index, watch, or package installation.\n- Enabled selected hosts receive equivalent `sdlc-code-index` definitions with fixed command, args, and environment.\n- Disabled fresh installs create no entry; disabling removes only an exact recognized definition; modified entries are preserved and reported.\n- Conflicts fail without force; force replaces only the fixed ID; unrelated JSON remains byte/structure-preserved according to existing rules.\n- Transaction rollback restores exact prior files after an injected post-write failure.\n- Existing CVS MCP projections remain byte-equivalent.\n- Tests do not start the provider or index a repository; focused checks pass.\n\n## Dependencies and Order\n\nDepends on `hrn-00096`; indirectly blocked by `hrn-00084`. Blocks the final guidance/evidence Task.\n\n## Artifacts\n\n`mise.toml`/mise lockfile; Python provider intent/installer code; OpenCode/Pi projection and reconciliation tests.\n\n## Estimate\n\nM. High risk because command portability, tool resolution, and recognized-entry ownership affect both hosts.\n\n## Non-Goals\n\nNo project-configurable command/args/version, automatic downstream mise declaration, provider availability probe, MCP startup, indexing, watching, deletion, setup, or release action.\n"
+"comments":
+  - "id": "hrn-00097-C0001"
+    "created_at": "2026-08-22T17:31:25.203Z"
+    "created_by": "lead-engineer"
+    "body": "Build Green. Added fixed CodeGraphContext desired/recognized intents for `sdlc-code-index`: OpenCode `mise exec -- cgc mcp start`, equivalent Pi command/args, and only validated deterministic safety environment. Disabled/provider-switch cleanup recognizes both source-storage variants; existing ownership-safe conflict/force/modified-preservation/rollback behavior and CVS projections remain covered. Installer never probes or runs mise/cgc. Added repository `pipx:codegraphcontext` 0.6.5 declaration and lock entry with no lifecycle task. With fresh user consent, `mise lock pipx:codegraphcontext` and `mise install pipx:codegraphcontext@0.6.5` succeeded; `mise ls` resolves 0.6.5. No MCP start, indexing, watch, deletion, or other provider lifecycle action ran. Evidence: focused Python projection/install suite 222 passed; Ruff check/format and `git diff --check` passed."

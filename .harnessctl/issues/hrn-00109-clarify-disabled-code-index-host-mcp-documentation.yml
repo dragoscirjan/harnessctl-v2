@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00109"
+"type": "bug"
+"title": "Clarify disabled code-index host MCP documentation"
+"status": "done"
+"created_at": "2026-08-23T00:04:48.089Z"
+"updated_at": "2026-08-23T00:19:18.204Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00105"
+"metadata":
+  "capability": "documentation"
+  "risk": "low"
+  "source": "formal-verify"
+"body": "# Clarify disabled code-index host MCP documentation\n\n## Defect\n\n`docs/skills.md` says a fresh disabled code-index install does not inspect or change host MCP entries. The installer still performs unrelated generic CVS and issue MCP projection, which can read and update host configuration. Only code-index configuration and code-index MCP entries are outside harnessctl ownership.\n\n## Evidence\n\n- `docs/skills.md:49-50` makes the unqualified host MCP claim.\n- `src/harnessctl/install.py:125-127,314-339` still computes and projects generic MCP intents.\n- `src/harnessctl/mcp.py:54-71` retains CVS and issue intents by design.\n\n## Impact\n\nOperators may infer that disabling code indexing suppresses every host MCP configuration interaction. That conflicts with intended unchanged generic CVS/issues behavior and overstates the code-index isolation guarantee.\n\n## Acceptance Criteria\n\n- Documentation scopes non-inspection and non-mutation guarantees to code-index configuration and code-index MCP entries.\n- Documentation states that unrelated configured generic CVS/issues MCP projection remains active and unchanged.\n- Documentation tests reject the unqualified whole-host claim and assert the corrected boundary.\n- No installer behavior or external provider lifecycle changes are introduced.\n- Focused docs tests, repository quality, issue validation, and `git diff --check` pass.\n\n## Boundaries\n\nDocumentation-only corrective work unless Build discovers contradictory implementation evidence. Do not execute or manage an external provider. Do not enter Build during Verify."
+"comments":
+  - "id": "hrn-00109-C0001"
+    "created_at": "2026-08-23T00:19:12.398Z"
+    "created_by": "lead-engineer"
+    "body": "Formal Verify passed. Documentation now scopes noninspection/nonmutation to code-index configuration and code-index MCP entries while explicitly retaining unrelated generic CVS/issues projection; docs regression rejects the old whole-host claim. Evidence: focused acceptance 299 passed; `mise run quality` 333 Python/202 Node and all gates passed; `mise run runtime-smoke`, issue/memory validation, Changesets status, and `git diff --check` passed; independent correctness and security/privacy reviews approved with no findings. No external provider executed."

@@ -24,6 +24,8 @@ Start with the [documentation index](docs/README.md), then use the focused guide
 - [Repository memory and disposable cache](docs/memory.md)
 - [Filesystem issues and configured provider routing](docs/issues.md)
 - [Version control and MCP provider setup](docs/cvs.md)
+- [Code-intelligence retrieval and provider boundaries](docs/code-intelligence.md)
+- [External code-intelligence provider comparison](docs/code-intelligence-providers.md)
 
 The detailed intended lifecycle remains in [FLOWS.md](FLOWS.md). Topic guides label
 implemented behavior separately from plans so roadmap material is not mistaken for a
@@ -168,10 +170,17 @@ Implemented in `src/harnessctl/`:
 - Fixed-ID GitHub, GitLab, Gitea, and Forgejo MCP projection into OpenCode and Pi host
   files, with independently configured CVS and Issues policies.
 - Packaged command, skill, and reference templates included in built wheels.
+- Opt-in, provider-neutral `sdlc-code-index` retrieval guidance with local source
+  verification and Glob/Grep fallback when index evidence is unavailable or unsuitable.
 
 The current registry installs five compact command shells plus one SDLC core skill and
 13 progressively disclosed references under both OpenCode and Pi. See the
 [SDLC guide](docs/sdlc.md) for the exact command set, budgets, and host boundaries.
+
+Enabled code intelligence installs the same generated `sdlc-code-index` skill for selected
+OpenCode and Pi hosts. The user separately owns the configured external MCP registration,
+runtime, credentials, index, and data; harnessctl never projects or manages them. See the
+[code-intelligence guide](docs/code-intelligence.md).
 
 ### Generic issue tooling
 
@@ -241,7 +250,7 @@ the normalized repository-memory tools. Adapter tests cover Pi memory registrati
 store, search, and validation delegation.
 
 Automatic memory installation supports OpenCode and Pi. Pi receives all five commands,
-all five skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
+its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
 `pi.extensions` package manifest loads the tool extension.
 
 OpenCode and Pi receive generated CVS and Issues skills. Pi MCP host configuration uses
