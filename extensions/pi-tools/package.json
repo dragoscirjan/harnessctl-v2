@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@harnessctl/pi-tools",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Pi tools for harnessctl.",
   "license": "MIT",
   "repository": {
@@ -47,7 +47,7 @@
     "@earendil-works/pi-coding-agent": ">=0.80.7"
   },
   "dependencies": {
-    "@harnessctl/generic-tools": "0.1.6",
+    "@harnessctl/generic-tools": "0.1.7",
     "typebox": "^1.1.38"
   },
   "devDependencies": {

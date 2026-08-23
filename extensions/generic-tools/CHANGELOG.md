@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## 0.1.7
+
+### Patch Changes
+
+- [#33](https://github.com/dragoscirjan/harnessctl-v2/pull/33) [`33f9db0`](https://github.com/dragoscirjan/harnessctl-v2/commit/33f9db0f26c7d39f17c89b8da951833027dade29) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add the opt-in, default-disabled `workflow.tdd.enabled` configuration contract.
+
 ## 0.1.6
 
 ### Patch Changes
