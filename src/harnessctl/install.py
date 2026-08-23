@@ -448,6 +448,7 @@ def install(
             mutation_started = True
             target.unlink()
         if config["memory"]["enabled"]:
+            mutation_started = True
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
         if harness in ("opencode", "all"):
             _smoke_check(
@@ -458,6 +459,13 @@ def install(
         if harness in ("pi", "all"):
             _smoke_check_pi(root, required_pi_packages, rendered_targets)
         _smoke_check_mcp(root, harness, intents)
+        for relative_skill in dormant_code_index_skills:
+            warnings.warn(
+                f"sdlc-code-index is disabled, but {relative_skill.as_posix()} remains "
+                "discoverable and active-capable; remove it manually to deactivate it",
+                UserWarning,
+                stacklevel=2,
+            )
     except BaseException as error:
         rollback_errors: list[BaseException] = []
         for source in reversed(installed_pi_packages):
@@ -483,13 +491,6 @@ def install(
                 [error, *rollback_errors],
             ) from error
         raise
-    for relative_skill in dormant_code_index_skills:
-        warnings.warn(
-            f"sdlc-code-index is disabled, but {relative_skill.as_posix()} remains "
-            "discoverable and active-capable; remove it manually to deactivate it",
-            UserWarning,
-            stacklevel=2,
-        )
     return [target for target, _ in rendered_targets]
 
 

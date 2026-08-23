@@ -521,6 +521,60 @@ def test_disabling_sdlc_code_index_retains_dormant_generated_skill(tmp_path: Pat
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+def test_disabled_sdlc_code_index_warning_failure_rolls_back_install(
+    tmp_path: Path, harness: str
+) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=False)
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    host_roots = (".opencode", ".pi") if harness == "all" else (f".{harness}",)
+    for host_root in host_roots:
+        skill = tmp_path / host_root / "skills/sdlc-code-index/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_bytes(b"operator-retained skill\n")
+    before = _tree_manifest(tmp_path)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(UserWarning, match="sdlc-code-index is disabled"):
+            install(tmp_path, harness)
+
+    assert _tree_manifest(tmp_path) == before
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+def test_disabled_sdlc_code_index_warning_failure_rolls_back_memory_directories(
+    tmp_path: Path, harness: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        "memory:\n  enabled: true\nskills:\n  sdlc-code-index:\n    enabled: false\n",
+    )
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    host_roots = (".opencode", ".pi") if harness == "all" else (f".{harness}",)
+    for host_root in host_roots:
+        skill = tmp_path / host_root / "skills/sdlc-code-index/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_bytes(b"operator-retained skill\n")
+
+    with pytest.warns(UserWarning, match="sdlc-code-index is disabled"):
+        install(tmp_path, harness)
+    memory_root = tmp_path / ".harnessctl/memory"
+    for folder in ("facts", "decisions", "events", "lessons", "tombstones"):
+        (memory_root / folder).rmdir()
+    memory_root.rmdir()
+    before = _tree_manifest(tmp_path)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(UserWarning, match="sdlc-code-index is disabled"):
+            install(tmp_path, harness, force=True)
+
+    assert _tree_manifest(tmp_path) == before
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
 def test_disabled_sdlc_code_index_symlink_is_rejected_before_mutation(
     tmp_path: Path, harness: str
 ) -> None:

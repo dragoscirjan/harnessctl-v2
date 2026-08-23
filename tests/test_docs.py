@@ -230,6 +230,7 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     guide = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
     root = (ROOT / "README.md").read_text(encoding="utf-8")
     normalized = " ".join(guide.split())
+    normalized_skills = " ".join(skills.split())
 
     assert "`skills.sdlc-code-index.enabled`" in configuration
     assert "default is `false`" in configuration
@@ -244,6 +245,9 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     assert "loads `sdlc-code-index`" in " ".join(skills.split())
     assert "never deletes it automatically" in " ".join(skills.lower().split())
     assert "remains active-capable" in skills
+    assert "does not inspect or change host MCP entries" not in normalized_skills
+    assert "does not inspect or change code-index MCP entries" in normalized_skills
+    assert "generic CVS and issue MCP projection remains active" in normalized_skills
     assert "does not register or run that server" in normalized
     assert "user-owned under normal, forced, migration, and rollback paths" in normalized
     assert "advisory retrieval evidence, never source authority" in normalized

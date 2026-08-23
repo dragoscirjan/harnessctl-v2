@@ -46,10 +46,12 @@ the skill is available and relationship-aware codebase retrieval or impact analy
 relevant. When disabled, the compiled core explicitly refuses to load a discoverable
 retained copy and continues with direct source discovery, Glob, Grep, and file reads.
 
-A fresh disabled install creates no code-index skill and does not inspect or change host
-MCP entries. Disabling after an enabled install does not delete or modify the existing
-skill. Instead, harnessctl emits one warning for each selected host whose discoverable
-file remains active-capable, naming `.opencode/skills/sdlc-code-index/SKILL.md` or
+A fresh disabled install creates no code-index skill. Code-index configuration does not
+inspect or change code-index MCP entries; unrelated generic CVS and issue MCP projection
+remains active and unchanged. Disabling after an enabled install does not delete or
+modify the existing skill. Instead, harnessctl emits one warning for each selected host
+whose discoverable file remains active-capable, naming
+`.opencode/skills/sdlc-code-index/SKILL.md` or
 `.pi/skills/sdlc-code-index/SKILL.md` for manual removal. Harnessctl never deletes it
 automatically. Every external MCP registration, process, package, index, credential, and
 data store remains user-owned.
