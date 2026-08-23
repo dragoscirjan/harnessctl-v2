@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00127"
+"type": "bug"
+"title": "Return evidence-backed local cache refresh status"
+"status": "done"
+"created_at": "2026-08-23T20:33:24.657Z"
+"updated_at": "2026-08-23T20:50:50.242Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00121"
+"metadata":
+  "occurrence": "cache-refresh-evidence"
+  "severity": "medium"
+  "source": "work-verify"
+"body": "# Return evidence-backed local cache refresh status\n\n## Parent\n\n`hrn-00121`\n\n## Defect\n\nThe normalized memory validation path may check or rebuild the disposable cache but does not return evidence describing that outcome.\n\n## Evidence\n\n`extensions/generic-tools/memory.ts:260-269` returns only validity and record counts. `extensions/generic-tools/local-persistence.ts:176-180` exposes `ensureLocalCache` as `void`, and validation can return before invoking it when issue graph loading fails.\n\n## Impact\n\n`work-refresh` cannot truthfully classify cache repair as `refreshed` or distinguish checked, rebuilt, and skipped outcomes.\n\n## Acceptance Criteria\n\n- A normalized public tool result identifies cache outcome as checked, rebuilt, or skipped with evidence.\n- Validation failures and issue-graph early returns cannot be misreported as cache repair.\n- Refresh maps only returned evidence to its cache classification.\n- Runtime, host adapter, documentation, and focused tests cover each outcome.\n- Full quality checks pass.\n\n## Non-Goals\n\nDirect SQLite access from prompts or exposing internal database details.\n"
+"comments": []

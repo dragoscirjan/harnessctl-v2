@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R43GCN4WN49FD36F8GW15B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | hrn-00123 | six-command distribution implemented
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Item: hrn-00123
+  Done: hrn-00122 contract done; sixth command renders/installs for OpenCode and Pi; generated trees refreshed; package and legacy migration inventories updated without mapping legacy commands to refresh.
+  Artifacts: source templates; generated .opencode/.pi outputs; tests/test_templates.py; tests/test_install.py; tests/test_release_artifacts.py
+  Verification: uv run pytest tests/test_templates.py tests/test_install.py tests/test_release_artifacts.py; 277 passed, 8 expected migration warnings.
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00123
+  revision: null
+created_at: 2026-08-23T20:13:30.901Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0R014RHFYW4JT6WP3077XZT
+tags:
+  - build
+  - checkpoint
+  - work-refresh

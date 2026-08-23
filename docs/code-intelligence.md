@@ -21,8 +21,8 @@ skills:
 alphanumeric character, contain only alphanumeric characters, `_`, or `-`, and not use
 the reserved `cvs_` prefix. The name must match a server that the user separately
 configures in the selected host. Harnessctl treats the value only as guidance: it does
-not create, recognize, remove, install, configure, start, probe, index, watch, or manage
-the server or its processes, packages, models, credentials, storage, or data.
+not create, recognize, remove, install, configure, start, watch, or manage the server or
+its processes, packages, models, credentials, storage, or data.
 
 Enabled OpenCode and Pi selections receive byte-equivalent skills at
 `.opencode/skills/sdlc-code-index/SKILL.md` and
@@ -45,10 +45,16 @@ configuration, tests, and version-control state. If the MCP or required capabili
 missing, stale, incomplete, or unsuitable, use Glob for file discovery and Grep for
 exact text search, then read the relevant files.
 
-Tool availability grants no permission for installation, setup, startup, indexing,
-watching, mutation, deletion, model download, credential access, storage changes, or any
-other lifecycle operation. Those actions remain separate user decisions outside the
-generated skill.
+Plan, Build, Verify, Release, and Continue are retrieval-only. The sole `work-refresh`
+exception first loads `sdlc-code-index` and uses only its compiled configured server and
+boundaries. It may invoke an explicitly supported safe refresh or reindex operation only
+after ordered checks for live-schema support, current evidence freshness,
+current-repository scope, and fresh consent naming the provider, operation, and repository.
+Unsupported capability is reported without guessed tools, CLI fallback, alternate provider,
+or route. Tool availability grants no permission
+for installation, setup, startup, configuration, watching, clearing, deletion, reset,
+model download, credential access, database or storage management, remote mutation,
+destructive fallback, or any other lifecycle operation.
 
 ## Disablement and migration
 
@@ -66,4 +72,6 @@ workflow uses it; package and index data removal is also user-owned.
 
 Formal Verify owns current acceptance mapping and independent security, privacy,
 compatibility, and maintainability review. A runtime MCP handshake is a separate
-user-authorized operation outside harnessctl's SDLC phases.
+user-authorized operation outside harnessctl's SDLC phases. `work-refresh` is also outside
+those phases, but its narrow provider operation remains subject to the exact live-schema,
+repository-scope, and fresh-consent gates above.

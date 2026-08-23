@@ -75,13 +75,16 @@ necessary.
 
 ## Intended SDLC flow
 
-The public workflow is Epic-first and has exactly five commands:
+The public interface has five Epic-first lifecycle commands plus one standalone refresh
+command:
 
 ```mermaid
 flowchart TD
-    accTitle: Epic-first SDLC flow
-    accDescr: Plan confirms one Epic and its executable plan, Build implements bounded work, Verify either returns confirmed defects to Build or advances to Release, and Continue resumes one exact step in one current phase.
+    accTitle: Epic-first SDLC flow and standalone refresh
+    accDescr: Plan confirms one Epic and its executable plan, Build through Release deliver it, Continue resumes one phase step, and standalone Refresh reconciles repository context without an Epic.
     request([Prompt or issue ID]) --> plan["work-plan<br/>/work plan"]
+    request --> refresh["work-refresh<br/>/work refresh"]
+    refresh --> report[Refresh report]
     plan -->|Approved Epic plan| build["work-build<br/>/work build"]
     build -->|Verification boundary| verify["work-verify<br/>/work verify"]
     verify -->|Confirmed corrective Bugs| build
@@ -93,9 +96,10 @@ flowchart TD
     continueWork -. "Resume exactly one step" .-> release
 ```
 
-Every command first resolves exactly one owning Epic. `work-build`, `work-verify`,
+Every lifecycle command first resolves exactly one owning Epic. `work-build`, `work-verify`,
 `work-release`, and `work-continue` stop and redirect to `work-plan` when no Epic can
-be resolved. The [authoritative five-command transition graph and accessible edge
+be resolved. `work-refresh` requires no Epic and does not enter or resume the lifecycle.
+The [authoritative six-command transition graph and accessible edge
 table](docs/sdlc.md#authoritative-command-transitions) cover every gate, loop, and
 terminal outcome.
 
@@ -107,6 +111,7 @@ OpenCode and Pi install these exact hyphenated names:
 /work-verify
 /work-release
 /work-continue
+/work-refresh
 ```
 
 The canonical harness-neutral aliases are:
@@ -117,12 +122,13 @@ The canonical harness-neutral aliases are:
 /work verify
 /work release
 /work continue
+/work refresh
 ```
 
 Grouped aliases describe canonical semantics; they are not additional generated command
 files. The former 18-command vocabulary is not installed as aliases. Useful intake,
 exploration, Initiative/Epic creation, design, decomposition, implementation, review,
-CVS, finish, and resume behavior remains behind the five commands as progressively
+CVS, finish, and resume behavior remains behind the lifecycle commands as progressively
 disclosed SDLC skill references.
 
 ## Stage contracts
@@ -155,6 +161,16 @@ Without an ID it presents at most five unfinished candidates and waits for selec
 It resumes exactly one confirmed step in Plan, Build, Verify, or Release, checkpoints
 that result, and stops without advancing phases.
 
+`work-refresh` performs bounded repository familiarization and reconciliation without an
+Epic or lifecycle transition. It validates enabled repository memory, preserves immutable
+history, reconciles stale active current-state meaning, and proposes each memory correction
+separately. For an enabled code index it first loads `sdlc-code-index` and uses only that
+skill's compiled configured server and boundaries. Projection mutation is gated by exact
+live-schema support, fresh evidence, current-repository scope, and fresh consent naming the
+provider, operation, and repository. Unsupported capabilities are reported rather than
+guessed; provider lifecycle, remote, destructive, credential, model, and database actions
+remain forbidden.
+
 ## What is implemented today
 
 ### Command and skill distribution
@@ -175,7 +191,7 @@ Implemented in `src/harnessctl/`:
 - Always-installed `sdlc-code` Build guidance with generic clean-code policy and 26
   lazily selected language, framework, shell, artifact, and IaC references.
 
-The current registry installs five compact command shells, the SDLC core with 13
+The current registry installs six compact command shells, the SDLC core with 14
 progressively disclosed references, and a byte-equivalent `sdlc-code` tree under both
 OpenCode and Pi. Build loads `sdlc-code`; Plan, Verify, Release, and non-Build Continue
 do not. See the
@@ -183,7 +199,10 @@ do not. See the
 
 Enabled code intelligence installs the same generated `sdlc-code-index` skill for selected
 OpenCode and Pi hosts. The user separately owns the configured external MCP registration,
-runtime, credentials, index, and data; harnessctl never projects or manages them. See the
+runtime, credentials, index, and data; harnessctl never projects or manages them. The
+generated `work-refresh` policy may invoke only an exact live-schema-supported,
+repository-scoped refresh operation after fresh consent; this transfers no provider
+ownership. See the
 [code-intelligence guide](docs/code-intelligence.md).
 
 ### Generic issue tooling
@@ -253,7 +272,7 @@ OpenCode and Pi adapters currently register the generic issue/configuration tool
 the normalized repository-memory tools. Adapter tests cover Pi memory registration,
 store, search, and validation delegation.
 
-Automatic memory installation supports OpenCode and Pi. Pi receives all five commands,
+Automatic memory installation supports OpenCode and Pi. Pi receives all six commands,
 its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
 `pi.extensions` package manifest loads the tool extension.
 
@@ -306,7 +325,7 @@ The following are intentionally not part of the current slice:
 - self-development mode;
 - game-development-specific workflows.
 
-The five prompts coordinate only configured capabilities and retain explicit proposal,
+The six prompts coordinate only configured capabilities and retain explicit proposal,
 confirmation, authority, checkpoint, and host-permission boundaries. They do not add a
 workflow runtime or make prompts a security boundary.
 
@@ -314,7 +333,7 @@ workflow runtime or make prompts a security boundary.
 
 Current roadmap areas include durable approval artifacts, grouped Pi command
 dispatch, model-tier and retry policy, remote provider adapters, and protected
-self-development. These remain separate from the installed five-command prompt set.
+self-development. These remain separate from the installed six-command prompt set.
 See [FLOWS.md](FLOWS.md) for intended sequencing and the
 [topic documentation](docs/README.md) for current-versus-planned boundaries.
 

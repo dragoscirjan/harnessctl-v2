@@ -16,7 +16,14 @@ from harnessctl.templates import (
     render_skill_resources,
 )
 
-COMMANDS = ("work-plan", "work-build", "work-verify", "work-release", "work-continue")
+COMMANDS = (
+    "work-plan",
+    "work-build",
+    "work-verify",
+    "work-release",
+    "work-continue",
+    "work-refresh",
+)
 RETIRED_COMMANDS = (
     "work-new",
     "work-explore",
@@ -48,6 +55,7 @@ PHASE_RESOURCE = {
     "work-verify": "references/verify.md",
     "work-release": "references/release.md",
     "work-continue": "references/continue.md",
+    "work-refresh": "references/refresh.md",
 }
 SDLC_CODE_REFERENCES = {
     "cpp",
@@ -106,7 +114,7 @@ def _words(value: str) -> int:
     return len(value.split())
 
 
-def test_registry_defines_only_five_epic_first_commands() -> None:
+def test_registry_defines_six_commands_and_only_four_phases() -> None:
     assert tuple(TEMPLATES) == COMMANDS
     assert tuple(COMMAND_METADATA) == COMMANDS
     assert tuple(DESCRIPTIONS) == COMMANDS
@@ -139,7 +147,7 @@ def test_command_shells_are_compact_and_progressively_disclosed(command: str, ha
     assert "{{" not in rendered
 
 
-@pytest.mark.parametrize("command", COMMANDS)
+@pytest.mark.parametrize("command", OLD_MEMORY_ENABLED_BYTES)
 def test_command_shells_are_at_least_eighty_percent_smaller(command: str) -> None:
     rendered = render_prompt(command, "opencode", config=_memory_config())
     assert len(rendered.encode()) <= OLD_MEMORY_ENABLED_BYTES[command] * 0.2
@@ -149,7 +157,7 @@ def test_sdlc_skill_resource_registry_is_complete_and_bounded() -> None:
     resources = render_skill_resources("sdlc", **_sdlc_context())
 
     assert set(resources) == set(SKILL_RESOURCE_TEMPLATES["sdlc"])
-    assert len(resources) == 13
+    assert len(resources) == 14
     assert all(path.startswith("references/") and path.endswith(".md") for path in resources)
     assert all(content.endswith("\n") for content in resources.values())
     assert all("{%" not in content and "{{" not in content for content in resources.values())
@@ -246,7 +254,7 @@ def test_core_skill_preserves_universal_invariants_and_budget() -> None:
         "**Required**, **Recommended**, **Optional**, or **Not needed**",
         "Remote and destructive actions need fresh action-specific consent",
         "switch route after attempted mutation",
-        "Execute only this command's phase",
+        "Execute only this command's phase or standalone refresh",
         "When `sdlc-code-index` is available",
         "relationship-aware codebase retrieval or impact analysis is relevant",
         "continue with direct source discovery, Glob, Grep, and file reads",
@@ -366,14 +374,112 @@ def test_sdlc_code_index_skill_preserves_retrieval_and_authority_boundaries() ->
         "Glob for file discovery and Grep for exact text search",
         "Read the source files",
         "Never invent tool names, parameters, or response fields",
-        "operator owns installation, setup, startup, indexing, watching",
+        "operator owns installation, setup, startup, watching",
         "models, credentials, storage, data, and removal",
-        "Do not invoke mutation or deletion operations",
+        "Plan, Build, Verify, Release, and Continue are retrieval-only",
+        "During `work-refresh` only",
+        "live schema explicitly supports the exact operation",
+        "fresh consent naming the provider, operation, and repository",
+        "Report an unsupported refresh instead of using a CLI",
     ):
         assert phrase in skill
     for provider in ("CodeGraphContext", "GitNexus", "Graphify"):
         assert provider not in skill
     assert "{{" not in skill
+
+
+def test_refresh_is_standalone_and_preserves_safety_boundaries() -> None:
+    skill = " ".join(render_skill("sdlc", **_sdlc_context()).split())
+    refresh = " ".join(
+        render_skill_resources("sdlc", **_sdlc_context())["references/refresh.md"].split()
+    )
+    continue_reference = render_skill_resources("sdlc", **_sdlc_context())["references/continue.md"]
+
+    for phrase in (
+        "requires no Epic",
+        "not a lifecycle phase",
+        "cannot be resumed by Continue",
+    ):
+        assert phrase in skill
+    for phrase in (
+        "current issues, specs, source, Git state, tests, configuration, and provider observations",
+        "memory_validate",
+        "Map only the returned cache outcome and evidence",
+        "active decision or event only when current authority contradicts reusable "
+        "current-state meaning",
+        "Preserve immutable history and valid historical records",
+        "separately propose one immutable",
+        "Never edit canonical YAML or SQLite directly",
+        "load `sdlc-code-index`",
+        "compiled configured server and boundaries",
+        "Gate each configured, active development projection in this order",
+        "fresh consent naming the provider, exact operation, and current repository",
+        "No failed gate permits mutation",
+        "Never install, start, configure, watch, clear, delete, reset, access credentials",
+        "change models or databases, mutate remote state, or use a destructive fallback",
+        "`refreshed`, `skipped`, `unsupported`, `stale`, or `blocked`",
+        "Never infer or claim refresh success",
+    ):
+        assert phrase in refresh
+    assert "work-refresh" not in continue_reference
+
+
+def test_refresh_enforces_projection_gates_before_mutation() -> None:
+    refresh = " ".join(
+        render_skill_resources("sdlc", **_sdlc_context())["references/refresh.md"].split()
+    )
+    ordered_gates = (
+        "Inspect its live tool schema",
+        "Establish current evidence freshness",
+        "Verify that the operation is scoped to the current repository",
+        "obtain fresh consent naming the provider",
+        "Only after gates 1-4 pass, invoke that exact operation",
+    )
+
+    positions = [refresh.index(gate) for gate in ordered_gates]
+    assert positions == sorted(positions)
+    for outcome in (
+        "Missing schema or capability is `unsupported`; do not mutate",
+        "Stale or unverifiable evidence is `stale`; do not mutate",
+        "Failed scope is `blocked`; do not mutate",
+        "Absent or declined consent is `blocked`; do not mutate",
+    ):
+        assert outcome in refresh
+    assert "never invoke a mutation before every gate passes" in refresh
+    assert "No failed gate permits mutation" in refresh
+    assert "CLI fallback, or alternate provider" in refresh
+
+
+def test_refresh_maps_only_normalized_cache_evidence() -> None:
+    refresh = " ".join(
+        render_skill_resources("sdlc", **_sdlc_context())["references/refresh.md"].split()
+    )
+
+    assert "`checked` with verified-match evidence is `skipped`" in refresh
+    assert "`rebuilt` with verified-rebuild evidence is `refreshed`" in refresh
+    assert "`skipped` is `blocked`" in refresh
+    assert "never claim repair from any other result" in refresh
+
+
+def test_refresh_compiles_disabled_memory_as_skipped() -> None:
+    refresh = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=False))[
+        "references/refresh.md"
+    ]
+
+    assert "Memory is disabled" in refresh
+    assert "memory reconciliation as `skipped`" in refresh
+    assert "memory_validate" not in refresh
+
+
+def test_refresh_compiles_disabled_code_index_as_skipped() -> None:
+    refresh = render_skill_resources("sdlc", **_sdlc_context(code_index_enabled=False))[
+        "references/refresh.md"
+    ]
+
+    assert "Code indexing is disabled" in refresh
+    assert "Report it as `skipped`" in refresh
+    assert "load `sdlc-code-index`" not in refresh
+    assert "another provider" in refresh
 
 
 def test_phase_references_preserve_rare_but_required_boundaries() -> None:

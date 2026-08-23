@@ -80,7 +80,12 @@ describe('repository memory', () => {
       expect(stored.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
       expect(getMemory(cwd, stored.id)).toEqual(stored);
       expect(listMemory(cwd)).toEqual([stored]);
-      expect(validateMemory(cwd)).toMatchObject({ valid: true, records: 1, tombstones: 0 });
+      expect(validateMemory(cwd)).toMatchObject({
+        valid: true,
+        records: 1,
+        tombstones: 0,
+        cache: { outcome: 'checked', evidence: 'canonical_snapshot_match_verified' },
+      });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -351,8 +356,56 @@ describe('repository memory', () => {
       const memoryPath = join(cwd, '.harnessctl', 'memory', 'facts', `${stored.id}.yaml`);
       writeFileSync(cachePath, 'corrupt-cache');
       writeFileSync(memoryPath, 'summary: [\n');
-      expect(validateMemory(cwd)).toMatchObject({ valid: false, records: 0, tombstones: 0 });
+      expect(validateMemory(cwd)).toMatchObject({
+        valid: false,
+        records: 0,
+        tombstones: 0,
+        cache: { outcome: 'skipped', evidence: 'memory_validation_failed' },
+      });
       expect(readFileSync(cachePath, 'utf8')).toBe('corrupt-cache');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('returns verified rebuild evidence only after validation repairs the cache', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('Cache rebuild evidence'));
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite');
+      writeFileSync(cachePath, 'corrupt-cache');
+
+      expect(validateMemory(cwd).cache).toEqual({
+        outcome: 'rebuilt',
+        evidence: 'canonical_snapshot_rebuild_verified',
+      });
+      expect(validateMemory(cwd).cache).toEqual({
+        outcome: 'checked',
+        evidence: 'canonical_snapshot_match_verified',
+      });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it('reports cache validation as skipped when the canonical issue graph is invalid', () => {
+    const cwd = fixture();
+    try {
+      storeMemory(cwd, fact('Canonical memory remains authoritative'));
+      const created = createIssueRecord(cwd, { type: 'task', title: 'Invalid dependency' });
+      const issuePath = join(cwd, created.path);
+      const decoded = decodeIssueDocument(readFileSync(issuePath));
+      writeFileSync(issuePath, encodeCanonicalIssue({ ...decoded.issue, depends_on: ['99999'] }));
+      const cachePath = join(cwd, '.harnessctl', 'cache', 'harnessctl.sqlite');
+      const before = readFileSync(cachePath);
+
+      expect(validateMemory(cwd)).toMatchObject({
+        valid: false,
+        records: 1,
+        errors: [expect.stringMatching(/invalid canonical issue graph/i)],
+        cache: { outcome: 'skipped', evidence: 'issue_graph_validation_failed' },
+      });
+      expect(readFileSync(cachePath)).toEqual(before);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

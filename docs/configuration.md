@@ -101,7 +101,10 @@ tools the generated skill may use. The name must contain 1 through 64 lowercase 
 characters, start and end with an alphanumeric character, use only alphanumeric
 characters, `_`, or `-` internally, and must not start with the reserved `cvs_` prefix.
 It is guidance only: harnessctl does not create, recognize, remove, install, configure,
-start, probe, index, watch, or otherwise manage that server.
+start, watch, or otherwise manage that server. When enabled, `work-refresh` may discover
+through live schemas and, after fresh exact consent, invoke a supported safe operation
+scoped to the current repository. Unsupported capability is reported; configuration does
+not grant provider ownership or general lifecycle authority.
 
 An enabled install generates byte-equivalent `sdlc-code-index` skills for the selected
 OpenCode and Pi hosts. A fresh disabled install writes no code-index skill. If a selected

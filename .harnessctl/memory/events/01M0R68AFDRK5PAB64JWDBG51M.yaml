@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R68AFDRK5PAB64JWDBG51M
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | repair Bugs 00126-00128 | done
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Done: hrn-00126, hrn-00127, hrn-00128 implemented, fully checked, and transitioned done with exact user consent. Refresh reconciles contradicted active decision/event current-state meaning; memory_validate returns evidence-backed cache outcomes; projection mutations require ordered live-schema, freshness, repository-scope, and fresh-consent gates. Refresh loads compiled sdlc-code-index and forbids alternate routes. Epic remains open; Verify not entered.
+  Next: work-verify hrn-00121
+  Blockers: none
+  Verification: focused Python 294 passed; mise run quality passed; Python 360 passed; Node 204 passed; lint, format, Mermaid, packages, release artifacts, dead-code, duplication thresholds passed; git diff --check clean.
+source:
+  kind: artifact
+  ref: hrn-00121
+  revision: null
+created_at: 2026-08-23T20:51:05.837Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0R65Q2QQG7ZEGV9J0P0YZ08
+tags:
+  - build
+  - checkpoint
+  - repair
+  - work-refresh

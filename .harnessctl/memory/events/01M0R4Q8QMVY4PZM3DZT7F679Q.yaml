@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M0R4Q8QMVY4PZM3DZT7F679Q
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | all child tasks | implementation complete
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Done: hrn-00122..hrn-00125 done with explicit closure consent; work-refresh command, safety contract, host distribution, compatibility, tests, docs, diagrams complete. Epic remains open; Verify not entered.
+  Artifacts: canonical templates; generated OpenCode/Pi files; README.md; FLOWS.md; docs; tests.
+  Verification: focused 277 passed; docs 16 passed; mise run quality passed; Python 357 passed; release artifacts 2 passed; git diff --check clean.
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00121
+  revision: null
+created_at: 2026-08-23T20:24:18.420Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0R4NHV0N4NFPDPHH0F3EVHN
+tags:
+  - build
+  - checkpoint
+  - work-refresh

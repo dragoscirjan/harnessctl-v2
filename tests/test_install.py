@@ -228,12 +228,20 @@ def test_command_set_migration_metadata_is_exact() -> None:
             "work-verify",
             "work-release",
             "work-continue",
+            "work-refresh",
         )
     )
     assert len(LEGACY_SDLC_COMMANDS) == 18
     assert len(RETIRED_SDLC_COMMANDS) == 16
     assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
-    assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS.values()) == set(CURRENT_SDLC_COMMANDS)
+    assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS.values()) == {
+        "work-plan",
+        "work-build",
+        "work-verify",
+        "work-release",
+        "work-continue",
+    }
+    assert "work-refresh" not in LEGACY_SDLC_COMMAND_REPLACEMENTS.values()
 
 
 @pytest.mark.parametrize("force", [False, True])
@@ -1226,7 +1234,7 @@ def test_config_allows_disabled_memory_and_caveman(tmp_path: Path) -> None:
 
 
 def test_command_metadata_exactly_covers_templates() -> None:
-    assert len(COMMAND_METADATA) == 5
+    assert len(COMMAND_METADATA) == 6
     assert COMMAND_METADATA.keys() == TEMPLATES.keys()
 
 
@@ -1247,7 +1255,10 @@ def test_enabled_pi_prompts_delegate_memory_hooks() -> None:
 
     for command in TEMPLATES:
         rendered = render_prompt(command, "pi", config=config)
-        assert "references/checkpoint.md" in rendered or command == "work-continue"
+        assert "references/checkpoint.md" in rendered or command in {
+            "work-continue",
+            "work-refresh",
+        }
         assert "memory_search" not in rendered
 
     checkpoint = render_skill_resources("sdlc", **_sdlc_context(memory_enabled=True))[
@@ -1272,6 +1283,7 @@ def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None
         retrieval_limit=3,
         retrieval_max_chars=2048,
         tdd_enabled=False,
+        code_index_enabled=False,
     )["references/checkpoint.md"]
     normalized = " ".join(checkpoint.split())
     assert "limit 3, 2048 chars" in normalized
@@ -1315,7 +1327,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
 
     installed = install(tmp_path, "opencode")
 
-    assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 5
+    assert len(list((tmp_path / ".opencode/commands").glob("*.md"))) == 6
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_search" not in rendered
@@ -1338,7 +1350,7 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
     installed = install(tmp_path, "opencode")
 
     assert len(installed) == (
-        11 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + len(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
+        12 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + len(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
     )
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")

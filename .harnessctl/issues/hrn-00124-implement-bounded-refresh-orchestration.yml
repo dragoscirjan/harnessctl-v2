@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00124"
+"type": "task"
+"title": "Implement bounded refresh orchestration"
+"status": "done"
+"created_at": "2026-08-23T18:51:33.653Z"
+"updated_at": "2026-08-23T20:15:32.670Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00121"
+"depends_on":
+  - "hrn-00122"
+  - "hrn-00123"
+"metadata":
+  "estimate": "1-2 days"
+  "order": 3
+"body": "# Implement bounded refresh orchestration\n\n## Parent\n\n`hrn-00121`\n\n## Objective\n\nImplement safe repository familiarization and supported projection refresh behavior.\n\n## Scope\n\nCover authoritative repository inspection, normalized memory validation/reconciliation, disposable cache repair, live capability discovery, and consent-gated repository reindex or safe tool projection refresh.\n\n## Acceptance Criteria\n\n- Output deterministically classifies capabilities as refreshed, skipped, unsupported, stale, or blocked with evidence.\n- Each canonical memory mutation is individually proposed and confirmed.\n- External refresh requires verified live capability, repository scope, and exact fresh consent.\n- No forbidden lifecycle, credential, remote, destructive, or direct-database action occurs.\n\n## Dependencies\n\n`hrn-00122`, `hrn-00123`.\n\n## Artifacts\n\nPrompt/reference orchestration and supporting code only where required.\n\n## Estimate\n\n1-2 days.\n\n## Non-Goals\n\nOwning provider lifecycle or building universal adapters.\n"
+"comments": []

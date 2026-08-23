@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R82BSZE26FEF9XS7E2CNSR
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00121 | release | ready PR | created
+details: |-
+  Epic: hrn-00121
+  Phase: release
+  Done: branch, commit, push, ready PR verified.
+  Delivery: release/hrn-00121-work-refresh; 47b243b; PR #40 https://github.com/dragoscirjan/harnessctl-v2/pull/40
+  Verification: pre-push quality passed; PR open, non-draft, base main, head exact; CI Ubuntu/macOS/Windows in progress.
+  Next: human review; merge requires fresh consent.
+  Blockers: none; CI pending.
+source:
+  kind: artifact
+  ref: "PR #40"
+  revision: null
+created_at: 2026-08-23T21:22:47.743Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - ready-pr
+  - release
+  - work-refresh

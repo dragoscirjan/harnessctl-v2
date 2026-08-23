@@ -120,7 +120,12 @@ describe('OpenCode adapter', () => {
         expect.objectContaining({ record_type: 'fact', confidence: 'verified' }),
       ]);
       expect(JSON.parse(String(memoryValidation))).toEqual(
-        expect.objectContaining({ valid: true, records: 1, tombstones: 0 }),
+        expect.objectContaining({
+          valid: true,
+          records: 1,
+          tombstones: 0,
+          cache: { outcome: 'checked', evidence: 'canonical_snapshot_match_verified' },
+        }),
       );
       expect(issueId).toBe('["hrn-00042","hrn-00007"]');
       expect(createdIssue.metadata.metadata.huge).toBe(9_007_199_254_740_992);

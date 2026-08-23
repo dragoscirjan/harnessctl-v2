@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00125"
+"type": "task"
+"title": "Verify compatibility and document work-refresh"
+"status": "done"
+"created_at": "2026-08-23T18:51:33.862Z"
+"updated_at": "2026-08-23T20:24:10.380Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00121"
+"depends_on":
+  - "hrn-00122"
+  - "hrn-00123"
+  - "hrn-00124"
+"metadata":
+  "estimate": "1 day"
+  "order": 4
+"body": "# Verify compatibility and document work-refresh\n\n## Parent\n\n`hrn-00121`\n\n## Objective\n\nProve compatibility, safety, packaging, and public behavior of `work-refresh`.\n\n## Scope\n\nAdd focused/full tests for command inventory, rendering, migration, package outputs, memory invariants, provider capability and consent paths; update docs and transition diagrams.\n\n## Acceptance Criteria\n\n- Focused and full quality checks pass.\n- Existing command behavior has no regression.\n- Safety scenarios and unsupported capability behavior are covered.\n- Public docs distinguish refresh from phases and from synchronization.\n\n## Dependencies\n\n`hrn-00122`, `hrn-00123`, `hrn-00124`.\n\n## Artifacts\n\nTests, documentation, and diagrams.\n\n## Estimate\n\n1 day.\n\n## Non-Goals\n\nRelease or deployment.\n"
+"comments":
+  - "id": "hrn-00125-C0001"
+    "created_at": "2026-08-23T20:21:38.518Z"
+    "created_by": "OpenCode"
+    "body": "Build check wrapper stopped before code checks: requested nonexistent mise target `format:fix`; repository exposes `format-fix`. Continuing with repository-native mise quality targets; no product failure observed."
