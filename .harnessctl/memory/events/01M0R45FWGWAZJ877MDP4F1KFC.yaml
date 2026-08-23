@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R45FWGWAZJ877MDP4F1KFC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | hrn-00124 | bounded refresh orchestration implemented
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Item: hrn-00124
+  Done: hrn-00122 and hrn-00123 done; refresh orchestration covers repository authority, normalized memory validation and individual immutable corrections, evidence-only cache claims, live capability discovery, exact consent, deterministic statuses, and forbidden-operation boundaries.
+  Artifacts: src/harnessctl/templates/skills/sdlc/references/refresh.md.j2; tests/test_templates.py; generated host references.
+  Verification: uv run pytest tests/test_templates.py; 60 passed.
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00124
+  revision: null
+created_at: 2026-08-23T20:14:35.920Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0R43GCN4WN49FD36F8GW15B
+tags:
+  - build
+  - checkpoint
+  - work-refresh

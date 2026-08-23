@@ -78,6 +78,10 @@ export interface LocalSnapshot {
   readonly tombstones: readonly TombstoneProjection[];
 }
 
+type LocalCacheValidation =
+  | { outcome: 'checked'; evidence: 'canonical_snapshot_match_verified' }
+  | { outcome: 'rebuilt'; evidence: 'canonical_snapshot_rebuild_verified' };
+
 interface SqlStatement {
   run(...parameters: unknown[]): unknown;
   get(...parameters: unknown[]): unknown;
@@ -173,11 +177,14 @@ export function loadLocalSnapshot(lease: BarrierLease): LocalSnapshot {
   };
 }
 
-export function ensureLocalCache(lease: BarrierLease, snapshot: LocalSnapshot): void {
+export function ensureLocalCache(lease: BarrierLease, snapshot: LocalSnapshot): LocalCacheValidation {
   assertLocalBarrierLease(lease);
   const path = resolve(lease.repositoryRoot, CACHE_PATH);
-  if (cacheIsHealthy(path, snapshot)) return;
+  if (cacheIsHealthy(path, snapshot)) {
+    return { outcome: 'checked', evidence: 'canonical_snapshot_match_verified' };
+  }
   rebuildLocalCache(lease, snapshot);
+  return { outcome: 'rebuilt', evidence: 'canonical_snapshot_rebuild_verified' };
 }
 
 export function synchronizeLocalCache(lease: BarrierLease, snapshot: LocalSnapshot, reload: () => LocalSnapshot): void {

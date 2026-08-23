@@ -1,10 +1,12 @@
 # External code-intelligence providers
 
 This guide compares external repository-intelligence MCP integrations without
-recommending or endorsing a provider. Harnessctl is provider-neutral: it does not
-install, recognize, register, configure, start, stop, probe, index, watch, update, or
-remove a provider, adapter, model, database, credential, process, index, or data store.
-Provider instructions are not authorization to run them.
+recommending or endorsing a provider. Harnessctl is provider-neutral: it does not own,
+install, recognize, register, configure, start, stop, watch, update, or remove a provider,
+adapter, model, database, credential, process, index, or data store. Provider instructions
+are not authorization to run them. Generated `work-refresh` guidance may invoke one exact
+safe repository refresh operation only after live-schema support, repository scope, and
+fresh consent are established; this does not transfer lifecycle ownership.
 
 The user owns the host entry and every provider lifecycle decision. Opt-in maps exactly
 one user-selected host key into guidance:

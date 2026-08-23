@@ -220,6 +220,9 @@ describe('Pi adapter', () => {
       expect(stored.content[0]?.text).toContain('Pi exposes repository memory tools.');
       expect(search.content[0]?.text).toContain('Pi exposes repository memory tools.');
       expect(validation.content[0]?.text).toContain('"valid":true');
+      expect(validation.content[0]?.text).toContain(
+        '"cache":{"outcome":"checked","evidence":"canonical_snapshot_match_verified"}',
+      );
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

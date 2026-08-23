@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R65Q2QQG7ZEGV9J0P0YZ08
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | repair Bugs 00126-00128 | implementation verified
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Done: hrn-00126 decision/event reconciliation; hrn-00127 evidence-backed cache status; hrn-00128 ordered fail-closed projection gates and tests implemented. Refresh delegates to compiled sdlc-code-index server/boundaries; no alternate route. Generated OpenCode/Pi artifacts and docs aligned.
+  Next: exact consent for hrn-00126..hrn-00128 in_progress -> done; then work-verify hrn-00121.
+  Blockers: Bug closure consent pending.
+  Verification: focused Python 294 passed; mise run quality passed; Python 360 passed; Node 204 passed; lint, format, Mermaid, packages, release artifacts, dead-code, duplication thresholds passed; git diff --check clean.
+source:
+  kind: artifact
+  ref: hrn-00121
+  revision: null
+created_at: 2026-08-23T20:49:40.439Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0R4Q8QMVY4PZM3DZT7F679Q
+tags:
+  - build
+  - checkpoint
+  - repair
+  - work-refresh

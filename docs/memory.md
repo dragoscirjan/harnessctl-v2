@@ -27,6 +27,23 @@ The current function tools are `memory_search`, `memory_list`, `memory_get`, `me
 `memory_import`. Retrieval is bounded by configuration. Import supports preview;
 export and import are explicit migration operations rather than routine synchronization.
 
+`memory_validate` returns a normalized `cache` result. `checked` carries
+`canonical_snapshot_match_verified` evidence, `rebuilt` carries
+`canonical_snapshot_rebuild_verified`, and `skipped` carries `memory_validation_failed` or
+`issue_graph_validation_failed`. Skipped validation is invalid and never proves repair. Only
+`rebuilt` with its matching evidence proves repair. The result exposes no database path,
+query, row, schema, or other storage-internal detail.
+
+`work-refresh` reconciles enabled repository memory rather than regenerating or
+synchronizing it wholesale. It runs `memory_validate` first and stops memory mutation if
+canonical validation fails. A verified `checked` cache is current, a verified `rebuilt`
+cache proves repair, and `skipped` proves no repair. Historical records remain immutable.
+Refresh inspects an active decision or event only when current authority contradicts
+reusable current-state meaning in that record; valid history remains untouched. Each
+proposed `memory_store`, `memory_supersede`, or `memory_delete` operation is shown and
+confirmed separately. Refresh never edits canonical YAML or disposable SQLite directly.
+Disabled memory is reported as skipped.
+
 ## Service and backend support
 
 | Service or backend                   | Status          | Role                                             |

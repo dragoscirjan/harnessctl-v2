@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00128"
+"type": "bug"
+"title": "Enforce work-refresh operation gating in tests"
+"status": "done"
+"created_at": "2026-08-23T20:33:39.926Z"
+"updated_at": "2026-08-23T20:50:50.448Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00121"
+"metadata":
+  "occurrence": "refresh-gating-test-evidence"
+  "severity": "low"
+  "source": "work-verify"
+"body": "# Enforce work-refresh operation gating in tests\n\n## Parent\n\n`hrn-00121`\n\n## Defect\n\nCurrent prompt tests prove required safety phrases exist but do not enforce operation-gating order or explicit blocked and unsupported paths.\n\n## Evidence\n\n`tests/test_templates.py:367-428` uses phrase-presence assertions for live schema, scope, consent, unsupported behavior, and forbidden actions.\n\n## Impact\n\nA sequencing regression could permit mutation before capability, scope, or consent checks while the tests remain green.\n\n## Acceptance Criteria\n\n- Tests enforce live schema support, current-repository scope, and fresh exact consent before any projection mutation instruction.\n- Tests cover missing capability, stale evidence, absent consent, blocked operation, and unsupported provider behavior.\n- Tests prove forbidden lifecycle, credential, remote, destructive, CLI-fallback, and alternate-provider paths never become permitted.\n- Generated OpenCode and Pi references remain equivalent.\n- Full quality checks pass.\n\n## Non-Goals\n\nProvider-specific integration adapters or executing external provider mutations in tests.\n"
+"comments": []

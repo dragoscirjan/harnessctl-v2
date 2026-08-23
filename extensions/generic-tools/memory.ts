@@ -66,6 +66,17 @@ export interface MemoryValidationReport {
   records: number;
   tombstones: number;
   errors: string[];
+  cache:
+    | { outcome: 'checked'; evidence: 'canonical_snapshot_match_verified' }
+    | { outcome: 'rebuilt'; evidence: 'canonical_snapshot_rebuild_verified' }
+    | { outcome: 'skipped'; evidence: 'memory_validation_failed' | 'issue_graph_validation_failed' };
+}
+
+interface MemoryDocumentValidationReport {
+  valid: boolean;
+  records: number;
+  tombstones: number;
+  errors: string[];
 }
 
 export class MemoryError extends Error {
@@ -247,7 +258,7 @@ export function validateMemory(cwd: string): MemoryValidationReport {
   try {
     settings = settingsFor(cwd);
   } catch (error: unknown) {
-    return invalidReport(error);
+    return invalidMemoryValidationReport(error);
   }
   try {
     return withLocalBarrier(cwd, (lease) => {
@@ -255,22 +266,30 @@ export function validateMemory(cwd: string): MemoryValidationReport {
       try {
         state = loadState(cwd, settings);
       } catch (error: unknown) {
-        return invalidReport(error);
+        return invalidMemoryValidationReport(error);
       }
-      const report = { valid: true, records: state.records.length, tombstones: state.tombstones.length, errors: [] };
-      let snapshot;
+      const report: Omit<MemoryValidationReport, 'cache'> = {
+        valid: true,
+        records: state.records.length,
+        tombstones: state.tombstones.length,
+        errors: [],
+      };
       try {
         assertCanonicalIssueGraph(cwd);
-        snapshot = loadLocalSnapshot(lease);
-      } catch {
-        return report;
+      } catch (error: unknown) {
+        return {
+          ...report,
+          valid: false,
+          errors: [errorMessage(error)],
+          cache: { outcome: 'skipped', evidence: 'issue_graph_validation_failed' },
+        } satisfies MemoryValidationReport;
       }
-      ensureLocalCache(lease, snapshot);
-      return report;
+      const cache = ensureLocalCache(lease, loadLocalSnapshot(lease));
+      return { ...report, cache };
     });
   } catch (error: unknown) {
     if (error instanceof LocalPersistenceError && error.category === 'synchronization') throw asMemoryError(error);
-    return invalidReport(error);
+    return invalidMemoryValidationReport(error);
   }
 }
 
@@ -283,7 +302,7 @@ export function exportMemory(cwd: string): string {
   });
 }
 
-export function importMemory(cwd: string, content: string, preview = false): MemoryValidationReport {
+export function importMemory(cwd: string, content: string, preview = false): MemoryDocumentValidationReport {
   let validated: ValidatedImport;
   try {
     if (Buffer.byteLength(content, 'utf8') > MAX_PAYLOAD_BYTES)
@@ -793,8 +812,15 @@ function newestFirst(left: { created_at: string }, right: { created_at: string }
   return right.created_at.localeCompare(left.created_at);
 }
 
-function invalidReport(error: unknown): MemoryValidationReport {
+function invalidReport(error: unknown): MemoryDocumentValidationReport {
   return { valid: false, records: 0, tombstones: 0, errors: [errorMessage(error)].slice(0, MAX_ERRORS + 1) };
+}
+
+function invalidMemoryValidationReport(error: unknown): MemoryValidationReport {
+  return {
+    ...invalidReport(error),
+    cache: { outcome: 'skipped', evidence: 'memory_validation_failed' },
+  };
 }
 
 function asMemoryError(error: unknown): Error {

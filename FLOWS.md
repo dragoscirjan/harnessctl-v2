@@ -1,13 +1,14 @@
 # harnessctl SDLC Flows
 
-This document describes the Epic-first lifecycle implemented by the five public SDLC
-commands. It covers command syntax, internal phase behavior, gates, recovery, and
-invalid transitions. Filesystem issues, linked specifications, source, Git, tests, and
-provider evidence are authoritative; memory is advisory discovery and checkpoint state.
+This document describes the four-phase Epic-first lifecycle and standalone refresh
+behavior implemented by six public SDLC commands. It covers command syntax, internal
+behavior, gates, recovery, and invalid transitions. Filesystem issues, linked
+specifications, source, Git, tests, and provider evidence are authoritative; memory is
+advisory discovery and checkpoint state.
 
 ## 1. Epic ownership
 
-Every command resolves exactly one owning Epic before phase work. An Epic resolves
+Every lifecycle command resolves exactly one owning Epic before phase work. An Epic resolves
 directly. A Story, Task, or Bug resolves through authoritative parent relationships.
 An Initiative resolves to its attached Epics and requires selection when more than one
 is relevant.
@@ -27,31 +28,35 @@ flowchart TD
 Multiple candidate Epics, broken hierarchy, missing parents, archived-only owners, or
 contradictory provider results block mutation. `work-build`, `work-verify`,
 `work-release`, and `work-continue` never create a convenience Epic; they redirect to
-Plan when ownership is missing.
+Plan when ownership is missing. `work-refresh` is the sole exception: it performs bounded
+repository familiarization without an Epic and never enters a lifecycle phase.
 
 ## 2. Public command vocabulary
 
 The installed names and canonical harness-neutral aliases are:
 
-| Installed name   | Canonical alias  | Public phase |
-| ---------------- | ---------------- | ------------ |
-| `/work-plan`     | `/work plan`     | Plan         |
-| `/work-build`    | `/work build`    | Build        |
-| `/work-verify`   | `/work verify`   | Verify       |
-| `/work-release`  | `/work release`  | Release      |
-| `/work-continue` | `/work continue` | Continue     |
+| Installed name   | Canonical alias  | Public phase       |
+| ---------------- | ---------------- | ------------------ |
+| `/work-plan`     | `/work plan`     | Plan               |
+| `/work-build`    | `/work build`    | Build              |
+| `/work-verify`   | `/work verify`   | Verify             |
+| `/work-release`  | `/work release`  | Release            |
+| `/work-continue` | `/work continue` | Continue           |
+| `/work-refresh`  | `/work refresh`  | Standalone refresh |
 
 Hosts generate only the hyphenated command files. Canonical grouped forms describe the
 shared semantics; they are not extra installed files. Former short names and 18-command
-names are not aliases. There is no Maintain command.
+names are not aliases. There is no general Maintain command.
 
 ## 3. Lifecycle
 
 ```mermaid
 flowchart TD
-    accTitle: Epic-first five-command lifecycle
-    accDescr: Plan creates or resolves one Epic and obtains plan approval, Build performs bounded work, Verify sends confirmed defects back to Build or passes to Release, and Continue resumes one exact step without crossing phases.
+    accTitle: Epic-first lifecycle and standalone refresh
+    accDescr: Plan through Release and Continue coordinate one Epic, while Refresh reconciles repository context and reports without entering the lifecycle.
     request([New prompt or existing issue]) --> plan["work-plan<br/>/work plan"]
+    request --> refresh["work-refresh<br/>/work refresh"]
+    refresh --> refreshReport[Refresh report]
     plan -->|Approved executable Epic plan| build["work-build<br/>/work build"]
     build -->|Verification boundary| verify["work-verify<br/>/work verify"]
     verify -->|Confirmed corrective Bug| build
@@ -76,9 +81,10 @@ reject, or reclassify items. The command presents the revised bounded set and ob
 confirmation before execution. Declined safety requirements require a safe alternative
 or a blocked stop.
 
-Each command reports the Epic, phase, authoritative evidence, classified items,
-confirmation state, completed step, next permitted step, blockers, and checkpoint
-result. It never reports completion from memory alone.
+Each command reports the Epic or not-applicable status, phase or standalone operation,
+authoritative evidence, classified items, confirmation state, completed step, next
+permitted step, blockers, and checkpoint result. It never reports completion from memory
+alone.
 
 Useful former command behavior remains internal:
 
@@ -91,6 +97,8 @@ Useful former command behavior remains internal:
 - Release includes CVS prechecks, branch, commit, push, pull request, merge,
   deployment, closure, rollback, and delivery evidence.
 - Continue includes artifact-first resume and exact phase/step reconciliation.
+- Refresh includes repository familiarization, memory reconciliation, cache evidence,
+  and supported projection freshness without lifecycle transition.
 
 ## 5. Plan
 
@@ -212,7 +220,31 @@ phase. It checkpoints the verified result and stops with a same-phase recommenda
 or a recommendation to invoke the next command. It never combines phases or executes
 the recommended next step.
 
-## 10. Checkpoints and interruptions
+## 10. Refresh
+
+Refresh reads a confirmed, bounded set of current repository authorities and configured
+tool capabilities. It requires no Epic, does not enter Plan, Build, Verify, or Release,
+and cannot be resumed by Continue. It is reconciliation, not remote or bidirectional
+synchronization.
+
+Enabled repository memory is validated through `memory_validate`. Historical records
+remain immutable. An active decision or event is inspected only when repository authority
+contradicts its reusable current-state meaning; each proposed store, supersession, or
+tombstone requires separate confirmation. Direct canonical YAML or SQLite edits and
+routine export/import are forbidden. Only returned `rebuilt` evidence proves cache repair;
+`checked` means current and `skipped` proves no repair.
+
+When code indexing is enabled, Refresh first loads `sdlc-code-index` and uses only its
+compiled configured server and boundaries. Configured repository projections are then
+gated in order: live schema support, fresh evidence, current-repository scope, and fresh
+exact consent. Mutation is forbidden until every gate passes. A safe refresh or reindex
+may run only when fresh consent names the exact provider, operation, and repository.
+Unsupported capability is reported without guessed CLI fallback. Provider installation,
+startup, configuration, watching, clearing, deletion, reset, credential, model, database,
+remote, and destructive operations remain outside the command. Results use
+`refreshed`, `skipped`, `unsupported`, `stale`, or `blocked` with evidence.
+
+## 11. Checkpoints and interruptions
 
 When memory is enabled and available, compact checkpoints follow confirmed steps,
 artifact revisions, issue status changes, implementation slices, test batches, phase
@@ -237,11 +269,11 @@ Day 7: /work-verify hrn-00123
 Day 8: /work-release hrn-00123
 ```
 
-## 11. Invalid transitions
+## 12. Invalid transitions
 
 The command blocks or stops without silent transition when:
 
-- no authoritative Epic resolves, with non-Plan commands redirecting to Plan;
+- no authoritative Epic resolves, with non-Plan lifecycle commands redirecting to Plan;
 - ownership, provider result, or checkpoint is ambiguous;
 - a Required safety item is declined without a safe alternative;
 - scope, requirements, acceptance boundaries, or design change unexpectedly;
@@ -252,19 +284,22 @@ The command blocks or stops without silent transition when:
 - a remote/destructive action lacks fresh action-specific consent;
 - merge or deployment authorization is absent;
 - the selected provider capability is unsupported or mutation result is ambiguous.
+- Refresh is asked to enter a lifecycle phase, become Continue-resumable, synchronize
+  remote state, or invoke an unverified or unconfirmed projection operation.
 
-## 12. Roles and boundaries
+## 13. Roles and boundaries
 
 ```mermaid
 flowchart LR
     accTitle: Epic-first SDLC responsibilities
-    accDescr: Humans confirm scope, plans, mutations, delivery, merge, and deployment while command phases coordinate evidence and configured tools within explicit boundaries.
+    accDescr: Humans confirm scope, plans, mutations, refresh operations, delivery, merge, and deployment while command phases and standalone Refresh coordinate evidence and configured tools within explicit boundaries.
     human[Human owner] --> decisions[Confirms Epic, plan, mutations, delivery, merge, deployment]
     plan[Plan phase] --> planning[Clarification, evidence, design, decomposition]
     build[Build phase] --> implementation[Bounded implementation and tests]
     verify[Verify phase] --> evidence[Independent checks and canonical Bugs]
     release[Release phase] --> delivery[Branch, commit, push, pull request]
     continueWork[Continue phase] --> resume[One reconciled phase step]
+    refresh[Standalone Refresh] --> familiarization[Repository context and projection report]
 ```
 
 Commands use only configured issue, specification, CVS, memory, and host capabilities.

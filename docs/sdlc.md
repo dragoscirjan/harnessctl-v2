@@ -3,7 +3,7 @@
 ## Current implementation
 
 The registry in
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) contains exactly five
+[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) contains exactly six
 public command templates. OpenCode and Pi installation renders these files:
 
 | Installed name  | Canonical alias  | Responsibility                                                                 |
@@ -13,12 +13,14 @@ public command templates. OpenCode and Pi installation renders these files:
 | `work-verify`   | `/work verify`   | Verify the Epic and route passes or confirmed defects.                         |
 | `work-release`  | `/work release`  | Complete verified branch, commit, push, and pull-request delivery.             |
 | `work-continue` | `/work continue` | Resume exactly one authoritative step in one current phase.                    |
+| `work-refresh`  | `/work refresh`  | Reconcile repository context, memory, and supported local projections.         |
 
 OpenCode files are installed under `.opencode/commands/`; Pi files are installed under
 `.pi/prompts/`. The grouped `/work *` forms are canonical harness-neutral aliases, not
 additional installed files. Short aliases and the former 18 commands are not generated.
-There is no `work-maintain`; maintenance starts in Plan, and verification defects return
-to Build as confirmed Bugs.
+There is no general `work-maintain`; lifecycle maintenance starts in Plan, verification
+defects return to Build as confirmed Bugs, and `work-refresh` is standalone repository
+familiarization rather than lifecycle work.
 
 The former intake, exploration, Initiative/Epic start, Story and Task decomposition,
 design document, HLD, LLD, implementation, review, CVS, finish, and resume behavior is
@@ -28,12 +30,12 @@ surface.
 ### Progressive-disclosure layout
 
 Each installed command is a compact dispatch shell: load the `sdlc` skill, load one
-normal phase reference, apply user arguments, and stop at that phase boundary. The
+command reference, apply user arguments, and stop at that command boundary. The
 shared skill tree is installed byte-for-byte identically at
 `.opencode/skills/sdlc/` and `.pi/skills/sdlc/`:
 
 - `SKILL.md` contains cross-phase authority, consent, safety, result, and loading rules;
-- `references/{plan,build,verify,release,continue}.md` contain normal phase behavior;
+- `references/{plan,build,verify,release,continue,refresh}.md` contain normal command behavior;
 - eight conditional references cover Initiative planning, design, decomposition, YOLO,
   defects, deployment, reconciliation, and compiled checkpoint policy.
 
@@ -45,14 +47,17 @@ therefore receive equivalent workflow instructions without an added runtime or M
 Enforced source-template budgets are: each command body at most 140 words/900 bytes,
 core skill at most 400 words/2,800 bytes, normal phase reference at most 550 words/4,000
 bytes, conditional reference at most 350 words/2,600 bytes, and shell + core + normal
-phase at most 1,050 words/7,500 bytes. Every command is also tested to remain at least
-80% smaller by bytes than its former memory-enabled inline baseline.
+phase at most 1,050 words/7,500 bytes. Each of the five historical commands is also
+tested to remain at least 80% smaller by bytes than its former memory-enabled inline
+baseline.
 
 Every command proposes and explains classified actions, allows revision, and obtains
-confirmation before reads or mutations. It resolves exactly one authoritative owning
-Epic before phase work. Story, Task, and Bug inputs resolve through their parent
-hierarchy. Ambiguous or contradictory ownership blocks. When no Epic resolves,
-Build, Verify, Release, and Continue stop and redirect to Plan rather than creating one.
+confirmation before reads or mutations. Plan, Build, Verify, Release, and Continue
+resolve exactly one authoritative owning Epic before phase work. Story, Task, and Bug
+inputs resolve through their parent hierarchy. Ambiguous or contradictory ownership
+blocks. When no Epic resolves, Build, Verify, Release, and Continue stop and redirect to
+Plan rather than creating one. Refresh requires no Epic and cannot enter or resume a
+lifecycle phase.
 
 Enabled repository memory adds compact resumable checkpoints, but memory remains
 advisory and never proves completion. Issue hierarchy, linked specifications, source,
@@ -153,18 +158,45 @@ records that result, and stops. It does not combine phases or enter the next pha
 the step completes. If no valid checkpoint exists but an Epic does, it presents only
 authority-supported phase candidates for user selection.
 
+### Refresh
+
+Refresh is standalone repository familiarization and reconciliation. It does not require
+an Epic, enter Plan, Build, Verify, or Release, create a checkpoint, or become resumable
+through Continue. It examines bounded current repository evidence from issues,
+specifications, source, Git, tests, configuration, and configured provider observations.
+
+When repository memory is enabled, Refresh runs `memory_validate` before proposing any
+memory mutation. Historical records remain immutable. It inspects an active decision or
+event only when repository authority contradicts reusable current-state meaning, then
+separately proposes and confirms each immutable `memory_store`, `memory_supersede`, or
+`memory_delete` call. It never edits canonical YAML or disposable SQLite directly and
+never treats `memory_export` or `memory_import` as routine synchronization. Only returned
+`rebuilt` evidence proves cache repair; `checked` means current and `skipped` proves none.
+
+For an enabled code index, Refresh first loads `sdlc-code-index` and uses only its compiled
+configured server and boundaries. Every configured projection is gated in order: exact
+live-schema support, current evidence freshness, current-repository scope, and fresh
+consent naming the provider, operation, and repository. No mutation may run before every
+gate passes. Unsupported capability is reported rather than replaced with a guessed tool,
+CLI, or alternate provider. Installation, startup, configuration, watching, clearing, deletion,
+reset, credential access, model or database management, remote mutation, and destructive
+fallback remain forbidden. Every context, memory, cache, index, or projection result is
+classified `refreshed`, `skipped`, `unsupported`, `stale`, or `blocked` with evidence.
+
 ## Authoritative command transitions
 
-This graph is derived from all five installed templates. Each command node shows the
-installed `work-*` name and canonical `/work *` alias. Solid edges are public phase
+This graph is derived from all six installed templates. Each command node shows the
+installed `work-*` name and canonical `/work *` alias. Solid edges are public command
 recommendations; dashed edges are gates, redirects, same-phase resumption, or terminal
 outcomes. A recommended destination is not silently invoked.
 
 ```mermaid
 flowchart TD
     accTitle: Authoritative template-derived command transitions
-    accDescr: Five Epic-first commands resolve one owning Epic, Plan requires confirmation and approval, Build stops for Verify, defects return to Build, successful verification reaches Release, and Continue resumes one step in one phase.
+    accDescr: Five Epic-first lifecycle commands coordinate Plan through Release and Continue, while standalone Refresh reconciles repository context without an Epic or phase transition.
     request([Prompt or issue ID]) -->|Start or recover planning| plan["work-plan<br/>/work plan"]
+    request -->|Refresh repository context| refresh["work-refresh<br/>/work refresh"]
+    refresh -->|Bounded reconciliation reported| refreshReport([REFRESH REPORT])
     plan -. "Entity or plan changes requested" .-> plan
     plan -. "Initiative and attached Epics confirmed" .-> initiativeStop([INITIATIVE MODE STOP])
     plan -. "Epic actions require confirmation" .-> confirmation([USER CONFIRMATION])
@@ -192,6 +224,8 @@ source, condition, and destination, including gates and outcomes.
 | Source                             | Condition or gate                          | Destination                      |
 | ---------------------------------- | ------------------------------------------ | -------------------------------- |
 | Prompt or issue ID                 | Start or recover planning                  | `work-plan` / `/work plan`       |
+| Prompt or issue ID                 | Refresh repository context                 | `work-refresh` / `/work refresh` |
+| `work-refresh` / `/work refresh`   | Bounded reconciliation reported            | `REFRESH REPORT`                 |
 | `work-plan` / `/work plan`         | Entity or plan changes requested           | Same command (revision loop)     |
 | `work-plan` / `/work plan`         | Initiative and attached Epics confirmed    | `INITIATIVE MODE STOP`           |
 | `work-plan` / `/work plan`         | Epic actions require confirmation          | `USER CONFIRMATION`              |

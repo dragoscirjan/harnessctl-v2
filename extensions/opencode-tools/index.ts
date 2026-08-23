@@ -140,7 +140,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     memory_validate: tool({
-      description: 'Validate all repository memory records without mutation.',
+      description: 'Validate repository memory and report evidence-backed local cache status.',
       args: {},
       async execute(_args, context) {
         return JSON.stringify(validateMemory(context.directory));

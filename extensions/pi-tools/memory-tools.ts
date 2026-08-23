@@ -88,7 +88,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'memory_validate',
     label: 'Memory Validate',
-    description: 'Validate all repository memory records without mutation.',
+    description: 'Validate repository memory and report evidence-backed local cache status.',
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, context) {
       return memoryResult(() => validateMemory(context.cwd));

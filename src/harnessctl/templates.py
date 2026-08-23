@@ -14,6 +14,7 @@ TEMPLATES = {
     "work-verify": "sdlc/work-verify.md.j2",
     "work-release": "sdlc/work-release.md.j2",
     "work-continue": "sdlc/work-continue.md.j2",
+    "work-refresh": "sdlc/work-refresh.md.j2",
 }
 COMMAND_METADATA = {
     "work-plan": {
@@ -63,6 +64,15 @@ COMMAND_METADATA = {
         ),
         "exit_classes": "confirmed correction or decision, or event verified by current evidence",
     },
+    "work-refresh": {
+        "memory_profile": "repository-reconciliation",
+        "phase": "standalone refresh",
+        "phase_label": "Repository refresh",
+        "retrieval_intent": (
+            "current repository authority, reusable memory, and configured projection freshness"
+        ),
+        "exit_classes": "verified refresh result, correction, or reusable repository lesson",
+    },
 }
 DESCRIPTIONS = {
     "work-plan": "Recognize one Epic and produce its approved executable plan",
@@ -70,6 +80,7 @@ DESCRIPTIONS = {
     "work-verify": "Verify one Epic against current authoritative evidence",
     "work-release": "Deliver one verified Epic through confirmed release actions",
     "work-continue": "Resume one authoritative Epic phase and one next step",
+    "work-refresh": "Reconcile repository context, memory, and configured development projections",
 }
 SKILL_TEMPLATES = {
     "caveman": "skills/caveman/SKILL.md.j2",
@@ -123,6 +134,7 @@ SKILL_RESOURCE_TEMPLATES = {
         "references/release-deploy.md": "skills/sdlc/references/release-deploy.md.j2",
         "references/continue.md": "skills/sdlc/references/continue.md.j2",
         "references/continue-reconcile.md": "skills/sdlc/references/continue-reconcile.md.j2",
+        "references/refresh.md": "skills/sdlc/references/refresh.md.j2",
         "references/checkpoint.md": "skills/sdlc/references/checkpoint.md.j2",
     },
 }

@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M0R014RHFYW4JT6WP3077XZT
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | build | hrn-00122 | refresh contract implemented
+details: |-
+  Epic: hrn-00121
+  Phase: build
+  Item: hrn-00122
+  Done: Added standalone work-refresh registry, shell, SDLC refresh policy, memory safety, and narrow code-index exception.
+  Artifacts: src/harnessctl/templates.py; src/harnessctl/templates/sdlc/work-refresh.md.j2; src/harnessctl/templates/skills/sdlc/references/refresh.md.j2; SDLC and code-index skill templates; tests/test_templates.py
+  Verification: uv run pytest tests/test_templates.py; 60 passed.
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00122
+  revision: null
+created_at: 2026-08-23T19:02:19.153Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - checkpoint
+  - work-refresh

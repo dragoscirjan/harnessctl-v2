@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0R59JFQ6GPM04R6V13WBT96
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | verify | acceptance review | failed with 3 tracked defects
+details: |-
+  Epic: hrn-00121
+  Phase: verify
+  Done: child state reconciled; independent correctness/security/privacy/compatibility review completed; Python suite 357 passed; acceptance failed.
+  Decisions: user selected repair route; Bugs hrn-00126, hrn-00127, hrn-00128 created and validated.
+  Next: work-build hrn-00121
+  Blockers: stale active decision/event reconciliation; unverifiable cache repair outcome; operation-gating test gap.
+  Artifacts: hrn-00126; hrn-00127; hrn-00128
+source:
+  kind: artifact
+  ref: hrn-00121
+  revision: null
+created_at: 2026-08-23T20:34:18.231Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - failed
+  - verify
+  - work-refresh

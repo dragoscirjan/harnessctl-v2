@@ -1,0 +1,15 @@
+"version": 1
+"id": "hrn-00122"
+"type": "task"
+"title": "Define work-refresh contract and safety boundaries"
+"status": "done"
+"created_at": "2026-08-23T18:51:33.093Z"
+"updated_at": "2026-08-23T20:12:00.912Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00121"
+"metadata":
+  "estimate": "1 day"
+  "order": 1
+"body": "# Define work-refresh contract and safety boundaries\n\n## Parent\n\n`hrn-00121`\n\n## Objective\n\nDefine exact semantics and safety policy for the standalone `work-refresh` command.\n\n## Scope\n\nSpecify the no-Epic exception, phase separation, consent model, memory reconciliation rules, capability reporting, and narrow code-index refresh exception.\n\n## Acceptance Criteria\n\n- Prompt/reference contract is unambiguous and executable.\n- `work-refresh` remains outside Plan/Build/Verify/Release and `work-continue`.\n- Ordinary SDLC phases retain retrieval-only code-index restrictions.\n- Memory and external-tool safety boundaries match Epic acceptance criteria.\n\n## Dependencies\n\nNone.\n\n## Artifacts\n\nSDLC templates and public documentation.\n\n## Estimate\n\n1 day.\n\n## Non-Goals\n\nProvider-specific adapter implementation.\n"
+"comments": []

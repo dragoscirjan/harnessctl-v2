@@ -17,6 +17,7 @@ PUBLIC_COMMANDS = {
     "work-build",
     "work-continue",
     "work-plan",
+    "work-refresh",
     "work-release",
     "work-verify",
 }
@@ -26,6 +27,7 @@ COMMAND_NODE_IDS = {
     "work-verify": "verify",
     "work-release": "release",
     "work-continue": "continueWork",
+    "work-refresh": "refresh",
 }
 PROVIDER_HEADINGS = [
     "Status and version",
@@ -179,6 +181,7 @@ def _table_node_id(cell: str) -> str:
         ("`BLOCKED OR STOPPED`", "blocked"),
         ("`HUMAN MERGE OR COMPLETE`", "complete"),
         ("`SAME PHASE STOP`", "samePhaseStop"),
+        ("`REFRESH REPORT`", "refreshReport"),
         ("`BLOCKED`", "blocked"),
     ):
         if cell.startswith(prefix):
@@ -216,7 +219,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
             key=lambda template: template.relative_to(ROOT).as_posix(),
         ),
     ]
-    assert len(templates) == 19
+    assert len(templates) == 21
     digest = hashlib.sha256()
     for template in templates:
         digest.update(template.relative_to(ROOT).as_posix().encode())
@@ -228,8 +231,35 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "c3d0b8b1c274e9ab76d7e34cca9e455fe7b52f2e365e8b07ec3903dcc97a6fe5"
+        "6dc5abf02a127864e51a69dc72108fedd714bdfb523400b82561e1c99c099fca"
     )
+
+
+def test_docs_describe_standalone_refresh_contract() -> None:
+    sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
+    flows = (ROOT / "FLOWS.md").read_text(encoding="utf-8")
+    memory = (DOCS / "memory.md").read_text(encoding="utf-8")
+    code_index = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
+    normalized = " ".join((sdlc + flows + memory + code_index).split())
+
+    for phrase in (
+        "does not require an Epic",
+        "cannot be resumed by Continue",
+        "reconciliation, not remote or bidirectional synchronization",
+        "`memory_validate`",
+        "Only returned `rebuilt` evidence proves cache repair",
+        "active decision or event",
+        "loads `sdlc-code-index`",
+        "compiled configured server and boundaries",
+        "live-schema support",
+        "current evidence freshness",
+        "current-repository scope",
+        "fresh consent naming the provider, operation, and repository",
+        "Unsupported capability is reported",
+    ):
+        assert phrase in normalized
+    for status in ("refreshed", "skipped", "unsupported", "stale", "blocked"):
+        assert f"`{status}`" in normalized
 
 
 def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:

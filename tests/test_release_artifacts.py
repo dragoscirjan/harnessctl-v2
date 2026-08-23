@@ -11,13 +11,14 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMAND_COUNT = 5
+COMMAND_COUNT = 6
 CURRENT_COMMANDS = {
     "work-plan",
     "work-build",
     "work-verify",
     "work-release",
     "work-continue",
+    "work-refresh",
 }
 
 
@@ -141,7 +142,7 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
                 if path.startswith("templates/skills/sdlc/references/") and path.endswith(".md.j2")
             }
         )
-        == 13
+        == 14
     )
     assert "templates/skills/sdlc-code/SKILL.md.j2" in expected_resources
     assert (
@@ -252,7 +253,7 @@ config['memory']['enabled'] = True
 intent = required_server_intents(config, 'opencode')[0]
 assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/'
 assert set(TEMPLATES) == set(CURRENT_SDLC_COMMANDS) == {
-    'work-plan', 'work-build', 'work-verify', 'work-release', 'work-continue'
+    'work-plan', 'work-build', 'work-verify', 'work-release', 'work-continue', 'work-refresh'
 }
 assert len(LEGACY_SDLC_COMMANDS) == 18
 assert len(RETIRED_SDLC_COMMANDS) == 16
@@ -298,7 +299,8 @@ sdlc_code_index = render_skill(
 )
 assert 'Configured MCP server: `operator-index`' in sdlc_code_index
 assert 'advisory retrieval evidence, never source authority' in sdlc_code_index
-assert 'Do not invoke mutation or deletion operations' in sdlc_code_index
+assert 'Plan, Build, Verify, Release, and Continue are retrieval-only' in sdlc_code_index
+assert 'During `work-refresh` only' in sdlc_code_index
 assert 'CodeGraphContext' not in sdlc_code_index
 providers = {
     'filesystem': (

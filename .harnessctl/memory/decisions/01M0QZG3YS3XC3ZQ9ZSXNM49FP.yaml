@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M0QZG3YS3XC3ZQ9ZSXNM49FP
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00121 | plan | work-refresh Epic | approved executable plan stored
+details: |-
+  Epic: hrn-00121
+  Phase: plan
+  Done: Approved Epic + tasks hrn-00122..hrn-00125 created, parented, dependency-linked, validated.
+  Decisions: Standalone sixth command; no Epic required; outside phases/continue; memory reconciliation; capability-verified consent-gated repository refresh; ordinary code-index use retrieval-only.
+  Next: work-build hrn-00121
+  Blockers: none
+  Artifacts: hrn-00121
+source:
+  kind: artifact
+  ref: hrn-00121
+  revision: null
+created_at: 2026-08-23T18:53:01.273Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - plan
+  - sdlc
+  - work-refresh

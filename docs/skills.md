@@ -62,12 +62,17 @@ byte-equivalent canonical skills at `.opencode/skills/sdlc-code-index/SKILL.md` 
 `.pi/skills/sdlc-code-index/SKILL.md`. The skill receives only the validated external MCP
 server name. It treats results as advisory retrieval evidence, verifies findings against
 repository sources, and uses Glob/Grep when the service is unavailable, stale,
-incomplete, or unsuitable. It grants no installation, setup, startup, indexing,
-watching, mutation, deletion, model, credential, storage, or lifecycle authority.
+incomplete, or unsuitable. Ordinary Plan, Build, Verify, Release, and Continue use it
+for retrieval only. The sole `work-refresh` exception may invoke an exact supported
+repository-scoped refresh operation after live-schema inspection and fresh consent. It
+grants no installation, setup, startup, configuration, watching, clearing, deletion,
+reset, model, credential, database, remote, destructive, or general lifecycle authority.
 When code indexing is enabled, the always-installed SDLC core loads `sdlc-code-index` when
 the skill is available and relationship-aware codebase retrieval or impact analysis is
 relevant. When disabled, the compiled core explicitly refuses to load a discoverable
 retained copy and continues with direct source discovery, Glob, Grep, and file reads.
+The compiled Refresh reference also loads `sdlc-code-index` before code-index discovery,
+uses only its configured server and boundaries, and refuses alternate providers or routes.
 
 A fresh disabled install creates no code-index skill. Code-index configuration does not
 inspect or change code-index MCP entries; unrelated generic CVS and issue MCP projection
@@ -79,11 +84,11 @@ whose discoverable file remains active-capable, naming
 automatically. Every external MCP registration, process, package, index, credential, and
 data store remains user-owned.
 
-All five compact SDLC command shells are rendered under `.opencode/commands/` or the
+All six compact SDLC command shells are rendered under `.opencode/commands/` or the
 official Pi `.pi/prompts/` path. Each shell loads the SDLC skill and exactly one normal
-phase reference. Conditional references are loaded only when their named condition
-occurs. Memory policy is compiled once into `sdlc/references/checkpoint.md`, not repeated
-inside every command.
+command reference. The SDLC tree contains 14 references. Conditional references are
+loaded only when their named condition occurs. Memory policy is compiled once into
+`sdlc/references/checkpoint.md`, not repeated inside every command.
 
 OpenCode and Pi adapter packages expose generic configuration, filesystem issue, and
 repository-memory tools. Pi installs `npm:@harnessctl/pi-tools@latest` project-locally;

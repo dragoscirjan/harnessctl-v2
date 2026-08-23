@@ -469,6 +469,7 @@ def install(
                 root,
                 check_memory=config["memory"]["enabled"],
                 check_tdd=tdd_enabled,
+                check_code_index=code_index_enabled,
             )
         if harness in ("pi", "all"):
             _smoke_check_pi(root, required_pi_packages, rendered_targets)
@@ -1236,7 +1237,13 @@ def _memory_ignore(root: Path, repository: dict[str, object]) -> str:
     return existing + ("" if not existing or existing.endswith("\n") else "\n") + entry + "\n"
 
 
-def _smoke_check(root: Path, *, check_memory: bool, check_tdd: bool) -> None:
+def _smoke_check(
+    root: Path,
+    *,
+    check_memory: bool,
+    check_tdd: bool,
+    check_code_index: bool,
+) -> None:
     issue_skill = root / OPENCODE_SKILLS / "issue-tracking/SKILL.md"
     if not issue_skill.is_file():
         raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
@@ -1250,6 +1257,7 @@ def _smoke_check(root: Path, *, check_memory: bool, check_tdd: bool) -> None:
         retrieval_limit=1,
         retrieval_max_chars=1,
         tdd_enabled=check_tdd,
+        code_index_enabled=check_code_index,
     ):
         if not (root / OPENCODE_SKILLS / "sdlc" / relative).is_file():
             raise RuntimeError(f"OpenCode SDLC resource smoke check failed: {relative}")
