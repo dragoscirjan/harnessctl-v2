@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## 0.1.8
+
+### Patch Changes
+
+- Add an opt-in, provider-neutral `sdlc-code-index` skill contract without owning or projecting the external MCP runtime.
+
 ## 0.1.7
 
 ### Patch Changes
