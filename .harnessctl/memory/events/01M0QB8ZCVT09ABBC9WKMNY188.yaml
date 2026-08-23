@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0QB8ZCVT09ABBC9WKMNY188
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00115 | Build | hrn-00119-hrn-00120 | implemented
+details: "Corrective code complete. OpenCode command separator fixed; five generated commands restored; structural all-command regression added. Markdown/JSON/YAML tests now assert explicit class-policy exclusion; no prompt change. Focused pytest, Ruff, Prettier, diff checks pass; independent review no code findings, Python suite 349 passed. Bugs remain in_progress: fresh `mise run quality` required in Verify before closure. No Release, commit, remote, destructive, or global-skill work."
+source:
+  kind: artifact
+  ref: hrn-00120
+  revision: v1:c5a185d5d59c56bc9a50db6ac46a813e26dd861c0bdc40ed880abfa2dfbfe6b1
+created_at: 2026-08-23T12:59:35.707Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0QA0CMXVYNE3E3VY7YPEDG4
+tags:
+  - hrn-00115
+  - hrn-00119
+  - hrn-00120
+  - sdlc
+  - work-build

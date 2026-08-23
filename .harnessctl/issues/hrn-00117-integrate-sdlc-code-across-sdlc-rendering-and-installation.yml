@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00117"
+"type": "task"
+"title": "Integrate sdlc-code across SDLC rendering and installation"
+"status": "done"
+"created_at": "2026-08-23T11:54:27.779Z"
+"updated_at": "2026-08-23T12:26:53.157Z"
+"created_by": "OpenCode"
+"parent": "hrn-00115"
+"depends_on":
+  - "hrn-00116"
+"metadata":
+  "estimate": "M"
+  "order": 2
+"body": "# Integrate sdlc-code across SDLC rendering and installation\n\n## Objective\n\nShip the approved `sdlc-code` root and nested references through the established harnessctl skill-resource pipeline and activate them only for implementation work.\n\n## Scope\n\n- Register canonical root and nested reference templates.\n- Install byte-equivalent resources for selected OpenCode and Pi hosts.\n- Make SDLC Build load `sdlc-code` before implementation.\n- Preserve the existing Continue-to-Build policy so resumed Build receives the same guidance.\n- Include all resources in source and built package artifacts.\n- Preserve conflict-safe and transactional installer behavior.\n\n## Acceptance Criteria\n\n- Fresh selected-host installs contain equivalent `sdlc-code/SKILL.md` and reference trees.\n- Build instructs agents to load `sdlc-code` before coding; Plan, Verify, and Release do not activate it.\n- Continue activates it only by loading current Build policy when Build is resumed.\n- Existing operator files at managed targets follow established conflict and force semantics without unrelated mutation.\n- Wheel, sdist, and installed-package rendering include every canonical resource.\n- No new configuration switch or external skill dependency is introduced.\n\n## Dependencies And Estimate\n\nDepends on `hrn-00116`. Estimate `M`.\n\n## Non-Goals\n\nNo mutation of `~/.config/opencode`, no language-tool installation, and no change to TDD or code-index enablement semantics."
+"comments":
+  - "id": "hrn-00117-C0001"
+    "created_at": "2026-08-23T12:23:13.742Z"
+    "created_by": "OpenCode"
+    "body": "Build integration complete. Registered `sdlc-code` root plus 25 references; installed byte-equivalent trees for OpenCode/Pi through existing transactional skill-tree path; Build loads `sdlc-code`; Continue always delegates resumed Build to current Build policy; no config switch or external dependency added. Evidence: `uv run pytest tests/test_templates.py tests/test_install.py tests/test_issue_skill.py -q` 276 passed; `uv run pytest tests/test_release_artifacts.py -q` 2 passed; focused Ruff check/format passed. Existing conflict, force, preflight, smoke, and rollback mechanisms remain authoritative. Pending explicit done transition."

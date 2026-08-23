@@ -49,6 +49,34 @@ PHASE_RESOURCE = {
     "work-release": "references/release.md",
     "work-continue": "references/continue.md",
 }
+SDLC_CODE_REFERENCES = {
+    "cpp",
+    "cs",
+    "css",
+    "ex",
+    "fish",
+    "gdscript",
+    "go",
+    "html",
+    "java",
+    "js",
+    "json",
+    "jsx",
+    "lua",
+    "md",
+    "ps1",
+    "py",
+    "rs",
+    "sh",
+    "svelte",
+    "swift",
+    "tf",
+    "ts",
+    "tsx",
+    "vue",
+    "yaml",
+    "zig",
+}
 
 
 def _memory_config() -> dict[str, object]:
@@ -133,6 +161,47 @@ def test_sdlc_skill_resource_registry_is_complete_and_bounded() -> None:
         len(content.encode()) <= (4000 if path in PHASE_RESOURCE.values() else 2600)
         for path, content in resources.items()
     )
+
+
+def test_sdlc_code_skill_and_resource_registry_are_complete() -> None:
+    skill = render_skill("sdlc-code")
+    resources = render_skill_resources("sdlc-code")
+    expected = {f"references/{name}.md" for name in SDLC_CODE_REFERENCES}
+
+    assert set(resources) == expected == set(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
+    assert all(content.endswith("\n") for content in (skill, *resources.values()))
+    assert all(
+        "{%" not in content and "{{" not in content for content in (skill, *resources.values())
+    )
+    assert "Apply this root once" in skill
+    assert "explicit repository policy and the approved task" in skill
+    assert "Treat named tools as alternatives" in skill
+    assert "Do not classify ambiguous `.h` or `.sh` files" in skill
+    assert "JSX syntax alone does not prove React" in skill
+    assert "`.gd`: read `gdscript.md`" in skill
+    assert "All 26 bundled subjects map one-to-one" in skill
+
+
+def test_sdlc_code_references_preserve_contextual_dispatch_rules() -> None:
+    resources = render_skill_resources("sdlc-code")
+
+    assert "pyproject.toml" in resources["references/py.md"]
+    assert "GDScript is a distinct language, not Python" in resources["references/gdscript.md"]
+    assert "project.godot" in resources["references/gdscript.md"]
+    assert "supported Godot version" in resources["references/gdscript.md"]
+    assert "A `.h` extension alone is insufficient" in resources["references/cpp.md"]
+    assert "A `.sh` extension does not prove Bash" in resources["references/sh.md"]
+    assert "repository evidence establishes React" in resources["references/tsx.md"]
+    for framework in ("vue", "svelte"):
+        assert "script" in resources[f"references/{framework}.md"]
+        assert "TypeScript" in resources[f"references/{framework}.md"]
+    artifact_exclusions = {
+        "md": "Code-oriented class and architecture rules do not apply.",
+        "json": "Do not apply class, interface, or dependency-injection guidance.",
+        "yaml": "Do not apply class, interface, or dependency-injection guidance",
+    }
+    for artifact, exclusion in artifact_exclusions.items():
+        assert exclusion in resources[f"references/{artifact}.md"]
 
 
 @pytest.mark.parametrize(
@@ -249,11 +318,13 @@ def test_build_reference_compiles_tdd_policy_by_configuration() -> None:
 
     assert "Load `develop-tdd` before implementation" in enabled
     assert "Red, Green, and Refactor" in enabled
+    assert "Load `sdlc-code` before implementation" in enabled
+    assert "Load `sdlc-code` before implementation" in disabled
     assert "develop-tdd" not in disabled
     assert "Red, Green, and Refactor" not in disabled
 
 
-def test_continue_reference_compiles_tdd_build_resume_by_configuration() -> None:
+def test_continue_reference_delegates_build_resume_to_current_build_policy() -> None:
     enabled = render_skill_resources("sdlc", **_sdlc_context(tdd_enabled=True))[
         "references/continue.md"
     ]
@@ -261,14 +332,14 @@ def test_continue_reference_compiles_tdd_build_resume_by_configuration() -> None
         "references/continue.md"
     ]
 
-    assert "load `references/build.md` before implementation" in enabled
-    assert "loads `develop-tdd`" in enabled
-    assert "Red, Green, and Refactor" in enabled
-    assert "non-Build resumes" in enabled
-    assert "references/build.md" not in disabled
-    assert "develop-tdd" not in disabled
-    for phase in ("plan", "verify", "release"):
-        assert f"references/{phase}.md" not in enabled
+    for rendered in (enabled, disabled):
+        assert "load `references/build.md` before implementation" in rendered
+        assert "compiled coding and optional TDD rules" in rendered
+        assert "non-Build resumes" in rendered
+        assert "develop-tdd" not in rendered
+        assert "sdlc-code" not in rendered
+        for phase in ("plan", "verify", "release"):
+            assert f"references/{phase}.md" not in rendered
 
 
 def test_develop_tdd_skill_preserves_canonical_cycle_and_rules() -> None:

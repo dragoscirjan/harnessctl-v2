@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M0Q3AXJHMSSVT3GHQM9DZNMC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: cvs_github
+summary: cvs_github startup failure was caused by an unset GH_TOKEN overriding a valid global GITHUB_TOKEN reference.
+details: On 2026-08-23 in harnessctl-v2, project .opencode/opencode.json configured Authorization as Bearer {env:GH_TOKEN}, while the process had GH_TOKEN unset and GITHUB_TOKEN set. OpenCode deep-merged the project MCP entry over the global cvs_github entry. `opencode mcp list --print-logs --log-level DEBUG` reported SSE HTTP 400. A direct MCP initialize returned 400 with an empty bearer and 200 text/event-stream with GITHUB_TOKEN. Endpoint and transport were valid.
+source:
+  kind: tool-observation
+  ref: .opencode/opencode.json
+  revision: null
+created_at: 2026-08-23T10:40:50.769Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - authentication
+  - github
+  - mcp
+  - opencode

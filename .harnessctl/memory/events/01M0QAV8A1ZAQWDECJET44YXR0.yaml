@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0QAV8A1ZAQWDECJET44YXR0
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00115 | Verify | acceptance | failed
+details: "`mise run quality` failed: Prettier rejects five regenerated OpenCode work commands due missing frontmatter/body separator. Independent review found weak artifact relevance assertion. Canonical Bugs: hrn-00119, hrn-00120. Epic and Bugs validate. Release blocked. Confirmed route: work-build hrn-00115, then fresh Verify. No repair, Plan, Build, Release, commit, remote, destructive, or global-skill work performed."
+source:
+  kind: artifact
+  ref: hrn-00115
+  revision: v1:24922a53687d2715aeca020c8291bd6b87f0bb8e2a13ccf5ec3bd38d6b44de26
+created_at: 2026-08-23T12:52:06.081Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00115
+  - hrn-00119
+  - hrn-00120
+  - sdlc
+  - work-verify

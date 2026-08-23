@@ -89,14 +89,22 @@ and checkpoint. It resumes the exact unfinished slice when work has started; oth
 it selects a confirmed ready Story, Task, or Bug. Each slice declares its objective,
 scope, expected files or component boundary, tests, and stop condition.
 
+Before implementation, Build loads the always-installed `sdlc-code` root. Its generic
+clean-code policy applies once and conditionally discloses only references supported by
+the slice and repository evidence. Repository policy, supported versions, and existing
+tooling override defaults. `work-continue` inherits this behavior whenever it resumes
+Build by loading the current Build reference. Plan, Verify, Release, and non-Build
+Continue do not activate `sdlc-code`.
+
 When `workflow.tdd.enabled` is true at installation, the generated Build reference loads
 `develop-tdd` before implementation and requires observable Red, Green, and Refactor
 steps for each slice. When `work-continue` resumes Build, its generated Continue policy
 loads that Build reference before implementation, preserving the same TDD boundaries.
-With the default `false` setting, both instructions are compiled out and a fresh install
+With the default `false` setting, TDD instructions are compiled out and a fresh install
 does not generate the TDD skill. A skill left by an earlier enabled install remains
-dormant because generated Build and Continue policy does not load or enforce it. TDD does
-not alter Plan, Verify, Release, non-Build Continue, or merge policy.
+dormant because generated Build policy does not load or enforce it. Continue still loads
+the Build reference when resuming Build so the always-on coding policy remains current.
+TDD does not alter Plan, Verify, Release, non-Build Continue, or merge policy.
 
 YOLO is one-time, Epic-scoped, bounded consent for the displayed eligible ready items.
 It ends on the first blocker, scope change, verification boundary, user stop, ambiguous

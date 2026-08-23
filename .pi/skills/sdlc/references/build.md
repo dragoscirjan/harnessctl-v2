@@ -6,6 +6,8 @@ If work started, show unfinished item/slice evidence and offer resume. Else ask 
 
 Before coding, confirm item, bounded objective, expected files/component, focused tests, stop condition, and any in-progress transition. Implement one local slice. Run focused/applicable local checks. Unexpected scope, ambiguity, failed required check, or blocker stops work.
 
+Load `sdlc-code` before implementation and apply only references relevant to the confirmed slice and repository context.
+
 Load `build-yolo.md` only when YOLO is offered/requested.
 
 Close a detailed issue only when current implementation/tests map every acceptance criterion and user separately confirms exact transition. Build never closes Epic. At verification boundary checkpoint evidence, recommend `work-verify`, stop. Never run Verify/Release or remote/destructive actions here.

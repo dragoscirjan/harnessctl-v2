@@ -228,7 +228,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "2b6fae4a2bc1e820dbb094d4e474071f246a852e7b05758a5de00a4eed808cee"
+        "c3d0b8b1c274e9ab76d7e34cca9e455fe7b52f2e365e8b07ec3903dcc97a6fe5"
     )
 
 
@@ -281,6 +281,30 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
     assert "loads `develop-tdd` before implementation" in normalized_sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
     assert "`work-continue` resumes Build" in normalized_sdlc
+
+
+def test_docs_describe_sdlc_code_installation_and_build_boundaries() -> None:
+    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
+    sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
+    root = (ROOT / "README.md").read_text(encoding="utf-8")
+    normalized = " ".join((skills + sdlc + root).split())
+
+    for phrase in (
+        "26 bundled references",
+        "Explicit repository policy and approved scope take precedence",
+        "Named tools are alternatives, not cumulative installation requirements",
+        "Ambiguous `.h` and `.sh` files require repository evidence",
+        "TSX combines TypeScript with React guidance only when React is established",
+        "GDScript as distinct from Python",
+        "Plan, Verify, Release, and non-Build Continue do not activate `sdlc-code`",
+        "byte-equivalent OpenCode and Pi trees",
+        "global skills under `~/.config/opencode`",
+    ):
+        assert phrase in normalized
+    assert ".opencode/skills/sdlc-code/" in root
+    assert ".pi/skills/sdlc-code/" in root
+    assert "--force" in root
+    assert "an older installer cannot recognize or delete them" in root
 
 
 def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:

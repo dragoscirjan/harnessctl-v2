@@ -8,7 +8,7 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
 ## Guides
 
 - [SDLC](sdlc.md): five Epic-first commands, stage boundaries, and approval gates.
-- [Skills](skills.md): caveman, memory, and issue-tracking guidance.
+- [Skills](skills.md): coding, caveman, memory, issue-tracking, and host guidance.
 - [Configuration](configuration.md): defaults, overlay behavior, and every current
   setting.
 - [Memory](memory.md): canonical YAML, immutable records, security, and cache limits.
