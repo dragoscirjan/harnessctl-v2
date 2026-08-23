@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M0P02SWM28VZ38XSE49GM1MT
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00105
+summary: hrn-00105 | release | branch delivery | pushed
+details: "Commit af75217 pushed to origin/feat/hrn-00084-code-intelligence-foundation; local HEAD, upstream, and remote ref matched. Verify Green: focused 299, quality 333 Python/202 Node, runtime smoke Node+Bun, two independent approvals. No PR, merge, deploy, provider execution, or destructive action. Epic remains open because requested Release scope was branch push only."
+source:
+  kind: artifact
+  ref: feat/hrn-00084-code-intelligence-foundation
+  revision: af75217
+created_at: 2026-08-23T00:24:44.692Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0NZSHTM0E77YABY2S1ZFF5T
+tags:
+  - code-index
+  - pushed
+  - release

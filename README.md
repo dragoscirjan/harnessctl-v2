@@ -25,6 +25,7 @@ Start with the [documentation index](docs/README.md), then use the focused guide
 - [Filesystem issues and configured provider routing](docs/issues.md)
 - [Version control and MCP provider setup](docs/cvs.md)
 - [Code-intelligence retrieval and provider boundaries](docs/code-intelligence.md)
+- [External code-intelligence provider comparison](docs/code-intelligence-providers.md)
 
 The detailed intended lifecycle remains in [FLOWS.md](FLOWS.md). Topic guides label
 implemented behavior separately from plans so roadmap material is not mistaken for a

@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00110"
+"type": "task"
+"title": "Define code-index provider evidence and freshness policy"
+"status": "done"
+"created_at": "2026-08-23T00:42:52.222Z"
+"updated_at": "2026-08-23T01:04:25.459Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00103"
+"documents":
+  - ".harnessctl/tasks/hrn-00110/evidence-policy.md"
+"metadata":
+  "capability": "documentation-research-policy"
+  "estimate": "S"
+  "order": 1
+  "risk": "medium"
+"body": "# Define code-index provider evidence and freshness policy\n\n## Objective\n\nDefine the evidence contract for all six providers without unsupported operational, privacy, security, or licensing claims.\n\n## Scope\n\n- Source hierarchy: official documentation, repository, releases/tags/commits, and license files first.\n- Citation fields: URL, source kind, provider version/tag/commit, and access date.\n- Freshness threshold: evidence checked within 7 calendar days before a research Task completes and rechecked during formal Verify; otherwise mark stale and narrow claims.\n- License fields: SPDX identifier or exact identity, applicable component/release, exceptions or dual licensing, and redistribution constraints.\n- Security/privacy fields: network exposure, authentication/authorization, filesystem/process permissions, data egress, supply-chain posture, telemetry, credentials, retention, storage, models, databases, sandboxing, and remote services.\n- Common comparison matrix, provider headings, conflict handling, and language for unknown/ambiguous/stale evidence.\n- Prohibit inference from silence and all provider execution or mutation.\n\n## Acceptance\n\n- Reusable template covers status/version, license, install/update, MCP applicability, OpenCode, Pi, server mapping, lifecycle/storage, credentials/privacy/telemetry/security, capabilities/limitations, stale-index behavior, removal, and sources.\n- Citation and freshness rules are measurable and testable.\n- License evidence identifies applicability and redistribution constraints, not only a license label.\n- Security/privacy evidence covers the complete Scope; omissions are explicitly unknown.\n- Source precedence and conflict handling are explicit.\n- Build and Verify recheck freshness and narrow stale/unavailable claims.\n- Policy forbids provider commands and provider-owned state mutation.\n\n## Dependencies\n\nNone; first Task under `hrn-00103`.\n\n## Artifacts\n\nEvidence policy content for the provider guide and structured handoff for `hrn-00111` and `hrn-00112`.\n\n## Estimate\n\nS.\n\n## Non-Goals\n\nIndividual provider research beyond policy examples; provider execution; harnessctl runtime/config changes."
+"comments":
+  - "id": "hrn-00110-C0001"
+    "created_at": "2026-08-23T01:03:02.456Z"
+    "created_by": "lead-engineer"
+    "body": "Build evidence: added and linked `.harnessctl/tasks/hrn-00110/evidence-policy.md` as the structured research handoff for Tasks 111/112 and later guide assembly by 113. Policy defines source precedence/conflicts; reproducible Unknown/Search records; exact citation, seven-day freshness, license, security/privacy, provider-template, matrix, and no-provider-mutation requirements. Added focused enforcement in `tests/test_docs.py`. Red missing-artifact test reproduced; final docs suite 11 passed; Ruff lint/format, Prettier, and `git diff --check` passed. Independent scoped review approved after resolving Unknown-record consistency and strengthening structural/safety assertions. No provider command, runtime/config mutation, Verify, Release, remote, commit, or destructive action."

@@ -17,6 +17,8 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
   OpenCode/Pi configuration, consent, and security boundaries.
 - [Code intelligence](code-intelligence.md): opt-in external MCP retrieval, source
   authority, fallback, migration, and user-owned lifecycle boundaries.
+- [External code-intelligence providers](code-intelligence-providers.md): sourced,
+  non-endorsing provider comparison, host examples, limitations, and manual cleanup.
 
 ## Authority and status
 

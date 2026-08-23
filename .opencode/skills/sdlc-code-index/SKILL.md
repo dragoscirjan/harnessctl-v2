@@ -5,7 +5,7 @@ description: Use configured SDLC code-index retrieval as advisory evidence.
 
 # SDLC code-index retrieval
 
-- Configured MCP server: `sdlc-code-index`.
+- Configured MCP server: `sdlc_code_index`.
 
 ## Retrieval
 

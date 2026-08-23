@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00114"
+"type": "task"
+"title": "Validate provider guide artifacts and release evidence"
+"status": "closed"
+"created_at": "2026-08-23T00:44:05.978Z"
+"updated_at": "2026-08-23T10:04:22.079Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00103"
+"depends_on":
+  - "hrn-00113"
+"metadata":
+  "capability": "documentation-verification"
+  "estimate": "S/M"
+  "order": 5
+  "risk": "medium"
+"body": "# Validate provider guide artifacts and release evidence\n\n## Objective\n\nProve the completed guide and artifacts are current, consistent, packaged, and safe without executing a provider or overstating unobservable effects.\n\n## Scope\n\n- Recheck every claim, URL, version/tag/commit, access date, license, and MCP-applicability classification.\n- Validate all provider sections against `hrn-00110`, the Epic-approved nonprecedential exception, and research records.\n- Validate OpenCode/Pi examples and `mcp_server` mapping against the provider-neutral contract.\n- Validate documentation inventory, links, package artifacts, and Changeset policy from `hrn-00113`: a Changeset only for published-package impact, otherwise the documented exemption.\n- Confirm skill templates and generated skills are unchanged.\n- Verify the historical GitNexus output quarantine, no subsequent provider calls, and locally observable no-intentional-mutation evidence. Record provider-side retention, egress, and remote state as `Unknown` without logs or snapshots.\n- Run formatting, focused tests, full quality, runtime smoke, and independent correctness/security/privacy review.\n- Record evidence only; corrections return to the owning Task or a defect.\n\n## Acceptance\n\n- Claims have current citations or explicit unknown/unsupported/stale markers and satisfy the 7-day/recheck policy.\n- License, security/privacy, and applicability fields satisfy `hrn-00110` except for the exact Epic-approved historical invocation exception.\n- Existing docs/package tests and applicable Changeset policy pass without unplanned authoring here.\n- Formatting, focused checks, `mise run quality`, and `mise run runtime-smoke` pass.\n- Independent correctness/security/privacy review has no unresolved findings.\n- The one historical GitNexus `list_repos` invocation is disclosed and nonprecedential; its output is absent from claims, citations, search inputs, corroboration, qualifications, matrices, and guide wording.\n- No subsequent provider call or live handshake occurs.\n- Available local evidence shows no intentional provider-state mutation was observed. Provider-side retention, egress, and remote state remain explicitly `Unknown`; validation does not claim absolute zero impact.\n- Rollback evidence enumerates exact guide/link/public-guide-test/package-inventory and any conditional Changeset removals, confirms research guards and skill artifacts are outside Task 113 rollback scope, and confirms no intentional local external-state mutation was observed.\n\n## Dependencies\n\nDepends on `hrn-00113`.\n\n## Artifacts\n\nValidation evidence, exception/quarantine assessment, explicit residual uncertainty, and independent review findings recorded on this Task.\n\n## Estimate\n\nS/M.\n\n## Non-Goals\n\nProduct/documentation authoring; formal Work Verify/Release; provider execution; another provider-call exception; proof of unobservable provider-side absence; scope expansion."
+"comments":
+  - "id": "hrn-00114-C0001"
+    "created_at": "2026-08-23T10:04:14.406Z"
+    "created_by": "lead-engineer"
+    "body": "Accepted limitations by explicit user decision on 2026-08-23. Formal Verify found four unresolved documentation-evidence discrepancies: stale CodeGraphContext hosted-terms citation `CGC-U08`; GitNexus browser-storage claim `GN-12` unsupported by its cited v1.6.9 README; GitNexus update procedure `GN-U15` incorrectly classified Unknown despite an explicit Upgrade section; and Repomix `R3` does not support the stated mandatory repacking behavior. These are accepted as current documentation/evidence risks without repair or defect creation. Formal Verify remains failed under the existing acceptance policy; closure records accepted risk, not a Verify pass. No provider command, MCP handshake, installation, indexing, configuration, remote action, or destructive action was performed during this decision."

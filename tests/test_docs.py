@@ -6,6 +6,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
+PROVIDER_EVIDENCE_POLICY = ROOT / ".harnessctl" / "tasks" / "hrn-00110" / "evidence-policy.md"
+GRAPH_PROVIDER_RESEARCH = ROOT / ".harnessctl" / "tasks" / "hrn-00111" / "research.md"
+CONTEXT_PROVIDER_RESEARCH = ROOT / ".harnessctl" / "tasks" / "hrn-00112" / "research.md"
+PROVIDER_GUIDE = DOCS / "code-intelligence-providers.md"
 SDLC_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "sdlc"
 SDLC_SKILL_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "skills" / "sdlc"
 AUTHORITATIVE_TITLE = "Authoritative template-derived command transitions"
@@ -23,6 +27,60 @@ COMMAND_NODE_IDS = {
     "work-release": "release",
     "work-continue": "continueWork",
 }
+PROVIDER_HEADINGS = [
+    "Status and version",
+    "License",
+    "Install and update",
+    "MCP applicability",
+    "OpenCode",
+    "Pi",
+    "Server mapping",
+    "Lifecycle and storage",
+    "Credentials, privacy, telemetry, and security",
+    "Capabilities and limitations",
+    "Stale-index behavior",
+    "Removal",
+    "Sources",
+]
+PROVIDER_MATRIX_HEADER = (
+    "| Provider | Version/evidence date | MCP applicability | License/component | "
+    "OpenCode | Pi | Index/storage ownership | Network/data egress | Telemetry | "
+    "Stale-index behavior | Evidence limitations |"
+)
+CITATION_FIELDS = (
+    "Claim supported",
+    "Evidence status",
+    "Source URL",
+    "Source kind",
+    "Access date",
+    "Provider version, tag, or commit",
+    "Applicable component",
+    "Evidence excerpt or location",
+    "Qualification",
+)
+EVIDENCE_STATUSES = {"Supported", "Unsupported", "Ambiguous", "Unknown", "Stale"}
+
+
+def _provider_section(document: str, provider: str) -> str:
+    match = re.search(
+        rf"^## {re.escape(provider)}\n(?P<section>.*?)(?=^## |\Z)",
+        document,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert match is not None
+    return match.group("section")
+
+
+def _assert_provider_structure(document: str, providers: tuple[str, ...]) -> None:
+    assert document.count(PROVIDER_MATRIX_HEADER) == 1
+    for provider in providers:
+        section = _provider_section(document, provider)
+        headings = re.findall(r"^### \d+\. (.+)$", section, re.MULTILINE)
+        assert headings == PROVIDER_HEADINGS
+        assert "pi-mcp-adapter" in section
+        assert "2.26.0" in section
+        assert ".pi/mcp.json" in section
+        assert '"mcpServers"' in section
 
 
 def test_documentation_set_and_root_index_exist() -> None:
@@ -35,6 +93,7 @@ def test_documentation_set_and_root_index_exist() -> None:
         "issues.md",
         "cvs.md",
         "code-intelligence.md",
+        "code-intelligence-providers.md",
     }
     assert {path.name for path in DOCS.glob("*.md")} == expected
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
@@ -265,6 +324,277 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     assert "harnessctl never projects or manages them" in " ".join(root.split())
     assert "release-gated on `hrn-00085`" not in root
     assert "docs/code-intelligence.md" in root
+
+
+def test_code_index_provider_evidence_policy_is_complete() -> None:
+    policy = PROVIDER_EVIDENCE_POLICY.read_text(encoding="utf-8")
+    normalized = " ".join(policy.split())
+    normalized_lower = normalized.lower()
+
+    for field in (
+        "Source URL",
+        "Source kind",
+        "Access date",
+        "Provider version, tag, or commit",
+        "Claim supported",
+    ):
+        assert field in policy
+    assert "within 7 calendar days" in normalized
+    assert "recheck every cited claim during formal verify" in normalized_lower
+    assert "mark the evidence stale and narrow or remove the claim" in normalized_lower
+
+    for field in (
+        "SPDX identifier or exact license identity",
+        "Applicable component and release",
+        "Exceptions or dual licensing",
+        "Redistribution constraints",
+    ):
+        assert field in policy
+    for topic in (
+        "Network exposure",
+        "Authentication and authorization",
+        "Filesystem and process permissions",
+        "Data egress",
+        "Supply-chain posture",
+        "Telemetry",
+        "Credentials",
+        "Retention",
+        "Storage",
+        "Models and databases",
+        "Sandboxing",
+        "Remote services",
+    ):
+        assert topic in policy
+
+    for status in ("Supported", "Unsupported", "Ambiguous", "Unknown", "Stale"):
+        assert f"`{status}`" in policy
+    provider_headings = [
+        "Status and version",
+        "License",
+        "Install and update",
+        "MCP applicability",
+        "OpenCode",
+        "Pi",
+        "Server mapping",
+        "Lifecycle and storage",
+        "Credentials, privacy, telemetry, and security",
+        "Capabilities and limitations",
+        "Stale-index behavior",
+        "Removal",
+        "Sources",
+    ]
+    provider_template = policy.split("## Provider research template", 1)[1].split(
+        "## Comparison matrix schema", 1
+    )[0]
+    assert re.findall(r"^\d+\. (.+)$", provider_template, re.MULTILINE) == provider_headings
+
+    assert "## Source precedence" in policy
+    assert "When sources conflict" in policy
+    assert "mark the result `Ambiguous`" in normalized
+    assert "`Search record` with the repositories, documentation areas" in normalized
+    assert "Use `Not found` as the Source URL only" in normalized
+    assert "Do not infer behavior from silence" in policy
+    assert "Do not install, execute, probe, index, watch, update, or remove" in normalized
+    assert "provider, package, process, model, database, or index" in normalized
+    assert "Do not mutate external MCP configuration" in normalized
+    assert "credentials, storage, or provider-owned state" in normalized
+    assert "Do not perform a live handshake" in normalized
+    assert "required research handoff for `hrn-00111` and `hrn-00112`" in normalized
+    assert "Provide the structured records to `hrn-00113`" in normalized
+
+
+def test_graph_provider_research_satisfies_the_evidence_policy() -> None:
+    research = GRAPH_PROVIDER_RESEARCH.read_text(encoding="utf-8")
+    _assert_provider_structure(
+        research,
+        ("CodeGraphContext", "GitNexus", "Graphify"),
+    )
+
+    source_header = "| ID | " + " | ".join(CITATION_FIELDS) + " |"
+    assert research.count(source_header) == 3
+    citation_rows = re.findall(
+        r"^\| ((?:CGC|GN|GF)-(?:U)?\d+) \|.*?\| "
+        r"(Supported|Unsupported|Ambiguous|Unknown|Stale) \|",
+        research,
+        re.MULTILINE,
+    )
+    citation_ids = [citation_id for citation_id, _ in citation_rows]
+    assert len(citation_ids) >= 100
+    assert len(citation_ids) == len(set(citation_ids))
+    assert {status for _, status in citation_rows} <= EVIDENCE_STATUSES
+    referenced_ids = set(re.findall(r"\b(?:CGC|GN|GF)-(?:U)?\d+\b", research))
+    assert referenced_ids <= set(citation_ids)
+    assert all(
+        re.search(
+            rf"^\| {re.escape(citation_id)} \|.*\| 2026-\d{{2}}-\d{{2}} \|",
+            research,
+            re.MULTILINE,
+        )
+        for citation_id in citation_ids
+    )
+    for line in research.splitlines():
+        if not re.match(r"^\| (?:CGC|GN|GF)-(?:U)?\d+ \|", line):
+            continue
+        fields = [field.strip() for field in line.strip("|").split("|")]
+        if fields[2] == "Unknown":
+            assert fields[4] == "Search record"
+
+    assert "repository-local `<repo>/.gitnexus/`" in research
+    assert "`~/.gitnexus/registry.json` is global discovery metadata" in research
+    assert "~/.gitnexus/<repo>" not in research
+    assert "python -m graphify.serve graphify-out/graph.json" in research
+    assert "`.graphify-out/`" not in research
+    assert "`graphify mcp`" not in research
+    assert "inadvertently invoked `list_repos`" in research
+    assert "entire output is quarantined" in research
+    assert "must be carried into formal Verify" in research
+    assert re.search(
+        r"^\| GN-04 \| General commercial production use is granted.*\| Unsupported \|",
+        research,
+        re.MULTILINE,
+    )
+    gitnexus = _provider_section(research, "GitNexus")
+    install_section = gitnexus.split("### 3. Install and update", 1)[1].split("### 4.", 1)[0]
+    assert install_section.count("npm install -g gitnexus@1.6.9") == 1
+    assert "update procedure was not established" in install_section
+
+
+def test_context_provider_research_satisfies_the_evidence_policy() -> None:
+    research = CONTEXT_PROVIDER_RESEARCH.read_text(encoding="utf-8")
+    _assert_provider_structure(
+        research,
+        ("Repomix", "FastCode", "CocoIndex"),
+    )
+
+    citation_matches = list(
+        re.finditer(
+            r"^#{3,4} \[(?P<id>[RFCH]\d+)\].*?\n"
+            r"(?P<body>.*?)(?=^#{3,4} \[|^## |\Z)",
+            research,
+            re.MULTILINE | re.DOTALL,
+        )
+    )
+    citation_ids = [match.group("id") for match in citation_matches]
+    assert len(citation_ids) >= 80
+    assert len(citation_ids) == len(set(citation_ids))
+    referenced_ids = set(re.findall(r"\[([RFCH]\d+)\]", research))
+    assert referenced_ids <= set(citation_ids)
+    for match in citation_matches:
+        body = match.group("body")
+        for field in CITATION_FIELDS:
+            assert body.count(f"| {field} |") == 1
+        status_match = re.search(r"^\| Evidence status \| (.+) \|$", body, re.MULTILINE)
+        assert status_match is not None
+        assert status_match.group(1) in EVIDENCE_STATUSES
+        assert re.search(r"^\| Access date \| 2026-\d{2}-\d{2} \|$", body, re.MULTILINE)
+        if status_match.group(1) == "Unknown":
+            assert "| Source kind | Search record |" in body
+
+    repomix = _provider_section(research, "Repomix")
+    fastcode = _provider_section(research, "FastCode")
+    cocoindex = _provider_section(research, "CocoIndex")
+    assert "Persistent code-index applicability is **Unknown**" in repomix
+    assert "Provider version, tag, or commit | Unknown; unversioned page" in repomix
+    for section in (repomix, fastcode, cocoindex):
+        assert "| Filesystem / process permissions | **Unknown** |" in section
+        assert "| Storage location / ownership | **Unknown** |" in section
+    assert "| Credentials / secrets | **Unknown** |" in repomix
+    assert "| Remote / hosted processing | **Unknown** |" in repomix
+    assert "License is **Ambiguous**" in research
+    assert "root `LICENSE`" in fastcode
+    assert "README says MIT" in fastcode
+    assert "Pi core has no native MCP host syntax" in research
+    assert "separately maintained `pi-mcp-adapter` v2.26.0" in research
+    assert "No provider software was installed, executed, probed, indexed" in research
+    assert "no live MCP handshake was performed" in research
+    assert "Version pinning is preferable" not in research
+    assert "Prefer sandbox mode" not in research
+    assert "Suggested mapping" not in research
+    assert "Suggested skill mapping" not in research
+
+
+def test_external_code_index_provider_guide_is_complete_and_neutral() -> None:
+    guide = PROVIDER_GUIDE.read_text(encoding="utf-8")
+    root = (ROOT / "README.md").read_text(encoding="utf-8")
+    docs_index = (DOCS / "README.md").read_text(encoding="utf-8")
+    neutral_guide = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
+    normalized = " ".join(guide.split())
+
+    for index in (root, docs_index, neutral_guide):
+        assert "code-intelligence-providers.md" in index
+
+    providers = (
+        "CodeGraphContext",
+        "GitNexus",
+        "Graphify",
+        "Repomix",
+        "FastCode",
+        "CocoIndex",
+    )
+    assert re.findall(r"^## (.+)$", guide, re.MULTILINE) == [
+        "Evidence boundary",
+        "Comparison matrix",
+        "Shared host boundary",
+        *providers,
+        "Migration and manual cleanup",
+    ]
+    for provider in providers:
+        section = _provider_section(guide, provider)
+        headings = re.findall(r"^### \d+\. (.+)$", section, re.MULTILINE)
+        assert headings == PROVIDER_HEADINGS
+
+    assert guide.count("## Comparison matrix") == 1
+    for column in (
+        "Version/evidence date",
+        "MCP applicability",
+        "License/component",
+        "Index/storage ownership",
+        "Network/data egress",
+        "Evidence limitations",
+    ):
+        assert column in guide
+
+    assert "Plan-authorized, nonprecedential research exception" in normalized
+    assert "read-only GitNexus" not in guide
+    assert "output is excluded from claims, citations, search inputs" in normalized
+    assert "Provider retention, egress, and remote state" in normalized
+    assert "authorizes no later provider call" in normalized
+    assert "No intended mutation was observed" in guide
+
+    assert "Pi core is **Unsupported**" in guide
+    assert "`pi-mcp-adapter` `2.26.0`" in guide
+    assert "**Supported** at the documented syntax level but untested" in normalized
+    assert ".pi/mcp.json" in guide
+
+    for fact in (
+        "package/source `0.6.5`, GitHub release `v0.5.7`",
+        "PolyForm Noncommercial 1.0.0",
+        "repository-local `<repo>/.gitnexus/`",
+        "`graphifyy[mcp]`",
+        "`graphify-out/`",
+        "persistent index are **Unknown**",
+        "root license absent at checked commits",
+        "`cocoindex-code` `0.2.41`",
+        "generic CocoIndex framework `1.0.20`",
+    ):
+        assert fact in normalized
+
+    assert "## Migration and manual cleanup" in guide
+    assert "Audit user-owned `.opencode/opencode.json` and `.pi/mcp.json`" in normalized
+    assert "Harnessctl performs none of these actions" in normalized
+    assert "recommending or endorsing a provider" in guide
+    assert "default provider" not in guide.lower()
+    assert "suggested mapping" not in guide.lower()
+    assert "prefer " not in guide.lower()
+
+    reference_ids = set(re.findall(r"\[((?:CGC|GN|GF)-(?:U)?\d+|[RFCH]\d+)\]", guide))
+    defined_ids = set(re.findall(r"^\[((?:CGC|GN|GF)-(?:U)?\d+|[RFCH]\d+)\]:", guide, re.MULTILINE))
+    assert reference_ids <= defined_ids
+
+    changeset_policy = (ROOT / ".changeset" / "README.md").read_text(encoding="utf-8")
+    assert "Documentation, tests, and repository-only automation changes need no changeset" in (
+        changeset_policy
+    )
 
 
 def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:

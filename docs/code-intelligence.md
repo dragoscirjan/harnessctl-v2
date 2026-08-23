@@ -2,6 +2,9 @@
 
 Harnessctl can generate provider-neutral retrieval guidance for an external MCP server.
 It does not register or run that server and never makes index output authoritative.
+For sourced, non-endorsing provider comparisons and user-owned host examples, see the
+[external provider guide](code-intelligence-providers.md). The guide does not change this
+provider-neutral contract.
 
 ## Configuration
 

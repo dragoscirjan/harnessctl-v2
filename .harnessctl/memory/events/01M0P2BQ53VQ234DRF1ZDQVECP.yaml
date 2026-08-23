@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0P2BQ53VQ234DRF1ZDQVECP
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00103
+summary: hrn-00103 | build | hrn-00110 evidence policy | done
+details: User confirmed Task closure. hrn-00110 done revision v1:c497aeba5c25137f3bd219164a0b3b3deb98f395ae122dcba26e9f3e7c4e66f3. Linked artifact `.harnessctl/tasks/hrn-00110/evidence-policy.md`; enforced by `tests/test_docs.py`. Docs 11 passed; Ruff, Prettier, diff check passed; independent scoped review approved. Tasks 111 and 112 are now dependency-ready. Epic hrn-00103 remains open. No provider execution, Verify, Release, remote, commit, or destructive action.
+source:
+  kind: artifact
+  ref: hrn-00110
+  revision: v1:c497aeba5c25137f3bd219164a0b3b3deb98f395ae122dcba26e9f3e7c4e66f3
+created_at: 2026-08-23T01:04:33.955Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes:
+  - 01M0P29FYA7ZF6H5SF4ZVYPK0Q
+tags:
+  - build
+  - code-index
+  - documentation
+  - evidence-policy
+  - sdlc

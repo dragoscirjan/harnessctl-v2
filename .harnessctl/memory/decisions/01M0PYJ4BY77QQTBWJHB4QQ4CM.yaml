@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0PYJ4BY77QQTBWJHB4QQ4CM
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00103
+summary: hrn-00103 | plan | historical provider-call exception | approved
+details: "User approved body-only amendments to Epic hrn-00103 and Tasks hrn-00111, hrn-00113, hrn-00114. Exactly one historical read-only GitNexus `list_repos` invocation is a disclosed, nonprecedential exception; output remains quarantined from evidence and guide content; no later provider call permitted. Local evidence may show no intentional mutation observed; provider retention, egress, and remote state remain Unknown. Research structural guards belong to Tasks 111/112; public-guide, inventory, link, and package tests belong to Task 113. Task 114 validates quarantine, no later calls, local evidence, and explicit remote uncertainty without claiming zero unobservable impact. Issue revisions: hrn-00103 v1:d58a82224ec4934bae0c8b4b39db3b5b5d67bdbb051e135d7380c397fe30cb57; hrn-00111 v1:e32124409abb9633f7a3b9ee721eb8adec418a7196b2026cc1cfdd0181372904; hrn-00113 v1:d719dba4f1f4b3f7c0449def972d7ac73f473cc97918de14d3d636ddd407b40d; hrn-00114 v1:19d68b5aac7b271dc1b62c1e792223517b4b32fe3b22852b1b06fffe3c8a6ae7. All validate; diff check passed. No status/relationship change, Build, Verify, Release, provider/network call, remote, commit, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00103
+  revision: v1:d58a82224ec4934bae0c8b4b39db3b5b5d67bdbb051e135d7380c397fe30cb57
+created_at: 2026-08-23T09:17:24.222Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0PY148972KVP1TT5VF5XQFM
+tags:
+  - acceptance-exception
+  - approved
+  - code-index
+  - plan
+  - provider-guide

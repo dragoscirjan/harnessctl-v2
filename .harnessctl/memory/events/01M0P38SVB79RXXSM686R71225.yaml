@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M0P38SVB79RXXSM686R71225
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00112
+summary: hrn-00112 done; research handoff linked at .harnessctl/tasks/hrn-00112/research.md.
+details: "Repomix v1.18.0, FastCode v1.0.1, cocoindex-code v0.2.41 researched under hrn-00110. Checks: 39 headings, 28 references/dates, 48 source URLs reachable, Prettier pass, git diff check pass, tests/test_docs.py 11 passed. Verify gaps retained in artifact."
+source:
+  kind: artifact
+  ref: .harnessctl/tasks/hrn-00112/research.md
+  revision: null
+created_at: 2026-08-23T01:20:26.987Z
+created_by: lead-engineer
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00112
+  - mcp
+  - provider-research

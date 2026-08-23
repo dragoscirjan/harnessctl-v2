@@ -1,0 +1,29 @@
+"version": 1
+"id": "hrn-00111"
+"type": "task"
+"title": "Research graph-oriented code-index MCP providers"
+"status": "done"
+"created_at": "2026-08-23T00:43:13.649Z"
+"updated_at": "2026-08-23T09:22:12.813Z"
+"created_by": "lead-engineer"
+"assigned_to": "lead-engineer"
+"parent": "hrn-00103"
+"depends_on":
+  - "hrn-00110"
+"documents":
+  - ".harnessctl/tasks/hrn-00111/research.md"
+"metadata":
+  "capability": "provider-research"
+  "estimate": "M"
+  "order": 2
+  "providers":
+    - "CodeGraphContext"
+    - "GitNexus"
+    - "Graphify"
+  "risk": "medium"
+"body": "# Research graph-oriented code-index MCP providers\n\n## Objective\n\nProduce current, source-backed evidence for CodeGraphContext, GitNexus, and Graphify under `hrn-00110`, preserving the approved nonprecedential historical exception record.\n\n## Scope\n\nFor each provider research status/version, license, install/update, MCP applicability, OpenCode/Pi configuration, server mapping, lifecycle/storage, credentials/privacy/telemetry/security, capabilities/limitations, stale-index behavior, removal, and sources.\n\nExactly one earlier delegated research pass invoked read-only GitNexus `list_repos`. The Epic accepts this historical incident as a nonprecedential exception. The output remains quarantined; no subsequent provider call or live handshake is permitted.\n\n## Acceptance\n\n- Each provider has a complete `hrn-00110` evidence matrix.\n- MCP applicability is explicitly classified as supported, unsupported, or ambiguous, with evidence.\n- Evidence was checked within 7 calendar days before Task completion and records URL, access date, and release/tag/commit where available.\n- License and security/privacy fields satisfy `hrn-00110`; unknowns remain explicit.\n- OpenCode/Pi examples are user-owned and map only the chosen server name into `skills.sdlc-code-index.mcp_server`.\n- Conflicting, stale, or unavailable evidence is recorded without inference.\n- Capabilities distinguish relationship-aware retrieval from unsupported behavior.\n- Exactly one historical read-only GitNexus `list_repos` invocation is disclosed as the Epic-approved, nonprecedential exception to the absolute `hrn-00110` checklist.\n- Its output is quarantined from claims, citations, search inputs, corroboration, qualifications, comparison matrices, and guide wording.\n- Local evidence records that no intentional mutation was observed; provider-side retention, egress, and remote state remain `Unknown` absent logs or snapshots.\n- No subsequent provider command or live handshake occurs and no intentional provider-owned state change is made.\n- Research-artifact structural tests enforce the evidence handoff; public-guide, inventory, link, and package tests remain owned by `hrn-00113`.\n\n## Dependencies\n\nDepends on `hrn-00110`. The Epic-approved exception supersedes only the impossible historical no-provider-command checklist statement for this incident; all other policy requirements remain applicable.\n\n## Artifacts\n\nStructured research and citations for the CodeGraphContext, GitNexus, and Graphify guide sections; disclosed exception/quarantine evidence; research-artifact structural guards.\n\n## Estimate\n\nM.\n\n## Risks And Uncertainty\n\nThe invocation cannot be undone. Quarantine and local repository evidence can be checked, but provider-side retention, egress, and remote state are unobservable and remain `Unknown`. This exception grants no permission for another provider call.\n\n## Non-Goals\n\nFinal guide authoring; provider endorsement; another provider-call exception; provider installation/probing/indexing/execution; claims of zero unobservable provider-side impact."
+"comments":
+  - "id": "hrn-00111-C0001"
+    "created_at": "2026-08-23T08:44:11.671Z"
+    "created_by": "lead-engineer"
+    "body": "Build evidence: linked `.harnessctl/tasks/hrn-00111/research.md` for CodeGraphContext, GitNexus, and Graphify. Artifact has exact 39 provider headings, policy matrix, 110 narrow citation rows, explicit license/security/privacy/unknown handling, user-owned OpenCode/Pi examples, pinned separate `pi-mcp-adapter` 2.26.0 boundary, corrected GitNexus repository-local storage and Graphify command/output paths. Added structural/citation/corrected-fact tests; docs suite 13 passed; Ruff, Prettier, and `git diff --check` passed. Two independent local-only audits approved after narrowing unsupported inferences and recommendation language. Acceptance exception: an earlier delegated pass invoked read-only GitNexus `list_repos`; output is fully quarantined and made no intended mutation, but the no-provider-command criterion cannot truthfully pass and must be assessed in formal Verify. No further provider call, lifecycle/config mutation, remote, commit, Verify, or Release action occurred."

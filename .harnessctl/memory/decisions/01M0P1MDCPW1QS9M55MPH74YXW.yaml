@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0P1MDCPW1QS9M55MPH74YXW
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00103
+summary: hrn-00103 | plan | external provider guide | approved
+details: "Epic hrn-00103 revision v1:b9a2618fd5379c9a76a5982443cdf0db92aba41818e9bbe883dd0bae00d7191f. Tasks: 110 evidence policy; 111 CodeGraphContext/GitNexus/Graphify research depends 110; 112 Repomix/FastCode/CocoIndex research depends 110; 113 guide/docs/tests/package inventory plus conditional Changeset depends 111+112; 114 validation-only depends 113. Evidence checked within 7 days and rechecked Verify; strict license/security/privacy/applicability unknowns. Skills unchanged; no provider execution. Body estimate L supersedes immutable metadata M. Dependency 105 closed. Issue graph valid; independent final Plan review approved. No Build, Verify, Release, commit, push, remote, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00103
+  revision: v1:b9a2618fd5379c9a76a5982443cdf0db92aba41818e9bbe883dd0bae00d7191f
+created_at: 2026-08-23T00:51:50.294Z
+created_by: lead-engineer
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - code-index
+  - documentation
+  - plan
+  - providers
+  - sdlc

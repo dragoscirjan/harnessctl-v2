@@ -10,6 +10,12 @@
         "X-MCP-Toolsets": "repos,issues,pull_requests,actions,git"
       },
       "oauth": false
+    },
+    "sdlc_code_index": {
+      "type": "local",
+      "command": ["cgc", "mcp", "start"],
+      "enabled": true,
+      "timeout": 30000
     }
   }
 }

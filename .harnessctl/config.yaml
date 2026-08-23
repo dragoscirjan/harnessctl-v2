@@ -30,4 +30,4 @@ memory:
 skills:
   sdlc-code-index:
     enabled: true
-    mcp_server: sdlc-code-index
+    mcp_server: sdlc_code_index
