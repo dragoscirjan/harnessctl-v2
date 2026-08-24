@@ -133,7 +133,7 @@ workflow:
 
 The setting is applied when harnessctl installs the selected host outputs; changing the
 file does not toggle an already installed skill at runtime. Enabled installs generate
-the canonical `develop-tdd` skill for each selected host and compile TDD instructions
+the canonical `sdlc-develop-tdd` skill for each selected host and compile TDD instructions
 into Build and Build-resuming Continue. Disabling the setting and reinstalling compiles
 those instructions out but leaves any existing skill untouched and dormant. See
 [generated skills](skills.md) for paths and behavior.

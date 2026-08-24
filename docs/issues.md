@@ -112,7 +112,7 @@ Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
 OpenCode and Pi issue-tracking skills contain only the selected provider's valid CLI and
 MCP capability guidance. They do not install provider tools or grant access. Pi uses
-`.pi/skills/issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
+`.pi/skills/sdlc-issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
 
 Remote Issues use fixed IDs `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and
 `cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,

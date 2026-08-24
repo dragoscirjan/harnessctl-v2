@@ -324,11 +324,11 @@ def test_build_reference_compiles_tdd_policy_by_configuration() -> None:
         "references/build.md"
     ]
 
-    assert "Load `develop-tdd` before implementation" in enabled
+    assert "Load `sdlc-develop-tdd` before implementation" in enabled
     assert "Red, Green, and Refactor" in enabled
     assert "Load `sdlc-code` before implementation" in enabled
     assert "Load `sdlc-code` before implementation" in disabled
-    assert "develop-tdd" not in disabled
+    assert "sdlc-develop-tdd" not in disabled
     assert "Red, Green, and Refactor" not in disabled
 
 
@@ -351,7 +351,7 @@ def test_continue_reference_delegates_build_resume_to_current_build_policy() -> 
 
 
 def test_develop_tdd_skill_preserves_canonical_cycle_and_rules() -> None:
-    skill = render_skill("develop-tdd")
+    skill = render_skill("sdlc-develop-tdd")
 
     for phrase in (
         "Red-Green-Refactor",

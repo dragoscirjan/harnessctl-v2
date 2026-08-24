@@ -1,5 +1,5 @@
 ---
-name: memory
+name: sdlc-memory
 description: Retrieve and preserve curated shared project knowledge safely.
 ---
 

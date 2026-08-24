@@ -1,5 +1,6 @@
 import importlib
 import json
+import os
 import tomllib
 import warnings
 from copy import deepcopy
@@ -18,6 +19,7 @@ from harnessctl.install import (
 )
 from harnessctl.templates import (
     COMMAND_METADATA,
+    SKILL_ID_MIGRATIONS,
     SKILL_RESOURCE_TEMPLATES,
     TEMPLATES,
     render_prompt,
@@ -120,6 +122,15 @@ def write_legacy_commands(root: Path, harness: str, *, mixed: bool = False) -> P
     return directory
 
 
+def write_legacy_skill(root: Path, harness: str, skill: str = "caveman") -> Path:
+    host_root = ".opencode" if harness == "opencode" else ".pi"
+    directory = root / host_root / "skills" / skill
+    (directory / "references/empty").mkdir(parents=True)
+    (directory / "SKILL.md").write_bytes(b"custom legacy skill\x00\n")
+    (directory / "references/custom.md").write_bytes(b"custom reference\n")
+    return directory
+
+
 def test_rendered_prompts_share_the_canonical_body() -> None:
     opencode = render_prompt("work-plan", "opencode")
     pi = render_prompt("work-plan", "pi")
@@ -175,9 +186,14 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
         assert (tmp_path / f".pi/prompts/{command}.md").exists()
     assert not (tmp_path / ".harnessctl").exists()
-    assert (tmp_path / ".opencode/skills/caveman/SKILL.md").exists()
-    assert (tmp_path / ".opencode/skills/cvs/SKILL.md").exists()
-    for skill in ("caveman", "cvs", "issue-tracking", "memory"):
+    assert (tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md").exists()
+    assert (tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md").exists()
+    for skill in (
+        "sdlc-caveman",
+        "sdlc-cvs",
+        "sdlc-issue-tracking",
+        "sdlc-memory",
+    ):
         assert (tmp_path / f".pi/skills/{skill}/SKILL.md").exists()
     assert (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").is_file()
     assert (tmp_path / ".pi/skills/sdlc/references/checkpoint.md").is_file()
@@ -190,6 +206,224 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
         tmp_path / ".pi/skills/sdlc-code"
     )
     assert len(SKILL_RESOURCE_TEMPLATES["sdlc-code"]) == 26
+
+
+def test_skill_namespace_migration_metadata_is_exact() -> None:
+    assert SKILL_ID_MIGRATIONS == {
+        "caveman": "sdlc-caveman",
+        "cvs": "sdlc-cvs",
+        "develop-tdd": "sdlc-develop-tdd",
+        "issue-tracking": "sdlc-issue-tracking",
+        "memory": "sdlc-memory",
+    }
+
+
+def test_fresh_install_creates_only_prefixed_skill_directories(tmp_path: Path) -> None:
+    write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, "all")
+
+    for host_root in (tmp_path / ".opencode/skills", tmp_path / ".pi/skills"):
+        assert all(path.name.startswith("sdlc") for path in host_root.iterdir())
+        assert not any(path.name.startswith("harnessctl-") for path in host_root.iterdir())
+        assert not any((host_root / legacy).exists() for legacy in SKILL_ID_MIGRATIONS)
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_legacy_skill_tree_is_byte_preserved_without_replacement_consent(
+    tmp_path: Path, force: bool
+) -> None:
+    legacy = write_legacy_skill(tmp_path, "opencode")
+    before = _tree_manifest(legacy)
+
+    with pytest.warns(UserWarning, match="--replace-sdlc-skill-set") as caught:
+        install(tmp_path, "opencode", force=force)
+
+    assert _tree_manifest(legacy) == before
+    assert (tmp_path / ".opencode/skills/sdlc/SKILL.md").is_file()
+    message = str(caught[0].message).replace("\\", "/")
+    assert f"- {legacy.as_posix()}" in message
+    assert "references" not in "\n".join(
+        line for line in message.splitlines() if line.startswith("- ")
+    )
+
+
+def test_skill_replacement_discloses_roots_and_migrates_only_selected_host(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_sdlc_code_index_config(tmp_path, enabled=True)
+    selected = [write_legacy_skill(tmp_path, "opencode", skill) for skill in SKILL_ID_MIGRATIONS]
+    for skill in SKILL_ID_MIGRATIONS:
+        write_legacy_skill(tmp_path, "pi", skill)
+    retained_markers = []
+    for skill in ("sdlc", "sdlc-code", "sdlc-code-index"):
+        marker = tmp_path / f".opencode/skills/{skill}/operator-retained"
+        marker.parent.mkdir(parents=True)
+        marker.write_bytes(f"retained {skill}\n".encode())
+        retained_markers.append(marker)
+    other_root = tmp_path / ".pi/skills"
+    other_before = _tree_manifest(other_root)
+    disclosures: list[str] = []
+    original_write = install_module.write_atomic
+
+    def checked_write(path: Path, content: str) -> None:
+        assert disclosures, "skill migration write preceded affected-path disclosure"
+        original_write(path, content)
+
+    monkeypatch.setattr(install_module, "write_atomic", checked_write)
+
+    install(
+        tmp_path,
+        "opencode",
+        replace_sdlc_skill_set=True,
+        disclose_skill_replacement=disclosures.append,
+    )
+
+    assert len(disclosures) == 1
+    affected = [
+        line.removeprefix("- ")
+        for line in disclosures[0].replace("\\", "/").splitlines()
+        if line.startswith("- ")
+    ]
+    assert affected == sorted(path.as_posix() for path in selected)
+    assert not any(path.exists() for path in selected)
+    assert _tree_manifest(other_root) == other_before
+    assert (tmp_path / ".opencode/skills/sdlc/SKILL.md").is_file()
+    for marker in retained_markers:
+        assert marker.read_bytes() == f"retained {marker.parent.name}\n".encode()
+
+    install(tmp_path, "opencode", force=True, replace_sdlc_skill_set=True)
+
+
+def test_legacy_skill_symlink_is_rejected_before_mutation(tmp_path: Path) -> None:
+    legacy = write_legacy_skill(tmp_path, "opencode")
+    referent = tmp_path / "operator-policy.md"
+    referent.write_bytes(b"operator policy\n")
+    (legacy / "linked.md").symlink_to(referent)
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="must not contain symlinks"):
+        install(tmp_path, "opencode", replace_sdlc_skill_set=True)
+
+    assert _tree_manifest(tmp_path) == before
+    assert referent.read_bytes() == b"operator policy\n"
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_legacy_skill_symlink_is_preserved_without_replacement_consent(
+    tmp_path: Path, force: bool
+) -> None:
+    legacy = write_legacy_skill(tmp_path, "opencode")
+    referent = tmp_path / "operator-policy.md"
+    referent.write_bytes(b"operator policy\n")
+    link = legacy / "linked.md"
+    link.symlink_to(referent)
+
+    with pytest.warns(UserWarning, match="--replace-sdlc-skill-set"):
+        install(tmp_path, "opencode", force=force)
+
+    assert link.is_symlink()
+    assert link.read_bytes() == b"operator policy\n"
+    assert referent.read_bytes() == b"operator policy\n"
+
+
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes require os.mkfifo")
+def test_legacy_skill_special_entry_is_preserved_without_replacement_consent(
+    tmp_path: Path, harness: str, force: bool
+) -> None:
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    selected_harnesses = ("opencode", "pi") if harness == "all" else (harness,)
+    pipes = []
+    for selected_harness in selected_harnesses:
+        legacy = write_legacy_skill(tmp_path, selected_harness)
+        pipe = legacy / "operator.pipe"
+        os.mkfifo(pipe)
+        pipes.append(pipe)
+
+    with pytest.warns(UserWarning, match="--replace-sdlc-skill-set"):
+        install(tmp_path, harness, force=force)
+
+    for pipe in pipes:
+        assert pipe.exists()
+        assert not pipe.is_file()
+
+
+def test_explicit_skill_replacement_rejects_symlink_root_before_mutation(
+    tmp_path: Path,
+) -> None:
+    referent = tmp_path / "operator-skill"
+    referent.mkdir()
+    (referent / "SKILL.md").write_bytes(b"operator policy\n")
+    legacy = tmp_path / ".opencode/skills/caveman"
+    legacy.parent.mkdir(parents=True)
+    legacy.symlink_to(referent, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="root must not be a symlink"):
+        install(tmp_path, "opencode", replace_sdlc_skill_set=True)
+
+    assert legacy.is_symlink()
+    assert (referent / "SKILL.md").read_bytes() == b"operator policy\n"
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="named pipes require os.mkfifo")
+def test_explicit_skill_replacement_rejects_special_entry_before_mutation(
+    tmp_path: Path,
+) -> None:
+    legacy = write_legacy_skill(tmp_path, "opencode")
+    pipe = legacy / "operator.pipe"
+    os.mkfifo(pipe)
+
+    with pytest.raises(ValueError, match="only regular files"):
+        install(tmp_path, "opencode", replace_sdlc_skill_set=True)
+
+    assert pipe.exists()
+    assert not (tmp_path / ".opencode/skills/sdlc-caveman").exists()
+
+
+@pytest.mark.parametrize(
+    ("harness", "smoke_check"),
+    (("opencode", "_smoke_check"), ("pi", "_smoke_check_pi")),
+)
+def test_skill_migration_failure_restores_exact_legacy_tree_for_each_host(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    smoke_check: str,
+) -> None:
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    for skill in SKILL_ID_MIGRATIONS:
+        write_legacy_skill(tmp_path, harness, skill)
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        smoke_check,
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("injected skill migration failure")
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="injected skill migration failure"):
+        install(tmp_path, harness, replace_sdlc_skill_set=True)
+
+    assert _tree_manifest(tmp_path) == before
+
+
+def test_canonical_conflict_precedes_explicit_skill_migration(tmp_path: Path) -> None:
+    legacy = write_legacy_skill(tmp_path, "opencode")
+    conflict = tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md"
+    conflict.parent.mkdir(parents=True)
+    conflict.write_bytes(b"operator canonical skill\x00\n")
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(FileExistsError, match="sdlc-caveman/SKILL.md"):
+        install(tmp_path, "opencode", replace_sdlc_skill_set=True)
+
+    assert _tree_manifest(tmp_path) == before
+    assert legacy.exists()
 
 
 def test_install_refuses_conflicts_and_force_replaces(tmp_path: Path) -> None:
@@ -401,18 +635,21 @@ def test_enabled_tdd_installs_equivalent_selected_host_skills(tmp_path: Path) ->
 
     installed = install(tmp_path, "all")
 
-    opencode_skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
-    pi_skill = tmp_path / ".pi/skills/develop-tdd/SKILL.md"
+    opencode_skill = tmp_path / ".opencode/skills/sdlc-develop-tdd/SKILL.md"
+    pi_skill = tmp_path / ".pi/skills/sdlc-develop-tdd/SKILL.md"
     assert opencode_skill in installed
     assert pi_skill in installed
     assert opencode_skill.read_bytes() == pi_skill.read_bytes()
     assert not (opencode_skill.parent / ".harnessctl-generated.json").exists()
     assert not (pi_skill.parent / ".harnessctl-generated.json").exists()
     continue_policies: list[bytes] = []
-    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+    for root in (
+        tmp_path / ".opencode/skills/sdlc",
+        tmp_path / ".pi/skills/sdlc",
+    ):
         build = (root / "references/build.md").read_text(encoding="utf-8")
         continue_policy = root / "references/continue.md"
-        assert "Load `develop-tdd` before implementation" in build
+        assert "Load `sdlc-develop-tdd` before implementation" in build
         assert "Red, Green, and Refactor" in build
         assert "load `references/build.md` before implementation" in continue_policy.read_text(
             encoding="utf-8"
@@ -424,7 +661,7 @@ def test_enabled_tdd_installs_equivalent_selected_host_skills(tmp_path: Path) ->
 def test_disabled_tdd_is_absent_from_fresh_install(tmp_path: Path) -> None:
     install(tmp_path, "opencode")
 
-    assert not (tmp_path / ".opencode/skills/develop-tdd").exists()
+    assert not (tmp_path / ".opencode/skills/sdlc-develop-tdd").exists()
     build = (tmp_path / ".opencode/skills/sdlc/references/build.md").read_text(encoding="utf-8")
     continue_policy = (tmp_path / ".opencode/skills/sdlc/references/continue.md").read_text(
         encoding="utf-8"
@@ -440,8 +677,8 @@ def test_disabling_tdd_retains_dormant_generated_skill(tmp_path: Path) -> None:
     write_pinned_pi_adapter(tmp_path)
     install(tmp_path, "all")
     skills = (
-        tmp_path / ".opencode/skills/develop-tdd/SKILL.md",
-        tmp_path / ".pi/skills/develop-tdd/SKILL.md",
+        tmp_path / ".opencode/skills/sdlc-develop-tdd/SKILL.md",
+        tmp_path / ".pi/skills/sdlc-develop-tdd/SKILL.md",
     )
     enabled_content = tuple(skill.read_bytes() for skill in skills)
     assert all(skill.is_file() for skill in skills)
@@ -453,7 +690,10 @@ def test_disabling_tdd_retains_dormant_generated_skill(tmp_path: Path) -> None:
 
     assert tuple(skill.read_bytes() for skill in skills) == enabled_content
     assert not any("TDD skill" in str(item.message) for item in caught)
-    for root in (tmp_path / ".opencode/skills/sdlc", tmp_path / ".pi/skills/sdlc"):
+    for root in (
+        tmp_path / ".opencode/skills/sdlc",
+        tmp_path / ".pi/skills/sdlc",
+    ):
         build = (root / "references/build.md").read_text(encoding="utf-8")
         continue_policy = (root / "references/continue.md").read_text(encoding="utf-8")
         assert "develop-tdd" not in build
@@ -643,7 +883,7 @@ def test_disabled_tdd_leaves_existing_operator_skill_untouched(
 
 def test_enabled_tdd_operator_skill_conflict_precedes_mutation(tmp_path: Path) -> None:
     write_tdd_config(tmp_path, enabled=True)
-    skill = tmp_path / ".opencode/skills/develop-tdd/SKILL.md"
+    skill = tmp_path / ".opencode/skills/sdlc-develop-tdd/SKILL.md"
     skill.parent.mkdir(parents=True)
     skill.write_text("operator-owned TDD policy\n", encoding="utf-8")
     before = _tree_manifest(tmp_path)
@@ -1292,8 +1532,8 @@ def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None
 
 
 def test_caveman_renders_only_selected_mode() -> None:
-    strict = render_skill("caveman", mode="strict")
-    balanced = render_skill("caveman", mode="balanced")
+    strict = render_skill("sdlc-caveman", mode="strict")
+    balanced = render_skill("sdlc-caveman", mode="balanced")
 
     assert "terse technical fragments" in strict
     assert "concise professional sentences" not in strict
@@ -1304,7 +1544,7 @@ def test_caveman_renders_only_selected_mode() -> None:
 
 def test_repository_memory_skill_is_specialized_and_bounded() -> None:
     rendered = render_skill(
-        "memory",
+        "sdlc-memory",
         retrieval_limit=8,
         max_chars=12_000,
         repository_root=".harnessctl/memory",
@@ -1336,8 +1576,8 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
     )
     assert "memory_store" in checkpoint
     assert "limit 5, 4000 chars" in checkpoint
-    assert tmp_path / ".opencode/skills/caveman/SKILL.md" in installed
-    assert tmp_path / ".opencode/skills/memory/SKILL.md" in installed
+    assert tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md" in installed
+    assert tmp_path / ".opencode/skills/sdlc-memory/SKILL.md" in installed
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
     assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
     assert not (tmp_path / ".opencode/plugins/harnessctl-memory.js").exists()
@@ -1356,7 +1596,7 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
         assert "memory_" not in rendered
         assert "Project memory" not in rendered
-    assert (tmp_path / ".opencode/skills/caveman/SKILL.md").is_file()
+    assert (tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md").is_file()
     checkpoint = (tmp_path / ".opencode/skills/sdlc/references/checkpoint.md").read_text(
         encoding="utf-8"
     )
@@ -1364,7 +1604,7 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
     assert "memory_store" not in checkpoint
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
     assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
-    assert not (tmp_path / ".opencode/skills/memory").exists()
+    assert not (tmp_path / ".opencode/skills/sdlc-memory").exists()
     assert not (tmp_path / ".opencode/plugins").exists()
     assert not (tmp_path / ".opencode/package.json").exists()
 
@@ -1376,7 +1616,7 @@ def test_install_supports_pi_memory_distribution(tmp_path: Path, harness: str) -
 
     installed = install(tmp_path, harness)
 
-    assert tmp_path / ".pi/skills/memory/SKILL.md" in installed
+    assert tmp_path / ".pi/skills/sdlc-memory/SKILL.md" in installed
     checkpoint = (tmp_path / ".pi/skills/sdlc/references/checkpoint.md").read_text(encoding="utf-8")
     assert "memory_store" in checkpoint
     assert "limit 5, 4000 chars" in checkpoint
@@ -1403,13 +1643,19 @@ def test_committed_sdlc_code_trees_match_current_installer_render(
 
     install(tmp_path, "all")
 
-    for host_path in (".opencode/skills/sdlc-code", ".pi/skills/sdlc-code"):
+    for host_path in (
+        ".opencode/skills/sdlc-code",
+        ".pi/skills/sdlc-code",
+    ):
         assert _tree_manifest(project_root / host_path) == _tree_manifest(tmp_path / host_path)
 
 
 @pytest.mark.parametrize(
     ("skill", "reference", "heading"),
-    (("sdlc", "checkpoint.md", "# Workflow checkpoint"), ("sdlc-code", "py.md", "# Python")),
+    (
+        ("sdlc", "checkpoint.md", "# Workflow checkpoint"),
+        ("sdlc-code", "py.md", "# Python"),
+    ),
 )
 def test_nested_skill_resource_conflict_and_force_are_transactional(
     tmp_path: Path, skill: str, reference: str, heading: str
@@ -1428,7 +1674,8 @@ def test_nested_skill_resource_conflict_and_force_are_transactional(
 
 
 @pytest.mark.parametrize(
-    ("skill", "reference"), (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md"))
+    ("skill", "reference"),
+    (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md")),
 )
 def test_nested_skill_resource_symlink_is_rejected_without_mutation(
     tmp_path: Path, skill: str, reference: str
@@ -1448,7 +1695,8 @@ def test_nested_skill_resource_symlink_is_rejected_without_mutation(
 
 
 @pytest.mark.parametrize(
-    ("skill", "reference"), (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md"))
+    ("skill", "reference"),
+    (("sdlc", "checkpoint.md"), ("sdlc-code", "py.md")),
 )
 def test_nested_skill_resource_failure_restores_exact_tree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, skill: str, reference: str
@@ -1471,7 +1719,7 @@ def test_nested_skill_resource_failure_restores_exact_tree(
 def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Path) -> None:
     _write_enabled_memory_config(tmp_path)
     command = tmp_path / ".opencode/commands/work-build.md"
-    skill = tmp_path / ".opencode/skills/memory/SKILL.md"
+    skill = tmp_path / ".opencode/skills/sdlc-memory/SKILL.md"
     command.parent.mkdir(parents=True)
     skill.parent.mkdir(parents=True)
     command.write_text("custom command", encoding="utf-8")
@@ -1484,7 +1732,7 @@ def test_install_reports_command_and_skill_conflicts_before_writes(tmp_path: Pat
     assert _tree_manifest(tmp_path) == before
     message = str(error.value).replace("\\", "/")
     assert ".opencode/commands/work-build.md" in message
-    assert ".opencode/skills/memory/SKILL.md" in message
+    assert ".opencode/skills/sdlc-memory/SKILL.md" in message
 
 
 @pytest.mark.parametrize("failure_point", ["write", "initialize", "smoke"])
@@ -1825,7 +2073,7 @@ def test_local_mcp_missing_binary_still_installs_cli_skill(
 
     installed = install(tmp_path, "opencode")
 
-    skill = tmp_path / ".opencode/skills/cvs/SKILL.md"
+    skill = tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md"
     assert skill in installed
     assert "- Remote CLI: `forgejo-cli`." in skill.read_text(encoding="utf-8")
     assert "- Remote MCP: unavailable." in skill.read_text(encoding="utf-8")

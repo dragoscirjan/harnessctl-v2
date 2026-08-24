@@ -156,9 +156,9 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         )
         == 26
     )
-    assert "templates/skills/issue-tracking/SKILL.md.j2" in expected_resources
-    assert "templates/skills/cvs/SKILL.md.j2" in expected_resources
-    assert "templates/skills/develop-tdd/SKILL.md.j2" in expected_resources
+    assert "templates/skills/sdlc-issue-tracking/SKILL.md.j2" in expected_resources
+    assert "templates/skills/sdlc-cvs/SKILL.md.j2" in expected_resources
+    assert "templates/skills/sdlc-develop-tdd/SKILL.md.j2" in expected_resources
     assert "templates/skills/sdlc-code-index/SKILL.md.j2" in expected_resources
     assert "mcp.py" in expected_resources
 
@@ -259,6 +259,7 @@ assert len(LEGACY_SDLC_COMMANDS) == 18
 assert len(RETIRED_SDLC_COMMANDS) == 16
 assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
 assert inspect.signature(install).parameters['replace_sdlc_command_set'].default is False
+assert inspect.signature(install).parameters['replace_sdlc_skill_set'].default is False
 for command in TEMPLATES:
     assert 'memory_search' not in render_prompt(command, 'opencode', config=config)
     assert 'memory_search' not in render_prompt(command, 'pi', config=config)
@@ -281,7 +282,7 @@ disabled_sdlc = render_skill(
 )
 assert '`sdlc-code-index` is disabled' in disabled_sdlc
 assert 'Do not load a discoverable retained copy' in disabled_sdlc
-assert 'Red-Green-Refactor' in render_skill('develop-tdd')
+assert 'Red-Green-Refactor' in render_skill('sdlc-develop-tdd')
 sdlc_code = render_skill('sdlc-code')
 sdlc_code_resources = render_skill_resources('sdlc-code')
 assert 'Apply this root once' in sdlc_code
@@ -326,7 +327,7 @@ for provider, connection in providers.items():
             remote_url=remote_url, token_env=token_env,
             mcp_id=f'cvs_{provider}', mcp_available=True,
         )
-    rendered = render_skill('issue-tracking', **context)
+    rendered = render_skill('sdlc-issue-tracking', **context)
     assert f'the configured {provider} issue authority' in rendered
     assert tools in rendered
     if provider != 'filesystem':
@@ -444,6 +445,7 @@ for provider, connection in providers.items():
         [str(python), "-m", "harnessctl.install", "--help"], cwd=runtime, env=environment
     )
     assert "--replace-sdlc-command-set" in help_result.stdout
+    assert "--replace-sdlc-skill-set" in help_result.stdout
     _run([*cli, str(disabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
     assert not (disabled_opencode / ".opencode/skills/sdlc-code-index").exists()
@@ -460,14 +462,14 @@ for provider, connection in providers.items():
     assert "Do not load a discoverable retained copy" in (
         disabled_pi / ".pi/skills/sdlc/SKILL.md"
     ).read_text(encoding="utf-8")
-    assert (disabled_pi / ".pi/skills/issue-tracking/SKILL.md").is_file()
+    assert (disabled_pi / ".pi/skills/sdlc-issue-tracking/SKILL.md").is_file()
     assert (disabled_pi / ".pi/mcp.json").is_file()
     for project, harness in ((enabled_pi, "pi"), (enabled_all, "all")):
         _run([*cli, str(project), "--harness", harness], cwd=runtime, env=environment)
-        assert (project / ".pi/skills/memory/SKILL.md").is_file()
+        assert (project / ".pi/skills/sdlc-memory/SKILL.md").is_file()
         assert len(list((project / ".pi/prompts").glob("*.md"))) == COMMAND_COUNT
         if harness == "all":
-            assert (project / ".opencode/skills/memory/SKILL.md").is_file()
+            assert (project / ".opencode/skills/sdlc-memory/SKILL.md").is_file()
 
     _run([*cli, str(enabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(remote_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
@@ -499,12 +501,16 @@ for provider, connection in providers.items():
     assert all("memory_search" not in path.read_text(encoding="utf-8") for path in commands)
     checkpoint = enabled_opencode / ".opencode/skills/sdlc/references/checkpoint.md"
     assert "memory_store" in checkpoint.read_text(encoding="utf-8")
-    for skill in ("caveman", "cvs", "memory", "issue-tracking"):
+    for skill in (
+        "sdlc-caveman",
+        "sdlc-cvs",
+        "sdlc-memory",
+        "sdlc-issue-tracking",
+    ):
         assert (enabled_opencode / f".opencode/skills/{skill}/SKILL.md").is_file()
-    assert (enabled_opencode / ".opencode/skills/sdlc-code-index/SKILL.md").is_file()
-    code_index_skill = (enabled_opencode / ".opencode/skills/sdlc-code-index/SKILL.md").read_text(
-        encoding="utf-8"
-    )
+    code_index_skill_path = enabled_opencode / ".opencode/skills/sdlc-code-index/SKILL.md"
+    assert code_index_skill_path.is_file()
+    code_index_skill = code_index_skill_path.read_text(encoding="utf-8")
     assert "Configured MCP server: `operator-index`" in code_index_skill
     assert "Configured provider" not in code_index_skill
     opencode_sdlc = (enabled_all / ".opencode/skills/sdlc/SKILL.md").read_bytes()
@@ -522,7 +528,7 @@ for provider, connection in providers.items():
         for path in pi_code.rglob("*")
         if path.is_file()
     }
-    remote_skill = remote_opencode / ".opencode/skills/issue-tracking/SKILL.md"
+    remote_skill = remote_opencode / ".opencode/skills/sdlc-issue-tracking/SKILL.md"
     assert "Use GitHub CLI `gh` or live tools under `cvs_github`" in remote_skill.read_text(
         encoding="utf-8"
     )

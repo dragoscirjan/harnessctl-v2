@@ -231,7 +231,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "6dc5abf02a127864e51a69dc72108fedd714bdfb523400b82561e1c99c099fca"
+        "b2f3b61967dd86dab0b428d67bf3f5c97a50339d0b10409c000c0e6b85a3afd2"
     )
 
 
@@ -267,7 +267,7 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     issues = (DOCS / "issues.md").read_text(encoding="utf-8")
     memory = (DOCS / "memory.md").read_text(encoding="utf-8")
 
-    assert ".opencode/skills/issue-tracking/SKILL.md" in skills
+    assert ".opencode/skills/sdlc-issue-tracking/SKILL.md" in skills
     for provider in ("filesystem", "github", "gitlab", "gitea", "forgejo"):
         assert provider in issues.lower()
     for backend in ("libsql", "mem0", "graphiti", "custom"):
@@ -300,15 +300,15 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
     assert "default is `false`" in configuration
     assert "workflow:\n  tdd:\n    enabled: true" in configuration
     for path in (
-        ".opencode/skills/develop-tdd/SKILL.md",
-        ".pi/skills/develop-tdd/SKILL.md",
+        ".opencode/skills/sdlc-develop-tdd/SKILL.md",
+        ".pi/skills/sdlc-develop-tdd/SKILL.md",
     ):
         assert path in skills
     assert "does not delete" in skills
     assert "existing skill untouched and dormant" in configuration
     assert "remains dormant" in normalized_sdlc
     assert "`workflow.tdd.enabled`" in sdlc
-    assert "loads `develop-tdd` before implementation" in normalized_sdlc
+    assert "loads `sdlc-develop-tdd` before implementation" in normalized_sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
     assert "`work-continue` resumes Build" in normalized_sdlc
 
@@ -334,7 +334,7 @@ def test_docs_describe_sdlc_code_installation_and_build_boundaries() -> None:
     assert ".opencode/skills/sdlc-code/" in root
     assert ".pi/skills/sdlc-code/" in root
     assert "--force" in root
-    assert "an older installer cannot recognize or delete them" in root
+    assert "remove any renamed support-skill directories that version does not manage" in normalized
 
 
 def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
@@ -673,8 +673,8 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
         assert server_id in cvs
         assert f"`{cli}`" in cvs
     for path in (
-        ".opencode/skills/cvs/SKILL.md",
-        ".pi/skills/cvs/SKILL.md",
+        ".opencode/skills/sdlc-cvs/SKILL.md",
+        ".pi/skills/sdlc-cvs/SKILL.md",
         ".opencode/opencode.json",
         ".pi/mcp.json",
         ".pi/settings.json",

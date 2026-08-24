@@ -102,7 +102,7 @@ Build by loading the current Build reference. Plan, Verify, Release, and non-Bui
 Continue do not activate `sdlc-code`.
 
 When `workflow.tdd.enabled` is true at installation, the generated Build reference loads
-`develop-tdd` before implementation and requires observable Red, Green, and Refactor
+`sdlc-develop-tdd` before implementation and requires observable Red, Green, and Refactor
 steps for each slice. When `work-continue` resumes Build, its generated Continue policy
 loads that Build reference before implementation, preserving the same TDD boundaries.
 With the default `false` setting, TDD instructions are compiled out and a fresh install

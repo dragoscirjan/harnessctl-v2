@@ -36,7 +36,7 @@ def _render(provider: str, tools: str, remote_url: str | None, token_env: str | 
             mcp_id=f"cvs_{provider}",
             mcp_available=True,
         )
-    return render_skill("issue-tracking", **context)
+    return render_skill("sdlc-issue-tracking", **context)
 
 
 def _config(
@@ -70,7 +70,7 @@ def test_issue_skill_is_self_contained_and_provider_exclusive(
     tools, remote_url, token_env = connection
     rendered = _render(provider, tools, remote_url, token_env)
 
-    assert "name: issue-tracking" in rendered
+    assert "name: sdlc-issue-tracking" in rendered
     assert tools in rendered
     assert "Initiative" in rendered and "Epic" in rendered and "Story" in rendered
     assert "Gherkin" in rendered
@@ -121,7 +121,7 @@ def test_forgejo_syntax_remains_help_driven() -> None:
 
 def test_remote_issue_tools_are_equal_choices_and_provider_isolated() -> None:
     rendered = render_skill(
-        "issue-tracking",
+        "sdlc-issue-tracking",
         provider="github",
         tools="gh",
         remote_url="https://github.com",
@@ -154,12 +154,12 @@ def test_opencode_install_always_adds_specialized_issue_skill(
     monkeypatch.setattr(install_module.shutil, "which", lambda _name: "/bin/forgejo-mcp")
 
     installed = install(tmp_path, "opencode")
-    target = tmp_path / ".opencode/skills/issue-tracking/SKILL.md"
+    target = tmp_path / ".opencode/skills/sdlc-issue-tracking/SKILL.md"
 
     assert target in installed
     assert target.read_text(encoding="utf-8") == _render(provider, tools, remote_url, token_env)
-    assert not (tmp_path / ".opencode/skills/caveman").exists()
-    assert not (tmp_path / ".opencode/skills/memory").exists()
+    assert not (tmp_path / ".opencode/skills/sdlc-caveman").exists()
+    assert not (tmp_path / ".opencode/skills/sdlc-memory").exists()
 
 
 @pytest.mark.parametrize("harness", ["pi"])
@@ -180,7 +180,7 @@ def test_pi_install_adds_specialized_issue_skill(
 
     installed = install(tmp_path, harness)
 
-    target = tmp_path / ".pi/skills/issue-tracking/SKILL.md"
+    target = tmp_path / ".pi/skills/sdlc-issue-tracking/SKILL.md"
     assert target in installed
     assert target.read_text(encoding="utf-8") == _render(
         "github", "gh", "https://github.com", "GH_TOKEN"
@@ -190,7 +190,7 @@ def test_pi_install_adds_specialized_issue_skill(
 
 
 def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> None:
-    target = tmp_path / ".opencode/skills/issue-tracking/SKILL.md"
+    target = tmp_path / ".opencode/skills/sdlc-issue-tracking/SKILL.md"
     target.parent.mkdir(parents=True)
     target.write_bytes(b"operator content\x00")
     before = _tree_manifest(tmp_path)
@@ -198,12 +198,12 @@ def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> Non
     with pytest.raises(FileExistsError) as error:
         install(tmp_path, "opencode")
 
-    assert "issue-tracking/SKILL.md" in str(error.value).replace("\\", "/")
+    assert "sdlc-issue-tracking/SKILL.md" in str(error.value).replace("\\", "/")
     assert _tree_manifest(tmp_path) == before
 
 
 def test_force_replaces_existing_issue_skill(tmp_path: Path) -> None:
-    target = tmp_path / ".opencode/skills/issue-tracking/SKILL.md"
+    target = tmp_path / ".opencode/skills/sdlc-issue-tracking/SKILL.md"
     target.parent.mkdir(parents=True)
     target.write_text("operator content", encoding="utf-8")
 
@@ -237,7 +237,7 @@ def test_issue_skill_write_failure_restores_exact_tree(
     original_write = install_module.write_atomic
 
     def fail_on_issue_skill(target: Path, content: str) -> None:
-        if target.as_posix().endswith("/issue-tracking/SKILL.md"):
+        if target.as_posix().endswith("/sdlc-issue-tracking/SKILL.md"):
             raise OSError("injected issue skill write failure")
         original_write(target, content)
 

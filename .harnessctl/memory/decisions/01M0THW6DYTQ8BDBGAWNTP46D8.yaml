@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M0THW6DYTQ8BDBGAWNTP46D8
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00129 | plan | executable Epic | approved and stored
+details: |-
+  Epic: hrn-00129
+  Command/phase: work-plan / plan
+  Item: namespace generated skills
+  Done: user approved `harnessctl-` ownership prefix; valid authoritative Epic stores 8-name map, explicit legacy migration, scope, acceptance, verification, release, rollback, estimate, risks
+  Next: recommended `work-build hrn-00129`
+  Blockers: none
+  Artifacts: .harnessctl/issues/hrn-00129-namespace-generated-skills-under-harnessctl.yml
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00129-namespace-generated-skills-under-harnessctl.yml
+  revision: v1:177aa4b2652680ed59c707139ccc73ceaa6c6ac928abf0bd123baa1336f919c8
+created_at: 2026-08-24T18:52:40.254Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - migration
+  - naming
+  - plan
+  - sdlc
+  - skills

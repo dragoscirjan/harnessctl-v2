@@ -1,5 +1,5 @@
 ---
-name: caveman
+name: sdlc-caveman
 description: Concise communication that preserves complete technical substance.
 ---
 

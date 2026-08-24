@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0TPKHN13ZZ6NY9CM1GE1J97
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00129
+summary: hrn-00129 | verify | corrected skill namespace | failed documentation format gate
+details: "Acceptance mapped. `mise run quality` failed at Prettier: `docs/skills.md` requires formatting; chained `mise run build` did not run. Independent review found no functional, security, privacy, compatibility, or stale-ID defect; 3 coverage gaps non-blocking. Evidence: hrn-00130-C0003, hrn-00129-C0004. User selected Build repair. Next: work-build hrn-00129. Blocker: full quality and build gates not passing/current."
+source:
+  kind: artifact
+  ref: hrn-00129
+  revision: v1:8305949486f63b4fbc1dfb69cf3aba2d299139848e38f472df73cfde19ac1edd
+created_at: 2026-08-24T20:15:19.713Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0TNMK3HRSM4W3EJ94XHFB78
+tags:
+  - failed
+  - formatting
+  - hrn-00130
+  - verify

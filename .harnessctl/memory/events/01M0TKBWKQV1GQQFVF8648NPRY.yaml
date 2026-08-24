@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M0TKBWKQV1GQQFVF8648NPRY
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00129 | build | skill namespace migration | implemented; focused checks pass
+details: |-
+  Epic: hrn-00129
+  Command/phase: work-build / build
+  Item: namespace generated skills under harnessctl-
+  Done: canonical 8-skill registry/templates/loads; selected-host explicit legacy migration with disclosure, no-consent byte preservation, symlink/special-entry preflight, exact rollback; tests/docs/changelog/generated OpenCode+Pi outputs updated
+  Artifacts: src/harnessctl/templates.py; src/harnessctl/install.py; src/harnessctl/templates/skills/harnessctl-*; tests/test_install.py; tests/test_templates.py; tests/test_release_artifacts.py; docs/skills.md; README.md; CHANGELOG.md
+  Verification: Build-focused pytest 337 passed, 10 expected warnings; focused Ruff passed; git diff --check passed
+  Blockers: none
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00129-namespace-generated-skills-under-harnessctl.yml
+  revision: v1:177aa4b2652680ed59c707139ccc73ceaa6c6ac928abf0bd123baa1336f919c8
+created_at: 2026-08-24T19:18:43.063Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0THW6DYTQ8BDBGAWNTP46D8
+tags:
+  - build
+  - migration
+  - naming
+  - sdlc
+  - skills

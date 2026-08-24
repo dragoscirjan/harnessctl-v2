@@ -362,18 +362,32 @@ uv run python -m harnessctl.install --cwd . --harness pi
 uv run python -m harnessctl.install --cwd . --harness pi --allow-pi-package-install
 uv run python -m harnessctl.install --cwd . --harness all
 uv run python -m harnessctl.install --cwd . --harness all --force
+uv run python -m harnessctl.install --cwd . --harness all --replace-sdlc-skill-set
 ```
 
 Pi installs require per-package interactive consent. Noninteractive automation must use
 `--allow-pi-package-install`; the legacy adapter-only flag remains an alias.
 
-The installer writes `sdlc-code` to `.opencode/skills/sdlc-code/`,
-`.pi/skills/sdlc-code/`, or both. Reinstall with `--force` to replace generated files,
-then restart or reload the selected host so it discovers the updated skill. To roll back,
-install the prior harnessctl version or revision with `--force`, then remove the generated
-`.opencode/skills/sdlc-code/` and `.pi/skills/sdlc-code/` directories for the selected
-hosts because an older installer cannot recognize or delete them. Harnessctl does not
-read, modify, or own global skills under `~/.config/opencode`.
+Harnessctl-generated skills use the `sdlc-` namespace. Five support skills are renamed:
+`caveman` to `sdlc-caveman`, `cvs` to `sdlc-cvs`, `develop-tdd` to
+`sdlc-develop-tdd`, `issue-tracking` to `sdlc-issue-tracking`, and `memory` to
+`sdlc-memory`. The existing `sdlc`, `sdlc-code`, and `sdlc-code-index` IDs remain
+unchanged, as does the functional configuration key `skills.sdlc-code-index`.
+
+The installer writes `sdlc-code` to
+`.opencode/skills/sdlc-code/`, `.pi/skills/sdlc-code/`, or both.
+Reinstall with `--force` to replace generated files, then restart or reload the selected
+host so it discovers the updated skill. To roll back, install the prior harnessctl version
+or revision with `--force`, then remove any renamed support-skill directories that version
+does not manage. Harnessctl does not read, modify, or own global skills under
+`~/.config/opencode`.
+
+Normal upgrades preserve the five legacy support-skill directories byte-for-byte and warn
+with their exact paths; `--force` never authorizes their deletion. After reviewing the
+disclosure, pass `--replace-sdlc-skill-set` to remove only selected-host legacy support
+trees transactionally. Symlinks or special entries abort explicit migration before
+mutation, and any later failure restores file bytes, file existence, and directory
+topology.
 
 ## Development commands
 
