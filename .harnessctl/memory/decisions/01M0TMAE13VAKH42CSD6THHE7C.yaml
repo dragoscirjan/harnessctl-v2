@@ -1,0 +1,35 @@
+schema_version: 1
+id: 01M0TMAE13VAKH42CSD6THHE7C
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00129 | plan | corrected skill namespace | approved executable plan
+details: |-
+  Epic: hrn-00129
+  Command/phase: work-plan / plan
+  Item: five support skill renames plus no-consent migration safety
+  Done: Epic and Bugs hrn-00130/hrn-00131 reconciled and validated
+  Decision: use sdlc-caveman, sdlc-cvs, sdlc-develop-tdd, sdlc-issue-tracking, sdlc-memory; retain sdlc, sdlc-code, sdlc-code-index
+  Migration: --replace-sdlc-skill-set; only five unprefixed support roots eligible; no-consent detection never traverses retained trees
+  Rollback: file bytes/existence plus directory topology; other metadata not guaranteed
+  Next: work-build hrn-00129
+  Blockers: none
+source:
+  kind: artifact
+  ref: hrn-00129
+  revision: v1:a3ec6e8bec73066b2b7b0ae57b07c8e33dd99a278ac4294a0991937522707c26
+created_at: 2026-08-24T19:35:23.939Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0TKZEZNWJ0XGPPAW4KWH39M
+tags:
+  - hrn-00130
+  - hrn-00131
+  - migration
+  - naming
+  - plan
+  - sdlc

@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M0TKZEZNWJ0XGPPAW4KWH39M
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00129 | verify | skill namespace migration | failed; replan required
+details: |-
+  Epic: hrn-00129
+  Command/phase: work-verify / verify
+  Item: namespace generated skills
+  Done: acceptance review found user-confirmed requirement correction and independent no-consent migration defect
+  Decision: canonical IDs are sdlc-caveman, sdlc-cvs, sdlc-develop-tdd, sdlc-issue-tracking, sdlc-memory; retain sdlc, sdlc-code, sdlc-code-index
+  Defects: hrn-00130; hrn-00131
+  Verification: unsuccessful; full quality/build gate not run after blocking requirement failure
+  Blockers: Epic scope/acceptance/design require Plan reconciliation before corrective Build
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00129-namespace-generated-skills-under-harnessctl.yml
+  revision: v1:4f79c9728d0cbba65fb8aa2a5da5d33c2aa5170b17f3527a9fe28fd58f3d960f
+created_at: 2026-08-24T19:29:24.469Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M0TKBWKQV1GQQFVF8648NPRY
+tags:
+  - defect
+  - migration
+  - naming
+  - sdlc
+  - verify

@@ -82,16 +82,15 @@ DESCRIPTIONS = {
     "work-continue": "Resume one authoritative Epic phase and one next step",
     "work-refresh": "Reconcile repository context, memory, and configured development projections",
 }
-SKILL_TEMPLATES = {
-    "caveman": "skills/caveman/SKILL.md.j2",
-    "sdlc-code": "skills/sdlc-code/SKILL.md.j2",
-    "sdlc-code-index": "skills/sdlc-code-index/SKILL.md.j2",
-    "cvs": "skills/cvs/SKILL.md.j2",
-    "develop-tdd": "skills/develop-tdd/SKILL.md.j2",
-    "issue-tracking": "skills/issue-tracking/SKILL.md.j2",
-    "memory": "skills/memory/SKILL.md.j2",
-    "sdlc": "skills/sdlc/SKILL.md.j2",
+SKILL_ID_MIGRATIONS = {
+    "caveman": "sdlc-caveman",
+    "cvs": "sdlc-cvs",
+    "develop-tdd": "sdlc-develop-tdd",
+    "issue-tracking": "sdlc-issue-tracking",
+    "memory": "sdlc-memory",
 }
+SKILL_IDS = (*SKILL_ID_MIGRATIONS.values(), "sdlc", "sdlc-code", "sdlc-code-index")
+SKILL_TEMPLATES = {skill: f"skills/{skill}/SKILL.md.j2" for skill in SKILL_IDS}
 SKILL_RESOURCE_TEMPLATES = {
     "sdlc-code": {
         "references/cpp.md": "skills/sdlc-code/references/cpp.md.j2",
@@ -133,7 +132,7 @@ SKILL_RESOURCE_TEMPLATES = {
         "references/release.md": "skills/sdlc/references/release.md.j2",
         "references/release-deploy.md": "skills/sdlc/references/release-deploy.md.j2",
         "references/continue.md": "skills/sdlc/references/continue.md.j2",
-        "references/continue-reconcile.md": "skills/sdlc/references/continue-reconcile.md.j2",
+        "references/continue-reconcile.md": ("skills/sdlc/references/continue-reconcile.md.j2"),
         "references/refresh.md": "skills/sdlc/references/refresh.md.j2",
         "references/checkpoint.md": "skills/sdlc/references/checkpoint.md.j2",
     },

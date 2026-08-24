@@ -20,7 +20,7 @@ PROVIDERS = {
 def _render(local: str, provider: str, *, mcp_available: bool = True) -> str:
     tools, remote_url, token_env = PROVIDERS[provider]
     return render_skill(
-        "cvs",
+        "sdlc-cvs",
         local=local,
         provider=provider,
         tools=tools,
@@ -100,7 +100,7 @@ def test_install_registers_cvs_skill_with_narrow_config_context(
     monkeypatch.setattr("harnessctl.install.shutil.which", lambda _name: "/bin/forgejo-mcp")
 
     installed = install(tmp_path, "opencode")
-    target = tmp_path / ".opencode/skills/cvs/SKILL.md"
+    target = tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md"
 
     assert target in installed
     assert target.read_text(encoding="utf-8") == _render("jj", "forgejo")
@@ -113,7 +113,7 @@ def test_install_never_resolves_or_renders_token_value(
     monkeypatch.setenv("GH_TOKEN", secret)
 
     install(tmp_path, "opencode")
-    rendered = (tmp_path / ".opencode/skills/cvs/SKILL.md").read_text(encoding="utf-8")
+    rendered = (tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md").read_text(encoding="utf-8")
 
     assert "GH_TOKEN" in rendered
     assert secret not in rendered
@@ -128,6 +128,6 @@ def test_committed_cvs_skill_matches_current_installer_render(
 
     install(tmp_path, "opencode")
 
-    expected = (tmp_path / ".opencode/skills/cvs/SKILL.md").read_bytes()
-    actual = (project_root / ".opencode/skills/cvs/SKILL.md").read_bytes()
+    expected = (tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md").read_bytes()
+    actual = (project_root / ".opencode/skills/sdlc-cvs/SKILL.md").read_bytes()
     assert actual == expected

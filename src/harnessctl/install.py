@@ -27,7 +27,13 @@ from .mcp import (
     render_pi_mcp,
     required_server_intents,
 )
-from .templates import TEMPLATES, render_prompt, render_skill, render_skill_resources
+from .templates import (
+    SKILL_ID_MIGRATIONS,
+    TEMPLATES,
+    render_prompt,
+    render_skill,
+    render_skill_resources,
+)
 
 TARGETS = {
     "opencode": Path(".opencode/commands"),
@@ -80,8 +86,9 @@ RETIRED_SDLC_COMMANDS = tuple(
     command for command in LEGACY_SDLC_COMMANDS if command not in OVERLAPPING_SDLC_COMMANDS
 )
 OPENCODE_SKILLS = Path(".opencode/skills")
+PI_SKILLS = Path(".pi/skills")
 CODE_INDEX_SKILL = Path("sdlc-code-index/SKILL.md")
-TDD_SKILL = Path("develop-tdd/SKILL.md")
+TDD_SKILL = Path("sdlc-develop-tdd/SKILL.md")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
 OPENCODE_TOOLS_PLUGIN = "@harnessctl/opencode-tools@latest"
@@ -104,10 +111,12 @@ def install(
     force: bool = False,
     *,
     replace_sdlc_command_set: bool = False,
+    replace_sdlc_skill_set: bool = False,
     allow_pi_package_install: bool = False,
     allow_pi_mcp_adapter_install: bool = False,
     confirm_pi_mcp_adapter_install: Callable[[str], bool] | None = None,
     disclose_sdlc_replacement: Callable[[str], None] | None = None,
+    disclose_skill_replacement: Callable[[str], None] | None = None,
 ) -> list[Path]:
     """Install prompt files for one harness or all supported harnesses."""
     if harness == "all":
@@ -139,12 +148,12 @@ def install(
     dormant_code_index_skills: list[Path] = []
     if not code_index_enabled:
         for selected_harness in harnesses:
-            skill_root = OPENCODE_SKILLS if selected_harness == "opencode" else Path(".pi/skills")
+            skill_root = OPENCODE_SKILLS if selected_harness == "opencode" else PI_SKILLS
             relative_skill = skill_root / CODE_INDEX_SKILL
             if _target(root, relative_skill).is_file():
                 dormant_code_index_skills.append(relative_skill)
     tdd_enabled = bool(config["workflow"]["tdd"]["enabled"])
-    tdd_skill_content = render_skill("develop-tdd")
+    tdd_skill_content = render_skill("sdlc-develop-tdd")
     sdlc_context = {
         "memory_hooks_enabled": bool(config["memory"]["enabled"]),
         "retrieval_limit": config["memory"]["retrieval"]["limit"],
@@ -182,9 +191,9 @@ def install(
         cvs_remote = cvs["remote"]
         rendered_targets.append(
             (
-                _target(root, OPENCODE_SKILLS / "cvs/SKILL.md"),
+                _target(root, OPENCODE_SKILLS / "sdlc-cvs/SKILL.md"),
                 render_skill(
-                    "cvs",
+                    "sdlc-cvs",
                     local=cvs["local"],
                     provider=cvs_remote["provider"],
                     tools=cvs_remote["tools"],
@@ -211,16 +220,16 @@ def install(
             )
         rendered_targets.append(
             (
-                _target(root, OPENCODE_SKILLS / "issue-tracking/SKILL.md"),
-                render_skill("issue-tracking", **issue_context),
+                _target(root, OPENCODE_SKILLS / "sdlc-issue-tracking/SKILL.md"),
+                render_skill("sdlc-issue-tracking", **issue_context),
             )
         )
         communication = config["communication"]["caveman"]
         if communication["enabled"]:
             rendered_targets.append(
                 (
-                    _target(root, OPENCODE_SKILLS / "caveman/SKILL.md"),
-                    render_skill("caveman", mode=communication["mode"]),
+                    _target(root, OPENCODE_SKILLS / "sdlc-caveman/SKILL.md"),
+                    render_skill("sdlc-caveman", mode=communication["mode"]),
                 )
             )
         memory = config["memory"]
@@ -230,9 +239,9 @@ def install(
             rendered_targets.extend(
                 [
                     (
-                        _target(root, OPENCODE_SKILLS / "memory/SKILL.md"),
+                        _target(root, OPENCODE_SKILLS / "sdlc-memory/SKILL.md"),
                         render_skill(
-                            "memory",
+                            "sdlc-memory",
                             retrieval_limit=retrieval["limit"],
                             max_chars=retrieval["max_chars"],
                             repository_root=repository["root"],
@@ -250,14 +259,14 @@ def install(
         _append_skill_tree(
             rendered_targets,
             root,
-            Path(".pi/skills/sdlc-code"),
+            PI_SKILLS / "sdlc-code",
             "sdlc-code",
             {},
         )
         _append_skill_tree(
             rendered_targets,
             root,
-            Path(".pi/skills/sdlc"),
+            PI_SKILLS / "sdlc",
             "sdlc",
             sdlc_context,
         )
@@ -265,9 +274,9 @@ def install(
         cvs_remote = cvs["remote"]
         rendered_targets.append(
             (
-                _target(root, Path(".pi/skills/cvs/SKILL.md")),
+                _target(root, PI_SKILLS / "sdlc-cvs/SKILL.md"),
                 render_skill(
-                    "cvs",
+                    "sdlc-cvs",
                     local=cvs["local"],
                     provider=cvs_remote["provider"],
                     tools=cvs_remote["tools"],
@@ -292,17 +301,17 @@ def install(
         rendered_targets.extend(
             [
                 (
-                    _target(root, Path(".pi/skills/issue-tracking/SKILL.md")),
-                    render_skill("issue-tracking", **issue_context),
+                    _target(root, PI_SKILLS / "sdlc-issue-tracking/SKILL.md"),
+                    render_skill("sdlc-issue-tracking", **issue_context),
                 ),
                 (
-                    _target(root, Path(".pi/skills/caveman/SKILL.md")),
-                    render_skill("caveman", mode=config["communication"]["caveman"]["mode"]),
+                    _target(root, PI_SKILLS / "sdlc-caveman/SKILL.md"),
+                    render_skill("sdlc-caveman", mode=config["communication"]["caveman"]["mode"]),
                 ),
                 (
-                    _target(root, Path(".pi/skills/memory/SKILL.md")),
+                    _target(root, PI_SKILLS / "sdlc-memory/SKILL.md"),
                     render_skill(
-                        "memory",
+                        "sdlc-memory",
                         retrieval_limit=config["memory"]["retrieval"]["limit"],
                         max_chars=config["memory"]["retrieval"]["max_chars"],
                         repository_root=config["memory"]["repository"]["root"],
@@ -311,12 +320,10 @@ def install(
             ]
         )
         if tdd_enabled:
-            rendered_targets.append(
-                (_target(root, Path(".pi/skills") / TDD_SKILL), tdd_skill_content)
-            )
+            rendered_targets.append((_target(root, PI_SKILLS / TDD_SKILL), tdd_skill_content))
         if code_index_enabled:
             rendered_targets.append(
-                (_target(root, Path(".pi/skills") / CODE_INDEX_SKILL), code_index_skill_content)
+                (_target(root, PI_SKILLS / CODE_INDEX_SKILL), code_index_skill_content)
             )
     if config["memory"]["enabled"]:
         rendered_targets.append(
@@ -362,6 +369,13 @@ def install(
         _target(root, PI_MCP_CONFIG),
     }
     _validate_plan(root, rendered_targets, config, harness, retired_targets)
+    legacy_skill_roots = _detect_legacy_skill_roots(root, harnesses)
+    legacy_skill_directories: list[Path] = []
+    legacy_skill_files: list[Path] = []
+    if replace_sdlc_skill_set:
+        legacy_skill_directories, legacy_skill_files = _validate_legacy_skill_trees(
+            legacy_skill_roots
+        )
     legacy_command_targets = _detect_legacy_commands(command_targets, retired_targets)
     if legacy_command_targets and not replace_sdlc_command_set:
         joined = "\n".join(f"- {target}" for target in legacy_command_targets)
@@ -393,6 +407,25 @@ def install(
             warnings.warn(disclosure, UserWarning, stacklevel=2)
         else:
             disclose_sdlc_replacement(disclosure)
+    if legacy_skill_roots:
+        joined = "\n".join(f"- {path}" for path in legacy_skill_roots)
+        if replace_sdlc_skill_set:
+            disclosure = (
+                "Replacing legacy SDLC support skill directories. These directories may contain "
+                f"custom changes and will be deleted:\n{joined}"
+            )
+            if disclose_skill_replacement is None:
+                warnings.warn(disclosure, UserWarning, stacklevel=2)
+            else:
+                disclose_skill_replacement(disclosure)
+        else:
+            warnings.warn(
+                "Legacy SDLC support skill directories remain unchanged and discoverable alongside "
+                "the new sdlc-prefixed skills. Remove them manually or rerun with "
+                f"--replace-sdlc-skill-set:\n{joined}",
+                UserWarning,
+                stacklevel=2,
+            )
     deletion_targets = (
         [target for target in retired_targets if target.exists()]
         if replace_sdlc_command_set
@@ -417,6 +450,7 @@ def install(
             *(target for target, _ in write_targets),
             *deletion_targets,
             *legacy_plugin_targets,
+            *(legacy_skill_files if replace_sdlc_skill_set else ()),
         ]
     )
     created_directories: list[Path] = []
@@ -461,6 +495,17 @@ def install(
         for target in legacy_plugin_targets:
             mutation_started = True
             target.unlink()
+        if replace_sdlc_skill_set:
+            for target in reversed(legacy_skill_files):
+                mutation_started = True
+                _target(root, target.relative_to(root))
+                target.unlink()
+            for directory in sorted(
+                legacy_skill_directories, key=lambda path: len(path.parts), reverse=True
+            ):
+                mutation_started = True
+                _target(root, directory.relative_to(root))
+                directory.rmdir()
         if config["memory"]["enabled"]:
             mutation_started = True
             _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
@@ -489,7 +534,14 @@ def install(
             except BaseException as cleanup_error:
                 rollback_errors.append(cleanup_error)
         if mutation_started:
-            rollback_errors.extend(_rollback(root, previous, created_directories))
+            rollback_errors.extend(
+                _rollback(
+                    root,
+                    previous,
+                    created_directories,
+                    legacy_skill_directories if replace_sdlc_skill_set else (),
+                )
+            )
         if (
             pi_package_install_attempted
             and settings_path is not None
@@ -1056,7 +1108,14 @@ def _smoke_check_pi(
     actual_commands = {path.stem for path in command_directory.glob("*.md") if path.is_file()}
     if not set(COMMANDS) <= actual_commands:
         raise RuntimeError("Pi command smoke check failed")
-    for skill in ("cvs", "issue-tracking", "caveman", "memory", "sdlc", "sdlc-code"):
+    for skill in (
+        "sdlc-cvs",
+        "sdlc-issue-tracking",
+        "sdlc-caveman",
+        "sdlc-memory",
+        "sdlc",
+        "sdlc-code",
+    ):
         skill_path = _target(root, Path(f".pi/skills/{skill}/SKILL.md"))
         if not skill_path.is_file():
             raise RuntimeError(f"Pi {skill} skill smoke check failed")
@@ -1185,6 +1244,57 @@ def _detect_legacy_commands(
     return sorted(set(detected), key=lambda path: str(path))
 
 
+def _detect_legacy_skill_roots(root: Path, harnesses: Iterable[str]) -> list[Path]:
+    """Detect selected-host legacy roots without inspecting operator-owned entries."""
+    roots: list[Path] = []
+    for harness in harnesses:
+        skill_root = OPENCODE_SKILLS if harness == "opencode" else PI_SKILLS
+        managed_root = _target(root, skill_root)
+        for legacy in SKILL_ID_MIGRATIONS:
+            legacy_root = managed_root / legacy
+            if os.path.lexists(legacy_root):
+                roots.append(legacy_root)
+    return sorted(set(roots), key=lambda path: str(path))
+
+
+def _validate_legacy_skill_trees(roots: Iterable[Path]) -> tuple[list[Path], list[Path]]:
+    """Validate explicitly authorized legacy trees before any mutation."""
+    directories: list[Path] = []
+    files: list[Path] = []
+    for legacy_root in roots:
+        if legacy_root.is_symlink():
+            raise ValueError(f"legacy SDLC support skill root must not be a symlink: {legacy_root}")
+        if not legacy_root.is_dir():
+            raise NotADirectoryError(
+                f"legacy SDLC support skill path is not a directory: {legacy_root}"
+            )
+        _collect_legacy_skill_tree(legacy_root, directories, files)
+    return (
+        sorted(set(directories), key=lambda path: str(path)),
+        sorted(set(files), key=lambda path: str(path)),
+    )
+
+
+def _collect_legacy_skill_tree(directory: Path, directories: list[Path], files: list[Path]) -> None:
+    """Collect regular entries without following links or accepting special files."""
+    directories.append(directory)
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            path = Path(entry.path)
+            if entry.is_symlink():
+                raise ValueError(
+                    f"legacy SDLC support skill tree must not contain symlinks: {path}"
+                )
+            if entry.is_dir(follow_symlinks=False):
+                _collect_legacy_skill_tree(path, directories, files)
+            elif entry.is_file(follow_symlinks=False):
+                files.append(path)
+            else:
+                raise ValueError(
+                    f"legacy SDLC support skill tree must contain only regular files: {path}"
+                )
+
+
 def _initialize_memory_paths(
     root: Path,
     repository: dict[str, object],
@@ -1199,9 +1309,16 @@ def _rollback(
     root: Path,
     previous: list[tuple[Path, bool, bytes]],
     created_directories: list[Path],
+    deleted_directories: Iterable[Path] = (),
 ) -> list[BaseException]:
     """Restore file before-images, then remove transaction-created empty directories."""
     errors: list[BaseException] = []
+    for directory in sorted(set(deleted_directories), key=lambda path: len(path.parts)):
+        try:
+            _target(root, directory.relative_to(root))
+            directory.mkdir(exist_ok=True)
+        except BaseException as error:
+            errors.append(error)
     for target, existed, content in reversed(previous):
         try:
             _target(root, target.relative_to(root))
@@ -1244,7 +1361,7 @@ def _smoke_check(
     check_tdd: bool,
     check_code_index: bool,
 ) -> None:
-    issue_skill = root / OPENCODE_SKILLS / "issue-tracking/SKILL.md"
+    issue_skill = root / OPENCODE_SKILLS / "sdlc-issue-tracking/SKILL.md"
     if not issue_skill.is_file():
         raise RuntimeError("OpenCode issue-tracking skill smoke check failed")
 
@@ -1280,7 +1397,7 @@ def _smoke_check(
     if not check_memory:
         return
 
-    memory_skill = root / OPENCODE_SKILLS / "memory/SKILL.md"
+    memory_skill = root / OPENCODE_SKILLS / "sdlc-memory/SKILL.md"
     if not memory_skill.is_file():
         raise RuntimeError("OpenCode memory skill smoke check failed")
 
@@ -1310,6 +1427,11 @@ def main() -> int:
         help="replace legacy Plan/Verify outputs and delete the 16 retired SDLC commands",
     )
     parser.add_argument(
+        "--replace-sdlc-skill-set",
+        action="store_true",
+        help="delete disclosed legacy unprefixed SDLC support skill directories",
+    )
+    parser.add_argument(
         "--allow-pi-package-install",
         "--allow-pi-mcp-adapter-install",
         dest="allow_pi_package_install",
@@ -1331,9 +1453,11 @@ def main() -> int:
             args.harness,
             args.force,
             replace_sdlc_command_set=args.replace_sdlc_command_set,
+            replace_sdlc_skill_set=args.replace_sdlc_skill_set,
             allow_pi_package_install=args.allow_pi_package_install,
             confirm_pi_mcp_adapter_install=confirmation,
             disclose_sdlc_replacement=lambda message: print(message, file=sys.stderr),
+            disclose_skill_replacement=lambda message: print(message, file=sys.stderr),
         ):
             print(f"Installed {target}")
     except (ConfigError, FileExistsError, OSError, RuntimeError, ValueError) as error:

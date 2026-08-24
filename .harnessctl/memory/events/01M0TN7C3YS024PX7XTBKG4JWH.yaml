@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0TN7C3YS024PX7XTBKG4JWH
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00129
+summary: hrn-00129 | build | corrected skill namespace | both Bugs implemented
+details: "Corrected canonical map: five support IDs use sdlc-*; sdlc, sdlc-code, sdlc-code-index retained. Added --replace-sdlc-skill-set. No-consent root detection does not traverse; explicit migration validates symlinks/special entries before mutation. OpenCode/Pi outputs, templates, tests, docs, changelog, packages updated. Focused Build: 342 tests passed; Ruff and git diff --check passed. Bugs hrn-00130/hrn-00131 remain open pending Verify. Next: work-verify hrn-00129. Blockers: none."
+source:
+  kind: artifact
+  ref: hrn-00129
+  revision: v1:9479e271ed768c5d3d040a73347427179b05f714ae74f964815d05160cb12db3
+created_at: 2026-08-24T19:51:12.254Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0TMAE13VAKH42CSD6THHE7C
+tags:
+  - build
+  - hrn-00130
+  - hrn-00131
+  - migration
+  - skill-namespace

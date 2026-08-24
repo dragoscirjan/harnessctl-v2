@@ -12,7 +12,8 @@ servers, authentication, or merge authorization.
 
 The installer currently:
 
-- generates `.opencode/skills/cvs/SKILL.md` and `.pi/skills/cvs/SKILL.md`;
+- generates `.opencode/skills/sdlc-cvs/SKILL.md` and
+  `.pi/skills/sdlc-cvs/SKILL.md`;
 - merges required fixed IDs into `.opencode/opencode.json` and `.pi/mcp.json`;
 - preserves unrelated host settings and rejects conflicting owned values unless narrow
   `--force` replacement is requested;

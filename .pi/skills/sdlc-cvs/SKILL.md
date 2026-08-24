@@ -1,5 +1,5 @@
 ---
-name: cvs
+name: sdlc-cvs
 description: Use configured CVS tools safely.
 ---
 
