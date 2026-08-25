@@ -157,12 +157,12 @@ Regenerate this artifact through `generate-contracts.ts`. It must express enums,
 
 ## Fixed MCP service catalog
 
-| Provider | Fixed ID      | Pinned service contract                                                                                                                   |
-| -------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| GitHub   | `cvs_github`  | Remote `https://api.githubcopilot.com/mcp/`; PAT header; toolsets exactly `repos,issues,pull_requests,actions,git`; OpenCode OAuth false. |
-| GitLab   | `cvs_gitlab`  | Remote `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration; no token header or environment reference.           |
-| Gitea    | `cvs_gitea`   | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Gitea HTTPS URL.                                              |
-| Forgejo  | `cvs_forgejo` | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Forgejo HTTPS URL.                                            |
+| Provider | Fixed ID           | Pinned service contract                                                                                                                   |
+| -------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub   | `sdlc_cvs_github`  | Remote `https://api.githubcopilot.com/mcp/`; PAT header; toolsets exactly `repos,issues,pull_requests,actions,git`; OpenCode OAuth false. |
+| GitLab   | `sdlc_cvs_gitlab`  | Remote `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration; no token header or environment reference.           |
+| Gitea    | `sdlc_cvs_gitea`   | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Gitea HTTPS URL.                                              |
+| Forgejo  | `sdlc_cvs_forgejo` | External `forgejo-mcp` 2.33.0 process using standard I/O and the configured Forgejo HTTPS URL.                                            |
 
 `forgejo-mcp` is operator-installed and remains an external GPL process. Harnessctl does not distribute, vendor, import, link, or install it. `MushroomFleet/gitea-mcp` is neither a fallback nor generated guidance.
 
@@ -176,12 +176,12 @@ The owned file is `.opencode/opencode.json`. Parse it as one JSON object before 
 
 Harnessctl owns only the fixed IDs it needs beneath top-level `mcp`:
 
-| ID            | Exact owned OpenCode definition                                                                                                                                                         |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cvs_github`  | `type` is `remote`; `url` is the official hosted endpoint; `headers.Authorization` is `Bearer {env:NAME}`; `headers.X-MCP-Toolsets` is the exact five-toolset string; `oauth` is false. |
-| `cvs_gitlab`  | `type` is `remote`; `url` is the official GitLab MCP endpoint; `oauth` is an empty object; no authorization header or token environment reference exists.                               |
-| `cvs_gitea`   | `type` is `local`; `command` is the ordered list containing `forgejo-mcp`, `--transport`, `stdio`, `--url`, and the validated URL; `environment.FORGEJO_ACCESS_TOKEN` is `{env:NAME}`.  |
-| `cvs_forgejo` | Same local shape as Gitea with the validated Forgejo URL and Forgejo token-name reference.                                                                                              |
+| ID                 | Exact owned OpenCode definition                                                                                                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sdlc_cvs_github`  | `type` is `remote`; `url` is the official hosted endpoint; `headers.Authorization` is `Bearer {env:NAME}`; `headers.X-MCP-Toolsets` is the exact five-toolset string; `oauth` is false. |
+| `sdlc_cvs_gitlab`  | `type` is `remote`; `url` is the official GitLab MCP endpoint; `oauth` is an empty object; no authorization header or token environment reference exists.                               |
+| `sdlc_cvs_gitea`   | `type` is `local`; `command` is the ordered list containing `forgejo-mcp`, `--transport`, `stdio`, `--url`, and the validated URL; `environment.FORGEJO_ACCESS_TOKEN` is `{env:NAME}`.  |
+| `sdlc_cvs_forgejo` | Same local shape as Gitea with the validated Forgejo URL and Forgejo token-name reference.                                                                                              |
 
 An absent `mcp` member is created. A non-object `mcp` member fails. An identical owned ID is retained semantically and is not treated as a conflict. A differing owned ID blocks the complete plan unless force is supplied. Force replaces only that fixed-ID value. It never rewrites unrelated MCP IDs or unrelated top-level settings.
 
@@ -197,12 +197,12 @@ Harnessctl owns required fixed IDs beneath `mcpServers` and only `outputGuard` b
 
 The exact owned value is `settings.outputGuard` containing `maxBytes` 51200, `maxLines` 2000, and `detailsMaxBytes` 16384. Existing different values at that owned path are conflicts. Force may replace only that path; it may not replace the entire settings object. Harnessctl omits global and per-server `directTools`; the adapter’s documented default therefore keeps one proxy tool and prevents direct-tool expansion. It also omits `hostConfigDiscovery`, `includeTools`, and `excludeTools`.
 
-| ID            | Exact owned Pi definition                                                                                                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cvs_github`  | Official URL; PAT authorization as `Bearer ${NAME}`; exact GitHub toolset header; `auth` bearer; `lifecycle` lazy. No direct-tool or tool-name filter fields.                                  |
-| `cvs_gitlab`  | Official URL; `auth` oauth; empty `oauth`; no authorization header, token reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle` lazy. No direct-tool or tool-name filter fields.          |
-| `cvs_gitea`   | `command` `forgejo-mcp`; ordered `args` of `--transport`, `stdio`, `--url`, validated URL; `env.FORGEJO_ACCESS_TOKEN` as `${NAME}`; lazy lifecycle. No direct-tool or tool-name filter fields. |
-| `cvs_forgejo` | Same process shape with the validated Forgejo URL and Forgejo token-name reference. No direct-tool or tool-name filter fields.                                                                 |
+| ID                 | Exact owned Pi definition                                                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sdlc_cvs_github`  | Official URL; PAT authorization as `Bearer ${NAME}`; exact GitHub toolset header; `auth` bearer; `lifecycle` lazy. No direct-tool or tool-name filter fields.                                  |
+| `sdlc_cvs_gitlab`  | Official URL; `auth` oauth; empty `oauth`; no authorization header, token reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle` lazy. No direct-tool or tool-name filter fields.          |
+| `sdlc_cvs_gitea`   | `command` `forgejo-mcp`; ordered `args` of `--transport`, `stdio`, `--url`, validated URL; `env.FORGEJO_ACCESS_TOKEN` as `${NAME}`; lazy lifecycle. No direct-tool or tool-name filter fields. |
+| `sdlc_cvs_forgejo` | Same process shape with the validated Forgejo URL and Forgejo token-name reference. No direct-tool or tool-name filter fields.                                                                 |
 
 No global lifecycle key is emitted. No undocumented aggregate-output, provider-body-size, OAuth-token, discovery, direct-tool, or provider tool-catalog field is emitted.
 
@@ -340,6 +340,10 @@ External package installation is not exactly reversible. Never remove a pre-exis
 - Matching CVS and Issues definitions deduplicate. Same fixed ID with different URL, token-name mapping, endpoint, command, tested compatibility version, OAuth, headers, or server-level toolsets fails the complete plan.
 - GitLab generated MCP objects never contain a token reference even if its CLI configuration names one.
 - Existing identical host entries remain unchanged. Different owned entries require narrow force. Unrelated host settings survive normal and forced installation.
+- Desired intents use only `sdlc_cvs_*` IDs. Separate recognized intents reproduce each
+  configured provider's exact former `cvs_*` definition. Reconciliation deletes an exact
+  legacy value transactionally, preserves a modified legacy member and its raw bytes with
+  a warning, and never emits a compatibility alias. Force does not broaden legacy removal.
 - A mutating timeout or ambiguous result never permits switching routes.
 - Authentication, DCR, secure-store, permission, capability, or repository-context failure stops before mutation when detectable.
 - Missing `forgejo-mcp` omits the Gitea or Forgejo MCP entry. Gitea independently retains
@@ -492,7 +496,7 @@ Each subtask changes one to three files and depends on the preceding contract wo
 4. The agent chooses a suitable route per operation without prescribed precedence, must
    choose before mutation, and never switches routes after mutation begins.
 5. Local Git and Jujutsu operations always remain direct.
-6. Fixed IDs are exactly `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and `cvs_forgejo`.
+6. Fixed IDs are exactly `sdlc_cvs_github`, `sdlc_cvs_gitlab`, `sdlc_cvs_gitea`, and `sdlc_cvs_forgejo`.
 7. Identical intents deduplicate; any same-ID defining mismatch fails without silent precedence.
 8. `.opencode/opencode.json` and `.pi/mcp.json` contain only documented host fields, correct interpolation, exact endpoints, exact OAuth behavior, exact process shapes, and preserved unrelated settings.
 9. Pi uses top-level `mcpServers` and top-level `settings.outputGuard` with bounds 51200 bytes, 2000 lines, and 16384 details bytes. It remains proxy-only by omitting direct-tool and provider tool-catalog fields; lazy lifecycle is per server only.

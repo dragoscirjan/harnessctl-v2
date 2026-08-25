@@ -664,10 +664,10 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     assert "must choose before invoking a mutation" in normalized
     assert "must never switch" in normalized
     for provider, server_id, cli in (
-        ("GitHub", "cvs_github", "gh"),
-        ("GitLab", "cvs_gitlab", "glab"),
-        ("Gitea", "cvs_gitea", "tea"),
-        ("Forgejo", "cvs_forgejo", "forgejo-cli"),
+        ("GitHub", "sdlc_cvs_github", "gh"),
+        ("GitLab", "sdlc_cvs_gitlab", "glab"),
+        ("Gitea", "sdlc_cvs_gitea", "tea"),
+        ("Forgejo", "sdlc_cvs_forgejo", "forgejo-cli"),
     ):
         assert provider in cvs
         assert server_id in cvs

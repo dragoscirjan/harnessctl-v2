@@ -47,16 +47,16 @@ For each operation, choose either `{{ tools }}`{% if mcp_available %} or one exa
 Remote issue titles must use the hierarchy prefix: 🚀 Initiative, 🏔️ Epic, 📖 Story, 🛠️ Task, or 🐛 Bug. Represent hierarchy through issue links and body text. Do not require labels; use only operator-established repository conventions.
 
 {% if provider == "github" -%}
-Use GitHub CLI `gh`{% if mcp_available %} or live tools under `cvs_github`{% endif %}. Consult installed help or live schemas for exact issue capabilities and syntax.
+Use GitHub CLI `gh`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. Consult installed help or live schemas for exact issue capabilities and syntax.
 {% elif provider == "gitlab" -%}
-Use GitLab CLI `glab`{% if mcp_available %} or live tools under `cvs_gitlab`{% endif %}. GitLab MCP uses its native OAuth flow and must not receive the configured CLI token reference. Consult installed help or live schemas for exact issue capabilities and syntax.
+Use GitLab CLI `glab`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. GitLab MCP uses its native OAuth flow and must not receive the configured CLI token reference. Consult installed help or live schemas for exact issue capabilities and syntax.
 {% elif provider == "gitea" -%}
-Use Gitea CLI `tea`{% if mcp_available %} or live tools under `cvs_gitea`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback.
+Use Gitea CLI `tea`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback.
 {% if mcp_available -%}
 After connecting to MCP and before any provider mutation, call `get_forgejo_mcp_server_version`. Continue only when its valid result is exactly `2.33.0`; absent, malformed, or different results stop the MCP route.
 {% endif -%}
 {% elif provider == "forgejo" -%}
-Use Forgejo CLI `forgejo-cli`{% if mcp_available %} or live tools under `cvs_forgejo`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback. Its CLI syntax remains help-driven: inspect `forgejo-cli --help`; infer no capability, subcommand, or syntax from another provider.
+Use Forgejo CLI `forgejo-cli`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback. Its CLI syntax remains help-driven: inspect `forgejo-cli --help`; infer no capability, subcommand, or syntax from another provider.
 {% if mcp_available -%}
 After connecting to MCP and before any provider mutation, call `get_forgejo_mcp_server_version`. Continue only when its valid result is exactly `2.33.0`; absent, malformed, or different results stop the MCP route.
 {% endif -%}

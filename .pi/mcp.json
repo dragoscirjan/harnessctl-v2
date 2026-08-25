@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "cvs_github": {
+    "sdlc_cvs_github": {
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GH_TOKEN}",

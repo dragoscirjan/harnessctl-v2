@@ -201,12 +201,12 @@ may prepare, inspect, and propose a merge without that consent, but must not com
 
 Generated host configuration uses fixed, provider-owned IDs:
 
-| Provider | Fixed ID      | Service boundary                                                                                                         |
-| -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| GitHub   | `cvs_github`  | GitHub's official hosted MCP endpoint, limited to the `repos`, `issues`, `pull_requests`, `actions`, and `git` toolsets. |
-| GitLab   | `cvs_gitlab`  | GitLab's official native OAuth MCP endpoint using Dynamic Client Registration.                                           |
-| Gitea    | `cvs_gitea`   | External `forgejo-mcp` version 2.33.0 process connected to the configured Gitea URL.                                     |
-| Forgejo  | `cvs_forgejo` | External `forgejo-mcp` version 2.33.0 process connected to the configured Forgejo URL.                                   |
+| Provider | Fixed ID           | Service boundary                                                                                                         |
+| -------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| GitHub   | `sdlc_cvs_github`  | GitHub's official hosted MCP endpoint, limited to the `repos`, `issues`, `pull_requests`, `actions`, and `git` toolsets. |
+| GitLab   | `sdlc_cvs_gitlab`  | GitLab's official native OAuth MCP endpoint using Dynamic Client Registration.                                           |
+| Gitea    | `sdlc_cvs_gitea`   | External `forgejo-mcp` version 2.33.0 process connected to the configured Gitea URL.                                     |
+| Forgejo  | `sdlc_cvs_forgejo` | External `forgejo-mcp` version 2.33.0 process connected to the configured Forgejo URL.                                   |
 
 The GitHub and GitLab entries remain hosted-service definitions. GitLab authentication
 uses the service's native OAuth and DCR contract rather than a generated static secret.
@@ -280,12 +280,12 @@ IDs remain operator-owned.
 
 The exact owned entries are:
 
-| ID            | Exact OpenCode fields                                                                                                                                                                                                          |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cvs_github`  | `type`: `remote`; `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer {env:<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `oauth`: `false`. |
-| `cvs_gitlab`  | `type`: `remote`; `url`: `https://gitlab.com/api/v4/mcp`; `oauth`: `{}`; no `headers.Authorization` and no token environment reference.                                                                                        |
-| `cvs_gitea`   | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-gitea-token-variable>}`.                             |
-| `cvs_forgejo` | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-forgejo-token-variable>}`.                         |
+| ID                 | Exact OpenCode fields                                                                                                                                                                                                          |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sdlc_cvs_github`  | `type`: `remote`; `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer {env:<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `oauth`: `false`. |
+| `sdlc_cvs_gitlab`  | `type`: `remote`; `url`: `https://gitlab.com/api/v4/mcp`; `oauth`: `{}`; no `headers.Authorization` and no token environment reference.                                                                                        |
+| `sdlc_cvs_gitea`   | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-gitea-token-variable>}`.                             |
+| `sdlc_cvs_forgejo` | `type`: `local`; `command`: ordered values `forgejo-mcp`, `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `environment.FORGEJO_ACCESS_TOKEN`: `{env:<configured-forgejo-token-variable>}`.                         |
 
 The GitHub token variable name is validated and its value is never resolved by
 harnessctl. GitLab's empty OAuth object enables OpenCode's automatic OAuth flow; the
@@ -304,19 +304,19 @@ installed through the consent-gated, verified
 
 Pi renders the following exact owned values beneath top-level `mcpServers`:
 
-| Entry         | Exact Pi fields                                                                                                                                                                                                                                                                       |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cvs_github`  | `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer ${<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `auth`: `bearer`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`. |
-| `cvs_gitlab`  | `url`: `https://gitlab.com/api/v4/mcp`; `auth`: `oauth`; `oauth`: `{}`; no token header, token environment reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                                                 |
-| `cvs_gitea`   | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-gitea-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                            |
-| `cvs_forgejo` | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-forgejo-token-variable>}`; `lifecycle`: `lazy`; `directTools`: `false`; release-vetted `includeTools`.                        |
+| Entry              | Exact Pi fields                                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sdlc_cvs_github`  | `url`: `https://api.githubcopilot.com/mcp/`; `headers.Authorization`: `Bearer ${<configured-github-pat-variable>}`; `headers.X-MCP-Toolsets`: `repos,issues,pull_requests,actions,git`; `auth`: `bearer`; `lifecycle`: `lazy`. |
+| `sdlc_cvs_gitlab`  | `url`: `https://gitlab.com/api/v4/mcp`; `auth`: `oauth`; `oauth`: `{}`; no token header, token environment reference, `bearerToken`, or `bearerTokenEnv`; `lifecycle`: `lazy`.                                                 |
+| `sdlc_cvs_gitea`   | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-gitea-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-gitea-token-variable>}`; `lifecycle`: `lazy`.                            |
+| `sdlc_cvs_forgejo` | `command`: `forgejo-mcp`; `args`: ordered values `--transport`, `stdio`, `--url`, `<validated-forgejo-url>`; `env.FORGEJO_ACCESS_TOKEN`: `${<configured-forgejo-token-variable>}`; `lifecycle`: `lazy`.                        |
 
-Top-level `settings` contains only the adapter-documented fields
-`hostConfigDiscovery`: `off`, `directTools`: `false`, and `outputGuard` with
+Top-level `settings` contains only `outputGuard` with
 `maxBytes`: `51200`, `maxLines`: `2000`, and `detailsMaxBytes`: `16384`. The cited
 adapter documentation verifies `lifecycle`: `lazy` only as a per-server field, not as a
 top-level setting; harnessctl therefore places it under each `mcpServers` entry and treats
-any requested global lazy-setting field as unsupported rather than inventing one.
+any requested global lazy-setting field as unsupported rather than inventing one. It omits
+direct-tool expansion, host discovery, and provider tool-name filters.
 
 GitLab OAuth, DCR fallback, URL binding, refresh, and credential persistence are
 delegated to pi-mcp-adapter's operating-system credential store and fail closed when it
@@ -343,6 +343,10 @@ change.
 - Unrelated host keys and unrelated MCP server IDs are preserved.
 - An existing identical owned definition is preserved rather than rewritten.
 - An existing different definition under a fixed owned ID is a conflict.
+- Fresh projections emit only canonical `sdlc_cvs_*` IDs. Legacy `cvs_*` IDs are
+  recognized only with their exact generated provider definition and are removed in the
+  same transaction. Modified legacy definitions remain byte-for-byte unchanged and emit
+  a bounded warning; no alias is generated.
 - Without force, any conflict blocks all writes.
 - With force, only the conflicting harnessctl-owned fixed ID may be replaced. Unrelated
   settings and server IDs remain untouched.
@@ -640,7 +644,7 @@ archives unless already part of the established package contract.
 3. Every remote service enumerates valid CLI and MCP capabilities. The agent chooses per
    operation without prescribed precedence, must choose before mutation, and never
    switches routes after mutation begins. Local Git and Jujutsu always remain direct.
-4. Fixed IDs are `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and `cvs_forgejo`.
+4. Fixed IDs are `sdlc_cvs_github`, `sdlc_cvs_gitlab`, `sdlc_cvs_gitea`, and `sdlc_cvs_forgejo`.
 5. Identical CVS/Issues server definitions deduplicate; a same-ID mismatch fails without
    silent precedence.
 6. OpenCode and Pi project GitHub's official hosted endpoint with PAT header interpolation

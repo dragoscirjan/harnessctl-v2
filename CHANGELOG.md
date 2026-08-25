@@ -17,6 +17,12 @@
   `--replace-sdlc-skill-set` removes selected-host legacy support trees after symlink and
   special-entry validation, with transactional rollback of file bytes, existence, and
   directory topology.
+- **Breaking:** rename harnessctl-owned CVS MCP IDs from `cvs_github`, `cvs_gitlab`,
+  `cvs_gitea`, and `cvs_forgejo` to the corresponding `sdlc_cvs_*` IDs. Fresh installs
+  emit only canonical IDs. Upgrades transactionally remove exact generated legacy
+  definitions; modified legacy or operator entries remain byte-for-byte unchanged with a
+  warning. No compatibility aliases are installed.
 
-This release builds Python wheel and source distributions as CI artifacts. It does not publish
-to PyPI or change npm packages.
+This release builds Python wheel and source distributions as CI artifacts and includes a patch
+changeset for `@harnessctl/generic-tools`; Changesets will propagate required exact-range adapter
+dependency updates. It does not publish artifacts to PyPI or npm.

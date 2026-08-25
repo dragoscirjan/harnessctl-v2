@@ -61,12 +61,19 @@ Every remote provider exposes its valid CLI and MCP capabilities. `tools`, URL, 
 name must match the selected provider; changing provider requires a complete explicit
 remote mapping.
 
-| Provider | Exact CLI     | MCP capability | Collaboration URL           | Environment-variable name |
-| -------- | ------------- | -------------- | --------------------------- | ------------------------- |
-| GitHub   | `gh`          | `cvs_github`   | `https://github.com`        | `GH_TOKEN`                |
-| GitLab   | `glab`        | `cvs_gitlab`   | `https://gitlab.com`        | `GITLAB_TOKEN`            |
-| Gitea    | `tea`         | `cvs_gitea`    | Explicit HTTPS instance URL | `GITEA_TOKEN`             |
-| Forgejo  | `forgejo-cli` | `cvs_forgejo`  | Explicit HTTPS instance URL | `FORGEJO_TOKEN`           |
+| Provider | Exact CLI     | MCP capability     | Collaboration URL           | Environment-variable name |
+| -------- | ------------- | ------------------ | --------------------------- | ------------------------- |
+| GitHub   | `gh`          | `sdlc_cvs_github`  | `https://github.com`        | `GH_TOKEN`                |
+| GitLab   | `glab`        | `sdlc_cvs_gitlab`  | `https://gitlab.com`        | `GITLAB_TOKEN`            |
+| Gitea    | `tea`         | `sdlc_cvs_gitea`   | Explicit HTTPS instance URL | `GITEA_TOKEN`             |
+| Forgejo  | `forgejo-cli` | `sdlc_cvs_forgejo` | Explicit HTTPS instance URL | `FORGEJO_TOKEN`           |
+
+Fresh installs emit only these `sdlc_cvs_*` IDs. During upgrades, harnessctl removes a
+legacy `cvs_*` entry only when its value exactly matches a recognized generated
+definition. Modified legacy and operator-owned entries remain byte-for-byte unchanged
+and produce a warning; no compatibility alias is installed. Canonical-ID conflicts retain
+the normal narrow `--force` behavior, and all selected-host changes share the installer
+transaction and rollback.
 
 ### GitHub
 
@@ -160,12 +167,12 @@ respectively, is present. `forgejo-mcp` is never a CLI.
 
 Server IDs are generated and fixed; they are not configurable.
 
-| Provider | Fixed ID      | Supported server contract                                                                                                              | Ownership and license boundary                                                                |
-| -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| GitHub   | `cvs_github`  | Official hosted endpoint `https://api.githubcopilot.com/mcp/`; requested toolsets `repos,issues,pull_requests,actions,git`; PAT header | Official GitHub hosted service; service terms apply. No local server package is distributed.  |
-| GitLab   | `cvs_gitlab`  | Official endpoint `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration                                        | Official GitLab hosted service; service terms apply. No token reference is generated for MCP. |
-| Gitea    | `cvs_gitea`   | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Gitea URL                                                           | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
-| Forgejo  | `cvs_forgejo` | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Forgejo URL                                                         | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
+| Provider | Fixed ID           | Supported server contract                                                                                                              | Ownership and license boundary                                                                |
+| -------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| GitHub   | `sdlc_cvs_github`  | Official hosted endpoint `https://api.githubcopilot.com/mcp/`; requested toolsets `repos,issues,pull_requests,actions,git`; PAT header | Official GitHub hosted service; service terms apply. No local server package is distributed.  |
+| GitLab   | `sdlc_cvs_gitlab`  | Official endpoint `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration                                        | Official GitLab hosted service; service terms apply. No token reference is generated for MCP. |
+| Gitea    | `sdlc_cvs_gitea`   | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Gitea URL                                                           | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
+| Forgejo  | `sdlc_cvs_forgejo` | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Forgejo URL                                                         | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
 
 Harnessctl does not distribute, vendor, import, link, or install `forgejo-mcp`.
 `MushroomFleet/gitea-mcp` is unsupported and is not a fallback. After connecting to a
@@ -184,7 +191,7 @@ catalog shows the exact supported shapes together. OpenCode environment referenc
 ```json
 {
   "mcp": {
-    "cvs_github": {
+    "sdlc_cvs_github": {
       "type": "remote",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
@@ -193,19 +200,19 @@ catalog shows the exact supported shapes together. OpenCode environment referenc
       },
       "oauth": false
     },
-    "cvs_gitlab": {
+    "sdlc_cvs_gitlab": {
       "type": "remote",
       "url": "https://gitlab.com/api/v4/mcp",
       "oauth": {}
     },
-    "cvs_gitea": {
+    "sdlc_cvs_gitea": {
       "type": "local",
       "command": ["forgejo-mcp", "--transport", "stdio", "--url", "https://gitea.example.com"],
       "environment": {
         "FORGEJO_ACCESS_TOKEN": "{env:GITEA_TOKEN}"
       }
     },
-    "cvs_forgejo": {
+    "sdlc_cvs_forgejo": {
       "type": "local",
       "command": ["forgejo-mcp", "--transport", "stdio", "--url", "https://forgejo.example.com"],
       "environment": {
@@ -229,7 +236,7 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
 ```json
 {
   "mcpServers": {
-    "cvs_github": {
+    "sdlc_cvs_github": {
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GH_TOKEN}",
@@ -238,13 +245,13 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
       "auth": "bearer",
       "lifecycle": "lazy"
     },
-    "cvs_gitlab": {
+    "sdlc_cvs_gitlab": {
       "url": "https://gitlab.com/api/v4/mcp",
       "auth": "oauth",
       "oauth": {},
       "lifecycle": "lazy"
     },
-    "cvs_gitea": {
+    "sdlc_cvs_gitea": {
       "command": "forgejo-mcp",
       "args": ["--transport", "stdio", "--url", "https://gitea.example.com"],
       "env": {
@@ -252,7 +259,7 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
       },
       "lifecycle": "lazy"
     },
-    "cvs_forgejo": {
+    "sdlc_cvs_forgejo": {
       "command": "forgejo-mcp",
       "args": ["--transport", "stdio", "--url", "https://forgejo.example.com"],
       "env": {

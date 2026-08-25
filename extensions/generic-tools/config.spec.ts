@@ -205,7 +205,7 @@ describe('configuration tools', () => {
     });
   });
 
-  it.each(['sdlc-code-index', 'index_2', 'a', 'a-b_c-9'])(
+  it.each(['sdlc-code-index', 'sdlc_cvs_custom', 'index_2', 'a', 'a-b_c-9'])(
     'accepts portable external MCP server name %s',
     (mcpServer) => {
       expect(
@@ -218,16 +218,22 @@ describe('configuration tools', () => {
     },
   );
 
-  it.each(['A', '-index', 'index-', '_index', 'index_', 'index.server', 'index server', 'cvs_github', 'a'.repeat(65)])(
-    'rejects invalid external MCP server name %s',
-    (mcpServer) => {
-      expect(() =>
-        readConfigFromText(
-          `version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`,
-        ),
-      ).toThrow(/skills\["sdlc-code-index"\]\.mcp_server/u);
-    },
-  );
+  it.each([
+    'A',
+    '-index',
+    'index-',
+    '_index',
+    'index_',
+    'index.server',
+    'index server',
+    'cvs_github',
+    'sdlc_cvs_github',
+    'a'.repeat(65),
+  ])('rejects invalid external MCP server name %s', (mcpServer) => {
+    expect(() =>
+      readConfigFromText(`version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`),
+    ).toThrow(/skills\["sdlc-code-index"\]\.mcp_server/u);
+  });
 
   it('rejects legacy mcp.servers before default merge', () => {
     expect(() =>

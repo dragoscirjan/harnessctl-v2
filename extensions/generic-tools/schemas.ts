@@ -27,8 +27,8 @@ export const mcpOutputLimitModeSchema = z.enum(['bounded-guidance', 'hard']);
 const externalMcpServerNameSchema = z
   .string()
   .regex(
-    /^(?!cvs_)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/,
-    'must be 1-64 lowercase ASCII letters, digits, underscores, or hyphens; start and end alphanumeric; cvs_ is reserved',
+    /^(?!cvs_)(?!sdlc_cvs_(?:github|gitlab|gitea|forgejo)$)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/,
+    'must be 1-64 lowercase ASCII letters, digits, underscores, or hyphens; start and end alphanumeric; cvs_ and managed sdlc_cvs_* IDs are reserved',
   );
 
 const PROVIDER_CONTRACTS = {

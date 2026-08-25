@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0WZFFK1P9Y1MBGWW71ZQTFA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00132 | verify | namespace migration plus hrn-00133/hrn-00134 | full gates and independent review pass
+details: "Epic revision v1:4307cb7e314b459564cf620b5347e70b725ffed194a52c9f9a3af03abbee43a3. `mise run quality`: 431 Python, 201 generic Node, 2 OpenCode, 3 Pi pass; lint, format, typing, coverage, package checks pass. `mise run build`: 2 release-artifact tests and package checks pass. Changeset status, stale legacy-ID allowlist, worktree scope, issue validation, and independent correctness/security/privacy/compatibility review pass. No live-provider operation. Epic and Bugs remain open. Next: work-release hrn-00132."
+source:
+  kind: tool-observation
+  ref: hrn-00132
+  revision: v1:4307cb7e314b459564cf620b5347e70b725ffed194a52c9f9a3af03abbee43a3
+created_at: 2026-08-25T17:28:52.577Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0WZ2H8JPTZZ0CQZRRHT5G61
+tags:
+  - cvs
+  - hrn-00132
+  - mcp
+  - verify

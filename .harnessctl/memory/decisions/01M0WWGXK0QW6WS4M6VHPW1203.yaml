@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0WWGXK0QW6WS4M6VHPW1203
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00132 | plan | sdlc_ CVS namespace | approved
+details: "Epic revision v1:b6f7b346e46113d3a3858ef518429dadcbf5ddc2e52a249df23552e4c723eac6. Canonical IDs: sdlc_cvs_github, sdlc_cvs_gitlab, sdlc_cvs_gitea, sdlc_cvs_forgejo. Exact legacy cvs_* definitions reconcile; modified/operator entries preserved and warned. No aliases, provider/runtime/auth changes, child issues, Build, Verify, Release, or source edits. Issue validation passed. Next recommended: work-build hrn-00132."
+source:
+  kind: artifact
+  ref: hrn-00132
+  revision: v1:b6f7b346e46113d3a3858ef518429dadcbf5ddc2e52a249df23552e4c723eac6
+created_at: 2026-08-25T16:37:13.952Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - cvs
+  - hrn-00132
+  - mcp
+  - naming
+  - plan

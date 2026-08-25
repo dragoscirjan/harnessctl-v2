@@ -114,13 +114,15 @@ OpenCode and Pi issue-tracking skills contain only the selected provider's valid
 MCP capability guidance. They do not install provider tools or grant access. Pi uses
 `.pi/skills/sdlc-issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
 
-Remote Issues use fixed IDs `cvs_github`, `cvs_gitlab`, `cvs_gitea`, and
-`cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
+Remote Issues use fixed IDs `sdlc_cvs_github`, `sdlc_cvs_gitlab`,
+`sdlc_cvs_gitea`, and `sdlc_cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
 environment-name, endpoint, command, version, OAuth, header, or toolset mismatch fails
 instead of choosing one domain. GitHub and GitLab use official hosted MCP services.
 Gitea and Forgejo use operator-installed external GPL `forgejo-mcp` 2.33.0 and require
 the runtime version check before mutation. See [CVS and MCP providers](cvs.md) for exact
 host formats, vetted license boundaries, output limits, and Pi consent/residuals.
+Exact generated legacy `cvs_*` definitions migrate to the canonical IDs; modified legacy
+definitions are preserved with a warning and are never treated as aliases.
 
 For Gitea and Forgejo, MCP capability is available only when the `forgejo-mcp`
 executable is present. CLI capability is independently available only when `tea` or

@@ -136,9 +136,14 @@ describe('canonical Zod schemas', () => {
 
   it('enforces the provider-neutral code-index skill contract in Zod and JSON Schema', () => {
     const valid = validConfig;
+    const validCustomNamespace = {
+      ...valid,
+      skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc_cvs_custom' } },
+    };
     const invalid = [
       { ...valid, skills: { 'sdlc-code-index': { enabled: 1, mcp_server: 'sdlc-code-index' } } },
       { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'cvs_github' } } },
+      { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc_cvs_github' } } },
       { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'Index' } } },
       { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'index-' } } },
       { ...valid, skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'a'.repeat(65) } } },
@@ -147,6 +152,7 @@ describe('canonical Zod schemas', () => {
     ];
 
     expect(configV2Schema.safeParse(valid).success).toBe(true);
+    expect(configV2Schema.safeParse(validCustomNamespace).success).toBe(true);
     for (const config of invalid) expect(configV2Schema.safeParse(config).success).toBe(false);
 
     const ajv = new Ajv2020({ allErrors: true, strict: true });
@@ -156,6 +162,7 @@ describe('canonical Zod schemas', () => {
     ) as object;
     const validate = ajv.compile(contract);
     expect(validate(valid)).toBe(true);
+    expect(validate(validCustomNamespace)).toBe(true);
     for (const config of invalid) expect(validate(config)).toBe(false);
   });
 

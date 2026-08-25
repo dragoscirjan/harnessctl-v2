@@ -189,6 +189,7 @@ def install(
         )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
+        cvs_mcp_id = _mcp_id(intents, cvs_remote["provider"])
         rendered_targets.append(
             (
                 _target(root, OPENCODE_SKILLS / "sdlc-cvs/SKILL.md"),
@@ -199,8 +200,8 @@ def install(
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
                     token_env=cvs_remote["token_env"],
-                    mcp_id=f"cvs_{cvs_remote['provider']}",
-                    mcp_available=_has_mcp(intents, cvs_remote["provider"]),
+                    mcp_id=cvs_mcp_id,
+                    mcp_available=cvs_mcp_id is not None,
                 ),
             )
         )
@@ -212,11 +213,12 @@ def install(
         if issues["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
+            issue_mcp_id = _mcp_id(intents, issues["type"])
             issue_context.update(
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
-                mcp_id=f"cvs_{issues['type']}",
-                mcp_available=_has_mcp(intents, issues["type"]),
+                mcp_id=issue_mcp_id,
+                mcp_available=issue_mcp_id is not None,
             )
         rendered_targets.append(
             (
@@ -272,6 +274,7 @@ def install(
         )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
+        cvs_mcp_id = _mcp_id(intents, cvs_remote["provider"])
         rendered_targets.append(
             (
                 _target(root, PI_SKILLS / "sdlc-cvs/SKILL.md"),
@@ -282,8 +285,8 @@ def install(
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
                     token_env=cvs_remote["token_env"],
-                    mcp_id=f"cvs_{cvs_remote['provider']}",
-                    mcp_available=_has_mcp(intents, cvs_remote["provider"]),
+                    mcp_id=cvs_mcp_id,
+                    mcp_available=cvs_mcp_id is not None,
                 ),
             )
         )
@@ -292,11 +295,12 @@ def install(
         if issues["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
+            issue_mcp_id = _mcp_id(intents, issues["type"])
             issue_context.update(
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
-                mcp_id=f"cvs_{issues['type']}",
-                mcp_available=_has_mcp(intents, issues["type"]),
+                mcp_id=issue_mcp_id,
+                mcp_available=issue_mcp_id is not None,
             )
         rendered_targets.extend(
             [
@@ -591,9 +595,9 @@ def _append_skill_tree(
     )
 
 
-def _has_mcp(intents: list[ServerIntent], provider: str) -> bool:
-    """Return whether the configured provider has a projected MCP server."""
-    return any(intent.server_id == f"cvs_{provider}" for intent in intents)
+def _mcp_id(intents: list[ServerIntent], provider: str) -> str | None:
+    """Return the projected MCP server ID for the configured provider."""
+    return next((intent.server_id for intent in intents if intent.provider == provider), None)
 
 
 def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -676,42 +680,62 @@ def _raw_json_object_members(source: str) -> dict[str, str]:
 
 
 def _dump_json_preserving_unchanged_members(
-    document: dict[str, Any], original: bytes | None, container_name: str
+    document: dict[str, Any], original: bytes | None
 ) -> str:
-    """Render JSON while preserving exact values of untouched container members."""
+    """Render JSON while preserving exact values outside changed owned paths."""
     rendered = json.dumps(document, indent=2, ensure_ascii=False)
     if original is None:
         return rendered + "\n"
-    container = document.get(container_name)
-    if not isinstance(container, dict):
-        return rendered + "\n"
 
-    top_level = _raw_json_object_members(original.decode("utf-8"))
-    raw_container = top_level.get(container_name)
-    if raw_container is None:
-        return rendered + "\n"
-    raw_members = _raw_json_object_members(raw_container)
-    preserved = {
+    original_text = original.decode("utf-8")
+    top_level = _raw_json_object_members(original_text)
+    preserved_top_level = {
         key: raw_value
-        for key, raw_value in raw_members.items()
-        if key in container
+        for key, raw_value in top_level.items()
+        if key in document
         and _json_values_equal(
-            json.loads(raw_value, object_pairs_hook=_reject_duplicate_members), container[key]
+            json.loads(raw_value, object_pairs_hook=_reject_duplicate_members), document[key]
         )
     }
-    if not preserved:
+
+    preserved_nested: dict[str, dict[str, str]] = {}
+    for top_key, raw_object in top_level.items():
+        current_object = document.get(top_key)
+        if top_key in preserved_top_level or not isinstance(current_object, dict):
+            continue
+        preserved_members = {
+            key: raw_value
+            for key, raw_value in _raw_json_object_members(raw_object).items()
+            if key in current_object
+            and _json_values_equal(
+                json.loads(raw_value, object_pairs_hook=_reject_duplicate_members),
+                current_object[key],
+            )
+        }
+        if preserved_members:
+            preserved_nested[top_key] = preserved_members
+    if not preserved_top_level and not preserved_nested:
         return rendered + "\n"
 
     staged = dict(document)
-    staged_container = dict(container)
-    staged[container_name] = staged_container
     replacements: list[tuple[str, str]] = []
-    for index, (key, raw_value) in enumerate(preserved.items()):
-        sentinel = f"__harnessctl_preserved_json_member_{index}__"
-        while sentinel in rendered:
+
+    def preserve(target: dict[str, Any], key: str, raw_value: str) -> None:
+        sentinel = f"__harnessctl_preserved_json_member_{len(replacements)}__"
+        while sentinel in rendered or sentinel in original_text:
             sentinel += "_"
-        staged_container[key] = sentinel
+        target[key] = sentinel
         replacements.append((json.dumps(sentinel), raw_value))
+
+    for key, raw_value in preserved_top_level.items():
+        preserve(staged, key, raw_value)
+    for top_key, preserved_members in preserved_nested.items():
+        current_object = document[top_key]
+        assert isinstance(current_object, dict)
+        staged_object = dict(current_object)
+        staged[top_key] = staged_object
+        for key, raw_value in preserved_members.items():
+            preserve(staged_object, key, raw_value)
 
     rendered = json.dumps(staged, indent=2, ensure_ascii=False)
     for sentinel, raw_value in replacements:
@@ -750,7 +774,7 @@ def _merge_host_json(
     )
     if not changed:
         return None
-    return _dump_json_preserving_unchanged_members(document, original, container_name)
+    return _dump_json_preserving_unchanged_members(document, original)
 
 
 def _merge_opencode_json(
@@ -810,7 +834,7 @@ def _merge_opencode_json(
 
     if not changed:
         return None
-    return _dump_json_preserving_unchanged_members(document, original, "mcp")
+    return _dump_json_preserving_unchanged_members(document, original)
 
 
 def _merge_pi_json(
@@ -858,7 +882,7 @@ def _merge_pi_json(
             changed = True
     if not changed:
         return None
-    return _dump_json_preserving_unchanged_members(document, original, "mcpServers")
+    return _dump_json_preserving_unchanged_members(document, original)
 
 
 def _recognized_mcp_definitions(

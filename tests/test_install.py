@@ -17,6 +17,11 @@ from harnessctl.install import (
     RETIRED_SDLC_COMMANDS,
     install,
 )
+from harnessctl.mcp import (
+    recognized_server_intents,
+    render_opencode_mcp,
+    render_pi_mcp,
+)
 from harnessctl.templates import (
     COMMAND_METADATA,
     SKILL_ID_MIGRATIONS,
@@ -100,6 +105,37 @@ def write_sdlc_code_index_config(
         f"    enabled: {'true' if enabled else 'false'}\n"
         f"    mcp_server: {mcp_server}\n",
     )
+
+
+def write_cvs_provider_config(root: Path, provider: str) -> dict[str, object]:
+    tools = {
+        "github": "gh",
+        "gitlab": "glab",
+        "gitea": "tea",
+        "forgejo": "forgejo-cli",
+    }
+    urls = {
+        "github": "https://github.com",
+        "gitlab": "https://gitlab.com",
+        "gitea": "https://gitea.example.test",
+        "forgejo": "https://forgejo.example.test",
+    }
+    token_envs = {
+        "github": "GH_TOKEN",
+        "gitlab": "GITLAB_TOKEN",
+        "gitea": "GITEA_TOKEN",
+        "forgejo": "FORGEJO_TOKEN",
+    }
+    write_project_config(
+        root,
+        "cvs:\n"
+        "  remote:\n"
+        f"    provider: {provider}\n"
+        f"    tools: {tools[provider]}\n"
+        f"    url: {urls[provider]}\n"
+        f"    token_env: {token_envs[provider]}\n",
+    )
+    return load_config(root)
 
 
 def write_pinned_pi_adapter(root: Path) -> None:
@@ -1079,7 +1115,9 @@ def test_config_defaults_to_disabled_external_code_index_skill(tmp_path: Path) -
     }
 
 
-@pytest.mark.parametrize("server_name", ["sdlc-code-index", "index_2", "a", "a-b_c-9"])
+@pytest.mark.parametrize(
+    "server_name", ["sdlc-code-index", "sdlc_cvs_custom", "index_2", "a", "a-b_c-9"]
+)
 def test_config_accepts_portable_external_code_index_server_name(
     tmp_path: Path, server_name: str
 ) -> None:
@@ -1105,6 +1143,7 @@ def test_config_accepts_portable_external_code_index_server_name(
         "index.server",
         "index server",
         "cvs_github",
+        "sdlc_cvs_github",
         "a" * 65,
     ],
 )
@@ -1823,7 +1862,135 @@ def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> 
     assert document["$schema"] == "schema"
     assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@latest"]
     assert document["mcp"]["operator"] == {"x": 1}
-    assert document["mcp"]["cvs_github"]["headers"]["Authorization"] == ("Bearer {env:GH_TOKEN}")
+    assert document["mcp"]["sdlc_cvs_github"]["headers"]["Authorization"] == (
+        "Bearer {env:GH_TOKEN}"
+    )
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_install_migrates_exact_legacy_cvs_mcp_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    force: bool,
+    provider: str,
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, provider)
+    legacy = recognized_server_intents(config, harness)[0]
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        generated = render_opencode_mcp(legacy)
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        generated = render_pi_mcp(legacy)
+    host.parent.mkdir(parents=True, exist_ok=True)
+    operator_raw = '{"weight":1e+02,"escaped":"\\u0061"}'
+    host.write_text(
+        f'{{"operatorRaw":{operator_raw},"{container}":'
+        f"{json.dumps({legacy.server_id: generated, 'operator': {'keep': True}})}}}\n",
+        encoding="utf-8",
+    )
+
+    install(tmp_path, harness, force=force)
+
+    rendered = host.read_text(encoding="utf-8")
+    document = json.loads(rendered)
+    entries = document[container]
+    assert legacy.server_id not in entries
+    assert entries[f"sdlc_cvs_{provider}"] == generated
+    assert entries["operator"] == {"keep": True}
+    assert document["operatorRaw"] == {"weight": 100, "escaped": "a"}
+    assert f'"operatorRaw": {operator_raw}' in rendered
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_install_preserves_modified_legacy_cvs_mcp_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    force: bool,
+    provider: str,
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, provider)
+    legacy = recognized_server_intents(config, harness)[0]
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        generated = render_opencode_mcp(legacy)
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        generated = render_pi_mcp(legacy)
+    modified = {**generated, "operatorWeight": 100}
+    modified_raw = json.dumps(modified, separators=(",", ":")).replace(
+        '"operatorWeight":100', '"operatorWeight":1e+02'
+    )
+    host.parent.mkdir(parents=True, exist_ok=True)
+    operator_raw = '{"weight":1e+02,"escaped":"\\u0061"}'
+    host.write_text(
+        f'{{"operatorRaw":{operator_raw},"{container}":{{"{legacy.server_id}":{modified_raw}}}}}\n',
+        encoding="utf-8",
+    )
+
+    with pytest.warns(UserWarning, match=f"preserving modified MCP ID {legacy.server_id}"):
+        install(tmp_path, harness, force=force)
+
+    rendered = host.read_text(encoding="utf-8")
+    entries = json.loads(rendered)[container]
+    assert entries[legacy.server_id] == modified
+    assert f"sdlc_cvs_{provider}" in entries
+    assert modified_raw in rendered
+    assert f'"operatorRaw": {operator_raw}' in rendered
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_legacy_cvs_mcp_migration_rolls_back_exact_host_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str, provider: str
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, provider)
+    legacy = recognized_server_intents(config, harness)[0]
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        generated = render_opencode_mcp(legacy)
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        generated = render_pi_mcp(legacy)
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(
+        json.dumps({container: {legacy.server_id: generated}}) + "\n",
+        encoding="utf-8",
+    )
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda _root, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check_mcp",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected smoke failure"):
+        install(tmp_path, harness)
+
+    assert _tree_manifest(tmp_path) == before
 
 
 def test_repository_does_not_own_codegraphcontext_tooling() -> None:
@@ -1911,15 +2078,15 @@ def test_external_code_index_host_entry_survives_owned_conflict(
 ) -> None:
     if harness == "opencode":
         host = tmp_path / ".opencode/opencode.json"
-        content = b'{"mcp":{"cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
+        content = b'{"mcp":{"sdlc_cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
     else:
         write_pinned_pi_adapter(tmp_path)
         host = tmp_path / ".pi/mcp.json"
-        content = b'{"mcpServers":{"cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
+        content = b'{"mcpServers":{"sdlc_cvs_github":null,"sdlc-code-index":{"weight":1e+02}}}\n'
     host.parent.mkdir(parents=True, exist_ok=True)
     host.write_bytes(content)
 
-    with pytest.raises(FileExistsError, match="cvs_github"):
+    with pytest.raises(FileExistsError, match="sdlc_cvs_github"):
         install(tmp_path, harness)
 
     assert host.read_bytes() == content
@@ -2056,7 +2223,7 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     assert host in installed
     document = json.loads(host.read_text(encoding="utf-8"))
     assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
-    assert "cvs_gitea" not in document.get("mcp", {})
+    assert "sdlc_cvs_gitea" not in document.get("mcp", {})
     assert "sdlc-code-index" not in document.get("mcp", {})
 
 
