@@ -455,7 +455,7 @@ def test_canonical_conflict_precedes_explicit_skill_migration(tmp_path: Path) ->
     conflict.write_bytes(b"operator canonical skill\x00\n")
     before = _tree_manifest(tmp_path)
 
-    with pytest.raises(FileExistsError, match="sdlc-caveman/SKILL.md"):
+    with pytest.raises(FileExistsError, match=r"sdlc-caveman[\\/]SKILL\.md"):
         install(tmp_path, "opencode", replace_sdlc_skill_set=True)
 
     assert _tree_manifest(tmp_path) == before
