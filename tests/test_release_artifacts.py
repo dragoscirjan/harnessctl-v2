@@ -529,7 +529,7 @@ for provider, connection in providers.items():
         if path.is_file()
     }
     remote_skill = remote_opencode / ".opencode/skills/sdlc-issue-tracking/SKILL.md"
-    assert "Use GitHub CLI `gh` or live tools under `cvs_github`" in remote_skill.read_text(
+    assert "Use GitHub CLI `gh` or live tools under `sdlc_cvs_github`" in remote_skill.read_text(
         encoding="utf-8"
     )
     assert "Use only GitLab CLI" not in remote_skill.read_text(encoding="utf-8")
@@ -537,6 +537,8 @@ for provider, connection in providers.items():
         (enabled_opencode / ".opencode/opencode.json").read_text(encoding="utf-8")
     )
     assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert "sdlc_cvs_github" in opencode["mcp"]
+    assert "cvs_github" not in opencode["mcp"]
     assert not (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").exists()
     assert not (enabled_opencode / ".harnessctl/cache/harnessctl.sqlite").exists()
 

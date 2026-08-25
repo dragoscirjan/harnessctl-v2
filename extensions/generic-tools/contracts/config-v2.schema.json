@@ -399,7 +399,7 @@
             },
             "mcp_server": {
               "type": "string",
-              "pattern": "^(?!cvs_)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+              "pattern": "^(?!cvs_)(?!sdlc_cvs_(?:github|gitlab|gitea|forgejo)$)(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
             }
           },
           "required": ["enabled", "mcp_server"],

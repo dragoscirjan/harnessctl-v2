@@ -155,17 +155,19 @@ description = "Run all unit tests"
 depends = ["node-test", "python-test"]
 
 [tasks.quality]
-description = "Run the complete local quality gate"
-depends = [
-  "format",
-  "lint",
-  "node-quality",
-  "python-test",
-  "release-artifacts",
-  "node-dupcheck",
-  "python-deadcode",
-  "actions-lint",
-  "mermaid-check",
+description = "Run Node tests before the remaining parallel quality gates"
+run = [
+  { task = "node-quality" },
+  { tasks = [
+    "format",
+    "lint",
+    "python-test",
+    "release-artifacts",
+    "node-dupcheck",
+    "python-deadcode",
+    "actions-lint",
+    "mermaid-check",
+  ] },
 ]
 
 [tasks.integration]

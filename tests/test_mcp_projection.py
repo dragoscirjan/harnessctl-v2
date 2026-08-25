@@ -85,6 +85,36 @@ def test_github_and_gitlab_exact_host_projections() -> None:
     assert "TOKEN" not in json.dumps(render_opencode_mcp(gitlab))
 
 
+@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_cvs_intents_use_canonical_ids_and_recognize_exact_legacy_ids(
+    provider: str,
+) -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["cvs"]["remote"] = {
+        "provider": provider,
+        "tools": {
+            "github": "gh",
+            "gitlab": "glab",
+            "gitea": "tea",
+            "forgejo": "forgejo-cli",
+        }[provider],
+        "url": {
+            "github": "https://github.com",
+            "gitlab": "https://gitlab.com",
+            "gitea": "https://gitea.example.test",
+            "forgejo": "https://forgejo.example.test",
+        }[provider],
+        "token_env": f"{provider.upper()}_TOKEN",
+    }
+
+    desired = required_server_intents(config, "all")
+    recognized = recognized_server_intents(config, "all")
+
+    assert [intent.server_id for intent in desired] == [f"sdlc_cvs_{provider}"]
+    assert [intent.server_id for intent in recognized] == [f"cvs_{provider}"]
+    assert replace(recognized[0], server_id=desired[0].server_id) == desired[0]
+
+
 @pytest.mark.parametrize("provider", ["gitea", "forgejo"])
 def test_local_forge_projection_maps_only_token_name(provider: str) -> None:
     intent = _intent(provider, token_env="FORGE_TOKEN")
@@ -162,7 +192,7 @@ def test_provider_neutral_local_projection_maps_deterministic_environment_names(
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
-def test_external_code_index_skill_generates_no_owned_mcp_intents(harness: str) -> None:
+def test_external_code_index_skill_generates_no_code_index_mcp_intents(harness: str) -> None:
     config = deepcopy(DEFAULT_CONFIG)
     config["mcp"] = {"output_limit_mode": "bounded-guidance"}
     config["skills"] = {"sdlc-code-index": {"enabled": True, "mcp_server": "operator-index"}}
@@ -171,7 +201,14 @@ def test_external_code_index_skill_generates_no_owned_mcp_intents(harness: str) 
 
     assert all(intent.server_id != "operator-index" for intent in desired)
     assert all(intent.server_id != "sdlc-code-index" for intent in desired)
-    assert recognized_server_intents(config, harness) == []
+    assert all(
+        intent.server_id != "operator-index"
+        for intent in recognized_server_intents(config, harness)
+    )
+    assert all(
+        intent.server_id != "sdlc-code-index"
+        for intent in recognized_server_intents(config, harness)
+    )
 
 
 @pytest.mark.parametrize(
@@ -212,7 +249,7 @@ def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
 
     assert len(deduplicated) == 1
     assert deduplicated[0].requesting_routes == ("cvs", "issues")
-    with pytest.raises(ConfigError, match="fixed ID cvs_github"):
+    with pytest.raises(ConfigError, match="fixed ID sdlc_cvs_github"):
         deduplicate_server_intents([intent, replace(duplicate, token_env="ISSUES_TOKEN")])
 
 
@@ -224,38 +261,60 @@ def test_opencode_merge_preserves_unrelated_content_and_avoids_rewrite(
     path.write_text(original, encoding="utf-8")
     expected = render_opencode_mcp(_intent("github", token_env="GH_TOKEN"))
 
-    merged = _merge_host_json(path, "mcp", {"cvs_github": expected}, force=False)
+    merged = _merge_host_json(path, "mcp", {"sdlc_cvs_github": expected}, force=False)
     assert merged is not None
     document = json.loads(merged)
     assert document["$schema"] == "x"
     assert document["mcp"]["operator"] == {"url": "x"}
     path.write_text(merged, encoding="utf-8")
-    assert _merge_host_json(path, "mcp", {"cvs_github": expected}, force=False) is None
+    assert _merge_host_json(path, "mcp", {"sdlc_cvs_github": expected}, force=False) is None
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_host_merge_preserves_raw_unchanged_top_level_values(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    operator_raw = '{"weight":1e+02,"escaped":"\\u0061"}'
+    path.write_text(
+        f'{{"operator":{operator_raw},"{container_name}":{{"legacy":{{}}}}}}',
+        encoding="utf-8",
+    )
+
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {"canonical": {}},
+        recognized={"legacy": ({},)},
+        force=False,
+    )
+
+    assert merged is not None
+    assert json.loads(merged)["operator"] == {"weight": 100, "escaped": "a"}
+    assert f'"operator": {operator_raw}' in merged
 
 
 def test_owned_conflict_requires_force_and_force_is_narrow(tmp_path: Path) -> None:
     path = tmp_path / "mcp.json"
+    settings_operator_raw = '{"weight":1e+02,"escaped":"\\u0061"}'
     path.write_text(
-        json.dumps(
-            {
-                "unrelated": True,
-                "mcpServers": {"cvs_github": {"url": "wrong"}, "operator": {}},
-                "settings": {"outputGuard": {"maxBytes": 1}, "operator": True},
-            }
-        ),
+        '{"unrelated":true,"mcpServers":'
+        '{"sdlc_cvs_github":{"url":"wrong"},"operator":{}},'
+        f'"settings":{{"outputGuard":{{"maxBytes":1}},"operator":{settings_operator_raw}}}}}',
         encoding="utf-8",
     )
     intent = _intent("github", token_env="GH_TOKEN")
 
-    with pytest.raises(FileExistsError, match="cvs_github"):
+    with pytest.raises(FileExistsError, match="sdlc_cvs_github"):
         _merge_pi_json(path, [intent], force=False)
     merged = _merge_pi_json(path, [intent], force=True)
     assert merged is not None
     document = json.loads(merged)
     assert document["unrelated"] is True
     assert document["mcpServers"]["operator"] == {}
-    assert document["settings"]["operator"] is True
+    assert document["settings"]["operator"] == {"weight": 100, "escaped": "a"}
     assert document["settings"]["outputGuard"] == OUTPUT_GUARD
+    assert f'"operator": {settings_operator_raw}' in merged
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
@@ -423,6 +482,58 @@ def test_disabled_owned_entry_preserves_and_reports_modified_content(
 
     assert merged is None
     assert path.read_text(encoding="utf-8") == original
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_exact_legacy_cvs_entry_migrates_to_canonical_id(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    generated = {"url": "https://example.test", "auth": "fixture"}
+    path.write_text(
+        json.dumps({container_name: {"cvs_github": generated, "operator": {}}}),
+        encoding="utf-8",
+    )
+
+    merged = _merge_host_json(
+        path,
+        container_name,
+        {"sdlc_cvs_github": generated},
+        recognized={"cvs_github": (generated,)},
+        force=False,
+    )
+
+    assert merged is not None
+    assert json.loads(merged)[container_name] == {
+        "operator": {},
+        "sdlc_cvs_github": generated,
+    }
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+def test_modified_legacy_cvs_entry_is_preserved_during_canonical_install(
+    tmp_path: Path, container_name: str
+) -> None:
+    path = tmp_path / "host.json"
+    generated = {"url": "https://example.test", "auth": "fixture"}
+    modified = {"url": "https://operator.example.test", "auth": "fixture"}
+    original = json.dumps({container_name: {"cvs_github": modified}})
+    path.write_text(original, encoding="utf-8")
+
+    with pytest.warns(UserWarning, match="preserving modified MCP ID cvs_github"):
+        merged = _merge_host_json(
+            path,
+            container_name,
+            {"sdlc_cvs_github": generated},
+            recognized={"cvs_github": (generated,)},
+            force=False,
+        )
+
+    assert merged is not None
+    assert json.loads(merged)[container_name] == {
+        "cvs_github": modified,
+        "sdlc_cvs_github": generated,
+    }
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])

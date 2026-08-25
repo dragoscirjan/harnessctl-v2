@@ -26,7 +26,7 @@ def _render(local: str, provider: str, *, mcp_available: bool = True) -> str:
         tools=tools,
         remote_url=remote_url,
         token_env=token_env,
-        mcp_id=f"cvs_{provider}",
+        mcp_id=f"sdlc_cvs_{provider}",
         mcp_available=mcp_available,
     )
 
@@ -41,7 +41,7 @@ def test_cvs_skill_routes_are_self_contained_and_provider_exclusive(
 
     assert f"- Local: `{local}`." in rendered
     assert f"- Remote CLI: `{tool}`." in rendered
-    assert f"- Remote MCP prefix: `cvs_{provider}`." in rendered
+    assert f"- Remote MCP prefix: `sdlc_cvs_{provider}`." in rendered
     assert f"- CLI token env: `{token_env}`." in rendered
     assert "Never invent commands, flags, tools, or fields" in rendered
     assert "No route priority" in rendered
@@ -80,7 +80,7 @@ def test_cvs_skill_omits_unavailable_local_mcp() -> None:
 
     assert "- Remote CLI: `forgejo-cli`." in rendered
     assert "- Remote MCP: unavailable." in rendered
-    assert "cvs_forgejo" not in rendered
+    assert "sdlc_cvs_forgejo" not in rendered
 
 
 def test_install_registers_cvs_skill_with_narrow_config_context(

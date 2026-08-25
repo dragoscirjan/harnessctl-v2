@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0WXSMESRM5RW2BPVZ81C6G9
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00132 | build | sdlc_ CVS namespace | implemented, focused checks pass
+details: "Branch feat/hrn-00132-mcp-namespace. Canonical four-provider IDs, exact legacy reconciliation, generated guidance, OpenCode/Pi outputs, validators, docs/specs/changelog, package assertions implemented. Exact migration, modified preservation, force, rollback tested across 4 providers x 2 hosts. Python focused: 366 passed. TS contracts: 140 passed. Typecheck, targeted Ruff/Prettier, diff check pass. Independent review: no findings. Full quality/build/live-provider checks deferred to Verify. Epic remains open; no commit, remote, Release."
+source:
+  kind: artifact
+  ref: hrn-00132
+  revision: v1:b6f7b346e46113d3a3858ef518429dadcbf5ddc2e52a249df23552e4c723eac6
+created_at: 2026-08-25T16:59:28.089Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0WWGXK0QW6WS4M6VHPW1203
+tags:
+  - build
+  - cvs
+  - hrn-00132
+  - mcp
+  - naming

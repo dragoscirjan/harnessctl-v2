@@ -14,6 +14,10 @@ GITLAB_MCP_URL = "https://gitlab.com/api/v4/mcp"
 GITHUB_TOOLSETS = "repos,issues,pull_requests,actions,git"
 FORGEJO_MCP_VERSION = "2.33.0"
 OUTPUT_GUARD = {"maxBytes": 51200, "maxLines": 2000, "detailsMaxBytes": 16384}
+CVS_MCP_SERVER_IDS = {
+    provider: f"sdlc_cvs_{provider}" for provider in ("github", "gitlab", "gitea", "forgejo")
+}
+LEGACY_CVS_MCP_SERVER_IDS = {provider: f"cvs_{provider}" for provider in CVS_MCP_SERVER_IDS}
 _ENVIRONMENT_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
 
 
@@ -71,18 +75,19 @@ def required_server_intents(config: Mapping[str, Any], harness: str) -> list[Ser
     return [_intent(service, route) for route, service in services]
 
 
-def recognized_server_intents(_config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
+def recognized_server_intents(config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
     """Return historical generated definitions eligible for exact reconciliation."""
-    if harness not in {"opencode", "pi", "all"}:
-        raise ValueError(f"unsupported harness: {harness}")
-    return []
+    return [
+        replace(intent, server_id=LEGACY_CVS_MCP_SERVER_IDS[intent.provider])
+        for intent in required_server_intents(config, harness)
+    ]
 
 
 def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
     provider = str(service["provider"])
     if provider == "github":
         return ServerIntent(
-            "cvs_github",
+            CVS_MCP_SERVER_IDS[provider],
             provider,
             "remote",
             GITHUB_MCP_URL,
@@ -96,7 +101,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         )
     if provider == "gitlab":
         return ServerIntent(
-            "cvs_gitlab",
+            CVS_MCP_SERVER_IDS[provider],
             provider,
             "remote",
             GITLAB_MCP_URL,
@@ -110,7 +115,7 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         )
     url = str(service["url"])
     return ServerIntent(
-        f"cvs_{provider}",
+        CVS_MCP_SERVER_IDS[provider],
         provider,
         "local",
         url,

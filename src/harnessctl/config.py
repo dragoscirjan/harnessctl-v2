@@ -28,6 +28,7 @@ CVS_LOCALS = frozenset({"git", "jj"})
 MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
 CODE_INDEX_SKILL_ID = "sdlc-code-index"
 _MCP_SERVER_NAME = re.compile(r"[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?")
+_MANAGED_CVS_MCP_SERVER_IDS = frozenset(f"sdlc_cvs_{provider}" for provider in REMOTE_ISSUE_TYPES)
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
@@ -209,10 +210,12 @@ def _validate(config: dict[str, Any]) -> None:
         not isinstance(mcp_server, str)
         or _MCP_SERVER_NAME.fullmatch(mcp_server) is None
         or mcp_server.startswith("cvs_")
+        or mcp_server in _MANAGED_CVS_MCP_SERVER_IDS
     ):
         raise ConfigError(
             f"{namespace}.mcp_server must be 1-64 lowercase ASCII letters, digits, "
-            "underscores, or hyphens; start and end alphanumeric; cvs_ is reserved"
+            "underscores, or hyphens; start and end alphanumeric; "
+            "cvs_ and managed sdlc_cvs_* IDs are reserved"
         )
 
     tdd = _mapping(_mapping(config, "workflow"), "tdd")
