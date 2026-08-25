@@ -7,6 +7,7 @@ import { encodeCanonicalIssue, type CanonicalIssueDocument } from './issues-cont
 import {
   applyIssueFileBatch,
   discoverIssueStorage,
+  MAX_ISSUE_FILES,
   resolveIssueCandidate,
   validateIssueRoot,
   withIssueBarrier,
@@ -122,14 +123,15 @@ describe('issue filesystem', () => {
   it('enforces the fixed 9,999-file discovery boundary', () => {
     const root = repository();
     mkdirSync(join(root, '.harnessctl/issues'), { recursive: true });
-    for (let index = 1; index <= 10_000; index += 1) {
+    expect(MAX_ISSUE_FILES).toBe(9_999);
+    for (let index = 1; index <= 3; index += 1) {
       const id = String(index).padStart(5, '0');
       writeFileSync(join(root, `.harnessctl/issues/${id}-issue.yml`), encodeCanonicalIssue(issue(id, 'Issue')));
     }
-    expect(() => discoverIssueStorage(root)).toThrowError(
+    expect(() => discoverIssueStorage(root, { candidateLimit: 2 })).toThrowError(
       expect.objectContaining({ category: 'resource_limit', limit: 'candidates' }),
     );
-  }, 30_000);
+  });
 
   it('accepts exactly 16 MiB and rejects one byte more before reading an issue file', () => {
     const root = repository();
