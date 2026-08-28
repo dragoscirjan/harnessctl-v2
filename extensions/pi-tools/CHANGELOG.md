@@ -1,5 +1,13 @@
 # @harnessctl/pi-tools
 
+## 0.1.10
+
+### Patch Changes
+
+- [#47](https://github.com/dragoscirjan/harnessctl-v2/pull/47) [`353a94b`](https://github.com/dragoscirjan/harnessctl-v2/commit/353a94b03c2e14f42de31940b07b12e8f8bc975d) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add the fixed repository-local Documents lifecycle, safe issue document links, and equivalent OpenCode and Pi adapter contracts.
+- Updated dependencies [[`353a94b`](https://github.com/dragoscirjan/harnessctl-v2/commit/353a94b03c2e14f42de31940b07b12e8f8bc975d)]:
+  - @harnessctl/generic-tools@0.1.10
+
 ## Unreleased
 
 ### Patch Changes
