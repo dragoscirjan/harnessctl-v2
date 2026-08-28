@@ -11,6 +11,8 @@ import tarfile
 import zipfile
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 COMMAND_COUNT = 6
 CURRENT_COMMANDS = {
@@ -108,6 +110,27 @@ def test_release_gates_exclude_migration_tooling() -> None:
         and RETIRED_MIGRATION_IDENTITY.search(command) is None
         for name, command in scripts.items()
     )
+
+
+def test_release_runs_only_after_main_push_quality_succeeds() -> None:
+    ci = yaml.load(
+        (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    release = yaml.load(
+        (ROOT / ".github/workflows/ci.release.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+
+    assert not (ROOT / ".github/workflows/release.yml").exists()
+    assert release["on"] == {"workflow_call": ""}
+    release_job = ci["jobs"]["release"]
+    assert release_job["needs"] == "quality"
+    assert release_job["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+    assert release_job["uses"] == "./.github/workflows/ci.release.yml"
+    assert release_job["secrets"] == "inherit"
+    assert release_job["permissions"] == {"contents": "write", "pull-requests": "write"}
+    assert ci["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
 
 
 def test_local_npm_document_adapters_remain_release_inputs() -> None:
