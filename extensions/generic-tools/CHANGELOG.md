@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## 0.1.9
+
+### Patch Changes
+
+- [#43](https://github.com/dragoscirjan/harnessctl-v2/pull/43) [`220f285`](https://github.com/dragoscirjan/harnessctl-v2/commit/220f2852269a0ce4f1b4e278d16629e78462a598) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Reserve the four harnessctl-managed `sdlc_cvs_*` MCP IDs while keeping custom IDs valid.
+
 ## 0.1.8
 
 ### Patch Changes
