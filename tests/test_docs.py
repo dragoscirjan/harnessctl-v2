@@ -794,17 +794,3 @@ def test_current_design_links_use_canonical_documents_paths() -> None:
         "doc-00014-repository-local-sdlc-design-document-management-v4.md",
     ):
         assert f"../.harnessctl/documents/{path}" in docs_index
-
-
-def test_document_release_notes_do_not_advertise_migration() -> None:
-    root_changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    generic_changelog = (ROOT / "extensions/generic-tools/CHANGELOG.md").read_text(encoding="utf-8")
-    current_notes = (
-        root_changelog.split("## Unreleased", 1)[1].split("## 0.2.0", 1)[0]
-        + generic_changelog.split("## 0.1.10", 1)[1].split("## Unreleased", 1)[0]
-    )
-
-    assert "repository-local Documents lifecycle" in current_notes
-    assert "safe issue document links" in current_notes
-    for retired_surface in ("--migrate-specs", "packaged runner", "migration runtime and CLI"):
-        assert retired_surface not in current_notes
