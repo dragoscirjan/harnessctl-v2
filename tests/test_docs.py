@@ -796,13 +796,12 @@ def test_current_design_links_use_canonical_documents_paths() -> None:
         assert f"../.harnessctl/documents/{path}" in docs_index
 
 
-def test_current_document_release_notes_do_not_advertise_migration() -> None:
+def test_document_release_notes_do_not_advertise_migration() -> None:
     root_changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     generic_changelog = (ROOT / "extensions/generic-tools/CHANGELOG.md").read_text(encoding="utf-8")
     current_notes = (
         root_changelog.split("## Unreleased", 1)[1].split("## 0.2.0", 1)[0]
-        + generic_changelog.split("## Unreleased", 1)[1].split("## 0.1.8", 1)[0]
-        + (ROOT / ".changeset/bright-documents-link.md").read_text(encoding="utf-8")
+        + generic_changelog.split("## 0.1.10", 1)[1].split("## Unreleased", 1)[0]
     )
 
     assert "repository-local Documents lifecycle" in current_notes
