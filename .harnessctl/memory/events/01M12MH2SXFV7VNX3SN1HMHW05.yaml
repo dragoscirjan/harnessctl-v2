@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M12MH2SXFV7VNX3SN1HMHW05
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | 10 children | implemented; configured gates pass
+details: "Epic-scoped YOLO completed prior 9 children plus Verify Bug hrn-00145. Retry defect fixed: pre-manifest preparation failures remove only invocation-owned identity-matching control/staging/promoted payload state; preserve replaced/nonempty/unowned state; manifest-published payloads remain recoverable. Evidence: 28 focused streaming/migration tests; independent review round 5 approved; mise run quality passed: generic-tools 296, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped; mise run build and 5 artifact tests passed. Issues remain open. No commit/remote/destructive/Verify/Release work. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: local workspace; hrn-00135-C0014; hrn-00145-C0001
+  revision: null
+created_at: 2026-08-27T22:12:57.277Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12JVR08XV5J8E94DWD5HR59
+tags:
+  - build
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00145
+  - migration

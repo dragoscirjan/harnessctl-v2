@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0XAZ5E3K1KCTAHCMV4MV311
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | plan | provider-backed SDLC documents | Epic, 4 Stories, HLD+LLD approved and created
+details: "Epic hrn-00135. Stories: hrn-00136 distinct Gitea/Forgejo MCP contracts; hrn-00137 filesystem authority/tools/cache; hrn-00138 provider wiki routes; hrn-00139 skill/install/release integration. Decisions: one configured authority; filesystem canonical under .harnessctl/documents with disposable SQLite; remote wiki authoritative; Gitea official gitea-mcp v1.6.0 only; Forgejo forgejo-mcp v2.33.0 only; no mixed contracts or route fallback after mutation. Artifacts: .specs/hld-00011-provider-backed-sdlc-document-management-v1.md; .specs/lld-00011-provider-backed-sdlc-document-management-v1.md. Verification: issue_validate passed. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:1b908712162fc64d16538874c9cc6ab2c1c41b7215f6b454763f17bf6fd5646b
+created_at: 2026-08-25T20:49:40.803Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documents
+  - forgejo
+  - gitea
+  - plan
+  - sdlc
+  - wiki

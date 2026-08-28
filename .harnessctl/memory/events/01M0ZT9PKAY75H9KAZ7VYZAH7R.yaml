@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M0ZT9PKAY75H9KAZ7VYZAH7R
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | verify | full gates pass; hrn-00140/hrn-00143 block release
+details: "Branch feat/hrn-00135-sdlc-documents. mise run quality/build, exact 3-package Changeset, artifacts, current-identity audit, and diff check pass. Review round 13: modified legacy cvs_gitea still permits canonical replacement; public docs and adapter descriptions omit safe direct .ai.tmp/*.md links. Existing Bugs hrn-00143 and hrn-00140 updated. No Verify repair. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:ca20c971b7c8d1e758fee85f74ad03d8d924de2e1096f078bda628933eede618
+created_at: 2026-08-26T19:56:03.562Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZSN67N994NW158C921V5D6
+tags:
+  - blocked
+  - documentation
+  - documents
+  - gitea
+  - migration
+  - verify

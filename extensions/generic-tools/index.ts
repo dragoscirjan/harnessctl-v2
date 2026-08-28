@@ -1,6 +1,7 @@
 import {
   createConfig,
   getConfigValue,
+  parseConfig,
   readConfig,
   validateAndMigrateConfig,
   ConfigError,
@@ -56,10 +57,51 @@ export type {
   IssueMetadataValue,
 } from './issues-contract.js';
 export type { IssueStorageCatalog, IssueStorageCandidate, IssueStorageStatus } from './issues-storage.js';
+export {
+  DOCUMENT_KINDS,
+  DOCUMENT_STATUSES,
+  DocumentError,
+  archiveDocument,
+  createDocument,
+  createFilesystemDocumentProvider,
+  getDocument,
+  listDocuments,
+  parseDocumentId,
+  restoreDocument,
+  updateDocument,
+  validateDocuments,
+  versionDocument,
+} from './documents.js';
+export type {
+  CreateDocumentOptions,
+  DocumentChanges,
+  DocumentKind,
+  DocumentLocation,
+  DocumentOperationReport,
+  DocumentRecord,
+  DocumentStatus,
+  DocumentSummary,
+  DocumentValidationReport,
+  FilesystemDocumentProvider,
+  FilesystemDocumentProviderOptions,
+  ListDocumentOptions,
+} from './documents.js';
+export {
+  canonicalDocumentFilename,
+  computeDocumentRevision,
+  decodeDocument,
+  encodeCanonicalDocument,
+} from './documents-contract.js';
 
-export { ConfigError, createConfig, getConfigValue, readConfig, validateAndMigrateConfig };
+export { ConfigError, createConfig, getConfigValue, parseConfig, readConfig, validateAndMigrateConfig };
 export type { ConfigDocument };
-export { configV2Schema, memoryDocumentSchema, memoryRecordSchema, memoryTombstoneSchema } from './schemas.js';
+export {
+  FILESYSTEM_DOCUMENT_TOOLS,
+  configV2Schema,
+  memoryDocumentSchema,
+  memoryRecordSchema,
+  memoryTombstoneSchema,
+} from './schemas.js';
 export type { CvsLocal, McpOutputLimitMode, RemoteProvider, RemoteService } from './schemas.js';
 export {
   MemoryConflictError,

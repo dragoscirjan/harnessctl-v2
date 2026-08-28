@@ -56,14 +56,23 @@ def test_cvs_skill_routes_are_self_contained_and_provider_exclusive(
         assert f"Never send `{token_env}` to MCP" in rendered
 
 
-@pytest.mark.parametrize("provider", ["gitea", "forgejo"])
-def test_forgejo_mcp_is_mcp_only_and_version_checked(provider: str) -> None:
-    rendered = _render("git", provider)
+def test_gitea_mcp_is_provider_exclusive_and_version_checked() -> None:
+    rendered = _render("git", "gitea")
+
+    assert "`gitea-mcp` is server-only, never CLI fallback" in rendered
+    assert "call `get_gitea_mcp_server_version`" in rendered
+    assert "require exactly `1.6.0`" in rendered
+    assert "forgejo-mcp" not in rendered
+
+
+def test_forgejo_mcp_is_provider_exclusive_and_version_checked() -> None:
+    rendered = _render("git", "forgejo")
 
     assert "`forgejo-mcp` is server-only, never CLI fallback" in rendered
     assert "call `get_forgejo_mcp_server_version`" in rendered
     assert "require exactly `2.33.0`" in rendered
     assert "forgejo-mcp --cli" not in rendered
+    assert "gitea-mcp" not in rendered
 
 
 def test_cli_provider_matrix_is_exact() -> None:

@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M0ZTV8SJHMJZCA7X5SK1069C
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | build | hrn-00140/hrn-00143 repaired | focused gates pass
+details: "Branch feat/hrn-00135-sdlc-documents. Modified old-signature legacy/canonical Gitea definitions now warn, stay byte-equivalent, and block planned canonical replacement under force/non-force; exact migrations and unrelated conflicts unchanged. Public docs and OpenCode/Pi arguments document safe direct .ai.tmp/*.md restrictions. Verification: 541 bounded Python tests with 11 established warnings; OpenCode 2; Pi 3; typechecks, Ruff, Prettier, diff check pass; review round 14 approved. Issues open. Next: work-verify hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:545a6e4071c9bdddf6198113680ec096f826bb6193b003003fa8ee26065e9726
+created_at: 2026-08-26T20:05:39.250Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZT9PKAY75H9KAZ7VYZAH7R
+tags:
+  - build
+  - documentation
+  - gitea
+  - hrn-00140
+  - hrn-00143
+  - migration

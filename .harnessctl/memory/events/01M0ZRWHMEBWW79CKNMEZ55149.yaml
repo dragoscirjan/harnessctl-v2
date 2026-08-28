@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZRWHMEBWW79CKNMEZ55149
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | verify | full gates pass; hrn-00143 blocks release
+details: "Branch feat/hrn-00135-sdlc-documents. mise run quality/build, Changeset exact 3-package projection, artifacts, stale audit pass. Independent review round 10: force overwrites modified historical canonical sdlc_cvs_gitea, contradicting hrn-00136/HLD preservation. Bug hrn-00143 open. No Verify repair. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:30dbb86e11d8a9a1c31a48095a9d22e671bbda4778775edb10af716a31c7618a
+created_at: 2026-08-26T19:31:23.918Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZJ24CX4DDW7Z7CJ7B9YS0A
+tags:
+  - blocked
+  - compatibility
+  - gitea
+  - migration
+  - verify

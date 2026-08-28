@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M0Z4W7C74F8AN8QJW286KCRE
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | build | Stories hrn-00136-hrn-00139 | implementation and bounded checks pass
+details: "Branch feat/hrn-00135-sdlc-documents. Done: distinct Gitea/Forgejo MCP contracts; filesystem Documents authority with 9 tools and SQLite projection; GitHub/GitLab/Gitea/Forgejo wiki route contracts; sdlc-documents OpenCode/Pi guidance, installer, issue links, docs, Changeset, artifacts. Verification: 496 Python; generic-tools 265; OpenCode 2; Pi 3; workspace typechecks; root/workspace lint; Ruff; Prettier; schema/artifact parity; diff check; Changeset status. Independent review round 6 approved, no findings. Residual: live providers not exercised; external-process final filesystem syscall race documented. Next: work-verify hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:fc796f68432eadc64e9d2c3d7f9ab3b30709c7064554cc1349eeb30daee5b7e3
+created_at: 2026-08-26T13:41:41.895Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0XAZ5E3K1KCTAHCMV4MV311
+tags:
+  - build
+  - documents
+  - forgejo
+  - gitea
+  - sdlc
+  - wiki

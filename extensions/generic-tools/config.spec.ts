@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ConfigError, createConfig, getConfigValue, readConfig } from './index.js';
+import { ConfigError, createConfig, getConfigValue, parseConfig, readConfig } from './index.js';
 
 function temporaryDirectory(): string {
   return mkdtempSync(join(tmpdir(), 'harnessctl-config-'));
@@ -30,6 +30,13 @@ describe('configuration tools', () => {
           type: 'filesystem',
           tools:
             'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
+        },
+        documents: {
+          root: '.harnessctl/documents',
+          prefix: 'doc-',
+          type: 'filesystem',
+          tools:
+            'document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore',
         },
         cvs: {
           local: 'git',
@@ -205,7 +212,7 @@ describe('configuration tools', () => {
     });
   });
 
-  it.each(['sdlc-code-index', 'sdlc_cvs_custom', 'index_2', 'a', 'a-b_c-9'])(
+  it.each(['sdlc-code-index', 'sdlc_cvs_custom', 'sdlc_documents_custom', 'index_2', 'a', 'a-b_c-9'])(
     'accepts portable external MCP server name %s',
     (mcpServer) => {
       expect(
@@ -288,6 +295,50 @@ describe('configuration tools', () => {
     expect(readConfigFromText(`version: 2\nissues:\n  tools: "${reordered}"\n`)).toMatchObject({
       issues: { type: 'filesystem', tools: canonical },
     });
+  });
+
+  it('normalizes and strictly validates the fixed filesystem document configuration', () => {
+    const canonical =
+      'document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore';
+    expect(
+      parseConfig(
+        `version: 2\ndocuments:\n  root: .harnessctl/documents\n  prefix: doc-\n  type: filesystem\n  tools: ${canonical.split(',').reverse().join(',')}\n`,
+      ).documents,
+    ).toEqual({ root: '.harnessctl/documents', prefix: 'doc-', type: 'filesystem', tools: canonical });
+    for (const source of [
+      'documents:\n  root: ../docs',
+      'documents:\n  root: docs',
+      'documents:\n  prefix: d-',
+      'documents:\n  unknown: true',
+      'documents:\n  tools: document_create',
+    ])
+      expect(() => parseConfig(`version: 2\n${source}\n`)).toThrow(ConfigError);
+  });
+
+  it.each(['github', 'gitlab', 'gitea', 'forgejo'])(
+    'rejects removed remote Documents configuration for %s with migration guidance',
+    (type) => {
+      expect(() =>
+        readConfigFromText(`version: 2\ndocuments:\n  type: ${type}\n  remote:\n    repository: owner/repo\n`),
+      ).toThrow(/remote Documents providers were removed.*\.harnessctl\/documents/u);
+    },
+  );
+
+  it.each([
+    { type: 'filesystem', remote: {} },
+    { type: 'filesystem', root: 'docs', prefix: 'doc-', tools: 'document_id' },
+    {
+      type: 'gitea',
+      tools: 'gitea-mcp',
+      remote: {
+        repository: 'owner/repo',
+        url: 'https://gitea.example.test',
+        token_env: 'GITEA_TOKEN',
+        extra: true,
+      },
+    },
+  ])('rejects unknown fields within Documents branches', (documents) => {
+    expect(() => readConfigFromText(JSON.stringify({ version: 2, documents }))).toThrow(ConfigError);
   });
 
   it.each(['github', 'gitlab', 'gitea', 'forgejo'])('requires explicit tools for remote type %s', (type) => {

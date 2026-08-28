@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M13V6NEBY88QVK457MJTQW5S
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | warning and HOME isolation | blocked by hrn-00146/hrn-00147
+details: "Fresh `mise run quality` and `mise run build` pass: generic-tools 267, OpenCode 2, Pi 3, Python 587, npm tarballs 23/5/7, release artifacts 5; diff and validators pass. Independent review reproduced post-quarantine original-path recreation: operator state preserved but required warning absent; hrn-00146-C0002 records AC9/13 failure. HOME isolation matrix incomplete for absent/hostile HOME and Pi/all; new Bug hrn-00147 related to hrn-00139 blocks AC11/13. No source repair, closure, commit, remote, destructive, Plan, Build, or Release action. User chose Build route."
+source:
+  kind: tool-observation
+  ref: hrn-00146-C0002; hrn-00147; fresh local Verify gates; independent review
+  revision: null
+created_at: 2026-08-28T09:28:50.379Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M13MH0CZZP3653T5EF5G7A88
+tags:
+  - checkpoint
+  - defect
+  - documents
+  - home-isolation
+  - hrn-00135
+  - hrn-00146
+  - hrn-00147
+  - operator-preservation
+  - verify

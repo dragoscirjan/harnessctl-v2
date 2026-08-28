@@ -17,6 +17,10 @@ FILESYSTEM_ISSUE_TOOLS = (
     "issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,"
     "issue_archive"
 )
+FILESYSTEM_DOCUMENT_TOOLS = (
+    "document_id,document_create,document_list,document_get,document_update,"
+    "document_version,document_validate,document_archive,document_restore"
+)
 REMOTE_ISSUE_TYPES = frozenset({"github", "gitlab", "gitea", "forgejo"})
 REMOTE_ISSUE_PROVIDERS = {
     "github": {"tool": "gh", "url": "https://github.com", "token_env": "GH_TOKEN"},
@@ -29,6 +33,16 @@ MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
 CODE_INDEX_SKILL_ID = "sdlc-code-index"
 _MCP_SERVER_NAME = re.compile(r"[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?")
 _MANAGED_CVS_MCP_SERVER_IDS = frozenset(f"sdlc_cvs_{provider}" for provider in REMOTE_ISSUE_TYPES)
+_FIXED_DOCUMENTS_CONFIG = {
+    "root": ".harnessctl/documents",
+    "prefix": "doc-",
+    "type": "filesystem",
+    "tools": FILESYSTEM_DOCUMENT_TOOLS,
+}
+_REMOVED_DOCUMENTS_CONFIG_MESSAGE = (
+    "remote or custom Documents configuration is no longer supported; remove the documents "
+    "override and use the fixed repository-local .harnessctl/documents authority"
+)
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "version": 2,
@@ -38,6 +52,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "type": "filesystem",
         "tools": FILESYSTEM_ISSUE_TOOLS,
     },
+    "documents": deepcopy(_FIXED_DOCUMENTS_CONFIG),
     "cvs": {
         "local": "git",
         "remote": {
@@ -140,6 +155,7 @@ def load_config(cwd: Path) -> dict[str, Any]:
             "mcp.servers is no longer supported; configure skills.sdlc-code-index and "
             "manage external MCP servers in the host configuration"
         )
+    _reject_removed_documents_configuration(value)
     _require_explicit_remote_configuration(value)
     config = _merge(DEFAULT_CONFIG, value)
     config["version"] = 2
@@ -180,6 +196,10 @@ def _validate(config: dict[str, Any]) -> None:
         raise ConfigError("issues.type must be filesystem, github, gitlab, gitea, or forgejo")
     _normalize_issue_tools(issues, issue_type)
     _validate_issue_remote(issues, issue_type)
+
+    documents = _mapping(config, "documents")
+    if documents != _FIXED_DOCUMENTS_CONFIG:
+        raise ConfigError(_REMOVED_DOCUMENTS_CONFIG_MESSAGE)
 
     cvs = _mapping(config, "cvs")
     _allowed_keys(cvs, {"local", "remote"}, "cvs")
@@ -246,6 +266,18 @@ def _validate(config: dict[str, Any]) -> None:
         raise ConfigError("memory.retrieval.include_superseded must be boolean")
     repository = _mapping(memory, "repository")
     _safe_path(repository, "root", "memory.repository")
+
+
+def _reject_removed_documents_configuration(source: dict[str, Any]) -> None:
+    """Reject retired Documents branches before defaults or external probes are considered."""
+    documents = source.get("documents")
+    if documents is None:
+        return
+    if not isinstance(documents, dict) or any(
+        key not in _FIXED_DOCUMENTS_CONFIG or value != _FIXED_DOCUMENTS_CONFIG[key]
+        for key, value in documents.items()
+    ):
+        raise ConfigError(_REMOVED_DOCUMENTS_CONFIG_MESSAGE)
 
 
 def _require_explicit_remote_configuration(source: dict[str, Any]) -> None:

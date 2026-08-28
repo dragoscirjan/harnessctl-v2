@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M12KGG0MC79X05DN1N9SZRG3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl-v2
+summary: "hrn-00135 | Verify | acceptance review | failed: hrn-00145"
+details: |-
+  Epic: hrn-00135
+  Phase: Verify
+  Done: fresh `mise run quality` and `mise run build` passed; independent review reproduced streaming preparation retry defect.
+  Blockers: hrn-00145; acceptance 6/7 blocked. `prepare()` leaves empty control directory after pre-manifest payload failure; recovery rejects it as unowned.
+  Artifacts: hrn-00145 parent hrn-00135, relates_to hrn-00140.
+  Verification: Python 631 passed/2 native-Windows skipped; generic-tools 288, OpenCode 2, Pi 3; package and release-artifact checks passed.
+  Delivery: no repair, closure, commit, remote, destructive, Plan, Build, or Release action.
+source:
+  kind: tool-observation
+  ref: hrn-00135 Verify; hrn-00145
+  revision: null
+created_at: 2026-08-27T21:55:09.460Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - defect
+  - hrn-00135
+  - hrn-00145
+  - verify

@@ -1,0 +1,12 @@
+schema_version: 1
+id: 01M12NP3MV7Q18V9QXWJY9AVA4
+organization_id: local
+project_id: project
+target_id: 01M12KGG0MC79X05DN1N9SZRG3
+reason: Stale duplicate Verify checkpoint; later Verify records supersede original hrn-00145 failure state.
+source:
+  kind: user-confirmed
+  ref: hrn-00135 Verify checkpoint reconciliation
+  revision: null
+created_at: 2026-08-27T22:33:10.555Z
+created_by: OpenCode

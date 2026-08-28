@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M12VNQSCB09T9ADEW2WJKDRK
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | Documents v4 simplification | implemented; gates pass
+details: "Preserved 19 converted mappings/14 lineages, 21 active Documents, canonical legacy metadata, and exact `.specs-v1` via immutable fixture/tests. Removed shipped `.specs` migration runtime, CLI, bridge, streaming, resources, provenance, scripts, package identities, tests, current guidance, completion/control state. Retained four kinds, nine tools, canonical issue links, ordinary Documents recovery, CVS/Issues/privacy behavior. Independent review approved. `mise run quality`: generic TS 267, adapters 5, Python 574; package tarballs 23/5/7; release artifacts 5. `mise run build`, diff check, Documents/Issues/memory validation pass. Epic/children open. No Verify/Release/closure/commit/remote action. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: hrn-00135-C0017; hrn-00139-C0004; hrn-00140-C0007; hrn-00142-C0005; hrn-00145-C0006; local Build gates
+  revision: null
+created_at: 2026-08-28T00:17:49.868Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12QSZG2VJS0Z7D5WJ6PMQW9
+tags:
+  - build
+  - checkpoint
+  - documents
+  - hrn-00135
+  - migration-removal
+  - v4

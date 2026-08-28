@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M12MTKWGTGS6SYFQTW7Y2WAX
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | acceptance 6/7 | blocked by hrn-00145 ancestor leak
+details: "Fresh `mise run quality` and `mise run build` pass: generic-tools 296, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped, 5 release-artifact tests. Independent review: prior final-control leak fixed; pre-manifest failure still leaves invocation-created `.harnessctl/documents/` and `.harnessctl/documents/.control/`, violating exact pre-commit restoration. Reused active Bug hrn-00145; comment C0002 records failure. No repair, closure, commit, remote, destructive, Plan, Build, or Release action. Next confirmed route: Build."
+source:
+  kind: tool-observation
+  ref: hrn-00145-C0002; local workspace Verify gates
+  revision: null
+created_at: 2026-08-27T22:18:09.680Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - hrn-00135
+  - hrn-00145
+  - migration
+  - recovery
+  - verify

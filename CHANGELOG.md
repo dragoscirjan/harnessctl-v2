@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Add a fixed repository-local `.harnessctl/documents` authority for HLD, LLD,
+  design-overview, and GDD records with nine normalized lifecycle tools and thin OpenCode
+  and Pi adapters.
+- Integrate Documents creation, review, versioning, validation, and issue linking into the
+  existing SDLC Plan reference without generating a Documents agent or skill.
+- Ship no `.specs` or `.ai.tmp` migration or link compatibility; `.specs-v1` remains inert
+  repository history rather than live authority.
+- Remove remote Documents providers, wiki routes, MCP identities, and configuration. Exact
+  previously generated `sdlc-documents` trees are removed transactionally; modified trees
+  are preserved with a warning.
+- Add patch Changesets for all three runtime packages; package versions and dependency
+  ranges remain unchanged until release versioning.
+
 ## 0.2.0
 
 - **Breaking:** replace the 18-command SDLC surface with `work-plan`, `work-build`,

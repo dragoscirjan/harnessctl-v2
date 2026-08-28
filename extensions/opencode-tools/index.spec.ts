@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -11,6 +11,15 @@ describe('OpenCode adapter', () => {
     expect(Object.keys(hooks.tool ?? {})).toEqual([
       'config_create',
       'config_get',
+      'document_id',
+      'document_create',
+      'document_list',
+      'document_get',
+      'document_update',
+      'document_version',
+      'document_validate',
+      'document_archive',
+      'document_restore',
       'memory_search',
       'memory_list',
       'memory_get',
@@ -34,6 +43,27 @@ describe('OpenCode adapter', () => {
       'issue_archive',
     ]);
     expect(hooks.tool?.config_get?.args.path).toBeDefined();
+    expect(hooks.tool?.['document_create']?.args.title).toBeDefined();
+    const enumCases = [
+      ['document_create', 'kind', ['hld', 'lld', 'design-overview', 'gdd'], ['task', 'draft', 'document']],
+      ['document_create', 'status', ['draft', 'review', 'approved'], ['active', 'archived', 'unknown']],
+      ['document_list', 'kind', ['hld', 'lld', 'design-overview', 'gdd'], ['task', 'draft', 'document']],
+      ['document_list', 'status', ['draft', 'review', 'approved'], ['active', 'archived', 'unknown']],
+      ['document_update', 'kind', ['hld', 'lld', 'design-overview', 'gdd'], ['task', 'draft', 'document']],
+      ['document_update', 'status', ['draft', 'review', 'approved'], ['active', 'archived', 'unknown']],
+      ['document_version', 'kind', ['hld', 'lld', 'design-overview', 'gdd'], ['task', 'draft', 'document']],
+      ['document_version', 'status', ['draft', 'review', 'approved'], ['active', 'archived', 'unknown']],
+    ] as const;
+    for (const [toolName, field, accepted, rejected] of enumCases) {
+      const valueSchema = hooks.tool?.[toolName]?.args[field] as
+        { safeParse(input: unknown): { success: boolean } } | undefined;
+      for (const value of accepted) expect(valueSchema?.safeParse(value).success).toBe(true);
+      for (const value of rejected) expect(valueSchema?.safeParse(value).success).toBe(false);
+    }
+    const locationSchema = hooks.tool?.['document_list']?.args.location as
+      { safeParse(input: unknown): { success: boolean } } | undefined;
+    expect(locationSchema?.safeParse('active').success).toBe(true);
+    expect(locationSchema?.safeParse('archived').success).toBe(false);
     expect(hooks.tool?.['memory_store']?.args.summary).toBeDefined();
     expect(hooks.tool?.['memory_search']?.args.query).toBeDefined();
     expect(hooks.tool?.['issue_id']?.args.prompt).toBeDefined();
@@ -45,6 +75,9 @@ describe('OpenCode adapter', () => {
     expect(hooks.tool?.['issue_comment']?.args.body).toBeDefined();
     expect(hooks.tool?.['issue_relate']?.args.targetId).toBeDefined();
     expect(hooks.tool?.['issue_link_document']?.args.path).toBeDefined();
+    const issueLinkPathSchema = hooks.tool?.['issue_link_document']?.args.path as { description?: string } | undefined;
+    expect(issueLinkPathSchema?.description).toContain('fixed active .harnessctl/documents authority');
+    expect(issueLinkPathSchema?.description).not.toMatch(/\.specs|\.ai\.tmp/u);
   });
 
   it('delegates execution to the generic configuration tools', async () => {
@@ -57,6 +90,44 @@ describe('OpenCode adapter', () => {
       const defaultTasksPath = await tools.config_get?.execute({ path: 'paths.tasks' }, context);
       await tools.config_create?.execute({}, context);
       const result = await tools.config_get?.execute({ path: 'version' }, context);
+      const document = await tools['document_create']?.execute(
+        { title: 'Adapter document', kind: 'hld', body: 'Adapter body.' },
+        context,
+      );
+      const createdDocument = JSON.parse(String(document)) as { id: string; revision: string };
+      const emptyMetadataDocument = JSON.parse(
+        String(
+          await tools['document_create']?.execute(
+            { title: 'Empty metadata', kind: 'design-overview', metadata: '' },
+            context,
+          ),
+        ),
+      ) as { metadata: { metadata?: Record<string, unknown> } };
+      const versionedDocument = await tools['document_version']?.execute(
+        { id: createdDocument.id, status: 'review', expectedRevision: createdDocument.revision },
+        context,
+      );
+      const currentDocument = JSON.parse(String(versionedDocument)) as { id: string; path: string; revision: string };
+      const restorable = JSON.parse(
+        String(await tools['document_create']?.execute({ title: 'Restorable', kind: 'lld' }, context)),
+      ) as { id: string; revision: string };
+      const archivedRestorable = JSON.parse(
+        String(
+          await tools['document_archive']?.execute(
+            { id: restorable.id, expectedRevision: restorable.revision },
+            context,
+          ),
+        ),
+      ) as { documents: Array<{ revision: string }> };
+      const restoredDocument = await tools['document_restore']?.execute(
+        { id: restorable.id, expectedRevision: archivedRestorable.documents.at(-1)?.revision ?? '' },
+        context,
+      );
+      const invalidDocumentLocations = await Promise.all(
+        ['archived', 'ACTIVE', ' active ', 'Archive', '', 'x'.repeat(100_000)].map((location) =>
+          tools['document_list']?.execute({ location: location as never }, context),
+        ),
+      );
       const stored = await tools['memory_store']?.execute(
         {
           memory_type: 'semantic',
@@ -103,18 +174,39 @@ describe('OpenCode adapter', () => {
         { id: 'hrn-00001', relationship: 'relates_to', targetId: 'hrn-00002' },
         context,
       );
-      mkdirSync(join(cwd, '.specs'));
-      writeFileSync(join(cwd, '.specs', 'adapter.md'), '# Adapter\n');
-      const linked = await tools['issue_link_document']?.execute(
+      const retiredSpecsLink = await tools['issue_link_document']?.execute(
         { id: 'hrn-00001', path: '.specs/adapter.md', kind: 'design' },
         context,
       );
+      const retiredDraftLink = await tools['issue_link_document']?.execute(
+        { id: 'hrn-00001', path: '.ai.tmp/draft.md' },
+        context,
+      );
+      const linkedDocument = await tools['issue_link_document']?.execute(
+        { id: 'hrn-00001', path: currentDocument.path, kind: 'document' },
+        context,
+      );
+      const blockedDocumentUpdate = await tools['document_update']?.execute(
+        { id: currentDocument.id, title: 'Renamed adapter document', expectedRevision: currentDocument.revision },
+        context,
+      );
+      const blockedDocumentArchive = await tools['document_archive']?.execute(
+        { id: currentDocument.id, expectedRevision: currentDocument.revision },
+        context,
+      );
+      const issueAfterArchiveRejection = await tools['issue_get']?.execute({ id: 'hrn-00001' }, context);
       const validation = await tools['issue_validate']?.execute({}, context);
       const archive = await tools['issue_archive']?.execute({ id: 'hrn-00001' }, context);
       const createdIssue = JSON.parse(String(issue)) as { id: string; metadata: { metadata: { huge: number } } };
 
       expect(defaultTasksPath).toBe('".harnessctl/tasks"');
       expect(result).toBe('2');
+      expect(createdDocument.id).toBe('doc-00001');
+      expect(emptyMetadataDocument.metadata.metadata).toBeUndefined();
+      expect(versionedDocument).toContain('"version":2');
+      expect(restoredDocument).toContain('"location":"active"');
+      for (const result of invalidDocumentLocations)
+        expect(result).toContain('Document error: invalid document location; expected active or archive');
       expect(JSON.parse(String(stored)).summary).toContain('repository storage');
       expect(JSON.parse(String(searched))).toEqual([
         expect.objectContaining({ record_type: 'fact', confidence: 'verified' }),
@@ -139,7 +231,13 @@ describe('OpenCode adapter', () => {
       expect(comment).toContain('hrn-00001-C0001');
       expect(related).toContain('"relates_to":["hrn-00002"]');
       expect(unrelated).not.toContain('"relates_to"');
-      expect(linked).toContain('.specs/adapter.md');
+      expect(retiredSpecsLink).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);
+      expect(retiredDraftLink).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);
+      expect(linkedDocument).toContain(currentDocument.path);
+      expect(blockedDocumentUpdate).toMatch(/linked by canonical issue/u);
+      expect(blockedDocumentArchive).toMatch(/linked by canonical issue/u);
+      expect(issueAfterArchiveRejection).toContain(currentDocument.path);
+      expect(tools['issue_unlink_document']).toBeUndefined();
       expect(validation).toContain('"valid":true');
       const invalidIssue = await tools['issue_create']?.execute({ type: 'invalid', title: 'Invalid' }, context);
       expect(invalidIssue).toContain('Issue error: invalid type');

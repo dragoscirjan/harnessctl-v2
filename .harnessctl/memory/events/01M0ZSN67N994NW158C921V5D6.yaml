@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZSN67N994NW158C921V5D6
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | build | hrn-00143 repaired | focused gates and review pass
+details: "Branch feat/hrn-00135-sdlc-documents. Modified historical canonical or legacy Gitea definitions with old forgejo-mcp signature survive force/non-force byte-equivalently, warn, and block replacement. Exact historical migration and unrelated canonical force behavior preserved. Verification: 520 bounded tests pass with 11 established warnings; Ruff, Prettier, diff check pass; review round 12 approved. Issues open. Next: work-verify hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:5ef846a3d7ed558ca2cee12706f98e42bc99a41b205bfd1e911427adf007f368
+created_at: 2026-08-26T19:44:51.445Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZRWHMEBWW79CKNMEZ55149
+tags:
+  - build
+  - compatibility
+  - gitea
+  - hrn-00143
+  - migration

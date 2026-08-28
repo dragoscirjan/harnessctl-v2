@@ -12,12 +12,14 @@ from .config import ConfigError
 GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/"
 GITLAB_MCP_URL = "https://gitlab.com/api/v4/mcp"
 GITHUB_TOOLSETS = "repos,issues,pull_requests,actions,git"
+GITEA_MCP_VERSION = "1.6.0"
 FORGEJO_MCP_VERSION = "2.33.0"
 OUTPUT_GUARD = {"maxBytes": 51200, "maxLines": 2000, "detailsMaxBytes": 16384}
 CVS_MCP_SERVER_IDS = {
     provider: f"sdlc_cvs_{provider}" for provider in ("github", "gitlab", "gitea", "forgejo")
 }
 LEGACY_CVS_MCP_SERVER_IDS = {provider: f"cvs_{provider}" for provider in CVS_MCP_SERVER_IDS}
+SAME_ID_MCP_MIGRATIONS = frozenset({CVS_MCP_SERVER_IDS["gitea"]})
 _ENVIRONMENT_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
 
 
@@ -77,10 +79,20 @@ def required_server_intents(config: Mapping[str, Any], harness: str) -> list[Ser
 
 def recognized_server_intents(config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
     """Return historical generated definitions eligible for exact reconciliation."""
-    return [
-        replace(intent, server_id=LEGACY_CVS_MCP_SERVER_IDS[intent.provider])
-        for intent in required_server_intents(config, harness)
-    ]
+    recognized: list[ServerIntent] = []
+    for intent in required_server_intents(config, harness):
+        if intent.server_id not in CVS_MCP_SERVER_IDS.values():
+            continue
+        legacy_id = LEGACY_CVS_MCP_SERVER_IDS[intent.provider]
+        recognized.append(replace(intent, server_id=legacy_id))
+        if intent.provider == "gitea":
+            recognized.extend(
+                (
+                    _historical_forgejo_backed_gitea_intent(intent, legacy_id),
+                    _historical_forgejo_backed_gitea_intent(intent, intent.server_id),
+                )
+            )
+    return recognized
 
 
 def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
@@ -114,6 +126,21 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
             (route,),
         )
     url = str(service["url"])
+    if provider == "gitea":
+        return ServerIntent(
+            CVS_MCP_SERVER_IDS[provider],
+            provider,
+            "local",
+            url,
+            str(service["token_env"]),
+            "gitea-mcp",
+            ("--transport", "stdio", "--host", url),
+            False,
+            GITEA_MCP_VERSION,
+            None,
+            (route,),
+            (("GITEA_ACCESS_TOKEN", str(service["token_env"])),),
+        )
     return ServerIntent(
         CVS_MCP_SERVER_IDS[provider],
         provider,
@@ -127,6 +154,20 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         None,
         (route,),
         (("FORGEJO_ACCESS_TOKEN", str(service["token_env"])),),
+    )
+
+
+def _historical_forgejo_backed_gitea_intent(intent: ServerIntent, server_id: str) -> ServerIntent:
+    """Return the exact managed Gitea definition emitted before provider separation."""
+    if intent.url is None or intent.token_env is None:
+        raise ConfigError("historical Gitea MCP intent requires URL and token environment")
+    return replace(
+        intent,
+        server_id=server_id,
+        command="forgejo-mcp",
+        args=("--transport", "stdio", "--url", intent.url),
+        compatibility_version=FORGEJO_MCP_VERSION,
+        environment=(("FORGEJO_ACCESS_TOKEN", intent.token_env),),
     )
 
 

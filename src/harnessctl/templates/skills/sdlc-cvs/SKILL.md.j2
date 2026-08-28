@@ -28,7 +28,10 @@ description: Use configured CVS tools safely.
 - Keep reads narrow: ≤20 results/page, ≤5 pages. Stop when enough evidence exists.
 {% if provider == "gitlab" and mcp_available -%}
 - GitLab MCP uses native OAuth. Never send `{{ token_env }}` to MCP.
-{% elif provider in ("gitea", "forgejo") and mcp_available -%}
+{% elif provider == "gitea" and mcp_available -%}
+- Before MCP mutation, call `get_gitea_mcp_server_version`; require exactly `1.6.0`.
+- `gitea-mcp` is server-only, never CLI fallback.
+{% elif provider == "forgejo" and mcp_available -%}
 - Before MCP mutation, call `get_forgejo_mcp_server_version`; require exactly `2.33.0`.
 - `forgejo-mcp` is server-only, never CLI fallback.
 {% endif -%}

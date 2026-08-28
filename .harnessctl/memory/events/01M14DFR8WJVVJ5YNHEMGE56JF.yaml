@@ -1,0 +1,27 @@
+schema_version: 1
+id: 01M14DFR8WJVVJ5YNHEMGE56JF
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | Pi agent directory isolation | implemented; gates pass
+details: "`hrn-00147` repair sets fresh temporary `PI_CODING_AGENT_DIR` for every Pi package subprocess, strips HOME/HOMEDRIVE/HOMEPATH/USERPROFILE/XDG_CONFIG_HOME, preserves unrelated env, and removes temporary state after success, failure, or timeout. Real Node child executes pinned Pi `getAgentDir()`/`getSettingsPath()` without reading hostile operator settings. Focused 4 and broader 424 tests pass; independent review approves; `mise run quality`, `mise run build`, and `git diff --check` pass. Evidence `hrn-00147-C0003`. Bug/Epic remain open; no Verify, Release, closure, commit, remote, or destructive action. Next: `work-verify hrn-00135`."
+source:
+  kind: artifact
+  ref: src/harnessctl/install.py; tests/test_install.py; hrn-00147-C0003
+  revision: hrn-00147 v1:a0ee205a0498361910792861e55fa4a09cb6f56cb2da96d87ba317ffe7e7fd8a
+created_at: 2026-08-28T14:48:22.556Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14AJ5TY3F0DTCHBAD2F4D2M
+tags:
+  - build
+  - checkpoint
+  - documents
+  - home-isolation
+  - hrn-00135
+  - hrn-00147
+  - pi

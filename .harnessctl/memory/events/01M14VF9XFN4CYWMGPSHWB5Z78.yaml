@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M14VF9XFN4CYWMGPSHWB5Z78
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | read-triggered journal recovery | failed; hrn-00148 open
+details: "Fresh `mise run quality`, `mise run build`, Documents/Issues/Memory validation, `git diff --check` pass. Independent review + direct repro: interrupted archive, missing-parent Issue, then `document_get` changed authority and removed journal before cache rebuild failed `FOREIGN KEY constraint failed`. `list/get/validate` skip complete Issues-graph preflight before mutating recovery. AC2/3/4 fail. Evidence: `hrn-00148-C0002`, `hrn-00135-C0023`, `documents.ts:132-176`. No Verify repair, closure, Release, commit, remote, destructive action. Next: bounded `work-build hrn-00148`. Residual native Windows Pi isolation remains CI risk."
+source:
+  kind: artifact
+  ref: hrn-00148-C0002; hrn-00135-C0023; extensions/generic-tools/documents.ts; extensions/generic-tools/documents.spec.ts
+  revision: hrn-00135 v1:d5862c0ce41561dac1edc4cf663fcddd074ba3b812b63bd2a865ed7b2bea9e62
+created_at: 2026-08-28T18:52:47.919Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14JAXQGGVZ1Y0X7N30DBD65
+tags:
+  - atomicity
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148
+  - verify

@@ -20,7 +20,7 @@ Manage initiatives, epics, stories, tasks, and bugs. Use this hierarchy where pr
 
 Write clear, testable acceptance criteria. When useful, describe a feature as “As a …, I want …, so that …” or a defect with `Given` / `When` / `Then` Gherkin steps.
 
-Keep progress comments concise: status, links to produced artifacts, next step or blocker, and agent attribution. Link to `.specs/`, task documents, and source artifacts instead of pasting their bodies.
+Keep progress comments concise: status, links to produced artifacts, next step or blocker, and agent attribution. Link to active canonical Documents, task documents, and source artifacts instead of pasting their bodies.
 
 Record an execution failure as an issue comment only when its target issue is known and the configured tooling, repository context, authentication when applicable, and comment capability remain operational. If the provider, CLI, authentication, repository resolution, or comment operation fails, stop and report directly to the user. Never retry failure reporting through the broken issue channel.
 
@@ -51,9 +51,9 @@ Use GitHub CLI `gh`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% e
 {% elif provider == "gitlab" -%}
 Use GitLab CLI `glab`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. GitLab MCP uses its native OAuth flow and must not receive the configured CLI token reference. Consult installed help or live schemas for exact issue capabilities and syntax.
 {% elif provider == "gitea" -%}
-Use Gitea CLI `tea`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback.
+Use Gitea CLI `tea`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. `gitea-mcp` is only the server executable, never a CLI fallback.
 {% if mcp_available -%}
-After connecting to MCP and before any provider mutation, call `get_forgejo_mcp_server_version`. Continue only when its valid result is exactly `2.33.0`; absent, malformed, or different results stop the MCP route.
+After connecting to MCP and before any provider mutation, call `get_gitea_mcp_server_version`. Continue only when its valid result is exactly `1.6.0`; absent, malformed, or different results stop the MCP route.
 {% endif -%}
 {% elif provider == "forgejo" -%}
 Use Forgejo CLI `forgejo-cli`{% if mcp_available %} or live tools under `{{ mcp_id }}`{% endif %}. `forgejo-mcp` is only the server executable, never a CLI fallback. Its CLI syntax remains help-driven: inspect `forgejo-cli --help`; infer no capability, subcommand, or syntax from another provider.

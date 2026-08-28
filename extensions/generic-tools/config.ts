@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
-import { configV2Schema, FILESYSTEM_ISSUE_TOOLS, formatSchemaError } from './schemas.js';
+import { DOCUMENT_ID_PREFIX, DOCUMENT_ROOT } from './documents-contract.js';
+import { configV2Schema, FILESYSTEM_DOCUMENT_TOOLS, FILESYSTEM_ISSUE_TOOLS, formatSchemaError } from './schemas.js';
 
 export type ConfigDocument = Record<string, unknown>;
 
@@ -20,6 +21,12 @@ export const DEFAULT_CONFIG: ConfigDocument = {
     prefix: 'hrn-',
     type: 'filesystem',
     tools: FILESYSTEM_ISSUE_TOOLS,
+  },
+  documents: {
+    root: DOCUMENT_ROOT,
+    prefix: DOCUMENT_ID_PREFIX,
+    type: 'filesystem',
+    tools: FILESYSTEM_DOCUMENT_TOOLS,
   },
   cvs: {
     local: 'git',
@@ -116,9 +123,11 @@ export function validateAndMigrateConfig(value: ConfigDocument): ConfigDocument 
     );
 
   assertRemoteConfigurationExplicit(value);
+  assertFixedDocumentConfiguration(value.documents);
   const config = deepMerge(DEFAULT_CONFIG, value);
   config.version = 2;
   normalizeIssueTools(config);
+  normalizeDocumentTools(config);
   normalizeCvsTools(config);
   const result = configV2Schema.safeParse(config);
   if (!result.success) throw new ConfigError(`Invalid configuration:\n${formatSchemaError(result.error)}`);
@@ -132,7 +141,6 @@ const EXPECTED_PROVIDER_TOOL: Readonly<Record<string, string>> = {
   gitea: 'tea',
   forgejo: 'forgejo-cli',
 };
-
 function assertRemoteConfigurationExplicit(value: ConfigDocument): void {
   const issues = value.issues;
   if (isMapping(issues) && REMOTE_ISSUE_TYPES.has(String(issues.type))) {
@@ -154,6 +162,22 @@ function assertRemoteConfigurationExplicit(value: ConfigDocument): void {
         `Invalid configuration: cvs.remote.provider=${String(provider)} requires cvs.remote.${key} to be selected explicitly.`,
       );
   }
+}
+
+function assertFixedDocumentConfiguration(value: unknown): void {
+  if (value === undefined) return;
+  if (!isMapping(value)) throw new ConfigError('Invalid configuration: documents must be a mapping.');
+  if (
+    Object.prototype.hasOwnProperty.call(value, 'remote') ||
+    (value.type !== undefined && value.type !== 'filesystem')
+  )
+    throw new ConfigError(
+      'Invalid configuration: remote Documents providers were removed; use the repository-local .harnessctl/documents authority.',
+    );
+  if (value.root !== undefined && value.root !== DOCUMENT_ROOT)
+    throw new ConfigError(`Invalid configuration: documents.root is fixed to ${DOCUMENT_ROOT}.`);
+  if (value.prefix !== undefined && value.prefix !== DOCUMENT_ID_PREFIX)
+    throw new ConfigError(`Invalid configuration: documents.prefix is fixed to ${DOCUMENT_ID_PREFIX}.`);
 }
 
 function normalizeCvsTools(config: ConfigDocument): void {
@@ -191,6 +215,28 @@ function normalizeIssueTools(config: ConfigDocument): void {
       `Invalid configuration: issues.tools must be exactly ${expected} for issues.type=${issues.type}.`,
     );
   if (expected !== undefined) issues.tools = expected;
+}
+
+function normalizeDocumentTools(config: ConfigDocument): void {
+  const documents = config.documents;
+  if (!isMapping(documents) || typeof documents.tools !== 'string') return;
+  const tools = parseToolIdentifiers(documents.tools, 'documents.tools');
+  if (documents.type === 'filesystem') {
+    const required = FILESYSTEM_DOCUMENT_TOOLS.split(',');
+    if (
+      tools.length !== required.length ||
+      new Set(tools).size !== tools.length ||
+      tools.some((tool) => !required.includes(tool))
+    )
+      throw new ConfigError(
+        `Invalid configuration: documents.tools must be exactly ${FILESYSTEM_DOCUMENT_TOOLS} for documents.type=filesystem.`,
+      );
+    documents.tools = FILESYSTEM_DOCUMENT_TOOLS;
+    return;
+  }
+  throw new ConfigError(
+    'Invalid configuration: remote Documents providers were removed; use the repository-local .harnessctl/documents authority.',
+  );
 }
 
 function parseToolIdentifiers(value: string, field = 'issues.tools'): string[] {

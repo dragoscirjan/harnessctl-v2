@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as z from 'zod';
 import {
   configV2Schema,
+  FILESYSTEM_DOCUMENT_TOOLS,
   FILESYSTEM_ISSUE_TOOLS,
   formatSchemaError,
   memoryRecordSchema,
@@ -20,6 +21,12 @@ const validConfig = {
     prefix: 'hrn-',
     type: 'filesystem',
     tools: FILESYSTEM_ISSUE_TOOLS,
+  },
+  documents: {
+    root: '.harnessctl/documents',
+    prefix: 'doc-',
+    type: 'filesystem',
+    tools: FILESYSTEM_DOCUMENT_TOOLS,
   },
   cvs: {
     local: 'git',
@@ -138,7 +145,7 @@ describe('canonical Zod schemas', () => {
     const valid = validConfig;
     const validCustomNamespace = {
       ...valid,
-      skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc_cvs_custom' } },
+      skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc_documents_gitea' } },
     };
     const invalid = [
       { ...valid, skills: { 'sdlc-code-index': { enabled: 1, mcp_server: 'sdlc-code-index' } } },
@@ -282,6 +289,60 @@ describe('canonical Zod schemas', () => {
     const document = { ...validConfig, issues: { ...validConfig.issues, type, tools, ...(remote && { remote }) } };
     expect(configV2Schema.safeParse(document).success).toBe(true);
     expect(configContractValidator()(document)).toBe(true);
+  });
+
+  it('accepts only the fixed Documents contract in runtime and portable schemas', () => {
+    const document = { ...validConfig, documents: validConfig.documents };
+    expect(configV2Schema.safeParse(document).success).toBe(true);
+    expect(configContractValidator()(document)).toBe(true);
+  });
+
+  it.each([
+    {
+      type: 'github',
+      tools: 'glab',
+      remote: { repository: 'owner/repo', url: 'https://github.com', token_env: 'GH_TOKEN' },
+    },
+    { ...validConfig.documents, root: 'docs' },
+    { ...validConfig.documents, prefix: 'design-' },
+    {
+      type: 'github',
+      tools: 'gh',
+      remote: { repository: 'group/subgroup/repo', url: 'https://github.com', token_env: 'GH_TOKEN' },
+    },
+    {
+      type: 'gitlab',
+      tools: 'glab',
+      remote: { repository: '../group/repo', url: 'https://gitlab.com', token_env: 'GITLAB_TOKEN' },
+    },
+    {
+      type: 'gitea',
+      tools: 'gitea-mcp',
+      remote: { repository: 'owner/${REPO}', url: 'https://gitea.example.test', token_env: 'GITEA_TOKEN' },
+    },
+    {
+      type: 'forgejo',
+      tools: 'forgejo-mcp',
+      remote: {
+        repository: 'owner/repo',
+        url: 'https://forgejo.example.test',
+        token_env: 'token-value',
+      },
+    },
+    {
+      type: 'gitea',
+      tools: 'gitea-mcp',
+      remote: {
+        repository: 'owner/repo',
+        url: 'https://gitea.example.test',
+        token_env: 'GITEA_TOKEN',
+        extra: true,
+      },
+    },
+  ])('rejects invalid Documents branches in runtime and portable schemas', (documents) => {
+    const document = { ...validConfig, documents };
+    expect(configV2Schema.safeParse(document).success).toBe(false);
+    expect(configContractValidator()(document)).toBe(false);
   });
 
   it.each([

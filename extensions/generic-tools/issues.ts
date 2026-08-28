@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, lstatSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { ConfigError, getConfigValue, readConfig } from './config.js';
+import { DOCUMENT_LIMITS, canonicalDocumentFilename, decodeDocument } from './documents-contract.js';
 import {
   ISSUE_CONTRACT_VERSION,
   ISSUE_STATUSES,
@@ -33,7 +34,15 @@ import {
   type IssueStorageCandidate,
   type IssueStorageCatalog,
 } from './issues-storage.js';
-import { ensureLocalCache, loadLocalSnapshot, synchronizeLocalCache } from './local-persistence.js';
+import {
+  ensureLocalCache,
+  loadLocalSnapshot,
+  LocalPersistenceError,
+  readBoundedNoFollowFile,
+  synchronizeLocalCache,
+  type BoundedNoFollowReadOptions,
+  type DocumentSnapshotOverlay,
+} from './local-persistence.js';
 
 export { ISSUE_STATUSES, ISSUE_TYPES };
 export type IssueType = CanonicalIssueType;
@@ -128,6 +137,8 @@ export interface FilesystemIssueProviderOptions {
   clock?: () => Date;
   lockWaitMs?: number;
   transactionId?: () => string;
+  /** Deterministic test seam for canonical document-link descriptor reads. */
+  documentReadOptions?: BoundedNoFollowReadOptions;
 }
 
 export interface FilesystemIssueProvider {
@@ -191,7 +202,7 @@ function buildFilesystemIssueProvider(
     withIssueBarrier(
       cwd,
       (lease) => {
-        assertValidForMutation(cwd, prefix, issueRoot);
+        assertValidForMutation(cwd, prefix, issueRoot, options.documentReadOptions);
         const snapshot = loadLocalSnapshot(lease);
         ensureLocalCache(lease, snapshot);
         const result = operation(lease);
@@ -223,12 +234,15 @@ function buildFilesystemIssueProvider(
         true,
       ),
     linkDocument: (id, path, kind) =>
-      locked((lease) => linkUnlocked(cwd, prefix, issueRoot, clock, lease, id, path, kind), true),
+      locked(
+        (lease) => linkUnlocked(cwd, prefix, issueRoot, clock, lease, id, path, kind, options.documentReadOptions),
+        true,
+      ),
     validate: (id) =>
       withIssueBarrier(
         cwd,
         (lease) => {
-          const report = validateUnlocked(cwd, prefix, issueRoot, id);
+          const report = validateUnlocked(cwd, prefix, issueRoot, id, options.documentReadOptions);
           if (!report.valid) return report;
           let snapshot;
           try {
@@ -314,7 +328,7 @@ export function validateIssues(cwd: string, id?: string): ValidationReport {
 }
 
 /** Internal cross-domain validation used before a shared local-cache projection. */
-export function validateCanonicalIssueGraph(cwd: string): ValidationReport {
+export function validateCanonicalIssueGraph(cwd: string, documentOverlay?: DocumentSnapshotOverlay): ValidationReport {
   try {
     const config = readConfig(cwd);
     if (config instanceof ConfigError) throw config;
@@ -326,10 +340,35 @@ export function validateCanonicalIssueGraph(cwd: string): ValidationReport {
     )
       return { valid: true, findings: [] };
     const { prefix, issueRoot } = getIssueStorageConfig(cwd);
-    return validateUnlocked(cwd, prefix, issueRoot);
+    return validateUnlocked(cwd, prefix, issueRoot, undefined, undefined, documentOverlay);
   } catch (error: unknown) {
     return { valid: false, findings: [findingFromError(error)] };
   }
+}
+
+/** Rejects a document mutation while any active or archived canonical issue links a blocked path. */
+export function assertNoCanonicalIssueDocumentReferences(cwd: string, blockedPaths: readonly string[]): void {
+  const config = readConfig(cwd);
+  if (config instanceof ConfigError) throw config;
+  if (!isFilesystemIssueConfig(config.issues)) return;
+  const { prefix, issueRoot } = getIssueStorageConfig(cwd);
+  const report = validateUnlocked(cwd, prefix, issueRoot);
+  if (!report.valid)
+    throw new IssueError('domain_invariant', 'cannot mutate a document while the canonical issue graph is invalid');
+  const blocked = new Set(blockedPaths);
+  const references: Array<{ issue: string; path: string }> = [];
+  for (const entity of orderedEntities(globalEntityMap(discoverCanonical(cwd, prefix, issueRoot))))
+    for (const path of entity.issue.documents ?? [])
+      if (blocked.has(path)) references.push({ issue: entity.issue.id, path });
+  if (references.length)
+    throw new IssueError(
+      'domain_invariant',
+      `document path is linked by canonical issue(s): ${sortedUnique(references.map(({ issue }) => issue)).join(', ')}`,
+      {
+        issueIds: sortedUnique(references.map(({ issue }) => issue)),
+        paths: sortedUnique(references.map(({ path }) => path)),
+      },
+    );
 }
 
 export function archiveIssueReport(cwd: string, id: string): ArchiveReport {
@@ -545,10 +584,11 @@ function linkUnlocked(
   id: string,
   documentPath: string,
   kind?: string,
+  readOptions?: BoundedNoFollowReadOptions,
 ): Issue {
   assertValidForMutation(cwd, prefix, issueRoot);
   const entity = requireActiveEntity(activeEntityMap(discoverCanonical(cwd, prefix, issueRoot)), id);
-  const path = validateDocumentPath(cwd, documentPath, kind);
+  const path = validateDocumentPath(cwd, documentPath, kind, readOptions);
   if ((entity.issue.documents ?? []).includes(path)) return issueFromEntity(entity, new Map([[id, entity]]));
   rewriteEntity(lease, entity, setReference(entity.issue, 'documents', path, true, canonicalTimestamp(clock())));
   return getUnlocked(cwd, prefix, issueRoot, id);
@@ -601,7 +641,14 @@ function archiveUnlocked(
   return { archived: unique, skipped: [], location: `${issueRoot}/archived/`, revisions, transactionId };
 }
 
-function validateUnlocked(cwd: string, prefix: string, issueRoot: string, id?: string): ValidationReport {
+function validateUnlocked(
+  cwd: string,
+  prefix: string,
+  issueRoot: string,
+  id?: string,
+  readOptions?: BoundedNoFollowReadOptions,
+  documentOverlay?: DocumentSnapshotOverlay,
+): ValidationReport {
   if (id !== undefined) assertIssueId(id, prefix, 'issue');
   let storage: IssueStorageCatalog;
   try {
@@ -660,7 +707,7 @@ function validateUnlocked(cwd: string, prefix: string, issueRoot: string, id?: s
     }
     for (const document of owner.issue.documents ?? []) {
       try {
-        validateDocumentPath(cwd, document);
+        validateDocumentPath(cwd, document, undefined, readOptions, documentOverlay);
       } catch (error: unknown) {
         add(owner, 'documents', errorMessage(error), error instanceof IssueError ? error.category : 'schema');
       }
@@ -791,8 +838,13 @@ function setReference(
   return result;
 }
 
-function assertValidForMutation(cwd: string, prefix: string, issueRoot: string): void {
-  const report = validateUnlocked(cwd, prefix, issueRoot);
+function assertValidForMutation(
+  cwd: string,
+  prefix: string,
+  issueRoot: string,
+  readOptions?: BoundedNoFollowReadOptions,
+): void {
+  const report = validateUnlocked(cwd, prefix, issueRoot, undefined, readOptions);
   if (!report.valid)
     throw new IssueError('domain_invariant', 'cannot mutate an invalid canonical issue graph', {
       issueIds: sortedUnique(report.findings.flatMap((finding) => (finding.issue ? [finding.issue] : []))),
@@ -878,8 +930,14 @@ function allocateIssueId(storage: IssueStorageCatalog, prefix: string): string {
   return `${prefix}${(maximum + 1n).toString().padStart(5, '0')}`;
 }
 
-function validateDocumentPath(cwd: string, value: string, kind?: string): string {
-  if (kind !== undefined && kind !== 'task' && kind !== 'design')
+function validateDocumentPath(
+  cwd: string,
+  value: string,
+  kind?: string,
+  readOptions?: BoundedNoFollowReadOptions,
+  documentOverlay?: DocumentSnapshotOverlay,
+): string {
+  if (kind !== undefined && kind !== 'task' && kind !== 'design' && kind !== 'document')
     throw new IssueError('schema', `invalid document kind: ${kind}`);
   const normalized = value.replaceAll('\\', '/');
   if (
@@ -890,25 +948,87 @@ function validateDocumentPath(cwd: string, value: string, kind?: string): string
   )
     throw new IssueError('path_safety', 'invalid repository-relative document path');
   const taskRoot = configuredTaskRoot(cwd);
+  const documentConfig = configuredDocumentRoot(cwd);
   const inTaskRoot = isUnderRoot(normalized, taskRoot);
-  const inDesignRoot = isUnderRoot(normalized, '.specs');
-  if (!inTaskRoot && !inDesignRoot)
-    throw new IssueError('path_safety', `document path must be under ${taskRoot}/ or .specs/`);
+  const inRetiredRoot = isUnderRoot(normalized, '.specs') || isUnderRoot(normalized, '.ai.tmp');
+  const inDocumentRoot = documentConfig !== undefined && isUnderRoot(normalized, documentConfig.root);
+  if (inRetiredRoot) throw new IssueError('path_safety', 'structured .specs and .ai.tmp links are retired');
+  if (!inTaskRoot && !inDocumentRoot)
+    throw new IssueError(
+      'path_safety',
+      `document path must be under ${taskRoot}/ or the active canonical Documents root`,
+    );
   if (kind === 'task' && !inTaskRoot) throw new IssueError('path_safety', `task documents must be under ${taskRoot}/`);
-  if (kind === 'design' && !inDesignRoot) throw new IssueError('path_safety', 'design documents must be under .specs/');
+  if (kind === 'design') throw new IssueError('schema', 'legacy design links are retired; use kind=document');
+  if (kind === 'document' && !inDocumentRoot)
+    throw new IssueError('path_safety', 'document links require an active file under filesystem documents.root');
+  if (inDocumentRoot && documentConfig) {
+    const suffix = normalized.slice(documentConfig.root.length + 1);
+    if (suffix.startsWith('archive/') || suffix.includes('/'))
+      throw new IssueError('path_safety', 'document links require an active canonical document, not an archive path');
+    const canonicalName = new RegExp(`^${escapeRegex(documentConfig.prefix)}\\d+-.+-v\\d+\\.md$`, 'u');
+    if (!canonicalName.test(suffix))
+      throw new IssueError('schema', 'document link is not a canonical document filename');
+  }
   const absolute = join(cwd, normalized);
   const difference = relative(cwd, absolute);
   if (!difference || difference === '..' || difference.startsWith(`..${sep}`))
     throw new IssueError('path_safety', 'document path escapes repository');
   let cursor = cwd;
-  for (const part of normalized.split('/')) {
+  for (const part of normalized.split('/').slice(0, -1)) {
     cursor = join(cursor, part);
     if (existsSync(cursor) && lstatSync(cursor).isSymbolicLink())
       throw new IssueError('path_safety', 'symlink document paths are not allowed');
   }
-  if (!existsSync(absolute) || !lstatSync(absolute).isFile())
+  const hasDocumentOverlay = inDocumentRoot && documentOverlay?.has(normalized) === true;
+  if (!hasDocumentOverlay && !existsSync(absolute))
     throw new IssueError('schema', `linked document does not exist: ${normalized}`);
+  if (inDocumentRoot && documentConfig) {
+    try {
+      const bytes = hasDocumentOverlay
+        ? documentOverlay?.get(normalized)
+        : readBoundedNoFollowFile(absolute, normalized, DOCUMENT_LIMITS.fileBytes, readOptions);
+      if (bytes === undefined) throw new IssueError('schema', `linked document does not exist: ${normalized}`);
+      const decoded = decodeDocument(bytes);
+      const suffix = normalized.slice(documentConfig.root.length + 1);
+      if (suffix !== canonicalDocumentFilename(decoded.metadata))
+        throw new IssueError('schema', 'document filename does not match canonical metadata');
+    } catch (error: unknown) {
+      if (error instanceof IssueError) throw error;
+      if (error instanceof LocalPersistenceError)
+        throw new IssueError(error.category === 'resource_limit' ? 'resource_limit' : 'path_safety', error.message, {
+          paths: [normalized],
+        });
+      throw new IssueError('schema', 'linked document is not valid canonical Markdown');
+    }
+  } else {
+    const stat = lstatSync(absolute);
+    if (!stat.isFile() || stat.isSymbolicLink())
+      throw new IssueError('path_safety', 'linked document must be a regular non-symlink file');
+  }
   return normalized;
+}
+
+function isFilesystemIssueConfig(value: unknown): boolean {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    (value as Record<string, unknown>).type === 'filesystem'
+  );
+}
+
+function configuredDocumentRoot(cwd: string): { root: string; prefix: string } | undefined {
+  const config = readConfig(cwd);
+  if (config instanceof ConfigError) throw new IssueError('configuration', config.message);
+  const documents = config.documents;
+  if (documents === null || typeof documents !== 'object' || Array.isArray(documents))
+    throw new IssueError('configuration', 'documents configuration must be a mapping');
+  const record = documents as Record<string, unknown>;
+  if (record.type !== 'filesystem') return undefined;
+  if (typeof record.root !== 'string' || typeof record.prefix !== 'string')
+    throw new IssueError('configuration', 'filesystem Documents root and prefix are required');
+  return { root: record.root, prefix: record.prefix };
 }
 
 function configuredTaskRoot(cwd: string): string {

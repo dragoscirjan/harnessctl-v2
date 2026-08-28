@@ -1,0 +1,28 @@
+schema_version: 1
+id: 01M151MJMHR4S8W6MYEKG245H2
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | full Documents Epic | passed; Release ready
+details: "All 13 Epic criteria mapped to approved `doc-00013`/`doc-00014` v4 and fresh evidence. OpenCode restart proven: plugin dist 2026-08-28 23:34:28 +03:00; process start 23:34:44. `mise run quality` passes: generic-tools 308, OpenCode 2, Pi 3, Python 602 with 11 established warnings, tarballs 23/5/7, release artifacts 5, configured static/package checks. `mise run build`, Documents/Issues/Memory validators, `git diff --check` pass. Independent Verify round 6 APPROVE; no blocker. Low non-blocking gap: full Cartesian recovery caller/domain matrix absent; shared path and representative cases covered. Residual external-filesystem TOCTOU and native Windows Pi CI risk. `hrn-00135-C0029`; `hrn-00148-C0008`; `hrn-00149-C0002`. Epic/Bugs remain open; closure needs separate confirmation. Next: Release."
+source:
+  kind: artifact
+  ref: hrn-00135-C0029; hrn-00148-C0008; hrn-00149-C0002
+  revision: hrn-00135 v1:2db79a54a079e5b29e94a903fee292b13de861b6ff9e1058b4cc3ea4aa1849d5; hrn-00148 v1:1fb4c8339d7b5bd8293d781569e06d773486baba8a0cf66578c3defa5e318252; hrn-00149 v1:a79ec61d4802c951568e99e28d1d4e614c53afa8e630959f62faf69c58ca9170
+created_at: 2026-08-28T20:40:32.145Z
+created_by: openai/gpt-5.6-sol
+confidence: verified
+status: active
+supersedes:
+  - 01M14ZF331DQJC79VD22HN8H8B
+tags:
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148
+  - hrn-00149
+  - passed
+  - release-ready
+  - verify

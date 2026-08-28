@@ -1,0 +1,32 @@
+"version": 1
+"id": "hrn-00137"
+"type": "story"
+"title": "Implement repository-local SDLC design document authority"
+"status": "open"
+"created_at": "2026-08-25T20:45:15.511Z"
+"updated_at": "2026-08-28T19:11:30.022Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"depends_on":
+  - "hrn-00142"
+"relates_to":
+  - "hrn-00148"
+  - "hrn-00149"
+"metadata":
+  "estimate": "3-4 engineering days"
+  "order": 2
+"body": "# Implement repository-local SDLC design document authority\n\n## Goal\n\nProvide the fixed, safe repository-backed lifecycle used by SDLC Plan for design records.\n\n## Scope\n\n- Fix authority at `.harnessctl/documents` with `doc-` IDs and exactly `hld`, `lld`, `design-overview`, and `gdd` kinds.\n- Retain the nine normalized lifecycle operations and equivalent generic/OpenCode/Pi schemas and results.\n- Retain strict canonical Markdown, exact-byte revisions, immutable prior versions, deterministic lists, locking, no-follow reads, atomic batch publication, recovery, archive/restore, and issue-reference checks.\n- Keep SQLite disposable, synchronize it only from validated canonical files, and retry repair after projection failure.\n- Reject remote/provider config, custom roots/prefixes, removed kinds, unsafe files, malformed graphs, ambiguous identities, partial lineages, and unsupported locations before mutation.\n- Validate the complete proposed graph before every publication.\n\n## Acceptance Criteria\n\n- [ ] Concurrent creation cannot duplicate IDs or overwrite records.\n- [ ] Only the fixed root, prefix, nine operations, three statuses, and four kinds are accepted everywhere.\n- [ ] Unsafe, malformed, oversized, unsupported, ambiguous, symlinked, or H1-invalid records fail without partial publication.\n- [ ] Update/version/archive/restore enforce exact current revisions, immutable history, complete lineages, references, and destination safety.\n- [ ] Every proposed mutation satisfies file count, aggregate bytes, lineage count, canonical encoding, collision, issue-link, and result bounds before publication.\n- [ ] Cache corruption/missing rows rebuild from canonical Markdown and never determine canonical results.\n- [ ] Generic-tools, OpenCode, Pi, concurrency, interruption, rollback, cache, security, and cross-platform tests pass."
+"comments":
+  - "id": "hrn-00137-C0001"
+    "created_at": "2026-08-26T13:40:46.558Z"
+    "created_by": "OpenCode"
+    "body": "Build complete: implemented filesystem Documents authority, nine normalized tools, strict canonical Markdown codec, exact-byte revisions, immutable versions, archive/restore recovery, bounded no-follow reads, shared SQLite projection, provider guards, OpenCode/Pi adapters, and issue-reference integrity checks. Focused lifecycle, concurrency, interruption, cache, security, and adapter tests pass."
+  - "id": "hrn-00137-C0002"
+    "created_at": "2026-08-26T21:12:23.053Z"
+    "created_by": "OpenCode"
+    "body": "Plan scope revised: fixed `.harnessctl/documents` authority, exactly four design kinds, nine local lifecycle tools, disposable cache, and complete proposed-state validation. Execute after hrn-00142; this authority enables migration and boundary-defect work."
+  - "id": "hrn-00137-C0003"
+    "created_at": "2026-08-27T21:43:21.275Z"
+    "created_by": "OpenCode"
+    "body": "YOLO Build complete for fixed local Documents authority. Four kinds, three statuses, nine tools, canonical validation, exact revisions, lifecycle recovery, strict cache discovery, adapter parity, and complete prepublication graph limits are implemented. Full configured quality/build gates pass. Status remains open; next boundary is Verify."

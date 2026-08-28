@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M14W3DHN3PP5H42S55KQASWT
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | all Documents recovery preflight | implemented; gates pass
+details: "`hrn-00148` repair validates complete canonical Issues graph before get/list/mutation/validate recovery, snapshot, cache repair, operation, publication. Exact-byte regressions: get/list/validate x pending journal, missing/corrupt cache, missing parent/relationship, hierarchy cycle, invalid document link. Public validate report semantics preserved. Reviewer approved. Documents 65; generic-tools 301; OpenCode 2; Pi 3; Python 602; release artifacts 5. `mise run quality`, `mise run build`, authority validators, `git diff --check` pass. Evidence: `hrn-00148-C0003`, `hrn-00135-C0024`. Epic/Bug open. No Verify, closure, Release, commit, remote, destructive action. Next: `work-verify hrn-00135`. Residual native Windows Pi isolation remains CI risk."
+source:
+  kind: artifact
+  ref: hrn-00148-C0003; hrn-00135-C0024; extensions/generic-tools/documents.ts; extensions/generic-tools/documents.spec.ts
+  revision: hrn-00135 v1:9ba927337cab7ad0b8e0dbdf796eb25cacb6a30fd6a393e22b08dd5e8ad6d635
+created_at: 2026-08-28T19:03:46.997Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14VF9XFN4CYWMGPSHWB5Z78
+tags:
+  - atomicity
+  - build
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148

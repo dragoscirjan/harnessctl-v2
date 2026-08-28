@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createConfig } from './config.js';
+import { archiveDocument, createDocument, getDocument, updateDocument, versionDocument } from './documents.js';
 import { decodeIssueDocument, encodeCanonicalIssue, issueMetadataText } from './issues-contract.js';
 import {
   archiveIssueReport,
@@ -203,15 +204,167 @@ describe('issue public operations', () => {
 
   it('supports comments, links, summaries, and expected transition revisions', () => {
     const root = repository();
-    mkdirSync(join(root, '.specs'));
-    writeFileSync(join(root, '.specs/design.md'), '# Design\n');
+    mkdirSync(join(root, '.harnessctl/tasks'));
+    writeFileSync(join(root, '.harnessctl/tasks/design.md'), '# Design\n');
     const created = createIssueRecord(root, { type: 'task', title: 'Operations' });
     const comment = commentIssue(root, created.id, 'Reviewed', 'tester');
-    const linked = linkDocument(root, created.id, '.specs/design.md', 'design');
+    const linked = linkDocument(root, created.id, '.harnessctl/tasks/design.md', 'task');
     const transitioned = transitionIssue(root, created.id, 'done', linked.revision);
     expect(comment.id).toBe('00001-C0001');
     expect(transitioned.metadata.status).toBe('done');
     expect(listIssueSummaries(root, { status: 'DONE' })).toHaveLength(1);
+  });
+
+  it('retires live .specs and .ai.tmp link recognition', () => {
+    const root = repository();
+    const issue = createIssueRecord(root, { type: 'task', title: 'Retired links' });
+    const draftRoot = join(root, '.ai.tmp');
+    mkdirSync(draftRoot);
+    writeFileSync(join(draftRoot, 'draft.md'), '# Draft\n');
+    mkdirSync(join(root, '.specs'));
+    writeFileSync(join(root, '.specs/design.md'), '# Design\n');
+
+    expect(() => linkDocument(root, issue.id, '.ai.tmp/draft.md')).toThrow(/retired/u);
+    expect(() => linkDocument(root, issue.id, '.specs/design.md', 'design')).toThrow(/retired/u);
+    expect(getIssue(root, issue.id).metadata.documents).toBeUndefined();
+  });
+
+  it('links only active canonical filesystem Documents with compatible kinds', () => {
+    const root = repository();
+    const issue = createIssueRecord(root, { type: 'task', title: 'Document links' });
+    const document = createDocument(root, { title: 'Canonical link', kind: 'hld' });
+
+    const linked = linkDocument(root, issue.id, document.path, 'document');
+    expect(linked.metadata.documents).toEqual([document.path]);
+    expect(() => linkDocument(root, issue.id, document.path, 'task')).toThrow(/task documents must be under/u);
+
+    writeFileSync(join(root, '.harnessctl/documents/doc-99999-not-canonical-v1.md'), '# Invalid\n');
+    expect(() =>
+      linkDocument(root, issue.id, '.harnessctl/documents/doc-99999-not-canonical-v1.md', 'document'),
+    ).toThrow(/strict YAML frontmatter|valid canonical Markdown/u);
+    rmSync(join(root, '.harnessctl/documents/doc-99999-not-canonical-v1.md'));
+
+    const oversizedPath = '.harnessctl/documents/doc-99999-oversized-v1.md';
+    writeFileSync(join(root, oversizedPath), Buffer.alloc(1_100_001));
+    expect(() => linkDocument(root, issue.id, oversizedPath, 'document')).toThrowError(
+      expect.objectContaining({ category: 'resource_limit' }),
+    );
+    rmSync(join(root, oversizedPath));
+
+    const archivedDocument = createDocument(root, { title: 'Archived link', kind: 'hld' });
+    archiveDocument(root, archivedDocument.id, archivedDocument.revision);
+    const archived = archivedDocument.path.replace('.harnessctl/documents/', '.harnessctl/documents/archive/');
+    expect(() => linkDocument(root, issue.id, archived, 'document')).toThrow(/active canonical document/u);
+  });
+
+  it('reads canonical issue links through the bounded no-follow descriptor primitive', () => {
+    const root = repository();
+    const issue = createIssueRecord(root, { type: 'task', title: 'Race-safe link' });
+    const document = createDocument(root, { title: 'Race-safe target', kind: 'hld' });
+    const original = join(root, document.path);
+    const canonical = readFileSync(original);
+    const provider = createFilesystemIssueProvider(root, {
+      documentReadOptions: {
+        beforeOpen: () => {
+          writeFileSync(original, '# raced\n');
+        },
+      },
+    });
+
+    expect(() => provider.linkDocument(issue.id, document.path, 'document')).toThrowError(
+      expect.objectContaining({ category: 'path_safety' }),
+    );
+    writeFileSync(original, canonical);
+    expect(getIssue(root, issue.id).metadata.documents).toBeUndefined();
+  });
+
+  it.each(['active', 'archived'] as const)(
+    'blocks document archive for references from %s canonical issues without mutating either authority',
+    (issueLocation) => {
+      const root = repository();
+      const issue = createIssueRecord(root, { type: 'task', title: `${issueLocation} reference` });
+      const document = createDocument(root, { title: 'Referenced lineage', kind: 'hld' });
+      linkDocument(root, issue.id, document.path, 'document');
+      if (issueLocation === 'archived') archiveIssueReport(root, issue.id);
+      const current = versionDocument(root, document.id, {
+        body: 'The issue still references version one.',
+        expectedRevision: document.revision,
+      });
+      const before = treeManifest(root);
+
+      expect(() => archiveDocument(root, document.id, current.revision)).toThrow(/linked by canonical issue/u);
+      expect(treeManifest(root)).toEqual(before);
+      expect(getDocument(root, document.id)).toEqual(expect.objectContaining({ location: 'active' }));
+      expect(getIssue(root, issue.id).metadata.documents).toEqual([document.path]);
+    },
+  );
+
+  it.each(['active', 'archived'] as const)(
+    'blocks a path-changing document update for references from %s canonical issues without mutating either authority',
+    (issueLocation) => {
+      const root = repository();
+      const issue = createIssueRecord(root, { type: 'task', title: `${issueLocation} update reference` });
+      const document = createDocument(root, { title: 'Linked title', kind: 'hld' });
+      linkDocument(root, issue.id, document.path, 'document');
+      if (issueLocation === 'archived') archiveIssueReport(root, issue.id);
+      const documentsBefore = treeManifest(join(root, '.harnessctl/documents'));
+      const issuesBefore = treeManifest(join(root, '.harnessctl/issues'));
+      const cachePath = join(root, '.harnessctl/cache/harnessctl.sqlite');
+      const cacheBefore = readFileSync(cachePath);
+
+      expect(() =>
+        updateDocument(root, document.id, { title: 'Renamed title', expectedRevision: document.revision }),
+      ).toThrow(/linked by canonical issue/u);
+      expect(treeManifest(join(root, '.harnessctl/documents'))).toEqual(documentsBefore);
+      expect(treeManifest(join(root, '.harnessctl/issues'))).toEqual(issuesBefore);
+      expect(readFileSync(cachePath)).toEqual(cacheBefore);
+      expect(getIssue(root, issue.id).metadata.documents).toEqual([document.path]);
+
+      const unchangedPath = updateDocument(root, document.id, {
+        status: 'review',
+        expectedRevision: document.revision,
+      });
+      expect(unchangedPath.path).toBe(document.path);
+      expect(unchangedPath.metadata.status).toBe('review');
+      const mutableIssue = createIssueRecord(root, { type: 'task', title: 'Supported mutation' });
+      expect(
+        updateIssue(root, mutableIssue.id, {
+          title: 'Issue remains mutable',
+          expectedRevision: mutableIssue.revision,
+        }),
+      ).toEqual(expect.objectContaining({ metadata: expect.objectContaining({ title: 'Issue remains mutable' }) }));
+    },
+  );
+
+  it('keeps issue reads and supported mutations valid after archive rejection without inventing unlink', () => {
+    const root = repository();
+    const issue = createIssueRecord(root, { type: 'task', title: 'Referenced issue' });
+    const document = createDocument(root, { title: 'Still active', kind: 'hld' });
+    linkDocument(root, issue.id, document.path, 'document');
+    expect(() => archiveDocument(root, document.id, document.revision)).toThrow(/linked by canonical issue/u);
+
+    expect('unlinkDocument' in createFilesystemIssueProvider(root)).toBe(false);
+    const created = createIssueRecord(root, { type: 'task', title: 'Mutation remains valid' });
+    expect(created.id).toBe('00002');
+    const linked = linkDocument(root, created.id, document.path, 'document');
+    expect(linked.metadata.documents).toEqual([document.path]);
+    expect(
+      updateIssue(root, issue.id, { title: 'Still mutable', expectedRevision: getIssue(root, issue.id).revision }),
+    ).toEqual(expect.objectContaining({ metadata: expect.objectContaining({ title: 'Still mutable' }) }));
+  });
+
+  it('rejects dormant local document paths when Documents authority is remote', () => {
+    const root = repository();
+    writeFileSync(
+      join(root, '.harnessctl/config.yaml'),
+      'version: 2\ndocuments:\n  type: github\n  tools: gh\n  remote:\n    repository: owner/repo\n    url: https://github.com\n    token_env: GH_TOKEN\n',
+      'utf8',
+    );
+    mkdirSync(join(root, '.harnessctl/documents'), { recursive: true });
+    writeFileSync(join(root, '.harnessctl/documents/doc-00001-dormant-v1.md'), '# Dormant\n');
+    expect(() => createIssueRecord(root, { type: 'task', title: 'Remote documents' })).toThrow(
+      /remote Documents providers/u,
+    );
   });
 
   it('archives derived descendants and retains the compatibility operation token', () => {

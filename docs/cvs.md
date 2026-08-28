@@ -19,11 +19,11 @@ The installer currently:
   `--force` replacement is requested;
 - deduplicates identical CVS and Issues server definitions and rejects same-ID
   differences;
-- installs neither provider CLIs nor `forgejo-mcp`; and
+- installs neither provider CLIs nor `gitea-mcp`/`forgejo-mcp`; and
 - can consentfully install Pi tools and the exact adapter prerequisite described below.
 
-Pi receives all six commands, all five generated skills, the Pi tools extension, and MCP
-host configuration through verified project-local discovery paths.
+Pi receives all six commands, every skill in the current managed registry, the Pi tools
+extension, and MCP host configuration through verified project-local discovery paths.
 
 ## Configuration
 
@@ -74,6 +74,14 @@ definition. Modified legacy and operator-owned entries remain byte-for-byte unch
 and produce a warning; no compatibility alias is installed. Canonical-ID conflicts retain
 the normal narrow `--force` behavior, and all selected-host changes share the installer
 transaction and rollback.
+
+Gitea has one additional exact historical migration. A previously generated
+Forgejo-backed Gitea definition under either `cvs_gitea` or `sdlc_cvs_gitea` is replaced
+transactionally with the official Gitea definition. A modified historical definition under
+either `cvs_gitea` or `sdlc_cvs_gitea` remains byte-preserved with a warning and blocks
+planned canonical replacement under force and non-force. Recognition requires the old local
+`forgejo-mcp` executable signature; argument, environment, and optional-member changes remain
+preserved. Unrelated canonical conflicts retain the normal narrow force-replacement behavior.
 
 ### GitHub
 
@@ -158,10 +166,11 @@ routes for the same mutation. Reads may repeat only when known idempotent and bo
 The agent never substitutes another provider, direct provider APIs, guessed syntax, or
 filesystem Issues.
 
-For Gitea and Forgejo, MCP capability is projected only when `forgejo-mcp` is present on
-`PATH`. Its presence does not prove runtime authentication, compatibility, or operation
+For Gitea, MCP capability is projected only when `gitea-mcp` is present on `PATH`; for
+Forgejo, only when `forgejo-mcp` is present. One executable never enables the other
+provider. Presence does not prove runtime authentication, compatibility, or operation
 capability. CLI capability is independently available only when `tea` or `forgejo-cli`,
-respectively, is present. `forgejo-mcp` is never a CLI.
+respectively, is present. Neither MCP executable is a CLI.
 
 ## Fixed MCP services and support boundary
 
@@ -171,15 +180,14 @@ Server IDs are generated and fixed; they are not configurable.
 | -------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | GitHub   | `sdlc_cvs_github`  | Official hosted endpoint `https://api.githubcopilot.com/mcp/`; requested toolsets `repos,issues,pull_requests,actions,git`; PAT header | Official GitHub hosted service; service terms apply. No local server package is distributed.  |
 | GitLab   | `sdlc_cvs_gitlab`  | Official endpoint `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration                                        | Official GitLab hosted service; service terms apply. No token reference is generated for MCP. |
-| Gitea    | `sdlc_cvs_gitea`   | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Gitea URL                                                           | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
+| Gitea    | `sdlc_cvs_gitea`   | Official `gitea-mcp` 1.6.0 over standard I/O and the configured Gitea URL                                                              | External MIT-licensed process, operator-installed and version-vetted only at 1.6.0.           |
 | Forgejo  | `sdlc_cvs_forgejo` | External `forgejo-mcp` 2.33.0 over standard I/O and the configured Forgejo URL                                                         | External GPL-licensed process, operator-installed and version-vetted only at 2.33.0.          |
 
-Harnessctl does not distribute, vendor, import, link, or install `forgejo-mcp`.
-`MushroomFleet/gitea-mcp` is unsupported and is not a fallback. After connecting to a
-Gitea or Forgejo MCP route, generated guidance requires
-`get_forgejo_mcp_server_version` to return exactly `2.33.0` before any provider
-mutation. The installer checks executable presence but neither connects nor claims its
-version.
+Harnessctl does not distribute, vendor, import, link, or install either server. Gitea
+guidance requires `get_gitea_mcp_server_version` to return exactly `1.6.0`; Forgejo
+guidance requires `get_forgejo_mcp_server_version` to return exactly `2.33.0` before any
+provider mutation. The installer checks each executable independently but neither
+connects nor claims its version.
 
 ## Generated OpenCode format
 
@@ -207,9 +215,9 @@ catalog shows the exact supported shapes together. OpenCode environment referenc
     },
     "sdlc_cvs_gitea": {
       "type": "local",
-      "command": ["forgejo-mcp", "--transport", "stdio", "--url", "https://gitea.example.com"],
+      "command": ["gitea-mcp", "--transport", "stdio", "--host", "https://gitea.example.com"],
       "environment": {
-        "FORGEJO_ACCESS_TOKEN": "{env:GITEA_TOKEN}"
+        "GITEA_ACCESS_TOKEN": "{env:GITEA_TOKEN}"
       }
     },
     "sdlc_cvs_forgejo": {
@@ -252,10 +260,10 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
       "lifecycle": "lazy"
     },
     "sdlc_cvs_gitea": {
-      "command": "forgejo-mcp",
-      "args": ["--transport", "stdio", "--url", "https://gitea.example.com"],
+      "command": "gitea-mcp",
+      "args": ["--transport", "stdio", "--host", "https://gitea.example.com"],
       "env": {
-        "FORGEJO_ACCESS_TOKEN": "${GITEA_TOKEN}"
+        "GITEA_ACCESS_TOKEN": "${GITEA_TOKEN}"
       },
       "lifecycle": "lazy"
     },

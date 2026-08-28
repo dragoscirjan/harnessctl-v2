@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -20,6 +21,17 @@ CURRENT_COMMANDS = {
     "work-continue",
     "work-refresh",
 }
+RETIRED_MIGRATION_RESOURCES = {
+    "resources/specs-migration/dependencies.json",
+    "resources/specs-migration/manifest.json",
+    "resources/specs-migration/specs-to-documents-v1.mjs",
+    "resources/specs-migration/THIRD_PARTY_NOTICES.txt",
+}
+RETIRED_MIGRATION_IDENTITY = re.compile(
+    r"(?:harnessctl[-_])?specs[-_]migrate|migrate[-_]?specs|"
+    r"specs[-_]?migration|specs-to-documents|streaming[-_]?transaction",
+    re.IGNORECASE,
+)
 
 
 def _run(
@@ -86,6 +98,70 @@ def test_pi_tools_package_declares_loadable_extension() -> None:
     assert "dist" in package["files"]
 
 
+def test_release_gates_exclude_migration_tooling() -> None:
+    scripts = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["scripts"]
+
+    assert scripts["version-packages"] == "changeset version && npm install --package-lock-only"
+    assert scripts["packages:check"] == "npm run packages:build && node scripts/check-packages.mjs"
+    assert all(
+        RETIRED_MIGRATION_IDENTITY.search(name) is None
+        and RETIRED_MIGRATION_IDENTITY.search(command) is None
+        for name, command in scripts.items()
+    )
+
+
+def test_local_npm_document_adapters_remain_release_inputs() -> None:
+    assert (ROOT / "extensions/generic-tools/documents.ts").is_file()
+    assert (ROOT / "extensions/opencode-tools/document-tools.ts").is_file()
+    assert (ROOT / "extensions/pi-tools/document-tools.ts").is_file()
+
+    _run(["npm", "run", "packages:build"], cwd=ROOT, env=os.environ.copy())
+
+    expected = {
+        "@harnessctl/generic-tools": {
+            "dist/documents.js",
+            "dist/documents.d.ts",
+        },
+        "@harnessctl/opencode-tools": {"dist/document-tools.js", "dist/document-tools.d.ts"},
+        "@harnessctl/pi-tools": {"dist/document-tools.js", "dist/document-tools.d.ts"},
+    }
+    for workspace, required in expected.items():
+        result = subprocess.run(
+            [
+                "npm",
+                "pack",
+                "--dry-run",
+                "--json",
+                "--ignore-scripts",
+                "--workspace",
+                workspace,
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        [packed] = json.loads(result.stdout)
+        paths = {entry["path"] for entry in packed["files"]}
+        assert required <= paths
+
+
+def test_document_runtime_changeset_covers_all_published_packages_without_version_edits() -> None:
+    changeset = (ROOT / ".changeset/bright-documents-link.md").read_text(encoding="utf-8")
+    packages = {
+        name: json.loads((ROOT / f"extensions/{name}/package.json").read_text(encoding="utf-8"))
+        for name in ("generic-tools", "opencode-tools", "pi-tools")
+    }
+
+    for package in packages.values():
+        assert f'"{package["name"]}": patch' in changeset
+        assert package["version"] == "0.1.9"
+    assert packages["opencode-tools"]["dependencies"]["@harnessctl/generic-tools"] == "0.1.9"
+    assert packages["pi-tools"]["dependencies"]["@harnessctl/generic-tools"] == "0.1.9"
+
+
 def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
@@ -107,19 +183,21 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         }
     )
 
-    _run(
-        [
-            "uv",
-            "build",
-            "--offline",
-            "--no-create-gitignore",
-            "--out-dir",
-            str(artifacts),
-            str(source),
-        ],
-        cwd=tmp_path,
-        env=environment,
-    )
+    for artifact_kind in ("--wheel", "--sdist"):
+        _run(
+            [
+                "uv",
+                "build",
+                artifact_kind,
+                "--offline",
+                "--no-create-gitignore",
+                "--out-dir",
+                str(artifacts),
+                str(source),
+            ],
+            cwd=tmp_path,
+            env=environment,
+        )
     outputs = sorted(path for path in artifacts.iterdir() if path.is_file())
     wheels = [path for path in outputs if path.suffix == ".whl"]
     sdists = [path for path in outputs if path.name.endswith(".tar.gz")]
@@ -127,11 +205,35 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     assert len(wheels) == 1
     assert len(sdists) == 1
 
+    rebuilt_source = tmp_path / "rebuilt-source"
+    rebuilt_source.mkdir()
+    with tarfile.open(sdists[0], mode="r:gz") as archive:
+        archive.extractall(rebuilt_source, filter="data")
+    extracted_sdist = next(path for path in rebuilt_source.iterdir() if path.is_dir())
+    rebuilt_artifacts = tmp_path / "rebuilt-artifacts"
+    rebuilt_artifacts.mkdir()
+    _run(
+        [
+            "uv",
+            "build",
+            "--wheel",
+            "--offline",
+            "--no-create-gitignore",
+            "--out-dir",
+            str(rebuilt_artifacts),
+            str(extracted_sdist),
+        ],
+        cwd=tmp_path,
+        env=environment,
+    )
+    rebuilt_wheels = list(rebuilt_artifacts.glob("*.whl"))
+    assert len(rebuilt_wheels) == 1
+
     package_root = source / "src/harnessctl"
     expected_resources = {
         path.relative_to(package_root).as_posix()
         for path in package_root.rglob("*")
-        if path.is_file() and path.suffix in {".py", ".j2"}
+        if path.is_file()
     }
     assert "templates/skills/sdlc/SKILL.md.j2" in expected_resources
     assert (
@@ -157,6 +259,10 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         == 26
     )
     assert "templates/skills/sdlc-issue-tracking/SKILL.md.j2" in expected_resources
+    assert "templates/skills/sdlc-documents/SKILL.md.j2" not in expected_resources
+    assert "document_contracts.py" not in expected_resources
+    assert "specs_migration_bridge.py" not in expected_resources
+    assert expected_resources.isdisjoint(RETIRED_MIGRATION_RESOURCES)
     assert "templates/skills/sdlc-cvs/SKILL.md.j2" in expected_resources
     assert "templates/skills/sdlc-develop-tdd/SKILL.md.j2" in expected_resources
     assert "templates/skills/sdlc-code-index/SKILL.md.j2" in expected_resources
@@ -167,6 +273,12 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         metadata_name = next(name for name in wheel_members if name.endswith(".dist-info/METADATA"))
         assert "Version: 0.2.0" in archive.read(metadata_name).decode("utf-8")
     assert {f"harnessctl/{path}" for path in expected_resources} <= wheel_members
+    assert "harnessctl/specs_migration_bridge.py" not in wheel_members
+    assert (
+        not {f"harnessctl/{resource}" for resource in RETIRED_MIGRATION_RESOURCES} & wheel_members
+    )
+    assert not any("sdlc-documents" in member for member in wheel_members)
+    assert not any(member.endswith("/document_contracts.py") for member in wheel_members)
 
     with tarfile.open(sdists[0], mode="r:gz") as archive:
         sdist_members = set(archive.getnames())
@@ -178,6 +290,16 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
         if "/src/harnessctl/" in member
     }
     assert expected_resources <= sdist_package_members
+    assert "specs_migration_bridge.py" not in sdist_package_members
+    assert sdist_package_members.isdisjoint(RETIRED_MIGRATION_RESOURCES)
+    with zipfile.ZipFile(rebuilt_wheels[0]) as archive:
+        rebuilt_members = set(archive.namelist())
+    assert "harnessctl/specs_migration_bridge.py" not in rebuilt_members
+    assert (
+        not {f"harnessctl/{resource}" for resource in RETIRED_MIGRATION_RESOURCES} & rebuilt_members
+    )
+    assert not any("sdlc-documents" in member for member in sdist_members)
+    assert not any(member.endswith("/document_contracts.py") for member in sdist_members)
     public_templates = {
         Path(path).stem.removesuffix(".md")
         for path in expected_resources
@@ -252,12 +374,32 @@ config = deepcopy(DEFAULT_CONFIG)
 config['memory']['enabled'] = True
 intent = required_server_intents(config, 'opencode')[0]
 assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/'
+for provider, tool, url, token_env, command, flag, target_env, version in (
+    ('gitea', 'tea', 'https://gitea.example.com', 'GITEA_TOKEN',
+     'gitea-mcp', '--host', 'GITEA_ACCESS_TOKEN', '1.6.0'),
+    ('forgejo', 'forgejo-cli', 'https://forgejo.example.com', 'FORGEJO_TOKEN',
+     'forgejo-mcp', '--url', 'FORGEJO_ACCESS_TOKEN', '2.33.0'),
+):
+    provider_config = deepcopy(DEFAULT_CONFIG)
+    provider_config['cvs']['remote'] = {
+        'provider': provider, 'tools': tool, 'url': url, 'token_env': token_env,
+    }
+    provider_intent = required_server_intents(provider_config, 'opencode')[0]
+    provider_rendered = render_opencode_mcp(provider_intent)
+    assert provider_intent.compatibility_version == version
+    assert provider_rendered['command'] == [
+        command, '--transport', 'stdio', flag, url,
+    ]
+    assert provider_rendered['environment'] == {
+        target_env: f'{{env:{token_env}}}',
+    }
 assert set(TEMPLATES) == set(CURRENT_SDLC_COMMANDS) == {
     'work-plan', 'work-build', 'work-verify', 'work-release', 'work-continue', 'work-refresh'
 }
 assert len(LEGACY_SDLC_COMMANDS) == 18
 assert len(RETIRED_SDLC_COMMANDS) == 16
 assert set(LEGACY_SDLC_COMMAND_REPLACEMENTS) == set(LEGACY_SDLC_COMMANDS)
+assert 'migrate_specs' not in inspect.signature(install).parameters
 assert inspect.signature(install).parameters['replace_sdlc_command_set'].default is False
 assert inspect.signature(install).parameters['replace_sdlc_skill_set'].default is False
 for command in TEMPLATES:
@@ -283,6 +425,12 @@ disabled_sdlc = render_skill(
 assert '`sdlc-code-index` is disabled' in disabled_sdlc
 assert 'Do not load a discoverable retained copy' in disabled_sdlc
 assert 'Red-Green-Refactor' in render_skill('sdlc-develop-tdd')
+try:
+    render_skill('sdlc-documents')
+except ValueError as error:
+    assert 'unsupported skill' in str(error)
+else:
+    raise AssertionError('retired Documents skill remained renderable')
 sdlc_code = render_skill('sdlc-code')
 sdlc_code_resources = render_skill_resources('sdlc-code')
 assert 'Apply this root once' in sdlc_code
@@ -446,6 +594,32 @@ for provider, connection in providers.items():
     )
     assert "--replace-sdlc-command-set" in help_result.stdout
     assert "--replace-sdlc-skill-set" in help_result.stdout
+    assert "--migrate-specs" not in help_result.stdout
+
+    legacy_specs = runtime / "legacy-specs"
+    specs = legacy_specs / ".specs"
+    specs.mkdir(parents=True)
+    source = specs / "hld-00001-packaged-artifact-v1.md"
+    source.write_text(
+        "---\n"
+        'id: "00001"\n'
+        "type: hld\n"
+        'title: "Packaged artifact"\n'
+        "version: 1\n"
+        "status: approved\n"
+        "---\n\n"
+        "# Packaged artifact\n\n"
+        "Legacy source must remain untouched.\n",
+        encoding="utf-8",
+    )
+    _run(
+        [*cli, str(legacy_specs), "--harness", "opencode"],
+        cwd=runtime,
+        env=environment,
+    )
+    assert source.read_text(encoding="utf-8").endswith("Legacy source must remain untouched.\n")
+    assert not (legacy_specs / ".harnessctl/documents").exists()
+
     _run([*cli, str(disabled_opencode), "--harness", "opencode"], cwd=runtime, env=environment)
     _run([*cli, str(disabled_pi), "--harness", "pi"], cwd=runtime, env=environment)
     assert not (disabled_opencode / ".opencode/skills/sdlc-code-index").exists()
@@ -463,6 +637,7 @@ for provider, connection in providers.items():
         disabled_pi / ".pi/skills/sdlc/SKILL.md"
     ).read_text(encoding="utf-8")
     assert (disabled_pi / ".pi/skills/sdlc-issue-tracking/SKILL.md").is_file()
+    assert not (disabled_pi / ".pi/skills/sdlc-documents").exists()
     assert (disabled_pi / ".pi/mcp.json").is_file()
     for project, harness in ((enabled_pi, "pi"), (enabled_all, "all")):
         _run([*cli, str(project), "--harness", harness], cwd=runtime, env=environment)
@@ -516,6 +691,8 @@ for provider, connection in providers.items():
     opencode_sdlc = (enabled_all / ".opencode/skills/sdlc/SKILL.md").read_bytes()
     pi_sdlc = (enabled_all / ".pi/skills/sdlc/SKILL.md").read_bytes()
     assert opencode_sdlc == pi_sdlc
+    assert not (enabled_all / ".opencode/skills/sdlc-documents").exists()
+    assert not (enabled_all / ".pi/skills/sdlc-documents").exists()
     assert b"When `sdlc-code-index` is available" in opencode_sdlc
     opencode_code = enabled_all / ".opencode/skills/sdlc-code"
     pi_code = enabled_all / ".pi/skills/sdlc-code"

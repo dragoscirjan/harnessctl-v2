@@ -1,3 +1,5 @@
+import builtins
+import hashlib
 import importlib
 import json
 import os
@@ -9,7 +11,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from harnessctl.config import DEFAULT_CONFIG, ConfigError, load_config
+from harnessctl.config import (
+    DEFAULT_CONFIG,
+    FILESYSTEM_DOCUMENT_TOOLS,
+    ConfigError,
+    load_config,
+)
 from harnessctl.install import (
     CURRENT_SDLC_COMMANDS,
     LEGACY_SDLC_COMMAND_REPLACEMENTS,
@@ -34,6 +41,7 @@ from harnessctl.templates import (
 
 install_module = importlib.import_module("harnessctl.install")
 config_module = importlib.import_module("harnessctl.config")
+RETIRED_DOCUMENT_SKILL_FIXTURE = Path(__file__).parent / "fixtures/retired-sdlc-documents-SKILL.md"
 
 
 def _mock_pi_path() -> str:
@@ -167,6 +175,38 @@ def write_legacy_skill(root: Path, harness: str, skill: str = "caveman") -> Path
     return directory
 
 
+def write_exact_retired_document_skill(root: Path, harness: str) -> Path:
+    host_root = ".opencode" if harness == "opencode" else ".pi"
+    directory = root / host_root / "skills/sdlc-documents"
+    directory.mkdir(parents=True)
+    (directory / "SKILL.md").write_bytes(RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes())
+    return directory
+
+
+def test_retired_document_skill_fingerprint_is_bound_to_historical_fixture() -> None:
+    content = RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+
+    assert len(content) == install_module.RETIRED_DOCUMENT_SKILL_SIZE
+    assert hashlib.sha256(content).hexdigest() == (install_module.RETIRED_DOCUMENT_SKILL_SHA256)
+
+
+def test_python_and_typescript_document_tool_order_matches_strict_contract() -> None:
+    typescript_schema = (
+        Path(__file__).parents[1] / "extensions/generic-tools/schemas.ts"
+    ).read_text(encoding="utf-8")
+    json_schema = json.loads(
+        (
+            Path(__file__).parents[1] / "extensions/generic-tools/contracts/config-v2.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert f"'{FILESYSTEM_DOCUMENT_TOOLS}'" in typescript_schema
+    assert (
+        json_schema["properties"]["documents"]["properties"]["tools"]["const"]
+        == FILESYSTEM_DOCUMENT_TOOLS
+    )
+
+
 def test_rendered_prompts_share_the_canonical_body() -> None:
     opencode = render_prompt("work-plan", "opencode")
     pi = render_prompt("work-plan", "pi")
@@ -196,7 +236,7 @@ def test_enabled_memory_does_not_claim_unverified_completion(command: str) -> No
         "references/checkpoint.md"
     ]
 
-    assert "current issues/specs/source/Git/tests/provider observations > memory" in rendered
+    assert "current issues/documents/source/Git/tests/provider observations > memory" in rendered
     assert "Checkpoint never proves approval/completion/current state" in checkpoint
 
 
@@ -236,6 +276,8 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     opencode_sdlc = (tmp_path / ".opencode/skills/sdlc/SKILL.md").read_bytes()
     pi_sdlc = (tmp_path / ".pi/skills/sdlc/SKILL.md").read_bytes()
     assert opencode_sdlc == pi_sdlc
+    assert not (tmp_path / ".opencode/skills/sdlc-documents").exists()
+    assert not (tmp_path / ".pi/skills/sdlc-documents").exists()
     assert b"`sdlc-code-index` is disabled" in opencode_sdlc
     assert b"Do not load a discoverable retained copy" in opencode_sdlc
     assert _tree_manifest(tmp_path / ".opencode/skills/sdlc-code") == _tree_manifest(
@@ -263,6 +305,686 @@ def test_fresh_install_creates_only_prefixed_skill_directories(tmp_path: Path) -
         assert all(path.name.startswith("sdlc") for path in host_root.iterdir())
         assert not any(path.name.startswith("harnessctl-") for path in host_root.iterdir())
         assert not any((host_root / legacy).exists() for legacy in SKILL_ID_MIGRATIONS)
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.parametrize("force", [False, True])
+def test_exact_retired_document_skill_tree_is_removed_for_selected_hosts(
+    tmp_path: Path,
+    harness: str,
+    force: bool,
+) -> None:
+    selected = ("opencode", "pi") if harness == "all" else (harness,)
+    if "pi" in selected:
+        write_pinned_pi_adapter(tmp_path)
+    roots = [write_exact_retired_document_skill(tmp_path, host) for host in selected]
+
+    install(tmp_path, harness, force=force)
+
+    assert all(not root.exists() for root in roots)
+    install(tmp_path, harness, force=True)
+    assert all(not root.exists() for root in roots)
+
+
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("modification", ["content", "extra", "symlink", "special"])
+def test_modified_retired_document_skill_tree_is_preserved_with_deterministic_warning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    force: bool,
+    modification: str,
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    if modification == "content":
+        (retired / "SKILL.md").write_bytes(b"operator modification\n")
+    elif modification == "extra":
+        (retired / "operator.md").write_bytes(b"operator file\n")
+    elif modification == "symlink":
+        (retired / "SKILL.md").unlink()
+        (retired / "SKILL.md").symlink_to(tmp_path / "operator-policy.md")
+    else:
+        if not hasattr(os, "mkfifo"):
+            pytest.skip("named pipes require os.mkfifo")
+        (retired / "SKILL.md").unlink()
+        os.mkfifo(retired / "SKILL.md")
+
+    with pytest.warns(
+        UserWarning,
+        match=r"preserving modified retired Documents skill tree \.opencode/skills/sdlc-documents",
+    ):
+        install(tmp_path, "opencode", force=force)
+
+    assert os.path.lexists(retired)
+    assert os.path.lexists(retired / "SKILL.md")
+
+
+def test_retired_document_skill_cleanup_rolls_back_exact_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected cleanup failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected cleanup failure"):
+        install(tmp_path, "opencode")
+
+    assert retired.is_dir()
+    assert _tree_manifest(tmp_path) == before
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.parametrize("home_mode", ["absent", "hostile"])
+def test_install_does_not_read_or_mutate_user_home(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    home_mode: str,
+) -> None:
+    root = tmp_path / "repository"
+    root.mkdir()
+    selected = ("opencode", "pi") if harness == "all" else (harness,)
+    if "pi" in selected:
+        write_pinned_pi_adapter(root)
+    retired = [write_exact_retired_document_skill(root, host) for host in selected]
+    hostile_home = tmp_path / "hostile-home"
+    hostile_opencode = hostile_home / ".opencode/operator.json"
+    hostile_pi = hostile_home / ".pi/operator.json"
+    hostile_opencode.parent.mkdir(parents=True)
+    hostile_pi.parent.mkdir(parents=True)
+    hostile_opencode.write_bytes(b"opencode operator sentinel\n")
+    hostile_pi.write_bytes(b"pi operator sentinel\n")
+    before = _tree_manifest(hostile_home)
+    original_open = Path.open
+    original_read_bytes = Path.read_bytes
+    original_read_text = Path.read_text
+    original_builtin_open = builtins.open
+    original_os_open = install_module.os.open
+    original_stat = install_module.os.stat
+    original_lstat = install_module.os.lstat
+    original_scandir = install_module.os.scandir
+
+    def reject_user_home_access(path: Path | str) -> None:
+        candidate = Path(path)
+        if candidate == hostile_home or hostile_home in candidate.parents:
+            raise AssertionError(f"user HOME must not be accessed: {candidate}")
+
+    def guarded_open(path: Path, *args: object, **kwargs: object) -> object:
+        reject_user_home_access(path)
+        return original_open(path, *args, **kwargs)
+
+    def guarded_read_bytes(path: Path) -> bytes:
+        reject_user_home_access(path)
+        return original_read_bytes(path)
+
+    def guarded_read_text(path: Path, *args: object, **kwargs: object) -> str:
+        reject_user_home_access(path)
+        return original_read_text(path, *args, **kwargs)
+
+    def guarded_scandir(path: Path | str) -> object:
+        reject_user_home_access(path)
+        return original_scandir(path)
+
+    def guarded_builtin_open(file: object, *args: object, **kwargs: object) -> object:
+        if isinstance(file, (str, os.PathLike)):
+            reject_user_home_access(file)
+        return original_builtin_open(file, *args, **kwargs)
+
+    def guarded_os_open(path: object, *args: object, **kwargs: object) -> int:
+        if isinstance(path, (str, os.PathLike)):
+            reject_user_home_access(path)
+        return original_os_open(path, *args, **kwargs)
+
+    def guarded_stat(path: object, *args: object, **kwargs: object) -> os.stat_result:
+        if isinstance(path, (str, os.PathLike)):
+            reject_user_home_access(path)
+        return original_stat(path, *args, **kwargs)
+
+    def guarded_lstat(path: object, *args: object, **kwargs: object) -> os.stat_result:
+        if isinstance(path, (str, os.PathLike)):
+            reject_user_home_access(path)
+        return original_lstat(path, *args, **kwargs)
+
+    if home_mode == "hostile":
+        monkeypatch.setenv("HOME", str(hostile_home))
+    else:
+        monkeypatch.delenv("HOME", raising=False)
+    with monkeypatch.context() as isolation:
+        isolation.setattr(
+            Path,
+            "home",
+            classmethod(
+                lambda _cls: (_ for _ in ()).throw(AssertionError("HOME must not be read"))
+            ),
+        )
+        isolation.setattr(Path, "open", guarded_open)
+        isolation.setattr(Path, "read_bytes", guarded_read_bytes)
+        isolation.setattr(Path, "read_text", guarded_read_text)
+        isolation.setattr(builtins, "open", guarded_builtin_open)
+        isolation.setattr(install_module.os, "open", guarded_os_open)
+        isolation.setattr(install_module.os, "stat", guarded_stat)
+        isolation.setattr(install_module.os, "lstat", guarded_lstat)
+        isolation.setattr(install_module.os, "scandir", guarded_scandir)
+
+        install(root, harness)
+
+    assert all(not path.exists() for path in retired)
+    assert _tree_manifest(hostile_home) == before
+
+
+def test_pi_package_action_uses_temporary_agent_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured_environment: dict[str, str] = {}
+    isolated_agent_directory: Path | None = None
+    for name in install_module.PI_HOME_ENVIRONMENT_VARIABLES:
+        monkeypatch.setenv(name, f"operator-{name.lower()}")
+    monkeypatch.setenv(
+        install_module.PI_AGENT_DIRECTORY_ENVIRONMENT_VARIABLE,
+        str(tmp_path / "operator-agent"),
+    )
+    monkeypatch.setenv("HARNESSCTL_UNRELATED_SENTINEL", "preserved")
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda name: _mock_pi_path() if name == "pi" else None,
+    )
+
+    def fake_run(_args: list[str], **kwargs: object) -> SimpleNamespace:
+        nonlocal isolated_agent_directory
+        captured_environment.update(kwargs["env"])  # type: ignore[arg-type]
+        isolated_agent_directory = Path(
+            captured_environment[install_module.PI_AGENT_DIRECTORY_ENVIRONMENT_VARIABLE]
+        )
+        assert isolated_agent_directory.is_dir()
+        return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+    monkeypatch.setattr(install_module.subprocess, "run", fake_run)
+
+    install_module._run_pi_package_action(tmp_path, "install", install_module.PI_TOOLS)
+
+    assert install_module.PI_HOME_ENVIRONMENT_VARIABLES.isdisjoint(captured_environment)
+    assert captured_environment["HARNESSCTL_UNRELATED_SENTINEL"] == "preserved"
+    assert isolated_agent_directory is not None
+    assert not isolated_agent_directory.exists()
+
+
+@pytest.mark.parametrize("failure", ["nonzero", "timeout"])
+def test_pi_package_action_removes_temporary_agent_directory_after_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    isolated_agent_directory: Path | None = None
+
+    def fake_run(args: list[str], **kwargs: object) -> SimpleNamespace:
+        nonlocal isolated_agent_directory
+        environment = kwargs["env"]
+        assert isinstance(environment, dict)
+        isolated_agent_directory = Path(
+            environment[install_module.PI_AGENT_DIRECTORY_ENVIRONMENT_VARIABLE]
+        )
+        assert isolated_agent_directory.is_dir()
+        if failure == "timeout":
+            raise install_module.subprocess.TimeoutExpired(args, 1)
+        return SimpleNamespace(returncode=7, stdout=b"", stderr=b"failed")
+
+    monkeypatch.setattr(install_module.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError):
+        install_module._run_pi_package_action(
+            tmp_path,
+            "install",
+            install_module.PI_TOOLS,
+            pi_executable=_mock_pi_path(),
+        )
+
+    assert isolated_agent_directory is not None
+    assert not isolated_agent_directory.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX executable fixture")
+def test_pi_package_action_child_cannot_resolve_hostile_global_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    hostile_home = tmp_path.parent / f"{tmp_path.name}-operator-home"
+    hostile_settings = hostile_home / ".pi/agent/settings.json"
+    hostile_settings.parent.mkdir(parents=True)
+    hostile_settings.write_text('{"npmCommand": "operator-command"}\n', encoding="utf-8")
+    report = tmp_path / "pi-child-report.json"
+    fake_pi = tmp_path / "pi"
+    pi_config = (
+        Path(__file__).parents[1] / "node_modules/@earendil-works/pi-coding-agent/dist/config.js"
+    )
+    if not pi_config.is_file():
+        pytest.skip("pinned Pi package is not installed")
+    fake_pi.write_text(
+        """#!/usr/bin/env node
+import fs from "node:fs";
+import { getAgentDir, getSettingsPath } from "__PI_CONFIG__";
+
+const agentDir = getAgentDir();
+const settingsPath = getSettingsPath();
+fs.writeFileSync(
+  "pi-child-report.json",
+  JSON.stringify({
+    agent_dir: agentDir,
+    agent_dir_exists: fs.statSync(agentDir).isDirectory(),
+    settings: fs.existsSync(settingsPath)
+      ? fs.readFileSync(settingsPath, "utf8")
+      : null,
+  }),
+  "utf8",
+);
+""".replace("__PI_CONFIG__", pi_config.as_uri()),
+        encoding="utf-8",
+    )
+    fake_pi.chmod(0o700)
+    monkeypatch.setenv("HOME", str(hostile_home))
+    monkeypatch.setenv("USERPROFILE", str(hostile_home))
+
+    install_module._run_pi_package_action(
+        tmp_path,
+        "install",
+        install_module.PI_TOOLS,
+        pi_executable=str(fake_pi),
+    )
+
+    child_report = json.loads(report.read_text(encoding="utf-8"))
+    assert child_report["agent_dir_exists"] is True
+    assert child_report["settings"] is None
+    assert not Path(child_report["agent_dir"]).exists()
+    assert hostile_settings.read_text(encoding="utf-8") == ('{"npmCommand": "operator-command"}\n')
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.parametrize("force", [False, True])
+def test_retired_document_skill_changed_after_planning_is_preserved(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    force: bool,
+) -> None:
+    selected = ("opencode", "pi") if harness == "all" else (harness,)
+    if "pi" in selected:
+        write_pinned_pi_adapter(tmp_path)
+    roots = [write_exact_retired_document_skill(tmp_path, host) for host in selected]
+    changed = roots[0] / "SKILL.md"
+    original_write_atomic = install_module.write_atomic
+    injected = False
+
+    def write_atomic_then_change(path: Path, content: str) -> None:
+        nonlocal injected
+        original_write_atomic(path, content)
+        if not injected:
+            injected = True
+            changed.write_bytes(b"operator change after cleanup planning\n")
+
+    monkeypatch.setattr(install_module, "write_atomic", write_atomic_then_change)
+
+    with pytest.warns(
+        UserWarning,
+        match=r"preserving modified retired Documents skill tree .*sdlc-documents",
+    ):
+        install(tmp_path, harness, force=force)
+
+    assert changed.read_bytes() == b"operator change after cleanup planning\n"
+    assert all(not root.exists() for root in roots[1:])
+
+
+@pytest.mark.parametrize("replacement", ["file", "tree"])
+def test_retired_document_skill_replaced_after_planning_is_preserved(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    replacement: str,
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    skill = retired / "SKILL.md"
+    historical = skill.read_bytes()
+    original_write_atomic = install_module.write_atomic
+    injected = False
+
+    def write_atomic_then_replace(path: Path, content: str) -> None:
+        nonlocal injected
+        original_write_atomic(path, content)
+        if injected:
+            return
+        injected = True
+        if replacement == "file":
+            skill.unlink()
+            skill.write_bytes(historical)
+        else:
+            moved = retired.with_name("operator-retired-documents")
+            retired.rename(moved)
+            retired.mkdir()
+            (retired / "SKILL.md").write_bytes(historical)
+
+    monkeypatch.setattr(install_module, "write_atomic", write_atomic_then_replace)
+
+    with pytest.warns(
+        UserWarning,
+        match=r"preserving modified retired Documents skill tree .*sdlc-documents",
+    ):
+        install(tmp_path, "opencode")
+
+    assert retired.is_dir()
+    assert skill.read_bytes() == historical
+    if replacement == "tree":
+        assert (
+            retired.with_name("operator-retired-documents") / "SKILL.md"
+        ).read_bytes() == historical
+
+
+def test_retired_document_skill_replaced_at_deletion_boundary_is_preserved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    skill = retired / "SKILL.md"
+    historical = skill.read_bytes()
+    original_rename = install_module.os.rename
+    injected = False
+
+    def replace_then_rename(source: Path, destination: Path) -> None:
+        nonlocal injected
+        if Path(source) == retired and not injected:
+            injected = True
+            skill.unlink()
+            skill.write_bytes(historical)
+        original_rename(source, destination)
+
+    monkeypatch.setattr(install_module.os, "rename", replace_then_rename)
+
+    with pytest.warns(UserWarning, match="preserving modified retired Documents skill tree"):
+        install(tmp_path, "opencode")
+
+    assert retired.is_dir()
+    assert skill.read_bytes() == historical
+
+
+def test_retired_document_skill_recreated_after_quarantine_warns_and_is_preserved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_rename = install_module.os.rename
+    recreated = False
+
+    def rename_then_recreate(source: Path, destination: Path) -> None:
+        nonlocal recreated
+        original_rename(source, destination)
+        if Path(source) == retired and not recreated:
+            recreated = True
+            retired.mkdir()
+            (retired / "SKILL.md").write_bytes(b"operator recreation after quarantine\n")
+
+    monkeypatch.setattr(install_module.os, "rename", rename_then_recreate)
+
+    with pytest.warns(
+        UserWarning,
+        match=r"preserving modified retired Documents skill tree .*sdlc-documents",
+    ):
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == b"operator recreation after quarantine\n"
+
+
+def test_retired_document_skill_warning_policy_cannot_interrupt_quarantine_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_rename = install_module.os.rename
+
+    def rename_then_recreate(source: Path, destination: Path) -> None:
+        original_rename(source, destination)
+        if Path(source) == retired:
+            retired.mkdir()
+            (retired / "SKILL.md").write_bytes(b"operator recreation\n")
+
+    monkeypatch.setattr(install_module.os, "rename", rename_then_recreate)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == b"operator recreation\n"
+    assert not any(retired.parent.glob(".sdlc-documents.harnessctl-retiring-*"))
+
+
+def test_retired_document_skill_quarantine_metadata_failure_restores_owned_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_lstat = install_module.os.lstat
+    injected = False
+
+    def fail_quarantine_lstat_once(
+        path: Path | str, *args: object, **kwargs: object
+    ) -> os.stat_result:
+        nonlocal injected
+        candidate = Path(path)
+        if candidate.name.startswith(".sdlc-documents.harnessctl-retiring-") and not injected:
+            try:
+                original_lstat(path, *args, **kwargs)
+            except FileNotFoundError:
+                pass
+            else:
+                injected = True
+                raise OSError("injected quarantine metadata failure")
+        return original_lstat(path, *args, **kwargs)
+
+    monkeypatch.setattr(install_module.os, "lstat", fail_quarantine_lstat_once)
+
+    with pytest.raises(OSError, match="injected quarantine metadata failure"):
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+    assert not any(retired.parent.glob(".sdlc-documents.harnessctl-retiring-*"))
+
+
+def test_retired_document_skill_post_rename_interruption_restores_owned_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_rename = install_module.os.rename
+    original_lexists = install_module.os.path.lexists
+    renamed = False
+    injected = False
+
+    def track_rename(source: Path, destination: Path) -> None:
+        nonlocal renamed
+        original_rename(source, destination)
+        if Path(source) == retired:
+            renamed = True
+
+    def interrupt_original_path_check(path: Path | str) -> bool:
+        nonlocal injected
+        if renamed and Path(path) == retired and not injected:
+            injected = True
+            raise KeyboardInterrupt("injected post-rename interruption")
+        return original_lexists(path)
+
+    monkeypatch.setattr(install_module.os, "rename", track_rename)
+    monkeypatch.setattr(install_module.os.path, "lexists", interrupt_original_path_check)
+
+    with pytest.raises(KeyboardInterrupt, match="injected post-rename interruption"):
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+    assert not any(retired.parent.glob(".sdlc-documents.harnessctl-retiring-*"))
+
+
+def test_retired_document_skill_ambiguous_rename_completion_restores_owned_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_rename = install_module.os.rename
+    injected = False
+
+    def rename_then_interrupt(source: Path, destination: Path) -> None:
+        nonlocal injected
+        original_rename(source, destination)
+        if Path(source) == retired and not injected:
+            injected = True
+            raise KeyboardInterrupt("injected ambiguous rename completion")
+
+    monkeypatch.setattr(install_module.os, "rename", rename_then_interrupt)
+
+    with pytest.raises(KeyboardInterrupt, match="injected ambiguous rename completion"):
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+    assert not any(retired.parent.glob(".sdlc-documents.harnessctl-retiring-*"))
+
+
+def test_retired_document_skill_post_delete_interruption_rolls_back_owned_tree(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    original_rmdir = Path.rmdir
+    original_lexists = install_module.os.path.lexists
+    deletion_complete = False
+    injected = False
+
+    def rmdir_then_mark_deleted(path: Path) -> None:
+        nonlocal deletion_complete
+        original_rmdir(path)
+        if path.name.startswith(".sdlc-documents.harnessctl-retiring-"):
+            deletion_complete = True
+
+    def interrupt_final_original_check(path: Path | str) -> bool:
+        nonlocal injected
+        if deletion_complete and Path(path) == retired and not injected:
+            injected = True
+            raise KeyboardInterrupt("injected post-delete interruption")
+        return original_lexists(path)
+
+    monkeypatch.setattr(Path, "rmdir", rmdir_then_mark_deleted)
+    monkeypatch.setattr(install_module.os.path, "lexists", interrupt_final_original_check)
+
+    with pytest.raises(KeyboardInterrupt, match="injected post-delete interruption"):
+        install(tmp_path, "opencode")
+
+    assert (retired / "SKILL.md").read_bytes() == RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+    assert not any(retired.parent.glob(".sdlc-documents.harnessctl-retiring-*"))
+
+
+def test_retired_document_skill_changed_after_planning_survives_rollback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    changed = retired / "SKILL.md"
+    original_write_atomic = install_module.write_atomic
+    injected = False
+
+    def write_atomic_then_change(path: Path, content: str) -> None:
+        nonlocal injected
+        original_write_atomic(path, content)
+        if not injected:
+            injected = True
+            changed.write_bytes(b"operator change before failed install\n")
+
+    monkeypatch.setattr(install_module, "write_atomic", write_atomic_then_change)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected failure"):
+        install(tmp_path, "opencode")
+
+    assert changed.read_bytes() == b"operator change before failed install\n"
+
+
+def test_retired_document_skill_cleanup_rolls_back_when_later_host_cleanup_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_pinned_pi_adapter(tmp_path)
+    roots = [write_exact_retired_document_skill(tmp_path, host) for host in ("opencode", "pi")]
+    original_remove = install_module._remove_retired_document_skill
+    calls = 0
+
+    def remove_then_fail(
+        root: Path, cleanup: object, deleted: list[tuple[object, bytes]]
+    ) -> bytes | None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("injected second-host cleanup failure")
+        return original_remove(root, cleanup, deleted)
+
+    monkeypatch.setattr(install_module, "_remove_retired_document_skill", remove_then_fail)
+
+    with pytest.raises(RuntimeError, match="injected second-host cleanup failure"):
+        install(tmp_path, "all")
+
+    assert all(
+        (retired / "SKILL.md").read_bytes() == RETIRED_DOCUMENT_SKILL_FIXTURE.read_bytes()
+        for retired in roots
+    )
+
+
+def test_retired_document_skill_rollback_never_overwrites_recreated_operator_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_pinned_pi_adapter(tmp_path)
+    roots = [write_exact_retired_document_skill(tmp_path, host) for host in ("opencode", "pi")]
+    original_remove = install_module._remove_retired_document_skill
+    calls = 0
+
+    def remove_recreate_then_fail(
+        root: Path, cleanup: object, deleted: list[tuple[object, bytes]]
+    ) -> bytes | None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("injected second-host cleanup failure")
+        removed = original_remove(root, cleanup, deleted)
+        roots[0].mkdir()
+        (roots[0] / "SKILL.md").write_bytes(b"operator recreation\n")
+        return removed
+
+    monkeypatch.setattr(install_module, "_remove_retired_document_skill", remove_recreate_then_fail)
+
+    with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
+        install(tmp_path, "all")
+
+    assert (roots[0] / "SKILL.md").read_bytes() == b"operator recreation\n"
+
+
+def test_retired_document_skill_rollback_exclusive_create_preserves_racing_operator_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_pinned_pi_adapter(tmp_path)
+    roots = [write_exact_retired_document_skill(tmp_path, host) for host in ("opencode", "pi")]
+    original_remove = install_module._remove_retired_document_skill
+    original_open = install_module.os.open
+    remove_calls = 0
+    injected = False
+
+    def remove_then_fail(
+        root: Path, cleanup: object, deleted: list[tuple[object, bytes]]
+    ) -> bytes | None:
+        nonlocal remove_calls
+        remove_calls += 1
+        if remove_calls == 2:
+            raise RuntimeError("injected second-host cleanup failure")
+        return original_remove(root, cleanup, deleted)
+
+    def create_operator_file_then_open(path: Path, flags: int, mode: int = 0o777) -> int:
+        nonlocal injected
+        if Path(path) == roots[0] / "SKILL.md" and flags & os.O_EXCL and not injected:
+            injected = True
+            Path(path).write_bytes(b"racing operator recreation\n")
+        return original_open(path, flags, mode)
+
+    monkeypatch.setattr(install_module, "_remove_retired_document_skill", remove_then_fail)
+    monkeypatch.setattr(install_module.os, "open", create_operator_file_then_open)
+
+    with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
+        install(tmp_path, "all")
+
+    assert (roots[0] / "SKILL.md").read_bytes() == b"racing operator recreation\n"
 
 
 @pytest.mark.parametrize("force", [False, True])
@@ -961,6 +1683,15 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     assert first["paths"]["tasks"] == ".harnessctl/tasks"
     assert first["issues"]["root"] == ".harnessctl/issues"
     assert first["issues"]["prefix"] == "hrn-"
+    assert first["documents"] == {
+        "root": ".harnessctl/documents",
+        "prefix": "doc-",
+        "type": "filesystem",
+        "tools": (
+            "document_id,document_create,document_list,document_get,document_update,"
+            "document_version,document_validate,document_archive,document_restore"
+        ),
+    }
     assert first["cvs"] == {
         "local": "git",
         "remote": {
@@ -993,6 +1724,54 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     first["paths"]["tasks"] = "mutated"
     assert load_config(tmp_path)["paths"]["tasks"] == ".harnessctl/tasks"
     assert not (tmp_path / ".harnessctl/config.yaml").exists()
+
+
+@pytest.mark.parametrize(
+    "documents",
+    [
+        {"root": "../documents"},
+        {"root": "custom/documents"},
+        {"prefix": "custom-"},
+        {"type": "github", "remote": {"repository": "owner/repo"}},
+        {"unknown": True},
+        {"tools": "document_create"},
+    ],
+)
+def test_config_rejects_removed_remote_or_custom_documents_early(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    documents: dict[str, object],
+) -> None:
+    path = tmp_path / ".harnessctl/config.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"version": 2, "documents": documents}), encoding="utf-8")
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda _name: (_ for _ in ()).throw(AssertionError("config rejection must precede probes")),
+    )
+
+    with pytest.raises(ConfigError, match="remove the documents override"):
+        install(tmp_path, "opencode")
+    assert not (tmp_path / ".opencode").exists()
+
+
+def test_removed_documents_config_rejection_precedes_retired_skill_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retired = write_exact_retired_document_skill(tmp_path, "opencode")
+    before = _tree_manifest(retired)
+    write_project_config(tmp_path, "documents:\n  type: gitea\n  remote: {}\n")
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda _name: (_ for _ in ()).throw(AssertionError("must reject before probing")),
+    )
+
+    with pytest.raises(ConfigError, match="remove the documents override"):
+        install(tmp_path, "opencode")
+
+    assert _tree_manifest(retired) == before
 
 
 @pytest.mark.parametrize(
@@ -1116,7 +1895,17 @@ def test_config_defaults_to_disabled_external_code_index_skill(tmp_path: Path) -
 
 
 @pytest.mark.parametrize(
-    "server_name", ["sdlc-code-index", "sdlc_cvs_custom", "index_2", "a", "a-b_c-9"]
+    "server_name",
+    [
+        "sdlc-code-index",
+        "sdlc_cvs_custom",
+        "sdlc_documents_custom",
+        "sdlc_documents_gitea",
+        "sdlc_documents_forgejo",
+        "index_2",
+        "a",
+        "a-b_c-9",
+    ],
 )
 def test_config_accepts_portable_external_code_index_server_name(
     tmp_path: Path, server_name: str
@@ -1911,7 +2700,264 @@ def test_install_migrates_exact_legacy_cvs_mcp_id(
 
 @pytest.mark.parametrize("harness", ["opencode", "pi"])
 @pytest.mark.parametrize("force", [False, True])
-@pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
+def test_install_replaces_exact_forgejo_backed_gitea_definition_at_canonical_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    force: bool,
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, "gitea")
+    historical = next(
+        intent
+        for intent in recognized_server_intents(config, harness)
+        if intent.server_id == "sdlc_cvs_gitea"
+    )
+    desired = install_module.required_server_intents(config, harness)[0]
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        renderer = render_opencode_mcp
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        renderer = render_pi_mcp
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(
+        json.dumps({container: {historical.server_id: renderer(historical)}}) + "\n",
+        encoding="utf-8",
+    )
+
+    install(tmp_path, harness, force=force)
+
+    entries = json.loads(host.read_text(encoding="utf-8"))[container]
+    assert entries == {desired.server_id: renderer(desired)}
+
+
+@pytest.mark.parametrize("force", [False, True])
+def test_all_install_replaces_both_exact_historical_gitea_ids_in_each_host(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, force: bool
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, "gitea")
+    historical = {
+        server_id: next(
+            intent
+            for intent in recognized_server_intents(config, "all")
+            if intent.server_id == server_id and intent.command == "forgejo-mcp"
+        )
+        for server_id in ("cvs_gitea", "sdlc_cvs_gitea")
+    }
+    write_pinned_pi_adapter(tmp_path)
+    hosts = (
+        (tmp_path / ".opencode/opencode.json", "mcp", render_opencode_mcp),
+        (tmp_path / ".pi/mcp.json", "mcpServers", render_pi_mcp),
+    )
+    for host, container, renderer in hosts:
+        host.parent.mkdir(parents=True, exist_ok=True)
+        host.write_text(
+            json.dumps(
+                {
+                    container: {
+                        server_id: renderer(intent) for server_id, intent in historical.items()
+                    }
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    install(tmp_path, "all", force=force)
+
+    desired = install_module.required_server_intents(config, "all")[0]
+    for host, container, renderer in hosts:
+        assert json.loads(host.read_text(encoding="utf-8"))[container] == {
+            desired.server_id: renderer(desired)
+        }
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.parametrize("server_id", ["cvs_gitea", "sdlc_cvs_gitea"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("modified", [False, True])
+def test_install_preserves_historical_gitea_without_planned_replacement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    server_id: str,
+    force: bool,
+    modified: bool,
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    gitea_config = write_cvs_provider_config(tmp_path, "gitea")
+    historical = next(
+        intent
+        for intent in recognized_server_intents(gitea_config, harness)
+        if intent.server_id == server_id and intent.command == "forgejo-mcp"
+    )
+    write_cvs_provider_config(tmp_path, "github")
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    hosts = []
+    if harness in ("opencode", "all"):
+        hosts.append((tmp_path / ".opencode/opencode.json", "mcp", render_opencode_mcp))
+    if harness in ("pi", "all"):
+        hosts.append((tmp_path / ".pi/mcp.json", "mcpServers", render_pi_mcp))
+    expected: dict[Path, dict[str, object]] = {}
+    for host, container, renderer in hosts:
+        value = renderer(historical)
+        if modified:
+            value = {**value, "operator": True}
+        expected[host] = value
+        host.parent.mkdir(parents=True, exist_ok=True)
+        host.write_text(json.dumps({container: {server_id: value}}) + "\n", encoding="utf-8")
+
+    install(tmp_path, harness, force=force)
+
+    for host, container, _renderer in hosts:
+        assert json.loads(host.read_text(encoding="utf-8"))[container][server_id] == expected[host]
+
+
+def test_all_historical_gitea_migration_rolls_back_both_hosts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, "gitea")
+    historical = {
+        server_id: next(
+            intent
+            for intent in recognized_server_intents(config, "all")
+            if intent.server_id == server_id and intent.command == "forgejo-mcp"
+        )
+        for server_id in ("cvs_gitea", "sdlc_cvs_gitea")
+    }
+    write_pinned_pi_adapter(tmp_path)
+    for host, container, renderer in (
+        (tmp_path / ".opencode/opencode.json", "mcp", render_opencode_mcp),
+        (tmp_path / ".pi/mcp.json", "mcpServers", render_pi_mcp),
+    ):
+        host.parent.mkdir(parents=True, exist_ok=True)
+        host.write_text(
+            json.dumps(
+                {
+                    container: {
+                        server_id: renderer(intent) for server_id, intent in historical.items()
+                    }
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    before = _tree_manifest(tmp_path)
+    monkeypatch.setattr(
+        install_module,
+        "_smoke_check_mcp",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("injected smoke failure")),
+    )
+
+    with pytest.raises(RuntimeError, match="injected smoke failure"):
+        install(tmp_path, "all")
+
+    assert _tree_manifest(tmp_path) == before
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("modification", ["add", "environment", "url", "remove_environment"])
+@pytest.mark.parametrize("server_id", ["cvs_gitea", "sdlc_cvs_gitea"])
+def test_modified_forgejo_backed_gitea_definition_blocks_replacement(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    force: bool,
+    modification: str,
+    server_id: str,
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, "gitea")
+    historical = next(
+        intent
+        for intent in recognized_server_intents(config, harness)
+        if intent.server_id == server_id and intent.command == "forgejo-mcp"
+    )
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+    hosts = []
+    if harness in ("opencode", "all"):
+        hosts.append((tmp_path / ".opencode/opencode.json", "mcp", render_opencode_mcp))
+    if harness in ("pi", "all"):
+        hosts.append((tmp_path / ".pi/mcp.json", "mcpServers", render_pi_mcp))
+    for host, container, renderer in hosts:
+        modified = renderer(historical)
+        environment_key = "environment" if container == "mcp" else "env"
+        arguments_key = "command" if container == "mcp" else "args"
+        if modification == "add":
+            modified["operatorWeight"] = 100
+        elif modification == "environment":
+            modified[environment_key] = {"OPERATOR_TOKEN": "literal"}
+        elif modification == "url":
+            arguments = list(modified[arguments_key])
+            arguments[-1] = "https://operator.example.test"
+            modified[arguments_key] = arguments
+        else:
+            del modified[environment_key]
+        modified_raw = json.dumps(modified, separators=(",", ":")).replace(
+            '"operatorWeight":100', '"operatorWeight":1e+02'
+        )
+        host.parent.mkdir(parents=True, exist_ok=True)
+        host.write_text(
+            f'{{"operatorRaw":{{"escaped":"\\u0061"}},'
+            f'"{container}":{{"{historical.server_id}":{modified_raw}}}}}\n',
+            encoding="utf-8",
+        )
+    before = _tree_manifest(tmp_path)
+
+    with (
+        pytest.warns(UserWarning, match=f"preserving modified historical MCP ID {server_id}"),
+        pytest.raises(FileExistsError, match=rf"modified historical.*{server_id}.*blocks"),
+    ):
+        install(tmp_path, harness, force=force)
+
+    assert _tree_manifest(tmp_path) == before
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_unrelated_gitea_canonical_conflict_retains_force_replacement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
+) -> None:
+    monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
+    config = write_cvs_provider_config(tmp_path, "gitea")
+    desired = install_module.required_server_intents(config, harness)[0]
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        renderer = render_opencode_mcp
+        unrelated = {"type": "local", "command": ["operator-mcp", "serve"]}
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        renderer = render_pi_mcp
+        unrelated = {"command": "operator-mcp", "args": ["serve"], "lifecycle": "lazy"}
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(
+        json.dumps({container: {desired.server_id: unrelated}}) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FileExistsError, match="sdlc_cvs_gitea"):
+        install(tmp_path, harness)
+    install(tmp_path, harness, force=True)
+
+    assert json.loads(host.read_text(encoding="utf-8"))[container][desired.server_id] == renderer(
+        desired
+    )
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("provider", ["github", "gitlab", "forgejo"])
 def test_install_preserves_modified_legacy_cvs_mcp_id(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2225,6 +3271,59 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
     assert "sdlc_cvs_gitea" not in document.get("mcp", {})
     assert "sdlc-code-index" not in document.get("mcp", {})
+
+
+@pytest.mark.parametrize(
+    ("provider", "available_command", "expected_command"),
+    [
+        ("gitea", "gitea-mcp", "gitea-mcp"),
+        ("forgejo", "forgejo-mcp", "forgejo-mcp"),
+    ],
+)
+def test_local_mcp_availability_is_provider_specific(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    provider: str,
+    available_command: str,
+    expected_command: str,
+) -> None:
+    write_cvs_provider_config(tmp_path, provider)
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda name: f"/bin/{name}" if name == available_command else None,
+    )
+
+    install(tmp_path, "opencode")
+
+    document = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
+    assert document["mcp"][f"sdlc_cvs_{provider}"]["command"][0] == expected_command
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("server_id", ["sdlc_documents_gitea", "sdlc_documents_forgejo"])
+def test_install_does_not_delete_stale_document_mcp_entries_by_name(
+    tmp_path: Path, harness: str, server_id: str
+) -> None:
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+    host.parent.mkdir(parents=True, exist_ok=True)
+    stale = {"operatorRaw": "\u0061", "weight": 100.0}
+    host.write_text(
+        f'{{"{container}":{{"{server_id}":{{"operatorRaw":"\\u0061","weight":1e+02}}}}}}\n',
+        encoding="utf-8",
+    )
+
+    install(tmp_path, harness)
+
+    content = host.read_text(encoding="utf-8")
+    assert json.loads(content)[container][server_id] == stale
+    assert '"operatorRaw":"\\u0061","weight":1e+02' in content
 
 
 def test_local_mcp_missing_binary_still_installs_cli_skill(

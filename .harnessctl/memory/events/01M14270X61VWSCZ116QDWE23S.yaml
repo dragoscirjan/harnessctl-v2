@@ -1,0 +1,28 @@
+schema_version: 1
+id: 01M14270X61VWSCZ116QDWE23S
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | warning and HOME isolation | implemented; gates pass
+details: "hrn-00146: post-quarantine operator recreation warns; rename/delete interruption windows restore or rollback exact managed bytes; warning policy cannot strand state. hrn-00147: OpenCode/Pi/all absent+hostile HOME guards prove no user-tree reads/writes; Pi child environment strips HOME/HOMEDRIVE/HOMEPATH/USERPROFILE/XDG_CONFIG_HOME, preserves unrelated env. Independent review round 6 approved. Focused 42; installer/preservation/release 421; `mise run quality`: generic 267, adapters 5, Python 599, tarballs 23/5/7, artifacts 5. `mise run build`, diff, Documents/Issues/Memory validation pass. Epic/children open. No Verify/Release/closure/commit/remote/destructive action. Next: `work-verify hrn-00135`."
+source:
+  kind: tool-observation
+  ref: hrn-00146-C0003; hrn-00147-C0001; hrn-00135-C0019; local Build gates
+  revision: null
+created_at: 2026-08-28T11:31:22.150Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M13RT1TGW2FWC0665EA7C0K4
+tags:
+  - build
+  - checkpoint
+  - documents
+  - home-isolation
+  - hrn-00135
+  - hrn-00146
+  - hrn-00147
+  - operator-preservation

@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M0ZJ24CX4DDW7Z7CJ7B9YS0A
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | build | hrn-00140-hrn-00142 repaired | focused gates and review pass
+details: "Branch feat/hrn-00135-sdlc-documents. Safe direct .ai.tmp Markdown links added. document_list location exact and bounded before config/local access. HLD/LLD approved; Epic plan phase classified historical; skill docs registry-neutral. Focused: generic 42, OpenCode 2, Pi 3, Python docs/artifacts 20; generic build, typecheck, lint, Ruff, Prettier, diff-check, issue validation pass. Independent review round 9 approved. Full Verify gates pending. Next: work-verify hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:46f08cbdf93d412ebe3f3131f18195444a230e1b2cddec6dfebe43937211b391
+created_at: 2026-08-26T17:32:06.941Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZGRPHJ45987N2V970NK25V
+tags:
+  - build
+  - compatibility
+  - documents
+  - verified

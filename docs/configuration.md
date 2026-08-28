@@ -30,6 +30,10 @@ parallel; the generated JSON contract comes from the TypeScript runtime schema.
 | `issues.tools`                      | Complete 12-tool local list | Exact provider tooling: local tool set, `gh`, `glab`, `tea`, or `forgejo-cli` |
 | `issues.remote.url`                 | None                        | Required for remote providers; rejected for filesystem                        |
 | `issues.remote.token_env`           | None                        | Required provider token environment-variable name; rejected for filesystem    |
+| `documents.root`                    | `.harnessctl/documents`     | Fixed repository-local canonical Markdown root                                |
+| `documents.prefix`                  | `doc-`                      | Fixed document ID prefix                                                      |
+| `documents.type`                    | `filesystem`                | Fixed local authority; remote providers are removed                           |
+| `documents.tools`                   | Complete 9-tool local list  | Exact normalized Documents tool set                                           |
 | `paths.root`                        | `.harnessctl`               | General harnessctl artifact root                                              |
 | `paths.tasks`                       | `.harnessctl/tasks`         | Task artifact path                                                            |
 | `paths.reports`                     | `.harnessctl/reports`       | Report artifact path                                                          |
@@ -51,6 +55,11 @@ issues:
   root: .harnessctl/issues
   prefix: hrn-
   tools: issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive
+documents:
+  type: filesystem
+  root: .harnessctl/documents
+  prefix: doc-
+  tools: document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore
 cvs:
   local: git
   remote:
@@ -92,6 +101,27 @@ memory:
 ```
 
 Filesystem configuration rejects `issues.remote`.
+
+### Documents settings
+
+Documents is independent from Issues and CVS, but its authority is not configurable.
+The full fixed mapping appears in generated defaults for schema parity. An omitted mapping
+receives these defaults; an explicit mapping must match them exactly. Custom roots,
+prefixes, tools, remote fields, and provider types are rejected with migration guidance.
+
+```yaml
+# Filesystem
+documents:
+  type: filesystem
+  root: .harnessctl/documents
+  prefix: doc-
+  tools: document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore
+```
+
+The exact tools are `document_id`, `document_create`, `document_list`, `document_get`,
+`document_update`, `document_version`, `document_validate`, `document_archive`, and
+`document_restore`. See [Documents](documents.md) for lifecycle, legacy compatibility,
+cache, and retired-skill cleanup boundaries.
 
 ### SDLC code-index settings
 
@@ -256,9 +286,10 @@ Replace only the Gitea or Forgejo example host with the real instance URL. These
 values are executable identifiers, not commands. harnessctl does not install,
 authenticate, or invoke a configured CLI. The generated issue-tracking skill instructs the host agent to use
 the configured provider's valid CLI/MCP capabilities and remote endpoint. Generic local issue tools fail closed
-in remote mode instead of mutating YAML. For Gitea and Forgejo, MCP capability depends
-on `forgejo-mcp` executable availability; CLI capability independently depends on `tea`
-or `forgejo-cli`. See [CVS and MCP providers](cvs.md) for host files, consent, and
+in remote mode instead of mutating YAML. Gitea MCP capability depends on official
+`gitea-mcp` 1.6.0 availability; Forgejo MCP capability depends on `forgejo-mcp` 2.33.0.
+CLI capability independently depends on `tea` or `forgejo-cli`. See
+[CVS and MCP providers](cvs.md) for host files, consent, and
 security boundaries.
 See [issues](issues.md). Future memory shapes are documented separately in
 [memory](memory.md); all remain invalid today.
