@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZGRPHJ45987N2V970NK25V
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | verify | full gates pass, review blocks | hrn-00140-hrn-00142 open
+details: "Branch feat/hrn-00135-sdlc-documents. Full quality: 559 Python, generic-tools 265, OpenCode 2, Pi 3; lint, format, types, coverage, duplication, dead code, workflows, docs, packages pass. Build: 3 release-artifact tests and package builds pass. Independent review round 7 blocks: legacy .ai.tmp links unsupported; document_list location accepts invalid values; lifecycle/spec/skill docs inconsistent. Bugs hrn-00140, hrn-00141, hrn-00142 created. No Verify repairs. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:40a36c2f4765f30eb74ce52b04e132773fc355a184ac0d6dd9e55b1ca95216e3
+created_at: 2026-08-26T17:09:29.266Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0Z4W7C74F8AN8QJW286KCRE
+tags:
+  - blocked
+  - compatibility
+  - docs
+  - documents
+  - verify

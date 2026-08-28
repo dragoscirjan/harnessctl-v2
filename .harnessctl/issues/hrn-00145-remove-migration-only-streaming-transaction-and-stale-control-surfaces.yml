@@ -1,0 +1,43 @@
+"version": 1
+"id": "hrn-00145"
+"type": "bug"
+"title": "Remove migration-only streaming transaction and stale control surfaces"
+"status": "open"
+"created_at": "2026-08-27T21:54:33.755Z"
+"updated_at": "2026-08-28T00:17:23.522Z"
+"created_by": "OpenCode"
+"parent": "hrn-00135"
+"documents":
+  - ".harnessctl/documents/doc-00013-repository-local-sdlc-design-document-management-v4.md"
+  - ".harnessctl/documents/doc-00014-repository-local-sdlc-design-document-management-v4.md"
+"metadata":
+  "affected_acceptance":
+    - 6
+    - 7
+  "phase": "verify"
+"body": "# Remove migration-only streaming transaction and stale control surfaces\n\n## Summary\n\nThe streaming transaction and quarantine/recovery machinery exists only for the completed repository-specific `.specs` conversion. Harnessctl is unreleased and no external repository needs this migration path. Removing the subsystem is simpler and safer than extending its operator-state authentication model.\n\n## Scope\n\n- Delete `extensions/generic-tools/streaming-transaction.ts`, its tests, migration callers, exports, generated runner copies, and migration-specific control protocol.\n- Remove migration completion/recovery/quarantine behavior and its package/provenance surfaces after persistent preservation evidence validates the converted authority.\n- Remove only the migration-specific completion directory and stale control remnants; preserve the ordinary `.harnessctl/documents/.control` root.\n- Retain ordinary Documents lifecycle transaction/recovery behavior in `documents.ts`, including create/update/version/archive/restore rollback and issue-reference safety.\n- Preserve all canonical Documents, issue links, embedded legacy provenance, `.specs-v1`, immutable comments, and unrelated operator/worktree state.\n\n## Acceptance Criteria\n\n- [ ] No migration streaming transaction, preparation/quarantine recovery, completion protocol, export, runner copy, package resource, or test remains in active source/artifacts.\n- [ ] Migration-specific control state is removed only after the 19-record persistent preservation gate passes.\n- [ ] Ordinary Documents lifecycle recovery remains intact and its focused tests pass.\n- [ ] Existing, replaced, nonempty, unowned, or unrelated operator state is never removed as migration cleanup.\n- [ ] Canonical Documents and Issues validate; `.specs-v1` remains unchanged.\n- [ ] Stale-surface, package/artifact, full quality/build, and final diff-loss checks pass."
+"comments":
+  - "id": "hrn-00145-C0001"
+    "created_at": "2026-08-27T22:12:47.142Z"
+    "created_by": "OpenCode"
+    "body": "Build repair implemented. Streaming preparation now retains staging/control/payload identities, validates manifest bytes before payload promotion, quarantines and removes only invocation-owned identity-matching pre-manifest state, preserves replaced/nonempty/unowned state, and leaves manifest-published payloads for recovery. Regression coverage includes materialization, early validation, markerless staging, cyclic metadata, every payload-promotion window, replacement preservation, and successful retry. Evidence: 28 focused streaming/migration tests passed; independent review round 5 approved; `mise run quality` passed (generic-tools 296, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped); `mise run build` and 5 release-artifact tests passed. Bug remains open; next boundary is Verify."
+  - "id": "hrn-00145-C0002"
+    "created_at": "2026-08-27T22:17:50.097Z"
+    "created_by": "OpenCode"
+    "body": "Verify failed: the final control-directory leak is fixed and immediate retry succeeds, but pre-manifest failure still leaves invocation-created `.harnessctl/documents/` and `.harnessctl/documents/.control/` ancestors. This violates Epic acceptance 6/7 exact pre-commit control-state restoration. Fresh evidence: `mise run quality` passed (generic-tools 296, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped), `mise run build` passed with 5 release-artifact tests, independent focused review passed 28/28 tests and reproduced the ancestor leak. No source repair performed in Verify. Next: Build repair reusing hrn-00145."
+  - "id": "hrn-00145-C0003"
+    "created_at": "2026-08-27T22:26:11.320Z"
+    "created_by": "OpenCode"
+    "body": "Build repair completed for the remaining ancestor leak. Streaming preparation now records every control ancestor created by the invocation and unwinds them deepest-first only when directory identity still matches and the directory remains empty; pre-existing, replaced, nonempty, and unowned state is preserved. Concurrent replacement that prevents exact restoration fails closed with explicit quarantined-state evidence, and cleanup failures remain typed. Evidence: 29 focused streaming/migration tests passed; independent review round 2 approved; `mise run quality` passed (generic-tools 297, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped); `mise run build`, deterministic resource checks, and 5 release-artifact tests passed. Bug remains open; next boundary is Verify."
+  - "id": "hrn-00145-C0004"
+    "created_at": "2026-08-27T22:32:10.604Z"
+    "created_by": "OpenCode"
+    "body": "Verify failed: pre-manifest cleanup can delete unowned nested state inside invocation-created preparation trees because recursive cleanup disables ownership-marker validation and accepts sidecar/chunk filenames. Independent reproduction deleted operator-created `proposed/sidecar.json`. Epic acceptance 6/7 remain blocked. Fresh `mise run quality` and `mise run build` passed; Linux tests passed, with 2 native-Windows tests skipped. No source repair performed in Verify. Next: Build repair reusing hrn-00145."
+  - "id": "hrn-00145-C0005"
+    "created_at": "2026-08-27T23:09:28.931Z"
+    "created_by": "OpenCode"
+    "body": "Build repair complete: preparation/rollback cleanup now preserves unowned nested and replaced payload state, authenticates cleanup from the retained transaction manifest, enforces exact referenced tree shape, accounts ownership evidence in the 512 MiB bound, resumes marker-removal cleanup, preserves pre-existing empty control, and atomically quarantines invocation-owned empty control before deletion. Independent review approved. Evidence: focused streaming+migration 35 passed; `mise run quality`, `mise run build`, `npm run specs-migration:check`, and `git diff --check` passed. Bug remains open; next step Verify."
+  - "id": "hrn-00145-C0006"
+    "created_at": "2026-08-28T00:17:23.522Z"
+    "created_by": "OpenCode"
+    "body": "Build v4 simplification complete. Removed migration-only streaming transaction, quarantine, bridge, completion, control-child, resources, package, and test surfaces. Retained ordinary `documents.ts` journal/recovery and operator-state protections. Independent review approved; configured quality/build gates pass. Issue remains open; next phase is Verify."

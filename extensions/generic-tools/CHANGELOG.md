@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## Unreleased
+
+### Patch Changes
+
+- Add the fixed repository-local Documents lifecycle and safe active-document issue links.
+
 ## 0.1.9
 
 ### Patch Changes

@@ -1,20 +1,34 @@
 import { createHash, randomBytes } from 'node:crypto';
 import {
   closeSync,
+  constants,
   existsSync,
+  fstatSync,
   fsyncSync,
   lstatSync,
   mkdirSync,
   openSync,
-  readFileSync,
+  readSync,
   readdirSync,
   renameSync,
   rmSync,
+  unlinkSync,
+  writeFileSync,
 } from 'node:fs';
+import type { Stats } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { parseDocument } from 'yaml';
 import { ConfigError, readConfig, type ConfigDocument } from './config.js';
+import {
+  DOCUMENT_LIMITS,
+  DOCUMENT_ID_PREFIX,
+  DOCUMENT_ROOT,
+  canonicalDocumentFilename,
+  computeDocumentRevision,
+  decodeDocument,
+  type CanonicalDocumentMetadata,
+} from './documents-contract.js';
 import { decodeIssueDocument, type CanonicalIssueDocument } from './issues-contract.js';
 import { memoryRecordSchema, memoryTombstoneSchema, type MemoryRecord, type MemoryTombstone } from './schemas.js';
 
@@ -23,12 +37,13 @@ const LOCK_PATH = '.harnessctl/cache/local-operations.lock';
 const CACHE_PATH = '.harnessctl/cache/harnessctl.sqlite';
 const CACHE_IDENTITY = 'harnessctl-local-cache';
 const APPLICATION_ID = 0x48524e31;
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 4;
 const DEFAULT_WAIT_MS = 5_000;
 const MAX_ISSUES = 9_999;
 const MAX_MEMORY_FILES = 10_000;
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_MEMORY_BYTES = 256 * 1024 * 1024;
+const MAX_DOCUMENTS = DOCUMENT_LIMITS.files;
 const MAX_ROWS = 1_000_000;
 const MAX_TEMP_BYTES = 512 * 1024 * 1024;
 const activeRoots = new Set<string>();
@@ -71,11 +86,98 @@ interface TombstoneProjection {
   revision: string;
 }
 
+interface DocumentProjection {
+  metadata: CanonicalDocumentMetadata;
+  path: string;
+  location: 'active' | 'archive';
+  revision: string;
+}
+
 export interface LocalSnapshot {
   readonly fingerprint: string;
   readonly issues: readonly IssueProjection[];
   readonly memories: readonly MemoryProjection[];
   readonly tombstones: readonly TombstoneProjection[];
+  readonly documents: readonly DocumentProjection[];
+}
+
+export type DocumentSnapshotOverlay = ReadonlyMap<string, Uint8Array | undefined>;
+
+export interface CanonicalFileReplacement {
+  path: string;
+  bytes?: Uint8Array;
+  expectedRevision?: string | null;
+}
+
+export interface CanonicalBatchOptions {
+  interruptAfter?: number;
+  preserveOnInterruption?: boolean;
+}
+
+export class CanonicalBatchInterruption extends Error {
+  public constructor() {
+    super('injected interruption after canonical file publication');
+    this.name = 'CanonicalBatchInterruption';
+  }
+}
+
+export const DOCUMENT_PUBLICATION_TEMP_FILENAME_PATTERN = /^\.harnessctl-document-publish-[a-f0-9]{24}\.tmp$/u;
+
+class CanonicalPublishInterruption extends Error {
+  public constructor(path: string) {
+    super(`injected interruption before canonical file rename: ${path}`);
+    this.name = 'CanonicalPublishInterruption';
+  }
+}
+
+export function applyCanonicalFileBatch(
+  lease: BarrierLease,
+  replacements: readonly CanonicalFileReplacement[],
+  options: CanonicalBatchOptions = {},
+): void {
+  assertLocalBarrierLease(lease);
+  if (!replacements.length || replacements.length > MAX_DOCUMENTS * 2)
+    throw new LocalPersistenceError('resource_limit', 'canonical batch path limit exceeded');
+  const ordered = [...replacements].sort((a, b) => compare(a.path, b.path));
+  const before = new Map<string, Uint8Array | undefined>();
+  const seen = new Set<string>();
+  for (const replacement of ordered) {
+    const key = replacement.path.normalize('NFKC').toLowerCase();
+    if (seen.has(key)) throw new LocalPersistenceError('path_safety', 'canonical batch contains duplicate paths');
+    seen.add(key);
+    const absolute = managedFilePath(lease.repositoryRoot, replacement.path);
+    const bytes = existsSync(absolute) ? boundedRead(absolute, replacement.path) : undefined;
+    if (replacement.expectedRevision === null && bytes !== undefined)
+      throw new LocalPersistenceError('synchronization', `canonical destination already exists: ${replacement.path}`);
+    if (
+      typeof replacement.expectedRevision === 'string' &&
+      (bytes === undefined || computeDocumentRevision(bytes) !== replacement.expectedRevision)
+    )
+      throw new LocalPersistenceError('synchronization', `canonical file has a stale revision: ${replacement.path}`);
+    before.set(replacement.path, bytes);
+  }
+  const applied: CanonicalFileReplacement[] = [];
+  try {
+    for (const replacement of ordered) {
+      publishCanonicalFile(lease.repositoryRoot, replacement.path, replacement.bytes, {
+        bytes: before.get(replacement.path),
+      });
+      applied.push(replacement);
+      if (options.interruptAfter === applied.length) throw new CanonicalBatchInterruption();
+    }
+  } catch (error: unknown) {
+    if (error instanceof CanonicalBatchInterruption && options.preserveOnInterruption) throw error;
+    let rollbackError: unknown;
+    for (const replacement of applied.reverse()) {
+      try {
+        publishCanonicalFile(lease.repositoryRoot, replacement.path, before.get(replacement.path));
+      } catch (failure: unknown) {
+        rollbackError ??= failure;
+      }
+    }
+    if (rollbackError) throw new LocalPersistenceError('synchronization', 'canonical batch and rollback both failed');
+    throw error;
+  }
 }
 
 type LocalCacheValidation =
@@ -149,7 +251,7 @@ export function assertLocalBarrierLease(lease: BarrierLease): void {
     throw new LocalPersistenceError('lock_contention', 'local operation requires an active barrier lease');
 }
 
-export function loadLocalSnapshot(lease: BarrierLease): LocalSnapshot {
+export function loadLocalSnapshot(lease: BarrierLease, documentOverlay?: DocumentSnapshotOverlay): LocalSnapshot {
   assertLocalBarrierLease(lease);
   const config = readConfig(lease.repositoryRoot);
   if (config instanceof ConfigError)
@@ -159,14 +261,18 @@ export function loadLocalSnapshot(lease: BarrierLease): LocalSnapshot {
     );
   const issues = loadIssues(lease.repositoryRoot, config);
   const memory = loadMemories(lease.repositoryRoot, config);
+  const documents = loadDocuments(lease.repositoryRoot, config, documentOverlay);
   const hash = createHash('sha256').update(`${CACHE_IDENTITY}\0${SCHEMA_VERSION}\0`);
   hash.update(
     deterministicJson({
       issues: config.issues,
       memory: config.memory,
+      documents: config.documents,
     }),
   );
-  for (const entry of [...issues.bytes, ...memory.bytes].sort((left, right) => compare(left.path, right.path)))
+  for (const entry of [...issues.bytes, ...memory.bytes, ...documents.bytes].sort((left, right) =>
+    compare(left.path, right.path),
+  ))
     hash.update(entry.path).update('\0').update(entry.bytes).update('\0');
   hash.update(memory.enabled ? 'memory=repository' : 'memory=disabled');
   return {
@@ -174,7 +280,94 @@ export function loadLocalSnapshot(lease: BarrierLease): LocalSnapshot {
     issues: issues.projections,
     memories: memory.records,
     tombstones: memory.tombstones,
+    documents: documents.projections,
   };
+}
+
+function loadDocuments(
+  root: string,
+  config: ConfigDocument,
+  overlay: DocumentSnapshotOverlay = new Map(),
+): { projections: DocumentProjection[]; bytes: Array<{ path: string; bytes: Uint8Array }> } {
+  const documents = mapping(config.documents, 'documents');
+  if (documents.type !== 'filesystem' || documents.root !== DOCUMENT_ROOT || documents.prefix !== DOCUMENT_ID_PREFIX)
+    throw new LocalPersistenceError(
+      'configuration',
+      `documents authority must use fixed root ${DOCUMENT_ROOT} and prefix ${DOCUMENT_ID_PREFIX}`,
+    );
+  const documentRoot = DOCUMENT_ROOT;
+  const prefix = DOCUMENT_ID_PREFIX;
+  assertSafeAncestor(root, documentRoot);
+  const projections: DocumentProjection[] = [];
+  const bytes: Array<{ path: string; bytes: Uint8Array }> = [];
+  const overlaidPaths = new Set<string>();
+  const identities = new Set<string>();
+  let aggregateBytes = 0;
+  const addDocument = (path: string, location: 'active' | 'archive', fileBytes: Uint8Array): void => {
+    if (projections.length >= MAX_DOCUMENTS)
+      throw new LocalPersistenceError('resource_limit', `document file limit exceeded at ${path}`);
+    aggregateBytes += fileBytes.byteLength;
+    if (aggregateBytes > DOCUMENT_LIMITS.aggregateBytes)
+      throw new LocalPersistenceError('resource_limit', `aggregate document byte limit exceeded at ${path}`);
+    const decoded = decodeDocument(fileBytes);
+    if (!new RegExp(`^${escapeRegex(prefix)}\\d{5,}$`, 'u').test(decoded.metadata.id))
+      throw new LocalPersistenceError('path_safety', `document ID is not canonical: ${path}`);
+    if (canonicalDocumentFilename(decoded.metadata) !== path.slice(path.lastIndexOf('/') + 1))
+      throw new LocalPersistenceError('path_safety', `document filename does not match metadata: ${path}`);
+    const identity = `${decoded.metadata.id}\0${decoded.metadata.version}`;
+    if (identities.has(identity)) throw new LocalPersistenceError('path_safety', `duplicate document version: ${path}`);
+    identities.add(identity);
+    projections.push({ metadata: decoded.metadata, path, location, revision: decoded.revision });
+    bytes.push({ path, bytes: fileBytes });
+  };
+  for (const location of ['active', 'archive'] as const) {
+    const directory = location === 'active' ? resolve(root, documentRoot) : resolve(root, documentRoot, 'archive');
+    if (!existsSync(directory)) continue;
+    assertDirectory(directory, `document ${location} root`);
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => compare(a.name, b.name))) {
+      if (location === 'active' && (entry.name === 'archive' || entry.name === '.control')) continue;
+      const path = portableRelative(root, join(directory, entry.name));
+      if (overlay.has(path)) {
+        overlaidPaths.add(path);
+        const replacement = overlay.get(path);
+        if (replacement !== undefined) addDocument(path, location, replacement);
+        continue;
+      }
+      if (!entry.isFile() || entry.isSymbolicLink())
+        throw new LocalPersistenceError('path_safety', `unexpected canonical document entry: ${path}`);
+      if (!entry.name.endsWith('.md'))
+        throw new LocalPersistenceError('path_safety', `unsupported canonical document file: ${path}`);
+      const fileBytes = boundedRead(join(directory, entry.name), path);
+      addDocument(path, location, fileBytes);
+    }
+  }
+  for (const [path, fileBytes] of overlay) {
+    if (fileBytes === undefined || overlaidPaths.has(path)) continue;
+    const activePrefix = `${documentRoot}/`;
+    const archivePrefix = `${documentRoot}/archive/`;
+    const location = path.startsWith(archivePrefix) ? 'archive' : path.startsWith(activePrefix) ? 'active' : undefined;
+    if (!location || path.slice(location === 'archive' ? archivePrefix.length : activePrefix.length).includes('/'))
+      throw new LocalPersistenceError('path_safety', `document overlay path is not canonical: ${path}`);
+    addDocument(path, location, fileBytes);
+  }
+  const lineages = new Map<string, DocumentProjection[]>();
+  for (const projection of projections) {
+    const lineage = lineages.get(projection.metadata.id) ?? [];
+    lineage.push(projection);
+    lineages.set(projection.metadata.id, lineage);
+  }
+  for (const [id, lineage] of lineages) {
+    if (lineage.length > DOCUMENT_LIMITS.versions)
+      throw new LocalPersistenceError('resource_limit', `document lineage version limit exceeded: ${id}`);
+    lineage.sort((a, b) => a.metadata.version - b.metadata.version);
+    if (
+      new Set(lineage.map((value) => value.location)).size !== 1 ||
+      lineage.some((value, index) => value.metadata.version !== index + 1) ||
+      lineage.some((value) => value.metadata.created_at !== lineage[0]?.metadata.created_at)
+    )
+      throw new LocalPersistenceError('path_safety', `invalid canonical document lineage: ${id}`);
+  }
+  return { projections, bytes };
 }
 
 export function ensureLocalCache(lease: BarrierLease, snapshot: LocalSnapshot): LocalCacheValidation {
@@ -358,7 +551,7 @@ function cacheIsHealthy(path: string, snapshot: LocalSnapshot): boolean {
       const applicationId = numericValue(database.get('PRAGMA application_id'));
       const userVersion = numericValue(database.get('PRAGMA user_version'));
       const meta = database.get(
-        'SELECT application_identity, schema_version, canonical_fingerprint, projection_digest, issue_count, memory_record_count, tombstone_count FROM cache_meta WHERE singleton_key = 1',
+        'SELECT application_identity, schema_version, canonical_fingerprint, projection_digest, issue_count, memory_record_count, tombstone_count, document_count FROM cache_meta WHERE singleton_key = 1',
       );
       const tables = new Set(
         database
@@ -377,6 +570,7 @@ function cacheIsHealthy(path: string, snapshot: LocalSnapshot): boolean {
         'memory_supersedes',
         'memory_tags',
         'memory_tombstones',
+        'documents',
       ] as const;
       if (!requiredTables.every((table) => tables.has(table))) return false;
       const actualCounts = requiredTables.map((table) => numericValue(database.get(`SELECT count(*) FROM ${table}`)));
@@ -384,6 +578,9 @@ function cacheIsHealthy(path: string, snapshot: LocalSnapshot): boolean {
       const providerCount = actualCounts[1];
       const issueGeneration = database.get("SELECT generation FROM provider_generations WHERE provider = 'issues'");
       const memoryGeneration = database.get("SELECT generation FROM provider_generations WHERE provider = 'memory'");
+      const documentGeneration = database.get(
+        "SELECT generation FROM provider_generations WHERE provider = 'documents'",
+      );
       return (
         firstValue(integrity) === 'ok' &&
         (foreignKeys === undefined || foreignKeys === null) &&
@@ -396,9 +593,11 @@ function cacheIsHealthy(path: string, snapshot: LocalSnapshot): boolean {
         meta.issue_count === snapshot.issues.length &&
         meta.memory_record_count === snapshot.memories.length &&
         meta.tombstone_count === snapshot.tombstones.length &&
-        providerCount === 2 &&
+        meta.document_count === snapshot.documents.length &&
+        providerCount === 3 &&
         issueGeneration?.generation === snapshot.fingerprint &&
         memoryGeneration?.generation === snapshot.fingerprint &&
+        documentGeneration?.generation === snapshot.fingerprint &&
         actualCounts.every(
           (count, index) => count !== undefined && count >= 0 && count <= MAX_ROWS && count === expectedCounts[index],
         ) &&
@@ -462,10 +661,11 @@ function createSchema(database: LocalDatabase): void {
       issue_count INTEGER NOT NULL,
       memory_record_count INTEGER NOT NULL,
       tombstone_count INTEGER NOT NULL,
+      document_count INTEGER NOT NULL,
       rebuilt_at TEXT NOT NULL
     );
     CREATE TABLE provider_generations (
-      provider TEXT PRIMARY KEY CHECK (provider IN ('issues', 'memory')),
+      provider TEXT PRIMARY KEY CHECK (provider IN ('issues', 'memory', 'documents')),
       generation TEXT NOT NULL
     );
     CREATE TABLE issues (
@@ -497,6 +697,12 @@ function createSchema(database: LocalDatabase): void {
       project_id TEXT NOT NULL, reason TEXT NOT NULL, source_kind TEXT NOT NULL, source_ref TEXT,
       source_revision TEXT, created_at TEXT NOT NULL, created_by TEXT NOT NULL
     );
+    CREATE TABLE documents (
+      id TEXT NOT NULL, version INTEGER NOT NULL, location TEXT NOT NULL CHECK(location IN ('active','archive')),
+      canonical_path TEXT NOT NULL UNIQUE, byte_revision TEXT NOT NULL, title TEXT NOT NULL,
+      kind TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+      created_by TEXT, PRIMARY KEY(id,version)
+    );
     CREATE INDEX issues_location_id ON issues(location,id);
     CREATE INDEX issues_status_id ON issues(status,id);
     CREATE INDEX issues_type_id ON issues(type,id);
@@ -506,6 +712,8 @@ function createSchema(database: LocalDatabase): void {
     CREATE INDEX memory_topic_active_created ON memory_records(topic,active,created_at DESC);
     CREATE INDEX memory_type_active_created ON memory_records(memory_type,active,created_at DESC);
     CREATE INDEX memory_tombstone_target ON memory_tombstones(target_id);
+    CREATE INDEX documents_location_id_version ON documents(location,id,version);
+    CREATE INDEX documents_kind_status ON documents(kind,status,id,version);
   `);
 }
 
@@ -513,9 +721,11 @@ function replaceSnapshot(database: LocalDatabase, snapshot: LocalSnapshot): void
   const rows = countRows(snapshot);
   if (rows > MAX_ROWS) throw new LocalPersistenceError('resource_limit', 'local cache projection row limit exceeded');
   database.transaction(() => {
+    database.exec('PRAGMA defer_foreign_keys = ON;');
     database.exec(`
       DELETE FROM issue_comments; DELETE FROM issue_documents; DELETE FROM issue_relationships; DELETE FROM issues;
       DELETE FROM memory_tombstones; DELETE FROM memory_tags; DELETE FROM memory_supersedes; DELETE FROM memory_records;
+      DELETE FROM documents;
       DELETE FROM provider_generations; DELETE FROM cache_meta;
     `);
     for (const projection of snapshot.issues) {
@@ -602,13 +812,31 @@ function replaceSnapshot(database: LocalDatabase, snapshot: LocalSnapshot): void
         value.created_by,
       ]);
     }
-    database.run('INSERT INTO provider_generations VALUES (?,?), (?,?)', [
+    for (const projection of snapshot.documents) {
+      const value = projection.metadata;
+      database.run('INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?)', [
+        value.id,
+        value.version,
+        projection.location,
+        projection.path,
+        projection.revision,
+        value.title,
+        value.kind,
+        value.status,
+        value.created_at,
+        value.updated_at,
+        value.created_by ?? null,
+      ]);
+    }
+    database.run('INSERT INTO provider_generations VALUES (?,?), (?,?), (?,?)', [
       'issues',
       snapshot.fingerprint,
       'memory',
       snapshot.fingerprint,
+      'documents',
+      snapshot.fingerprint,
     ]);
-    database.run('INSERT INTO cache_meta VALUES (1,?,?,?,?,?,?,?,?)', [
+    database.run('INSERT INTO cache_meta VALUES (1,?,?,?,?,?,?,?,?,?)', [
       CACHE_IDENTITY,
       SCHEMA_VERSION,
       snapshot.fingerprint,
@@ -616,6 +844,7 @@ function replaceSnapshot(database: LocalDatabase, snapshot: LocalSnapshot): void
       snapshot.issues.length,
       snapshot.memories.length,
       snapshot.tombstones.length,
+      snapshot.documents.length,
       new Date().toISOString(),
     ]);
   });
@@ -632,6 +861,7 @@ function databaseProjectionDigest(database: LocalDatabase): string {
     memorySupersedes: database.all('SELECT * FROM memory_supersedes ORDER BY source_id, target_id'),
     memoryTags: database.all('SELECT * FROM memory_tags ORDER BY record_id, ordinal'),
     memoryTombstones: database.all('SELECT * FROM memory_tombstones ORDER BY id'),
+    documents: database.all('SELECT * FROM documents ORDER BY id, version'),
   };
   return createHash('sha256').update(deterministicJson(rows)).digest('hex');
 }
@@ -699,7 +929,8 @@ function wrapDatabase(handle: SqlHandle): LocalDatabase {
 }
 
 function countRows(snapshot: LocalSnapshot): number {
-  let rows = 3 + snapshot.issues.length + snapshot.memories.length + snapshot.tombstones.length;
+  let rows =
+    4 + snapshot.issues.length + snapshot.memories.length + snapshot.tombstones.length + snapshot.documents.length;
   for (const { issue } of snapshot.issues)
     rows +=
       issue.comments.length +
@@ -731,7 +962,7 @@ function expectedTableCounts(snapshot: LocalSnapshot): number[] {
   }
   return [
     1,
-    2,
+    3,
     snapshot.issues.length,
     relationships,
     documents,
@@ -740,7 +971,62 @@ function expectedTableCounts(snapshot: LocalSnapshot): number[] {
     supersedes,
     tags,
     snapshot.tombstones.length,
+    snapshot.documents.length,
   ];
+}
+
+function managedFilePath(root: string, value: string): string {
+  const path = safePath(value);
+  const absolute = resolve(root, path);
+  portableRelative(root, absolute);
+  const parent = portableRelative(root, dirname(absolute));
+  assertSafeAncestor(root, parent);
+  return absolute;
+}
+
+function publishCanonicalFile(
+  root: string,
+  path: string,
+  bytes: Uint8Array | undefined,
+  expectedCurrent?: { readonly bytes: Uint8Array | undefined },
+): void {
+  const absolute = managedFilePath(root, path);
+  if (process.env.HARNESSCTL_TEST_PUBLICATION_FAILURE_PATH === path)
+    throw new LocalPersistenceError('synchronization', `injected canonical publication failure: ${path}`);
+  ensureDirectory(root, portableRelative(root, dirname(absolute)));
+  if (bytes === undefined) {
+    if (expectedCurrent) assertCanonicalPathUnchanged(root, path, expectedCurrent.bytes);
+    if (existsSync(absolute)) {
+      boundedRead(absolute, path);
+      unlinkSync(absolute);
+      syncDirectory(dirname(absolute));
+    }
+    return;
+  }
+  if (existsSync(absolute)) boundedRead(absolute, path);
+  const temporary = join(dirname(absolute), `.harnessctl-document-publish-${randomBytes(12).toString('hex')}.tmp`);
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(temporary, 'wx', 0o600);
+    writeFileSync(descriptor, bytes);
+    fsyncSync(descriptor);
+    closeSync(descriptor);
+    descriptor = undefined;
+    if (process.env.HARNESSCTL_TEST_DOCUMENT_PRE_RENAME_INTERRUPT_PATH === path)
+      throw new CanonicalPublishInterruption(path);
+    // The barrier coordinates harnessctl writers. This final recheck narrows
+    // external races; closing the syscall window requires platform openat APIs.
+    if (expectedCurrent) assertCanonicalPathUnchanged(root, path, expectedCurrent.bytes);
+    if (managedFilePath(root, path) !== absolute)
+      throw new LocalPersistenceError('path_safety', `managed canonical path changed: ${path}`);
+    renameSync(temporary, absolute);
+    syncDirectory(dirname(absolute));
+  } catch (error: unknown) {
+    if (descriptor !== undefined) closeSync(descriptor);
+    if (error instanceof CanonicalPublishInterruption) throw error;
+    rmSync(temporary, { force: true });
+    throw new LocalPersistenceError('synchronization', `cannot publish canonical path ${path}: ${safeMessage(error)}`);
+  }
 }
 
 export function selectSqliteRuntime(versions: { readonly bun?: string; readonly node?: string }): 'bun' | 'node' {
@@ -792,13 +1078,109 @@ function parseYaml(bytes: Uint8Array, path: string): unknown {
   return document.toJS({ maxAliasCount: 0 });
 }
 
+export interface BoundedNoFollowReadOptions {
+  /** Test seam used to replace a path deterministically between validation and open. */
+  beforeOpen?: () => void;
+  /** Test seam for the cross-platform identity-validation fallback. */
+  forceFallback?: boolean;
+}
+
+export function readBoundedNoFollowFile(
+  path: string,
+  relativePath: string,
+  limit: number,
+  options: BoundedNoFollowReadOptions = {},
+): Uint8Array {
+  if (!Number.isSafeInteger(limit) || limit < 0)
+    throw new LocalPersistenceError('resource_limit', `managed file byte limit is invalid at ${relativePath}`);
+  const before = checkedRegularFile(path, relativePath, limit);
+  options.beforeOpen?.();
+  let descriptor: number | undefined;
+  try {
+    descriptor = openReadDescriptor(path, options.forceFallback === true);
+    const opened = fstatSync(descriptor);
+    assertStableFile(before, opened, relativePath, limit);
+    const bytes = readExactDescriptor(descriptor, opened.size, relativePath);
+    assertStableFile(opened, fstatSync(descriptor), relativePath, limit);
+    assertStableFile(opened, checkedRegularFile(path, relativePath, limit), relativePath, limit);
+    // A final path syscall remains inherently racy without portable openat-style APIs.
+    return bytes;
+  } catch (error: unknown) {
+    if (error instanceof LocalPersistenceError) throw error;
+    throw new LocalPersistenceError(
+      'path_safety',
+      `cannot safely read managed path ${relativePath}: ${safeMessage(error)}`,
+    );
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 function boundedRead(path: string, relativePath: string): Uint8Array {
+  return readBoundedNoFollowFile(path, relativePath, MAX_FILE_BYTES);
+}
+
+function openReadDescriptor(path: string, forceFallback: boolean): number {
+  const noFollow = constants.O_NOFOLLOW;
+  if (!forceFallback && process.platform !== 'win32' && typeof noFollow === 'number') {
+    try {
+      return openSync(path, constants.O_RDONLY | noFollow);
+    } catch (error: unknown) {
+      if (!hasCode(error, 'EINVAL') && !hasCode(error, 'ENOTSUP')) throw error;
+      // Some platforms expose O_NOFOLLOW but reject it. The caller still validates
+      // descriptor identity against lstat before consuming any bytes.
+    }
+  }
+  return openSync(path, constants.O_RDONLY);
+}
+
+function checkedRegularFile(path: string, relativePath: string, limit: number): Stats {
   const stat = lstatSync(path);
   if (!stat.isFile() || stat.isSymbolicLink())
     throw new LocalPersistenceError('path_safety', `managed path is not a regular file: ${relativePath}`);
-  if (stat.size > MAX_FILE_BYTES)
+  if (stat.size > limit)
     throw new LocalPersistenceError('resource_limit', `managed file byte limit exceeded at ${relativePath}`);
-  return readFileSync(path);
+  return stat;
+}
+
+function assertStableFile(before: Stats, after: Stats, relativePath: string, limit: number): void {
+  if (
+    !after.isFile() ||
+    after.isSymbolicLink() ||
+    after.size > limit ||
+    before.dev !== after.dev ||
+    before.ino !== after.ino ||
+    before.size !== after.size ||
+    before.mtimeMs !== after.mtimeMs ||
+    before.ctimeMs !== after.ctimeMs
+  )
+    throw new LocalPersistenceError('path_safety', `managed path changed while reading: ${relativePath}`);
+}
+
+function readExactDescriptor(descriptor: number, size: number, relativePath: string): Uint8Array {
+  const bytes = Buffer.alloc(size);
+  let offset = 0;
+  while (offset < size) {
+    const count = readSync(descriptor, bytes, offset, size - offset, offset);
+    if (count === 0)
+      throw new LocalPersistenceError('path_safety', `managed path changed while reading: ${relativePath}`);
+    offset += count;
+  }
+  if (readSync(descriptor, Buffer.alloc(1), 0, 1, size) !== 0)
+    throw new LocalPersistenceError('path_safety', `managed path changed while reading: ${relativePath}`);
+  return bytes;
+}
+
+function assertCanonicalPathUnchanged(root: string, path: string, expected: Uint8Array | undefined): void {
+  const absolute = managedFilePath(root, path);
+  const current = existsSync(absolute) ? boundedRead(absolute, path) : undefined;
+  if (
+    (expected === undefined) !== (current === undefined) ||
+    (expected !== undefined &&
+      current !== undefined &&
+      computeDocumentRevision(expected) !== computeDocumentRevision(current))
+  )
+    throw new LocalPersistenceError('synchronization', `canonical path changed during publication: ${path}`);
 }
 
 function ensureDirectory(root: string, path: string): void {

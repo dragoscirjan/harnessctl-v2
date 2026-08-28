@@ -1,5 +1,12 @@
 # @harnessctl/opencode-tools
 
+## Unreleased
+
+### Patch Changes
+
+- Register the nine normalized repository-local Documents tools and expanded issue-link
+  contract without a Documents skill or remote route.
+
 ## 0.1.9
 
 ### Patch Changes

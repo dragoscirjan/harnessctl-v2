@@ -250,7 +250,7 @@ def test_core_skill_preserves_universal_invariants_and_budget() -> None:
     assert len(skill.encode()) <= 2800
     for phrase in (
         "exactly one authoritative, non-archived Epic",
-        "issues/specs/source/Git/tests/provider observations > memory",
+        "issues/documents/source/Git/tests/provider observations > memory",
         "**Required**, **Recommended**, **Optional**, or **Not needed**",
         "Remote and destructive actions need fresh action-specific consent",
         "switch route after attempted mutation",
@@ -260,6 +260,7 @@ def test_core_skill_preserves_universal_invariants_and_budget() -> None:
         "continue with direct source discovery, Glob, Grep, and file reads",
     ):
         assert phrase in normalized
+    assert "issues/specs" not in normalized
     for field in ("Epic:", "Phase:", "Done:", "Evidence:", "Next:", "Blockers:", "Checkpoint:"):
         assert field in skill
 
@@ -341,6 +342,8 @@ def test_continue_reference_delegates_build_resume_to_current_build_policy() -> 
     ]
 
     for rendered in (enabled, disabled):
+        assert "documents/plans" in rendered
+        assert "specs/plans" not in rendered
         assert "load `references/build.md` before implementation" in rendered
         assert "compiled coding and optional TDD rules" in rendered
         assert "non-Build resumes" in rendered
@@ -402,7 +405,8 @@ def test_refresh_is_standalone_and_preserves_safety_boundaries() -> None:
     ):
         assert phrase in skill
     for phrase in (
-        "current issues, specs, source, Git state, tests, configuration, and provider observations",
+        "current issues, documents, source, Git state, tests, configuration, and provider "
+        "observations",
         "memory_validate",
         "Map only the returned cache outcome and evidence",
         "active decision or event only when current authority contradicts reusable "
@@ -421,6 +425,8 @@ def test_refresh_is_standalone_and_preserves_safety_boundaries() -> None:
         "Never infer or claim refresh success",
     ):
         assert phrase in refresh
+    assert "current issues, specs" not in refresh
+    assert "mutate issues, specs" not in refresh
     assert "work-refresh" not in continue_reference
 
 

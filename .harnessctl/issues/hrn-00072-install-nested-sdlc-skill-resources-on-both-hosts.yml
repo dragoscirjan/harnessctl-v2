@@ -11,6 +11,6 @@
 "depends_on":
   - "hrn-00071"
 "metadata":
-  "design": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md"
+  "design": ".harnessctl/documents/doc-00012-compact-progressively-disclosed-sdlc-prompts-v1.md"
 "body": "Given the compact SDLC skill tree\nWhen harnessctl installs OpenCode or Pi artifacts\nThen every nested resource is installed transactionally and packaged.\n\n## Deliverables\n\n- Install identical SDLC skill trees under `.opencode/skills/sdlc` and `.pi/skills/sdlc`.\n- Extend conflict, force, symlink, rollback, idempotence, smoke, and artifact tests.\n- Verify wheel/sdist includes every resource.\n\n## Acceptance\n\n- [x] OpenCode and Pi trees are byte-equivalent.\n- [x] Nested resource failure restores exact owned before-images.\n- [x] Operator files and user `req.md` remain untouched.\n- [x] Isolated release artifact checks pass."
 "comments": []

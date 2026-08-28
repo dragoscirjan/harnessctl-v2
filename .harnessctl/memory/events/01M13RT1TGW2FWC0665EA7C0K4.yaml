@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M13RT1TGW2FWC0665EA7C0K4
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | operator-safe retired skill cleanup | implemented; gates pass
+details: "hrn-00146 fixed: exact retired `sdlc-documents` cleanup revalidates identity/type/shape/size/SHA, atomically quarantines, preserves changed/replaced/operator state, and restores without overwriting competing paths. Empty `.specs` removed after 19-record/14-lineage/21-document preservation tests passed; `.specs-v1` and ordinary Documents control retained. Independent review approved. `mise run quality`: generic 267, adapters 5, Python 587; package tarballs 23/5/7; release artifacts 5. `mise run build`, diff check, Documents/Issues/Memory validation pass. Epic/children open. No Verify/Release/closure/commit/remote/destructive action. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: hrn-00146-C0001; hrn-00140-C0009; hrn-00135-C0018; local Build gates
+  revision: null
+created_at: 2026-08-28T08:46:59.920Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12VNQSCB09T9ADEW2WJKDRK
+tags:
+  - build
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00146
+  - operator-preservation

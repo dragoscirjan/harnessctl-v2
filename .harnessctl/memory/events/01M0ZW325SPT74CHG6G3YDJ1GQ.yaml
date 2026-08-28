@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZW325SPT74CHG6G3YDJ1GQ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | build | hrn-00143 docs repaired | focused gates pass
+details: "Epic hrn-00135. Branch feat/hrn-00135-sdlc-documents. LLD 00011, docs/cvs.md, tests/test_docs.py now bind modified historical cvs_gitea or sdlc_cvs_gitea to warning, byte preservation, and planned canonical replacement blocking under force/non-force. Docs 18, installer 56, Python 604 with 11 established warnings, Ruff, Prettier, git diff --check pass. Independent review round 16 approved: /tmp/opencode/hrn-00135-build-review-round-16.md. Epic and children open. Full Verify deferred. Next: work-verify hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:46764079fca9bc7a831995f39ee0da5ac35c16d64d84dc24dd0a6cce0dfa764a
+created_at: 2026-08-26T20:27:23.193Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZVKEAZV5B6AV87C3AMBY8B
+tags:
+  - build
+  - documentation
+  - gitea
+  - hrn-00143
+  - reviewed

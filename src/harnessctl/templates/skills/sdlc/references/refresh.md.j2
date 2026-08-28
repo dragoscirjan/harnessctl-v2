@@ -4,10 +4,10 @@ Refresh repository working context without entering the Epic lifecycle.
 
 ## Contract
 
-- Scope one current repository. Familiarize from current issues, specs, source, Git state, tests,
+- Scope one current repository. Familiarize from current issues, documents, source, Git state, tests,
   configuration, and provider observations. Read only what supports bounded reconciliation; never
   read secrets.
-- Treat source authority as newer than memory or projections. Do not mutate issues, specs, source,
+- Treat source authority as newer than memory or projections. Do not mutate issues, documents, source,
   Git, or tests merely to refresh context.
 {% if memory_hooks_enabled %}
 - Run `memory_validate` before relying on canonical repository memory. Stop memory mutation when

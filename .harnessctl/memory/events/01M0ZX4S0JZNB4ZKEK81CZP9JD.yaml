@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZX4S0JZNB4ZKEK81CZP9JD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | verify | round 17 blocked | Plan required
+details: "Branch feat/hrn-00135-sdlc-documents. Fresh quality/build/Changeset/package/stale-provider/diff gates pass: Python 604 with 11 established warnings; generic-tools 267; OpenCode 2; Pi 3; release artifacts 3; package files 23/5/7. Independent review `/tmp/opencode/hrn-00135-verify-review-round-17.md` found high prepublication capacity defect: valid 2000->2001 create and 100->101 version can leave canonical state invalid; Bug hrn-00144 open. User confirmed `.ai.tmp` compatibility obsolete; hrn-00140 routes complete acceptance/design/runtime/docs/tests removal through Plan. No Verify repair. Epic/children open. Next: work-plan hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:89a6b950017751d03ea656c308830c8af54706e00f4892651461a369acf0fcfb
+created_at: 2026-08-26T20:45:47.922Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZW325SPT74CHG6G3YDJ1GQ
+tags:
+  - blocked
+  - documents
+  - hrn-00140
+  - hrn-00144
+  - verify

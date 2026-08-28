@@ -11,7 +11,7 @@
 "depends_on":
   - "hrn-00072"
 "metadata":
-  "design": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md"
+  "design": ".harnessctl/documents/doc-00012-compact-progressively-disclosed-sdlc-prompts-v1.md"
 "body": "Given compact prompts installed for both harnesses\nWhen final verification runs\nThen behavior, budgets, docs, generated outputs, and packages are proven current.\n\n## Deliverables\n\n- Update relevant docs/digests and generated OpenCode/Pi outputs.\n- Run code review and full repository checks.\n- Record before/after prompt measurements.\n\n## Acceptance\n\n- [x] Every command body is at least 80% smaller by bytes than baseline.\n- [x] Typical command + core + normal phase is below 1,050 words and 7,500 bytes.\n- [x] Full quality, node build, runtime smoke, and package checks pass.\n- [x] Story acceptance is verified and worktree excludes user-owned `req.md`."
 "comments":
   - "id": "hrn-00073-C0001"

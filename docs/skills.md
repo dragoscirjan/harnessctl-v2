@@ -44,6 +44,12 @@ directory topology if installation fails. It never changes the functional
 `skills.sdlc-code-index` configuration key, MCP IDs, commands, global skills, or an
 unselected host.
 
+The retired `sdlc-documents` ID is not generated and is not part of the rename set. On
+each selected host, installation removes it transactionally only when the complete tree
+is the exact historical managed one-file output with the expected byte size and SHA-256.
+Modified, additional, special, unreadable, or symlink entries preserve the complete tree
+and produce an exact-path warning. This fingerprint rule also applies under `--force`.
+
 Memory requires caveman. Every OpenCode installation registers
 `@harnessctl/opencode-tools@latest` in `.opencode/opencode.json`; config and issue tools
 therefore remain available even when memory is disabled. Older local plugin shims are
@@ -118,8 +124,10 @@ command reference. The SDLC tree contains 14 references. Conditional references 
 loaded only when their named condition occurs. Memory policy is compiled once into
 `sdlc/references/checkpoint.md`, not repeated inside every command.
 
-OpenCode and Pi adapter packages expose generic configuration, filesystem issue, and
-repository-memory tools. Pi installs `npm:@harnessctl/pi-tools@latest` project-locally;
+OpenCode and Pi adapter packages expose generic configuration, filesystem issue,
+repository-local Documents, and repository-memory tools. Documents lifecycle guidance is
+part of the existing SDLC Plan reference, not a separate skill. Pi installs
+`npm:@harnessctl/pi-tools@latest` project-locally;
 its `pi.extensions` manifest loads the tool registration extension.
 
 The issue-tracking skill is self-contained and provider-specific. Filesystem mode
@@ -160,10 +168,11 @@ OpenCode host MCP entries are merged into `.opencode/opencode.json`. Pi host ent
 the verified per-call output guard are merged into `.pi/mcp.json` when the exact external
 MIT `npm:pi-mcp-adapter@2.26.0` prerequisite is present or separately consented to.
 These host files register routes; they do not grant authentication, prove capability,
-or install provider CLIs or external GPL `forgejo-mcp` 2.33.0.
+or install provider CLIs, official MIT `gitea-mcp` 1.6.0, or external GPL
+`forgejo-mcp` 2.33.0.
 
 Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for generated skills.
 Issue guidance is written to `.opencode/skills/sdlc-issue-tracking/SKILL.md` or
-`.pi/skills/sdlc-issue-tracking/SKILL.md`.
-See [issues](issues.md), [CVS and MCP providers](cvs.md), and
+.pi/skills/sdlc-issue-tracking/SKILL.md`. No Documents agent or skill is generated.
+See [issues](issues.md), [documents](documents.md), [CVS and MCP providers](cvs.md), and
 [code intelligence](code-intelligence.md).

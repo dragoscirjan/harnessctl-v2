@@ -27,6 +27,7 @@ import {
   issueMetadataText,
 } from '@harnessctl/generic-tools';
 import { tool, type Plugin } from '@opencode-ai/plugin';
+import { openCodeDocumentTools } from './document-tools.js';
 
 export const CustomToolsPlugin: Plugin = async () => ({
   tool: {
@@ -51,6 +52,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
         return value instanceof ConfigError ? formatError(value) : JSON.stringify(value);
       },
     }),
+    ...openCodeDocumentTools(),
     memory_search: tool({
       description: 'Search bounded active project memory using repository-backed cache.',
       args: {
@@ -320,11 +322,13 @@ export const CustomToolsPlugin: Plugin = async () => ({
       },
     }),
     issue_link_document: tool({
-      description: 'Link a repository-relative task or design document to an issue.',
+      description: 'Link a repository-relative task or active canonical document to an issue.',
       args: {
         id: tool.schema.string().describe('Issue ID'),
-        path: tool.schema.string().describe('Path under .harnessctl/tasks/ or .specs/'),
-        kind: tool.schema.string().describe('Optional document kind: task or design').optional(),
+        path: tool.schema
+          .string()
+          .describe('Path under the configured tasks root or the fixed active .harnessctl/documents authority'),
+        kind: tool.schema.string().describe('Optional document kind: task, design, or document (preferred)').optional(),
       },
       async execute(args, context) {
         try {

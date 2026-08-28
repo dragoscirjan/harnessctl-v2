@@ -5,9 +5,12 @@ from __future__ import annotations
 import argparse
 import contextlib
 import errno
+import hashlib
 import json
 import os
+import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -20,6 +23,7 @@ from typing import Any
 from .config import CODE_INDEX_SKILL_ID, ConfigError, load_config
 from .mcp import (
     OUTPUT_GUARD,
+    SAME_ID_MCP_MIGRATIONS,
     ServerIntent,
     deduplicate_server_intents,
     recognized_server_intents,
@@ -38,6 +42,10 @@ from .templates import (
 TARGETS = {
     "opencode": Path(".opencode/commands"),
     "pi": Path(".pi/prompts"),
+}
+_HISTORICAL_GITEA_REPLACEMENTS = {
+    "cvs_gitea": "sdlc_cvs_gitea",
+    "sdlc_cvs_gitea": "sdlc_cvs_gitea",
 }
 COMMANDS = tuple(TEMPLATES.keys())
 CURRENT_SDLC_COMMANDS = COMMANDS
@@ -103,6 +111,28 @@ PI_RESIDUAL_EFFECTS = (
     "project-local .pi/npm, package-manager metadata, downloads, caches, "
     "lifecycle-script effects, and other external state may remain"
 )
+PI_HOME_ENVIRONMENT_VARIABLES = frozenset(
+    {"HOME", "HOMEDRIVE", "HOMEPATH", "USERPROFILE", "XDG_CONFIG_HOME"}
+)
+PI_AGENT_DIRECTORY_ENVIRONMENT_VARIABLE = "PI_CODING_AGENT_DIR"
+RETIRED_DOCUMENT_SKILL = Path("sdlc-documents")
+RETIRED_DOCUMENT_SKILL_SIZE = 2713
+RETIRED_DOCUMENT_SKILL_SHA256 = "46e4530daf5ef7cc5052eab84e4710ad4e8cc843b373928ae9b1c8bb65f4faa9"
+
+
+@dataclass(frozen=True)
+class _PathIdentity:
+    device: int
+    inode: int
+    ctime_ns: int
+
+
+@dataclass(frozen=True)
+class _RetiredDocumentSkillCleanup:
+    directory: Path
+    file: Path
+    directory_identity: _PathIdentity
+    file_identity: _PathIdentity
 
 
 def install(
@@ -120,16 +150,20 @@ def install(
 ) -> list[Path]:
     """Install prompt files for one harness or all supported harnesses."""
     if harness == "all":
-        harnesses: Iterable[str] = TARGETS
+        harnesses: Iterable[str] = tuple(TARGETS)
     elif harness in TARGETS:
         harnesses = (harness,)
     else:
         raise ValueError(f"unsupported harness: {harness}")
 
-    root = cwd.resolve()
+    root = cwd.resolve(strict=True)
+    if not root.is_dir():
+        raise NotADirectoryError(f"installation root is not a directory: {root}")
     config = load_config(root)
     if harness in ("opencode", "all") and config["mcp"]["output_limit_mode"] == "hard":
         raise ConfigError("mcp.output_limit_mode=hard is supported only by Pi")
+
+    retired_document_skill_cleanups = _plan_retired_document_skill_cleanup(root, harnesses)
 
     intents = deduplicate_server_intents(required_server_intents(config, harness))
     intents = _available_server_intents(intents)
@@ -189,7 +223,7 @@ def install(
         )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
-        cvs_mcp_id = _mcp_id(intents, cvs_remote["provider"])
+        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["provider"])
         rendered_targets.append(
             (
                 _target(root, OPENCODE_SKILLS / "sdlc-cvs/SKILL.md"),
@@ -213,7 +247,7 @@ def install(
         if issues["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
-            issue_mcp_id = _mcp_id(intents, issues["type"])
+            issue_mcp_id = _mcp_id(intents, "issues", issues["type"])
             issue_context.update(
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
@@ -274,7 +308,7 @@ def install(
         )
         cvs = config["cvs"]
         cvs_remote = cvs["remote"]
-        cvs_mcp_id = _mcp_id(intents, cvs_remote["provider"])
+        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["provider"])
         rendered_targets.append(
             (
                 _target(root, PI_SKILLS / "sdlc-cvs/SKILL.md"),
@@ -295,7 +329,7 @@ def install(
         if issues["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
-            issue_mcp_id = _mcp_id(intents, issues["type"])
+            issue_mcp_id = _mcp_id(intents, "issues", issues["type"])
             issue_context.update(
                 remote_url=issues["remote"]["url"],
                 token_env=issues["remote"]["token_env"],
@@ -457,6 +491,7 @@ def install(
             *(legacy_skill_files if replace_sdlc_skill_set else ()),
         ]
     )
+    deleted_retired_document_skills: list[tuple[_RetiredDocumentSkillCleanup, bytes]] = []
     created_directories: list[Path] = []
     installed_pi_packages: list[str] = []
     pi_package_install_attempted = False
@@ -530,6 +565,9 @@ def install(
                 UserWarning,
                 stacklevel=2,
             )
+        for cleanup in retired_document_skill_cleanups:
+            mutation_started = True
+            _remove_retired_document_skill(root, cleanup, deleted_retired_document_skills)
     except BaseException as error:
         rollback_errors: list[BaseException] = []
         for source in reversed(installed_pi_packages):
@@ -545,6 +583,9 @@ def install(
                     created_directories,
                     legacy_skill_directories if replace_sdlc_skill_set else (),
                 )
+            )
+            rollback_errors.extend(
+                _restore_retired_document_skills(root, deleted_retired_document_skills)
             )
         if (
             pi_package_install_attempted
@@ -572,9 +613,14 @@ class _PiPackageState:
 
 def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]:
     """Omit local MCP servers whose operator-installed executable is unavailable."""
-    forgejo_mcp_available = shutil.which("forgejo-mcp") is not None
+    availability = {
+        command: shutil.which(command) is not None
+        for command in {intent.command for intent in intents if intent.command is not None}
+    }
     return [
-        intent for intent in intents if intent.command != "forgejo-mcp" or forgejo_mcp_available
+        intent
+        for intent in intents
+        if intent.command is None or availability.get(intent.command, False)
     ]
 
 
@@ -595,9 +641,16 @@ def _append_skill_tree(
     )
 
 
-def _mcp_id(intents: list[ServerIntent], provider: str) -> str | None:
-    """Return the projected MCP server ID for the configured provider."""
-    return next((intent.server_id for intent in intents if intent.provider == provider), None)
+def _mcp_id(intents: list[ServerIntent], route: str, provider: str) -> str | None:
+    """Return the projected MCP server ID for one configured route and provider."""
+    return next(
+        (
+            intent.server_id
+            for intent in intents
+            if intent.provider == provider and route in intent.requesting_routes
+        ),
+        None,
+    )
 
 
 def _reject_duplicate_members(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -623,6 +676,24 @@ def _json_values_equal(left: Any, right: Any) -> bool:
             for left_item, right_item in zip(left, right, strict=True)
         )
     return left == right
+
+
+def _matches_historical_local_server_signature(current: Any, historical: Mapping[str, Any]) -> bool:
+    """Recognize an edited historical local server by its old executable."""
+    if not isinstance(current, dict):
+        return False
+    historical_command = historical.get("command")
+    current_command = current.get("command")
+    if isinstance(historical_command, list):
+        return (
+            historical.get("type") == "local"
+            and current.get("type") == "local"
+            and bool(historical_command)
+            and isinstance(current_command, list)
+            and bool(current_command)
+            and current_command[0] == historical_command[0]
+        )
+    return isinstance(historical_command, str) and current_command == historical_command
 
 
 def _load_json_object(path: Path, label: str) -> tuple[dict[str, Any], bytes | None]:
@@ -906,11 +977,37 @@ def _reconcile_owned_mcp_entries(
     path: Path,
     force: bool,
 ) -> bool:
+    _reject_modified_historical_replacement_conflicts(
+        container,
+        required,
+        recognized,
+        path=path,
+    )
     changed = False
     for server_id, expected in required.items():
         current = container.get(server_id)
         if _json_values_equal(current, expected):
             continue
+        historical = recognized.get(server_id, ())
+        if server_id in SAME_ID_MCP_MIGRATIONS and any(
+            _json_values_equal(current, definition) for definition in historical
+        ):
+            container[server_id] = dict(expected)
+            changed = True
+            continue
+        if server_id in SAME_ID_MCP_MIGRATIONS and any(
+            _matches_historical_local_server_signature(current, definition)
+            for definition in historical
+        ):
+            warnings.warn(
+                f"preserving modified historical MCP ID {server_id} in {path}",
+                UserWarning,
+                stacklevel=3,
+            )
+            raise FileExistsError(
+                f"modified historical harnessctl-owned MCP ID {server_id} "
+                f"blocks canonical replacement in {path}"
+            )
         if server_id in container and not force:
             raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
         container[server_id] = dict(expected)
@@ -919,6 +1016,15 @@ def _reconcile_owned_mcp_entries(
         if server_id in required or server_id not in container:
             continue
         current = container[server_id]
+        replacement_id = _HISTORICAL_GITEA_REPLACEMENTS.get(server_id)
+        if replacement_id is not None and replacement_id not in required:
+            warnings.warn(
+                f"preserving historical MCP ID {server_id} in {path}; "
+                f"canonical replacement {replacement_id} is not planned",
+                UserWarning,
+                stacklevel=3,
+            )
+            continue
         if any(_json_values_equal(current, definition) for definition in definitions):
             del container[server_id]
             changed = True
@@ -929,6 +1035,42 @@ def _reconcile_owned_mcp_entries(
             stacklevel=3,
         )
     return changed
+
+
+def _reject_modified_historical_replacement_conflicts(
+    container: Mapping[str, Any],
+    required: Mapping[str, Mapping[str, Any]],
+    recognized: Mapping[str, tuple[Mapping[str, Any], ...]],
+    *,
+    path: Path,
+) -> None:
+    """Reject edited legacy entries before planning their canonical replacement."""
+    for server_id, replacement_id in _HISTORICAL_GITEA_REPLACEMENTS.items():
+        if (
+            server_id == replacement_id
+            or replacement_id not in required
+            or server_id not in container
+        ):
+            continue
+        current = container[server_id]
+        if any(
+            _json_values_equal(current, definition) for definition in recognized.get(server_id, ())
+        ):
+            continue
+        if not any(
+            _matches_historical_local_server_signature(current, definition)
+            for definition in recognized.get(replacement_id, ())
+        ):
+            continue
+        warnings.warn(
+            f"preserving modified historical MCP ID {server_id} in {path}",
+            UserWarning,
+            stacklevel=4,
+        )
+        raise FileExistsError(
+            f"modified historical harnessctl-owned MCP ID {server_id} blocks "
+            f"canonical replacement {replacement_id} in {path}"
+        )
 
 
 def _inspect_pi_packages(root: Path) -> _PiPackageState:
@@ -1036,17 +1178,25 @@ def _run_pi_package_action(
     if pi_path is None:
         raise RuntimeError("Pi package action requires pi on PATH")
     invocation, use_shell = _pi_invocation(pi_path, action, source)
-    try:
-        result = subprocess.run(
-            invocation,
-            cwd=root,
-            shell=use_shell,
-            check=False,
-            capture_output=True,
-            timeout=PI_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError(f"pi {action} timed out; result may be ambiguous") from error
+    with tempfile.TemporaryDirectory(prefix="harnessctl-pi-agent-") as agent_directory:
+        environment = {
+            name: value
+            for name, value in os.environ.items()
+            if name not in PI_HOME_ENVIRONMENT_VARIABLES
+        }
+        environment[PI_AGENT_DIRECTORY_ENVIRONMENT_VARIABLE] = agent_directory
+        try:
+            result = subprocess.run(
+                invocation,
+                cwd=root,
+                env=environment,
+                shell=use_shell,
+                check=False,
+                capture_output=True,
+                timeout=PI_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise RuntimeError(f"pi {action} timed out; result may be ambiguous") from error
     try:
         stdout = result.stdout.decode("utf-8", errors="strict")
         stderr = result.stderr.decode("utf-8", errors="strict")
@@ -1279,6 +1429,216 @@ def _detect_legacy_skill_roots(root: Path, harnesses: Iterable[str]) -> list[Pat
             if os.path.lexists(legacy_root):
                 roots.append(legacy_root)
     return sorted(set(roots), key=lambda path: str(path))
+
+
+def _plan_retired_document_skill_cleanup(
+    root: Path, harnesses: Iterable[str]
+) -> list[_RetiredDocumentSkillCleanup]:
+    """Select only exact one-file Documents skill trees for transactional removal."""
+    cleanups: list[_RetiredDocumentSkillCleanup] = []
+    for harness in harnesses:
+        skill_root = OPENCODE_SKILLS if harness == "opencode" else PI_SKILLS
+        host_skill_root = _target(root, skill_root)
+        retired_root = host_skill_root / RETIRED_DOCUMENT_SKILL
+        if not os.path.lexists(retired_root):
+            continue
+        snapshot = _retired_document_skill_snapshot(retired_root)
+        if snapshot is None:
+            _warn_preserved_retired_document_skill(root, retired_root, stacklevel=3)
+            continue
+        cleanups.append(snapshot[0])
+    return cleanups
+
+
+def _retired_document_skill_snapshot(
+    retired_root: Path,
+) -> tuple[_RetiredDocumentSkillCleanup, bytes] | None:
+    """Authenticate the historical one-file tree and return its exact path identities."""
+    try:
+        directory_metadata = os.lstat(retired_root)
+    except OSError:
+        return None
+    if not stat.S_ISDIR(directory_metadata.st_mode):
+        return None
+    try:
+        with os.scandir(retired_root) as iterator:
+            entries = list(iterator)
+    except OSError:
+        return None
+    if len(entries) != 1:
+        return None
+    entry = entries[0]
+    if entry.name != "SKILL.md" or entry.is_symlink() or not entry.is_file(follow_symlinks=False):
+        return None
+    path = Path(entry.path)
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+        with os.fdopen(descriptor, "rb") as stream:
+            metadata = os.fstat(stream.fileno())
+            if (
+                not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_size != RETIRED_DOCUMENT_SKILL_SIZE
+            ):
+                return None
+            content = stream.read(RETIRED_DOCUMENT_SKILL_SIZE + 1)
+        path_metadata = os.lstat(path)
+        final_directory_metadata = os.lstat(retired_root)
+    except OSError:
+        return None
+    if len(content) != RETIRED_DOCUMENT_SKILL_SIZE:
+        return None
+    if hashlib.sha256(content).hexdigest() != RETIRED_DOCUMENT_SKILL_SHA256:
+        return None
+    directory_identity = _path_identity(directory_metadata)
+    file_identity = _path_identity(metadata)
+    if (
+        _path_identity(path_metadata) != file_identity
+        or _path_identity(final_directory_metadata) != directory_identity
+    ):
+        return None
+    return (
+        _RetiredDocumentSkillCleanup(
+            directory=retired_root,
+            file=path,
+            directory_identity=directory_identity,
+            file_identity=file_identity,
+        ),
+        content,
+    )
+
+
+def _path_identity(metadata: os.stat_result) -> _PathIdentity:
+    return _PathIdentity(
+        device=metadata.st_dev,
+        inode=metadata.st_ino,
+        ctime_ns=metadata.st_ctime_ns,
+    )
+
+
+def _warn_preserved_retired_document_skill(
+    root: Path, retired_root: Path, *, stacklevel: int
+) -> None:
+    relative = retired_root.relative_to(root).as_posix()
+    with contextlib.suppress(UserWarning):
+        warnings.warn(
+            f"preserving modified retired Documents skill tree {relative}",
+            UserWarning,
+            stacklevel=stacklevel,
+        )
+
+
+def _remove_retired_document_skill(
+    root: Path,
+    cleanup: _RetiredDocumentSkillCleanup,
+    deleted: list[tuple[_RetiredDocumentSkillCleanup, bytes]],
+) -> bytes | None:
+    """Remove one still-owned tree through a private atomic quarantine."""
+    current = _retired_document_skill_snapshot(cleanup.directory)
+    if current is None or current[0] != cleanup:
+        _warn_preserved_retired_document_skill(root, cleanup.directory, stacklevel=3)
+        return None
+
+    quarantine = cleanup.directory.with_name(
+        f".{cleanup.directory.name}.harnessctl-retiring-{secrets.token_hex(16)}"
+    )
+    _target(root, cleanup.directory.relative_to(root))
+    _target(root, quarantine.relative_to(root))
+    rollback_entry: tuple[_RetiredDocumentSkillCleanup, bytes] | None = None
+    try:
+        os.rename(cleanup.directory, quarantine)
+        warned_about_operator_state = os.path.lexists(cleanup.directory)
+        renamed_directory_identity = _path_identity(os.lstat(quarantine))
+        if (
+            renamed_directory_identity.device != cleanup.directory_identity.device
+            or renamed_directory_identity.inode != cleanup.directory_identity.inode
+        ):
+            _restore_retired_document_skill_quarantine(cleanup.directory, quarantine)
+            _warn_preserved_retired_document_skill(root, cleanup.directory, stacklevel=3)
+            return None
+        quarantined_cleanup = _RetiredDocumentSkillCleanup(
+            directory=quarantine,
+            file=quarantine / cleanup.file.name,
+            directory_identity=renamed_directory_identity,
+            file_identity=cleanup.file_identity,
+        )
+        quarantined = _retired_document_skill_snapshot(quarantine)
+        if quarantined is None or quarantined[0] != quarantined_cleanup:
+            _restore_retired_document_skill_quarantine(cleanup.directory, quarantine)
+            _warn_preserved_retired_document_skill(root, cleanup.directory, stacklevel=3)
+            return None
+        rollback_entry = (cleanup, current[1])
+        deleted.append(rollback_entry)
+        quarantined_cleanup.file.unlink()
+        quarantined_cleanup.directory.rmdir()
+    except BaseException:
+        restored = False
+        try:
+            if os.path.lexists(quarantine):
+                if not os.path.lexists(quarantine / cleanup.file.name):
+                    _write_exclusive_bytes(quarantine / cleanup.file.name, current[1])
+                _restore_retired_document_skill_quarantine(cleanup.directory, quarantine)
+                restored = True
+        finally:
+            if restored and rollback_entry is not None:
+                deleted.remove(rollback_entry)
+        raise
+    if warned_about_operator_state or os.path.lexists(cleanup.directory):
+        _warn_preserved_retired_document_skill(root, cleanup.directory, stacklevel=3)
+    return current[1]
+
+
+def _restore_retired_document_skill_quarantine(original: Path, quarantine: Path) -> None:
+    """Restore quarantined state without replacing operator-created state."""
+    if not os.path.lexists(quarantine):
+        return
+    if os.path.lexists(original):
+        raise RuntimeError(
+            "cannot restore retired Documents skill quarantine without replacing "
+            f"operator state: {original} (quarantine: {quarantine})"
+        )
+    os.rename(quarantine, original)
+
+
+def _restore_retired_document_skills(
+    root: Path, deleted: Iterable[tuple[_RetiredDocumentSkillCleanup, bytes]]
+) -> list[BaseException]:
+    """Restore deleted managed trees without overwriting recreated operator paths."""
+    errors: list[BaseException] = []
+    for cleanup, content in reversed(tuple(deleted)):
+        try:
+            _target(root, cleanup.directory.relative_to(root))
+            if os.path.lexists(cleanup.directory):
+                raise RuntimeError(
+                    "cannot restore retired Documents skill without replacing operator state: "
+                    f"{cleanup.directory}"
+                )
+            cleanup.directory.mkdir()
+            _write_exclusive_bytes(cleanup.file, content)
+            restored = _retired_document_skill_snapshot(cleanup.directory)
+            if restored is None:
+                raise RuntimeError(
+                    f"failed to verify retired Documents skill rollback: {cleanup.directory}"
+                )
+        except BaseException as error:
+            errors.append(error)
+    return errors
+
+
+def _write_exclusive_bytes(path: Path, content: bytes) -> None:
+    """Create one rollback file without following or replacing a competing path."""
+    flags = (
+        os.O_WRONLY
+        | os.O_CREAT
+        | os.O_EXCL
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
+    )
+    descriptor = os.open(path, flags, 0o600)
+    with os.fdopen(descriptor, "wb") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
 
 
 def _validate_legacy_skill_trees(roots: Iterable[Path]) -> tuple[list[Path], list[Path]]:

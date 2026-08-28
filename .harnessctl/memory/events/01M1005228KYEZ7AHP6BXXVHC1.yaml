@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M1005228KYEZ7AHP6BXXVHC1
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | plan | local Documents v2 approved | Build ready
+details: "Branch feat/hrn-00135-sdlc-documents. HLD/LLD 00011 v2 approved: fixed repository-local SDLC Documents; kinds hld/lld/design-overview/gdd; nine lifecycle tools; thin OpenCode/Pi adapters; no agent, generated Documents skill, remote Documents provider, `.ai.tmp` migration, or user-global config import. Build must losslessly migrate current 17 supported `.specs` files and structured issue links into `.harnessctl/documents`, preserve `.specs-v1`, use proposed-state validation, chunked preimages/proposed output, private 14,000-operation streaming publication, exact rollback, durable restored/committed recovery, completion-only idempotence, and preserve CVS/Issues Gitea/Forgejo behavior. Epic hrn-00135 and children hrn-00136..hrn-00144 remain open with validated acyclic dependencies. Prettier, issue validation, memory validation, diff check pass. Independent Plan review round 23 approved: /tmp/opencode/hrn-00135-plan-review-round-23.md. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:499d62219f7876eb2635f489a7a9221677cdae01545bdcb1639bbe13adf6a24f
+created_at: 2026-08-26T21:38:22.920Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZX4S0JZNB4ZKEK81CZP9JD
+tags:
+  - approved
+  - build-ready
+  - documents
+  - hrn-00140
+  - hrn-00144
+  - plan

@@ -1,0 +1,29 @@
+"version": 1
+"id": "hrn-00136"
+"type": "story"
+"title": "Preserve Gitea and Forgejo boundaries during Documents cleanup"
+"status": "open"
+"created_at": "2026-08-25T20:45:10.904Z"
+"updated_at": "2026-08-27T21:43:21.001Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"depends_on":
+  - "hrn-00142"
+"metadata":
+  "estimate": "2-3 engineering days"
+  "order": 1
+"body": "# Preserve Gitea and Forgejo boundaries during Documents cleanup\n\n## Goal\n\nKeep the already-built CVS and Issues Gitea/Forgejo separation intact while removing every Documents-specific provider coupling.\n\n## Scope\n\n- Preserve official Gitea `gitea-mcp` and Forgejo `forgejo-mcp` binaries, fixed IDs, pins, environment mappings, route attribution, and deduplication for CVS and Issues.\n- Preserve exact historical Gitea migration, modified historical definition warnings/blocking, unrelated raw JSON bytes, force semantics, and rollback behavior.\n- Identify Documents-only reuse of provider intents, IDs, reservations, contracts, config, fixtures, and guidance so `hrn-00138` can remove it narrowly.\n- Prevent cleanup from deleting, weakening, aliasing, or merging CVS/Issues provider behavior.\n\n## Acceptance Criteria\n\n- [ ] CVS and Issues Gitea routes use only official `gitea-mcp`; Forgejo routes use only `forgejo-mcp`.\n- [ ] Exact historical definitions still migrate transactionally; modified `cvs_gitea` and `sdlc_cvs_gitea` definitions remain byte-preserved, warn, and block replacement under force and non-force.\n- [ ] No Documents configuration or route is required to retain CVS/Issues provider behavior.\n- [ ] Removing Documents provider surfaces changes no unrelated host JSON, provider route, or rollback behavior.\n- [ ] Focused provider, installer, migration, docs, package, and regression tests pass."
+"comments":
+  - "id": "hrn-00136-C0001"
+    "created_at": "2026-08-26T13:40:40.940Z"
+    "created_by": "OpenCode"
+    "body": "Build complete: separated managed Gitea and Forgejo MCP contracts across CVS/Issues. Official Gitea `gitea-mcp` 1.6.0 and Forgejo `forgejo-mcp` 2.33.0 now have distinct binaries, flags, env mappings, version guidance, availability, and historical Gitea reconciliation. Focused provider, installer, migration, rollback, docs, and package-artifact tests pass."
+  - "id": "hrn-00136-C0002"
+    "created_at": "2026-08-26T21:12:22.818Z"
+    "created_by": "OpenCode"
+    "body": "Plan scope revised: preserve existing CVS/Issues Gitea and Forgejo boundaries while Documents-only provider coupling is removed. Historical Build evidence remains valid; execute after hrn-00142."
+  - "id": "hrn-00136-C0003"
+    "created_at": "2026-08-27T21:43:21.001Z"
+    "created_by": "OpenCode"
+    "body": "YOLO Build complete for CVS/Issues provider-preservation scope. Official Gitea/Forgejo separation, shared-route deduplication/attribution, historical Gitea migration, modified-definition blocking under both force modes, rollback, and package evidence are covered without Documents coupling. Full configured quality/build gates pass. Status remains open; next boundary is Verify."

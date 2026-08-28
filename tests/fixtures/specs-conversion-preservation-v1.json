@@ -1,0 +1,178 @@
+{
+  "fixtureVersion": 1,
+  "migrationId": "specs-to-documents-v1",
+  "convertedCount": 19,
+  "lineageIds": [
+    "doc-00001",
+    "doc-00002",
+    "doc-00003",
+    "doc-00004",
+    "doc-00005",
+    "doc-00006",
+    "doc-00007",
+    "doc-00008",
+    "doc-00009",
+    "doc-00010",
+    "doc-00011",
+    "doc-00012",
+    "doc-00013",
+    "doc-00014"
+  ],
+  "mapping": [
+    {
+      "sourcePath": ".specs/lld-00001-generic-configuration-tools-and-harness-adapters-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00001-generic-configuration-tools-and-harness-adapters-v1.md",
+      "sourceSha256": "928e69616098f7fae1e777a43ff53ff42b9722ebf37fccf74044602ec231778f",
+      "targetSha256": "52e609fea4e6f6c9c62670bfc1a0bf9a346bd5f89079be855e76050e6d635d7b",
+      "documentId": "doc-00001"
+    },
+    {
+      "sourcePath": ".specs/lld-00002-caveman-and-memory-skills-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00002-caveman-and-memory-skills-low-level-design-v1.md",
+      "sourceSha256": "a4c57789c0159106980c5364905d31e1dffa7562c4a5c3c3c00b71065cd88c0c",
+      "targetSha256": "ac876edc203b6bba1e43db96d4872325c3208cda78d2b9375215f84adff1c71e",
+      "documentId": "doc-00002"
+    },
+    {
+      "sourcePath": ".specs/lld-00002-caveman-memory-hooks-across-sdlc-commands-v2.md",
+      "targetPath": ".harnessctl/documents/doc-00002-caveman-memory-hooks-across-sdlc-commands-v2.md",
+      "sourceSha256": "dab7d258797b108437ac0b92c0504cf45fbac23983dcc726684b8283ce54175d",
+      "targetSha256": "1aaf1c0d8411a0cf4f7043536cf6c923aed3d7e4d31c7144f18740d090e9ea63",
+      "documentId": "doc-00002"
+    },
+    {
+      "sourcePath": ".specs/lld-00003-github-ci-and-independent-npm-package-releases-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00003-github-ci-and-independent-npm-package-releases-v1.md",
+      "sourceSha256": "00a43e3cf8234ee7720d74064fb1375fd9660536feeca7af5720dfe93b6670a3",
+      "targetSha256": "824c641dd29496ebb536ffcae132f9d03363609da446fd8a53588bc0fb58e306",
+      "documentId": "doc-00003"
+    },
+    {
+      "sourcePath": ".specs/hld-00004-canonical-yaml-issue-storage-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00004-canonical-yaml-issue-storage-v1.md",
+      "sourceSha256": "cd54136d63bee9322050ea6c6ea74a8be9f1636a47f4b7a0976f087ca748abd5",
+      "targetSha256": "d302c0140edd346453198b45edc133ee3a1dea3f10b671bb9757fe7e2f293155",
+      "documentId": "doc-00004"
+    },
+    {
+      "sourcePath": ".specs/lld-00005-canonical-yaml-issue-storage-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00005-canonical-yaml-issue-storage-v1.md",
+      "sourceSha256": "4b6f59257748186ad8e1d2f43253fe0ed5a7d96bc1aaa5a2f93e9e3fe70207cd",
+      "targetSha256": "bfcf97321b113837bec8c81ef55ece479ad8b3766ebe7550b7c78e5a5f4dfdf1",
+      "documentId": "doc-00005"
+    },
+    {
+      "sourcePath": ".specs/hld-00006-generic-local-sqlite-projections-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00006-simplified-canonical-issues-and-local-sqlite-cache-v1.md",
+      "sourceSha256": "b6f70e25fe1d2850cebd5aa30bf51ba5e578752aad5992208462a6cb078872e0",
+      "targetSha256": "b1298dd98115a1a08253edbd64739e3112f1a2a1ed2303a507066b83f56b54bb",
+      "documentId": "doc-00006"
+    },
+    {
+      "sourcePath": ".specs/lld-00006-simplified-local-persistence-and-sqlite-write-through-cache-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00007-simplified-local-persistence-and-sqlite-write-through-cache-v1.md",
+      "sourceSha256": "89b21980e80e60c4fc3ec4c05b8c152e13fe7fafc4c67bf3a7b6ad7119fd343d",
+      "targetSha256": "fcdd7c84dec4fe26e57924bdc9ad00b1ce101767ba63d0a6dc5cf52154884f2b",
+      "documentId": "doc-00007"
+    },
+    {
+      "sourcePath": ".specs/lld-00007-documentation-set-and-configured-issue-tracking-skill-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00008-documentation-set-and-configured-issue-tracking-skill-v1.md",
+      "sourceSha256": "b2ad18e6c74455548d49806e5e30bbc3c0f888e37bd8c403ed760b83a3d47a73",
+      "targetSha256": "f9521aaa1afebefcdb9e425ab34c3530fa10bb7b05f5f572c791ef6d684339ff",
+      "documentId": "doc-00008"
+    },
+    {
+      "sourcePath": ".specs/hld-00008-configurable-cvs-mcp-aware-issues-and-generated-host-mcp-configuration-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00009-configurable-cvs-mcp-aware-issues-and-generated-host-mcp-configuration-v1.md",
+      "sourceSha256": "fa5a4172ea7d2a105092ce505f1c35f92599fe60b9f4eb9e0b2df934d1e629db",
+      "targetSha256": "8b3817cd6cf8f043e93e1c76f00b59aff74e79241688535f3462ef40ba0cb0ec",
+      "documentId": "doc-00009"
+    },
+    {
+      "sourcePath": ".specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00010-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md",
+      "sourceSha256": "71945fbffd691c60cf1929a262ce90fb9469908493b04fee51116184654f042f",
+      "targetSha256": "96671cab3826ca91f030e48ce4391cfdb7dbe3151c58fe48a035462b471fbff8",
+      "documentId": "doc-00010"
+    },
+    {
+      "sourcePath": ".specs/lld-00009-simplified-epic-first-sdlc-command-set-delta-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00011-simplified-epic-first-sdlc-command-set-delta-v1.md",
+      "sourceSha256": "8207b3d97f84ff4f8641063e29625496d40c609b9d61a9545bd1c37b7e00f5a7",
+      "targetSha256": "16063d6a0ade6312280478b9bbfe43fb1045959dd5941278971fc6ab5fa25d2a",
+      "documentId": "doc-00011"
+    },
+    {
+      "sourcePath": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00012-compact-progressively-disclosed-sdlc-prompts-v1.md",
+      "sourceSha256": "0646c8d4b7eddd7ce073ed5101c57393a7063e399a87a4d0cc4fccfeed2d7e2c",
+      "targetSha256": "14e12851f0391f6b398e6e42cd756ec7a24d3278f67e94716d226ecb1e49e203",
+      "documentId": "doc-00012"
+    },
+    {
+      "sourcePath": ".specs/hld-00011-provider-backed-sdlc-document-management-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00013-provider-backed-sdlc-document-management-v1.md",
+      "sourceSha256": "7f340500e688a7a8ad3e3d98351231e03b7334be373cff53315d208077ea0545",
+      "targetSha256": "0b28466433774887ea4bc576e9b2f20633db8204c455f6ae6d1838947fab1c35",
+      "documentId": "doc-00013"
+    },
+    {
+      "sourcePath": ".specs/hld-00011-repository-local-sdlc-design-document-management-v2.md",
+      "targetPath": ".harnessctl/documents/doc-00013-repository-local-sdlc-design-document-management-v2.md",
+      "sourceSha256": "28709a0fb686c4118e46e1829ef9e5af1563b50bde90a4bce4d504b4de8b33a7",
+      "targetSha256": "5f7d262acff0dfaea3652c5b0de6d58c7e2a30fd50d64b83ce015045e32de573",
+      "documentId": "doc-00013"
+    },
+    {
+      "sourcePath": ".specs/hld-00011-repository-local-sdlc-design-document-management-v3.md",
+      "targetPath": ".harnessctl/documents/doc-00013-repository-local-sdlc-design-document-management-v3.md",
+      "sourceSha256": "1da675042004ab8f0921da72e203e71d909e093781b06d89611a1d19013d5aac",
+      "targetSha256": "868750cad2bb1e59733b0f1fb0dd4d93dd8d0cf2059e89a828ac3544c9129f9d",
+      "documentId": "doc-00013"
+    },
+    {
+      "sourcePath": ".specs/lld-00011-provider-backed-sdlc-document-management-v1.md",
+      "targetPath": ".harnessctl/documents/doc-00014-provider-backed-sdlc-document-management-v1.md",
+      "sourceSha256": "9c3bb2340b18a1b499e2d23429112db5935e1ce1ea45f6032ac4a8a54886bc1c",
+      "targetSha256": "e29c88cf30d619a3d9031947c16369a6cdaa2eedfb798c2760d65e162746ead2",
+      "documentId": "doc-00014"
+    },
+    {
+      "sourcePath": ".specs/lld-00011-repository-local-sdlc-design-document-management-v2.md",
+      "targetPath": ".harnessctl/documents/doc-00014-repository-local-sdlc-design-document-management-v2.md",
+      "sourceSha256": "2a7aff839fe989f9fd34ceb3ca3bd75d1ff0a7d1c8ec759b77971a2392dd2ac1",
+      "targetSha256": "90d394aade990913008a62fd5cceb9b59ed2d6da6bc4092f3d5359012f0d57d6",
+      "documentId": "doc-00014"
+    },
+    {
+      "sourcePath": ".specs/lld-00011-repository-local-sdlc-design-document-management-v3.md",
+      "targetPath": ".harnessctl/documents/doc-00014-repository-local-sdlc-design-document-management-v3.md",
+      "sourceSha256": "69d2dbac873562c4b08b194e86afda36c0ae4f7941c7baf2756fe52de39f284d",
+      "targetSha256": "00e3efd138ae5a0a89bc6626e1905631c5d9eb269e2bc27df7b6c385e2bf9e25",
+      "documentId": "doc-00014"
+    }
+  ],
+  "successorPaths": [
+    ".harnessctl/documents/doc-00013-repository-local-sdlc-design-document-management-v4.md",
+    ".harnessctl/documents/doc-00014-repository-local-sdlc-design-document-management-v4.md"
+  ],
+  "legacyArchive": [
+    {
+      "path": ".specs-v1/00001-prd-human-governed-sdlc-v1.md",
+      "sha256": "ca862acfba5e60b7226ba7a84c7308cc3c27a32fd25c62b294c191d66ab7efa7"
+    },
+    {
+      "path": ".specs-v1/00001-requirement-summary.md",
+      "sha256": "d4c3719beb70390abd14089e8c20e2da0534cadd64ec5b12ffd7090a791cea74"
+    },
+    {
+      "path": ".specs-v1/00002-lld-filesystem-issue-management-v2.md",
+      "sha256": "98b5b62000fe5fa18148c63ced761df93eaa90abbf4ee84700903a19f787f5d0"
+    },
+    {
+      "path": ".specs-v1/00003-lld-harness-neutral-sdlc-prompt-templates-and-harness-installers-v2.md",
+      "sha256": "e0b52a0d0721bdda3c348cc461ae4bcccff670f5a9c0175c7d3044a57bda7ba9"
+    }
+  ]
+}

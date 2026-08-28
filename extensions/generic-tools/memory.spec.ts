@@ -180,7 +180,7 @@ describe('repository memory', () => {
       writeFileSync(cachePath, Buffer.from('SQLite format 3\0legacy cache bytes'));
 
       expect(searchMemory(cwd, { query: 'portable migration' })).toEqual([stored]);
-      expect(cacheRow(cwd, 'PRAGMA user_version')).toEqual({ user_version: 2 });
+      expect(cacheRow(cwd, 'PRAGMA user_version')).toEqual({ user_version: 4 });
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -424,7 +424,7 @@ describe('repository memory', () => {
 
       cacheExec(cwd, "DELETE FROM provider_generations WHERE provider = 'issues'");
       expect(listMemory(cwd)).toHaveLength(1);
-      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM provider_generations')).toEqual({ count: 2 });
+      expect(cacheRow(cwd, 'SELECT count(*) AS count FROM provider_generations')).toEqual({ count: 3 });
 
       cacheExec(cwd, 'DELETE FROM memory_tags');
       expect(listMemory(cwd)).toHaveLength(1);

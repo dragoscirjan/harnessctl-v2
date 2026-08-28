@@ -13,6 +13,7 @@ overview in the [root README](../README.md) or the complete intended lifecycle i
   setting.
 - [Memory](memory.md): canonical YAML, immutable records, security, and cache limits.
 - [Issues](issues.md): canonical filesystem workflow and remote CLI/MCP capabilities.
+- [Documents](documents.md): fixed repository-local design authority and lifecycle.
 - [CVS and MCP providers](cvs.md): Git/Jujutsu, per-operation remote capability selection, generated
   OpenCode/Pi configuration, consent, and security boundaries.
 - [Code intelligence](code-intelligence.md): opt-in external MCP retrieval, source
@@ -32,13 +33,17 @@ orientation. [FLOWS.md](../FLOWS.md) describes the detailed intended lifecycle a
 include work not yet delivered. Roadmap sections explicitly say “not implemented.”
 
 The designs most relevant to these pages are the
-[configuration design](../.specs/lld-00001-generic-configuration-tools-and-harness-adapters-v1.md),
-[skills and memory design](../.specs/lld-00002-caveman-and-memory-skills-v1.md),
-[SDLC memory-hooks design](../.specs/lld-00002-caveman-memory-hooks-across-sdlc-commands-v2.md),
-[local persistence design](../.specs/lld-00006-simplified-local-persistence-and-sqlite-write-through-cache-v1.md),
-and [documentation and issue-routing design](../.specs/lld-00007-documentation-set-and-configured-issue-tracking-skill-v1.md).
+[configuration design](../.harnessctl/documents/doc-00001-generic-configuration-tools-and-harness-adapters-v1.md),
+[skills and memory design](../.harnessctl/documents/doc-00002-caveman-and-memory-skills-low-level-design-v1.md),
+[SDLC memory-hooks design](../.harnessctl/documents/doc-00002-caveman-memory-hooks-across-sdlc-commands-v2.md),
+[local persistence design](../.harnessctl/documents/doc-00007-simplified-local-persistence-and-sqlite-write-through-cache-v1.md),
+and [documentation and issue-routing design](../.harnessctl/documents/doc-00008-documentation-set-and-configured-issue-tracking-skill-v1.md).
 The current CVS and MCP contracts are governed by the
-[CVS/MCP design](../.specs/lld-00008-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md).
+[CVS/MCP design](../.harnessctl/documents/doc-00010-configurable-cvs-mcp-aware-issues-and-host-mcp-configuration-v1.md).
+Documents are governed by the approved
+[HLD](../.harnessctl/documents/doc-00013-repository-local-sdlc-design-document-management-v4.md)
+and
+[LLD](../.harnessctl/documents/doc-00014-repository-local-sdlc-design-document-management-v4.md).
 
 ## Product boundary
 

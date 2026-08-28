@@ -1,0 +1,27 @@
+schema_version: 1
+id: 01M14WM9NXVRJM1RBJRA1RGKY8
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | recovery preflight and adapter enums | failed; hrn-00148/hrn-00149 open
+details: "Fresh `mise run quality`, `mise run build`, Documents/Issues/Memory validators, `git diff --check` pass: generic-tools 301, OpenCode 2, Pi 3, Python 602, package tarballs 23/5/7, release artifacts 5. AC1/2/3/4 fail. `hrn-00148`: pre-recovery validation covers Issues only; interrupted archive + unrelated malformed Document + `document_get` changed authority, removed journal, then failed parse. Complete pre-recovery Documents/Issues/Memory validation required without blocking interrupted-lineage recovery. `hrn-00149`: OpenCode/Pi status and list kind/status schemas accept arbitrary strings, violating exact four-kind/three-status adapter contract. Evidence `hrn-00148-C0004`, `hrn-00135-C0025`. No Verify repair, closure, Release, commit, remote, destructive action. Next: bounded Build `hrn-00148` and `hrn-00149`. Residual native Windows Pi isolation remains CI risk."
+source:
+  kind: artifact
+  ref: hrn-00148-C0004; hrn-00149; hrn-00135-C0025
+  revision: hrn-00135 v1:720ce19319e9c06dff89898bb552dea84ff3885043f52fa97d2af2845d108bf4; hrn-00148 v1:34a2bb65473df7d3bc2afadf5d0384ce561fb422c495b74df95ef6441b516c88; hrn-00149 v1:dbce5548610318dfb709013d6fa047979c66d1e5e4c10233e1edc1ce58ebb4b4
+created_at: 2026-08-28T19:13:00.093Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14W3DHN3PP5H42S55KQASWT
+tags:
+  - atomicity
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148
+  - hrn-00149
+  - verify

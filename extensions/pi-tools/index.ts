@@ -19,6 +19,7 @@ import {
   issueMetadataText,
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
+import { registerDocumentTools } from './document-tools.js';
 import { registerMemoryTools } from './memory-tools.js';
 
 export default function harnessctlTools(pi: ExtensionAPI): void {
@@ -63,6 +64,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   });
 
   registerMemoryTools(pi);
+  registerDocumentTools(pi);
 
   pi.registerTool({
     name: 'issue_id',
@@ -261,11 +263,15 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
   pi.registerTool({
     name: 'issue_link_document',
     label: 'Issue Link Document',
-    description: 'Link a repository-relative task or design document to an issue.',
+    description: 'Link a repository-relative task or active canonical document to an issue.',
     parameters: Type.Object({
       id: Type.String({ description: 'Issue ID' }),
-      path: Type.String({ description: 'Path under .harnessctl/tasks/ or .specs/' }),
-      kind: Type.Optional(Type.String({ description: 'Optional document kind: task or design' })),
+      path: Type.String({
+        description: 'Path under the configured tasks root or the fixed active .harnessctl/documents authority',
+      }),
+      kind: Type.Optional(
+        Type.String({ description: 'Optional document kind: task, design, or document (preferred)' }),
+      ),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {

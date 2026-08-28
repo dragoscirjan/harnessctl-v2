@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M14ZF331DQJC79VD22HN8H8B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | recoverable linked rollback | failed; hrn-00148 open
+details: "Fresh `mise run quality`, `mise run build`, Documents/Issues/Memory validators, and `git diff --check` pass. Verify round 5 confirms AC2-4 failure: `recoverDocumentTransaction()` validates current Issues before rollback overlay. Interrupted archive publication points 3/4 plus Issue link to missing active v1 makes `getDocument()` reject and retain journal although rollback would restore linked path and valid graph. `hrn-00148-C0006`; `hrn-00135-C0027`. `hrn-00149` adapter repair has no confirmed finding. No Verify repair, closure, Release, commit, remote, destructive action. Next: `work-build hrn-00148`. Residual external filesystem TOCTOU and native Windows Pi isolation remain CI risks."
+source:
+  kind: artifact
+  ref: hrn-00148-C0006; hrn-00135-C0027
+  revision: hrn-00148 v1:693ae35f214b94071f41f09afdacb871a24510ef2098168d823591ffd74abf70; hrn-00135 v1:32ed514401577b69cb882450106c18998fc9730694d0d83905a2649ca49437a3
+created_at: 2026-08-28T20:02:35.233Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14YPVV0Z9Z32W36HBDH4JEN
+tags:
+  - atomicity
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148
+  - verify

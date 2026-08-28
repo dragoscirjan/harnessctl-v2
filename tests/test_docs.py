@@ -93,12 +93,29 @@ def test_documentation_set_and_root_index_exist() -> None:
         "configuration.md",
         "memory.md",
         "issues.md",
+        "documents.md",
         "cvs.md",
         "code-intelligence.md",
         "code-intelligence-providers.md",
     }
     assert {path.name for path in DOCS.glob("*.md")} == expected
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_document_docs_cover_fixed_authority_and_removed_legacy_links() -> None:
+    documents = (DOCS / "documents.md").read_text(encoding="utf-8")
+    issues = (DOCS / "issues.md").read_text(encoding="utf-8")
+    public_docs = "\n".join(path.read_text(encoding="utf-8") for path in DOCS.glob("*.md"))
+
+    assert "fixed repository-local" in documents
+    assert ".harnessctl/documents" in documents
+    assert "No `.specs` or `.ai.tmp` migration command or link compatibility ships" in documents
+    assert "`.specs-v1` is inert repository history" in documents
+    assert "--migrate-specs" not in public_docs
+    assert "migration runner" not in public_docs
+    assert "retired legacy roots are rejected" in issues
+    assert ".ai.tmp/*.md" not in public_docs
+    assert "remain linkable" not in documents
 
 
 def test_local_markdown_links_resolve() -> None:
@@ -231,8 +248,38 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "b2f3b61967dd86dab0b428d67bf3f5c97a50339d0b10409c000c0e6b85a3afd2"
+        "65210fc0b88d3dab24981bf0a55828e47492214cdef73b76074b453207b677ac"
     )
+
+
+def test_plan_design_reference_owns_document_lifecycle_on_both_hosts() -> None:
+    template = (SDLC_SKILL_TEMPLATES / "references/plan-design.md.j2").read_text(encoding="utf-8")
+    generated = [
+        (ROOT / host / "skills/sdlc/references/plan-design.md").read_text(encoding="utf-8")
+        for host in (".opencode", ".pi")
+    ]
+
+    assert generated == [template, template]
+    for kind in ("hld", "lld", "design-overview", "gdd"):
+        assert kind in template.lower()
+    for tool in (
+        "document_list",
+        "document_get",
+        "document_create",
+        "document_update",
+        "document_version",
+        "document_validate",
+        "issue_link_document",
+        "issue_validate",
+    ):
+        assert f"`{tool}`" in template
+    assert "specification tooling" not in template
+    normalized = " ".join(template.split())
+    assert "Separately confirm the transition to `review`" in normalized
+    assert "separately confirm the transition to `approved`" in normalized
+    assert "fresh exact revision immediately before mutation" in normalized
+    assert "approved active canonical path" in normalized
+    assert "before checkpointing" in normalized
 
 
 def test_docs_describe_standalone_refresh_contract() -> None:
@@ -681,6 +728,84 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     ):
         assert path in cvs
     assert "npm:pi-mcp-adapter@2.26.0" in cvs
+    assert "gitea-mcp` 1.6.0" in cvs
     assert "forgejo-mcp` 2.33.0" in cvs
+    assert '"command": ["gitea-mcp", "--transport", "stdio", "--host"' in cvs
+    assert '"command": ["forgejo-mcp", "--transport", "stdio", "--url"' in cvs
+    assert "A previously generated Forgejo-backed Gitea definition" in normalized
+    assert (
+        "modified historical definition under either `cvs_gitea` or `sdlc_cvs_gitea` "
+        "remains byte-preserved with a warning and blocks planned canonical replacement "
+        "under force and non-force" in normalized
+    )
+    assert "Recognition requires the old local `forgejo-mcp` executable signature" in normalized
     assert "Environment-variable names only" in cvs
     assert "npm:@harnessctl/pi-tools@latest" in cvs
+    assert "every skill in the current managed registry" in normalized
+
+
+def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> None:
+    documents = (DOCS / "documents.md").read_text(encoding="utf-8")
+    normalized_documents = " ".join(documents.split())
+    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
+    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
+    current_docs = "\n".join(path.read_text(encoding="utf-8") for path in DOCS.glob("*.md"))
+
+    for fact in (
+        "`hld`, `lld`, `design-overview`, and `gdd`",
+        "`document_id`, `document_create`, `document_list`",
+        "`document_update`, `document_version`, `document_validate`",
+        "`document_archive`, and `document_restore`",
+        "existing SDLC Plan reference",
+        "latest exact-byte `expectedRevision`",
+        "separately confirmed transitions",
+        "approved active canonical path",
+        "both `document_validate` and `issue_validate`",
+        "No `.specs` or `.ai.tmp` migration command or link compatibility ships",
+        "`.specs-v1` is inert repository history",
+        "exact previously managed one-file output",
+        "`--force` does not weaken this fingerprint rule",
+    ):
+        assert fact in normalized_documents
+    for removed in (
+        "documents.remote",
+        "sdlc_documents_gitea",
+        "sdlc_documents_forgejo",
+        "GitHub Wiki",
+        "GitLab Wiki",
+        "Gitea Wiki",
+        "Forgejo Wiki",
+    ):
+        assert removed not in current_docs
+    assert "remote providers are removed" in configuration
+    assert "currently registers eight" in skills
+    assert "No Documents agent or skill is generated" in skills
+
+
+def test_current_design_links_use_canonical_documents_paths() -> None:
+    docs_index = (DOCS / "README.md").read_text(encoding="utf-8")
+    root = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert "../.specs/" not in docs_index
+    assert "--migrate-specs" not in root
+    assert "migration runner" not in root
+    for path in (
+        "doc-00013-repository-local-sdlc-design-document-management-v4.md",
+        "doc-00014-repository-local-sdlc-design-document-management-v4.md",
+    ):
+        assert f"../.harnessctl/documents/{path}" in docs_index
+
+
+def test_current_document_release_notes_do_not_advertise_migration() -> None:
+    root_changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    generic_changelog = (ROOT / "extensions/generic-tools/CHANGELOG.md").read_text(encoding="utf-8")
+    current_notes = (
+        root_changelog.split("## Unreleased", 1)[1].split("## 0.2.0", 1)[0]
+        + generic_changelog.split("## Unreleased", 1)[1].split("## 0.1.8", 1)[0]
+        + (ROOT / ".changeset/bright-documents-link.md").read_text(encoding="utf-8")
+    )
+
+    assert "repository-local Documents lifecycle" in current_notes
+    assert "safe issue document links" in current_notes
+    for retired_surface in ("--migrate-specs", "packaged runner", "migration runtime and CLI"):
+        assert retired_surface not in current_notes

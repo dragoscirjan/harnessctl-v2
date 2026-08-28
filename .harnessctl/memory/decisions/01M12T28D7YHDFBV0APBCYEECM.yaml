@@ -1,0 +1,27 @@
+schema_version: 1
+id: 01M12T28D7YHDFBV0APBCYEECM
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Plan | Documents v4 one-time bootstrap pivot | approved
+details: "Approved HLD `doc-00013` v4 and LLD `doc-00014` v4 define Documents creation/maintenance as product. `.specs` conversion was completed repository-only bootstrap; Build must first bind 19 mappings/14 lineages in persistent fixture, then remove all shipped migration runtime, CLI, bridge, streaming, resources, provenance, tests, guidance, completion state, and empty `.specs`. Retain 21 active canonical files, metadata provenance, `.specs-v1`, ordinary Documents recovery, nine tools, CVS/Issues/privacy behavior. `hrn-00135`, `hrn-00139`, `hrn-00140`, `hrn-00142`, `hrn-00145` reconciled and linked to both approved v4 records. Documents, Issues, Memory validation pass. No Build, Verify, Release, closure, commit, remote, or destructive action. Next: `work-build hrn-00135`."
+source:
+  kind: artifact
+  ref: doc-00013 v4; doc-00014 v4; hrn-00135
+  revision: HLD v1:3b675bb5e467a0bb94a37a190905e98ba10667c288532cd708ab5b8910b2025d; LLD v1:3f7e1d5fade5462055d6040aebb1a23e79074410e0b66de21797bea58f107efc
+created_at: 2026-08-27T23:49:42.951Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1005228KYEZ7AHP6BXXVHC1
+tags:
+  - approved
+  - bootstrap
+  - checkpoint
+  - documents
+  - hrn-00135
+  - migration-removal
+  - plan

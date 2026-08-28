@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M12HHH3E69MF5K2JGYP51SYS
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: Implemented bounded local release/provenance acceptance for packaged specs migration resources.
+details: "package/release checks now run full scanner self-test; package inspection creates and safely extracts real npm tarballs and audits generic-tools packed provenance bytes; release artifact test compares source/direct wheel/sdist/offline rebuilt wheel resources and executes installed migration offline across harness selections; version-packages deterministically rebuilds resources and Python fixed expectations. Evidence: packages:check passed (32/5/7 packed files), 56 focused release/bridge tests passed, release artifacts 5 passed, ESLint/Ruff/Prettier/diff checks passed, generation idempotence passed."
+source:
+  kind: tool-observation
+  ref: local workspace
+  revision: null
+created_at: 2026-08-27T21:20:46.190Z
+created_by: devops
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00135
+  - migration
+  - provenance
+  - release

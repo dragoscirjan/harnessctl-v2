@@ -9,6 +9,8 @@ const safeProjectPath = nonemptyString.regex(
 
 export const FILESYSTEM_ISSUE_TOOLS =
   'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive';
+export const FILESYSTEM_DOCUMENT_TOOLS =
+  'document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore';
 const safeTokenEnvironmentName = z
   .string()
   .regex(/^[A-Z][A-Z0-9_]*$/, 'must be an uppercase environment variable name, not a token value');
@@ -37,7 +39,6 @@ const PROVIDER_CONTRACTS = {
   gitea: { tools: 'tea', url: httpsInstanceUrl },
   forgejo: { tools: 'forgejo-cli', url: httpsInstanceUrl },
 } as const;
-
 type Provider = keyof typeof PROVIDER_CONTRACTS;
 
 function remoteFields(provider: Provider) {
@@ -121,11 +122,20 @@ const issuesSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+const documentsSchema = z
+  .object({
+    root: z.literal('.harnessctl/documents'),
+    prefix: z.literal('doc-'),
+    type: z.literal('filesystem'),
+    tools: z.literal(FILESYSTEM_DOCUMENT_TOOLS),
+  })
+  .strict();
 
 export const configV2Schema = z
   .object({
     version: z.literal(2),
     issues: issuesSchema,
+    documents: documentsSchema,
     cvs: z.object({ local: cvsLocalSchema, remote: remoteServiceSchema }).strict(),
     mcp: z.object({ output_limit_mode: mcpOutputLimitModeSchema }).strict(),
     skills: z

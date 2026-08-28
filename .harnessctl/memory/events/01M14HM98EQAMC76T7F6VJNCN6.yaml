@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M14HM98EQAMC76T7F6VJNCN6
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Verify | complete graph preflight | failed; hrn-00148 open
+details: "Fresh `mise run quality`, `mise run build`, `git diff --check`, Documents/Issues/Memory validators pass. Independent Verify confirms high defect: Documents mutations can publish canonical files before schema-valid graph-invalid Issues make SQLite synchronization/rebuild fail. AC2/3/4 fail. Created `hrn-00148`, related to `hrn-00137`; Epic evidence `hrn-00135-C0021`. No repair, closure, Release, commit, remote, or destructive action. Next confirmed disposition: bounded Build repair `hrn-00148`. Residual native Windows Pi isolation remains CI risk."
+source:
+  kind: artifact
+  ref: hrn-00148; hrn-00135-C0021; extensions/generic-tools/documents.ts; extensions/generic-tools/local-persistence.ts
+  revision: hrn-00135 v1:db8f0d3ba08982458732331e1cc87ab3d9f3185b2b6fd6a650d20347118da132
+created_at: 2026-08-28T16:00:45.326Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M14DFR8WJVVJ5YNHEMGE56JF
+tags:
+  - atomicity
+  - checkpoint
+  - documents
+  - hrn-00135
+  - hrn-00148
+  - verify

@@ -11,6 +11,6 @@
 "depends_on":
   - "hrn-00070"
 "metadata":
-  "design": ".specs/lld-00010-compact-progressively-disclosed-sdlc-prompts-v1.md"
+  "design": ".harnessctl/documents/doc-00012-compact-progressively-disclosed-sdlc-prompts-v1.md"
 "body": "Given safe nested resource rendering\nWhen SDLC policy is rewritten for progressive disclosure\nThen five tiny command shells load one core skill and only relevant playbooks.\n\n## Deliverables\n\n- Add compact `sdlc` SKILL.md and phase/conditional references.\n- Rewrite five commands as caveman shells.\n- Remove obsolete inline SDLC partials after invariant coverage.\n\n## Acceptance\n\n- [x] Five command names and stop boundaries remain compatible.\n- [x] Core preserves authority, confirmation, Epic-first, provider, and safety rules.\n- [x] Rare Initiative/design/decomposition/YOLO/defect/deploy/reconcile policy is conditional.\n- [x] Memory/checkpoint behavior remains compatible through current memory skill/tools.\n- [x] Prompt and aggregate budgets pass."
 "comments": []

@@ -74,7 +74,9 @@ def test_issue_skill_is_self_contained_and_provider_exclusive(
     assert tools in rendered
     assert "Initiative" in rendered and "Epic" in rendered and "Story" in rendered
     assert "Gherkin" in rendered
-    assert "`.specs/`" in rendered
+    assert "active canonical Documents" in rendered
+    assert ".specs" not in rendered
+    assert ".ai.tmp" not in rendered
     assert "target issue is known" in rendered
     assert "Never retry failure reporting through the broken issue channel" in rendered
     assert "ISSUE_TRACKING" not in rendered
@@ -117,6 +119,16 @@ def test_forgejo_syntax_remains_help_driven() -> None:
     assert "help-driven" in rendered
     assert "Use Gitea CLI" not in rendered
     assert "tea issue" not in rendered
+
+
+def test_gitea_mcp_guidance_is_provider_exclusive() -> None:
+    rendered = _render("gitea", "tea", "https://gitea.example.com", "GITEA_TOKEN")
+
+    assert "`gitea-mcp` is only the server executable" in rendered
+    assert "call `get_gitea_mcp_server_version`" in rendered
+    assert "exactly `1.6.0`" in rendered
+    assert "forgejo-mcp" not in rendered
+    assert "get_forgejo_mcp_server_version" not in rendered
 
 
 def test_remote_issue_tools_are_equal_choices_and_provider_isolated() -> None:
@@ -187,6 +199,7 @@ def test_pi_install_adds_specialized_issue_skill(
     )
     assert not (tmp_path / ".opencode").exists()
     assert len(list(tmp_path.rglob("SKILL.md"))) == 6
+    assert not (tmp_path / ".pi/skills/sdlc-documents").exists()
 
 
 def test_issue_skill_conflict_is_detected_before_mutation(tmp_path: Path) -> None:

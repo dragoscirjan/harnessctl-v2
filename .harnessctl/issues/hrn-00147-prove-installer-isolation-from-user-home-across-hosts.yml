@@ -1,0 +1,30 @@
+"version": 1
+"id": "hrn-00147"
+"type": "bug"
+"title": "Prove installer isolation from user HOME across hosts"
+"status": "open"
+"created_at": "2026-08-28T09:26:49.943Z"
+"updated_at": "2026-08-28T14:47:58.994Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"metadata":
+  "affected_acceptance":
+    - 11
+    - 13
+  "phase": "verify"
+  "related_story": "hrn-00139"
+"body": "# Prove installer isolation from user HOME across hosts\n\n## Evidence Gap\n\nEpic acceptance requires tests with absent and hostile `HOME` proving harnessctl never reads or copies user-level OpenCode/Pi configuration. Current coverage exercises only OpenCode with `HOME` set and a patched `Path.home()`.\n\n## Impact\n\nPi, `all`, absent `HOME`, hostile user-level `.opencode`/`.pi` trees, and child-process environment behavior remain unproven. Acceptance 11 and 13 cannot pass without current bounded evidence.\n\n## Acceptance Criteria\n\n- Cover `opencode`, `pi`, and `all` with `HOME` absent and with a hostile repository-external `HOME`.\n- Populate hostile user-level `.opencode` and `.pi` trees with sentinel content; prove no read, copy, merge, deletion, or mutation.\n- Prove installer planning, rendering, smoke checks, and Pi subprocess actions do not acquire user-global configuration through `Path.home()`, environment fallback, shell expansion, or inherited child environment.\n- Preserve normal repository-local installation behavior and unrelated environment variables.\n- Run focused and configured quality/build checks before Verify.\n\n## Verify Evidence\n\nFresh configured quality/build gates passed, but independent review found the required host/environment matrix absent. No repair occurred during Verify; user selected Build."
+"comments":
+  - "id": "hrn-00147-C0001"
+    "created_at": "2026-08-28T11:30:47.900Z"
+    "created_by": "OpenCode"
+    "body": "Build C0001: completed installer HOME-isolation evidence and child-process hardening. OpenCode, Pi, and all now run under absent and hostile HOME matrices while low-level/high-level filesystem guards prove user `.opencode`/`.pi` trees are neither read nor changed. Pi package subprocesses receive a copied environment with `HOME`, `HOMEDRIVE`, `HOMEPATH`, `USERPROFILE`, and `XDG_CONFIG_HOME` removed while unrelated variables remain. Focused race/HOME matrix: 42 passed; broader installer/preservation/release suite: 421 passed. Independent review approved. Full `mise run quality`, `mise run build`, validators, and diff checks pass. Bug remains open for Verify; native Windows environment/path semantics remain CI evidence."
+  - "id": "hrn-00147-C0002"
+    "created_at": "2026-08-28T13:46:08.161Z"
+    "created_by": "OpenCode"
+    "body": "Verify C0002: FAILED acceptance 11 and 13. Fresh `mise run quality`, `mise run build`, validators, and `git diff --check` pass. Independent review and direct dependency inspection confirm Pi package actions remain able to access operator-global configuration: harnessctl only removes HOME-related environment variables, while pinned Pi `getAgentDir()` falls back to `os.homedir()` and package commands initialize a settings manager that reads global settings. Current subprocess test verifies only environment removal, not filesystem isolation. No implementation repair occurred during Verify. Recommended next phase: Build `hrn-00147` to provide an isolated `PI_CODING_AGENT_DIR` and prove the child process cannot read hostile user state."
+  - "id": "hrn-00147-C0003"
+    "created_at": "2026-08-28T14:47:58.994Z"
+    "created_by": "OpenCode"
+    "body": "Build repair completed for Pi global-settings isolation. `_run_pi_package_action()` now overrides inherited `PI_CODING_AGENT_DIR` with a fresh temporary directory for every Pi package subprocess, strips HOME/HOMEDRIVE/HOMEPATH/USERPROFILE/XDG_CONFIG_HOME, preserves unrelated environment, and removes the isolated directory after success, nonzero exit, or timeout. Regressions execute pinned Pi `getAgentDir()`/`getSettingsPath()` in a real Node child against hostile operator settings and cover cleanup/error paths. Evidence: 4 focused tests passed; installer/preservation/release slice 424 passed; independent review approved; `mise run quality` passed (602 Python tests plus configured Node/lint/type/format/duplication/artifact checks); `mise run build` passed; `git diff --check` passed. Residual: native Windows child execution remains for Verify/CI. Bug remains open pending Verify."

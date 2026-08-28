@@ -23,6 +23,7 @@ Start with the [documentation index](docs/README.md), then use the focused guide
 - [Configuration and tool settings](docs/configuration.md)
 - [Repository memory and disposable cache](docs/memory.md)
 - [Filesystem issues and configured provider routing](docs/issues.md)
+- [Repository-local design documents](docs/documents.md)
 - [Version control and MCP provider setup](docs/cvs.md)
 - [Code-intelligence retrieval and provider boundaries](docs/code-intelligence.md)
 - [External code-intelligence provider comparison](docs/code-intelligence-providers.md)
@@ -186,6 +187,8 @@ Implemented in `src/harnessctl/`:
 - Fixed-ID GitHub, GitLab, Gitea, and Forgejo MCP projection into OpenCode and Pi host
   files, with independently configured CVS and Issues policies.
 - Packaged command, skill, and reference templates included in built wheels.
+- Nine repository-local Documents tools for HLD, LLD, design-overview, and GDD
+  lifecycles under the fixed `.harnessctl/documents` authority.
 - Opt-in, provider-neutral `sdlc-code-index` retrieval guidance with local source
   verification and Glob/Grep fallback when index evidence is unavailable or unsuitable.
 - Always-installed `sdlc-code` Build guidance with generic clean-code policy and 26
@@ -233,18 +236,30 @@ keys, multiple documents, unsafe paths, and invalid schema values are rejected. 
 writes are deterministic. Parent, child, blocking, and symmetric relationship views
 are derived from a single persisted direction rather than duplicated across files.
 
+### Generic document tooling
+
+The generic runtime exposes exactly `document_id`, `document_create`, `document_list`,
+`document_get`, `document_update`, `document_version`, `document_validate`,
+`document_archive`, and `document_restore`. Canonical Markdown is fixed beneath
+`.harnessctl/documents`; valid kinds are `hld`, `lld`, `design-overview`, and `gdd`.
+OpenCode and Pi register equivalent thin adapters. Plan owns the design lifecycle through
+its existing SDLC reference; no Documents agent or generated `sdlc-documents` skill is
+installed.
+
+No `.specs` or `.ai.tmp` migration command or link compatibility ships. `.specs-v1` is
+inert repository history, not a live authority or compatibility source.
+
 ### Simplified local persistence
 
-Filesystem issues and enabled repository memory are the only canonical local state.
-Every issue get/list/validation and memory get/list/search/export operation reads YAML
-from the filesystem; SQLite never supplies an agent result or repairs YAML.
+Filesystem issues, repository Documents, and enabled repository memory are canonical
+local state. Every read and validation operation reads canonical files; SQLite never
+supplies an agent result or repairs canonical authority.
 
 Participating local issue and repository-memory operations share one exclusive,
 non-reentrant barrier at `.harnessctl/cache/local-operations.lock`. Canonical writes
 use same-directory replacement and bounded in-process rollback for ordinary failures.
-There are no application transaction journals, projection sinks or change sets,
-dirty markers, startup roll-forward, or agent-facing cache tools. A process crash can
-leave partial canonical state; later validation reports it for manual correction.
+Issues and Memory have no application transaction journals or agent-facing cache tools.
+Documents use private journaled publication for multi-file lineage operations.
 
 After each successful issue or repository-memory mutation, harnessctl synchronously
 refreshes the disposable cache at `.harnessctl/cache/harnessctl.sqlite`. Missing,
@@ -268,9 +283,9 @@ repositories must be converted outside these tools before canonical operations b
 
 ### Harness adapters
 
-OpenCode and Pi adapters currently register the generic issue/configuration tools and
-the normalized repository-memory tools. Adapter tests cover Pi memory registration,
-store, search, and validation delegation.
+OpenCode and Pi adapters currently register the generic configuration, issue, Documents,
+and repository-memory tools. Adapter tests cover equivalent Documents registration and
+delegation on both hosts.
 
 Automatic memory installation supports OpenCode and Pi. Pi receives all six commands,
 its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
@@ -482,14 +497,12 @@ before taking action.
 
 ## Important documents
 
-| Document                                                                                     | Purpose                                       |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `.specs/00001-prd-human-governed-sdlc-v1.md`                                                 | Product and architecture baseline             |
-| `.specs/00002-lld-filesystem-issue-management-v2.md`                                         | Filesystem issue-management design            |
-| `.specs/00003-lld-harness-neutral-sdlc-prompt-templates-and-harness-installers-v2.md`        | Prompt templates and installer design         |
-| `.harnessctl/issues/00001-initiative-human-governed-extensible-sdlc-for-coding-harnesses.md` | Long-term initiative and roadmap              |
-| `mise.toml`                                                                                  | Root tool versions and cross-language tasks   |
-| `pyproject.toml`                                                                             | Python dependencies and quality configuration |
+| Document                 | Purpose                                       |
+| ------------------------ | --------------------------------------------- |
+| `.harnessctl/documents/` | Canonical repository-local design authority   |
+| `.harnessctl/issues/`    | Canonical issue authority                     |
+| `mise.toml`              | Root tool versions and cross-language tasks   |
+| `pyproject.toml`         | Python dependencies and quality configuration |
 
 ## Human-only boundaries
 

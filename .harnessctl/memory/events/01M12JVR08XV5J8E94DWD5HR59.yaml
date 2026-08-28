@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M12JVR08XV5J8E94DWD5HR59
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | all 9 children | implemented; configured gates pass
+details: "Epic-scoped YOLO exhausted hrn-00142, 00136, 00137, 00138, 00140, 00141, 00143, 00144, 00139. Fixed local Documents authority/migration/cutover/provider cleanup/CVS preservation/adapters/lifecycle/stale-skill/package provenance complete. Active v3 HLD/LLD linked to hrn-00135 and hrn-00140. Evidence: mise run quality passed: Python 631 passed, 2 Windows-only skipped on Linux; generic-tools 288, OpenCode 2, Pi 3; lint/type/format/package/provenance checks passed. mise run build passed: 5 artifact tests. Issues remain open; no commit/remote/destructive work. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: local workspace; hrn-00135-C0013
+  revision: null
+created_at: 2026-08-27T21:43:49.512Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12HHH3E69MF5K2JGYP51SYS
+tags:
+  - build
+  - checkpoint
+  - documents
+  - hrn-00135
+  - migration

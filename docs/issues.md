@@ -28,6 +28,12 @@ of copying specifications, and `issue_validate` before relying on manually moved
 edited repository data. `issue_archive` recursively archives an issue and active
 descendants with rollback on ordinary failure.
 
+`issue_link_document` accepts real files beneath configured `paths.tasks` and active
+canonical files beneath the fixed `.harnessctl/documents` root. Use kind `task` for task
+artifacts and `document` for canonical design records. The tool stores only the
+repository-relative path. Archive paths, symlinks, traversal, absolute paths, missing
+files, oversized files, and retired legacy roots are rejected. See [Documents](documents.md).
+
 The local adapter tool set is listed in [configuration](configuration.md). OpenCode
 and Pi adapters register it when their packages are loaded. Skill installation and
 tool registration are separate concerns.
@@ -118,15 +124,17 @@ Remote Issues use fixed IDs `sdlc_cvs_github`, `sdlc_cvs_gitlab`,
 `sdlc_cvs_gitea`, and `sdlc_cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
 environment-name, endpoint, command, version, OAuth, header, or toolset mismatch fails
 instead of choosing one domain. GitHub and GitLab use official hosted MCP services.
-Gitea and Forgejo use operator-installed external GPL `forgejo-mcp` 2.33.0 and require
-the runtime version check before mutation. See [CVS and MCP providers](cvs.md) for exact
-host formats, vetted license boundaries, output limits, and Pi consent/residuals.
+Gitea uses operator-installed official `gitea-mcp` 1.6.0; Forgejo uses external
+`forgejo-mcp` 2.33.0. Each requires its provider-specific runtime version check before
+mutation. See [CVS and MCP providers](cvs.md) for exact host formats, vetted license
+boundaries, output limits, and Pi consent/residuals.
 Exact generated legacy `cvs_*` definitions migrate to the canonical IDs; modified legacy
 definitions are preserved with a warning and are never treated as aliases.
 
-For Gitea and Forgejo, MCP capability is available only when the `forgejo-mcp`
-executable is present. CLI capability is independently available only when `tea` or
-`forgejo-cli`, respectively, is present. One route's absence does not disable the other.
+Gitea MCP capability is available only when `gitea-mcp` is present; Forgejo MCP
+capability is available only when `forgejo-mcp` is present. CLI capability is
+independently available only when `tea` or `forgejo-cli`, respectively, is present. One
+provider's executable or one route's absence does not affect the other.
 
 Capability references used by generated guidance are:
 

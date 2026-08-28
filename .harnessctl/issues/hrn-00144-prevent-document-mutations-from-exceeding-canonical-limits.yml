@@ -1,0 +1,25 @@
+"version": 1
+"id": "hrn-00144"
+"type": "bug"
+"title": "Prevent document mutations from exceeding canonical limits"
+"status": "open"
+"created_at": "2026-08-26T20:44:11.787Z"
+"updated_at": "2026-08-27T21:43:22.646Z"
+"created_by": "opencode"
+"parent": "hrn-00135"
+"depends_on":
+  - "hrn-00137"
+"metadata":
+  "affected_story": "hrn-00137"
+  "severity": "high"
+  "source": "verify-round-17"
+"body": "# Prevent document mutations from exceeding canonical limits\n\n## Summary\n\nReject filesystem document mutations before publication when the resulting canonical catalog would exceed configured limits.\n\n## Scope\n\n- Guard `document_create` before publication when a valid 2,000-file catalog would become 2,001 files.\n- Guard `document_version` before publication when a valid 100-version lineage would become 101 versions.\n- Preserve canonical bytes and cache state on rejection.\n- Preserve valid operations below each limit.\n\n## Acceptance Criteria\n\n- Capacity checks evaluate the proposed next state before canonical publication.\n- Rejected boundary mutations leave canonical authority and cache unchanged.\n- Regression tests cover 2,000 to 2,001 files and 100 to 101 versions from valid starting states.\n- Focused and full configured quality/build gates pass.\n\n## Evidence\n\nVerify round 17 independent review: `/tmp/opencode/hrn-00135-verify-review-round-17.md`.\n\n## Comments\n"
+"comments":
+  - "id": "hrn-00144-C0001"
+    "created_at": "2026-08-26T21:12:24.719Z"
+    "created_by": "OpenCode"
+    "body": "Plan retains the high-severity proposed-state defect. Implement prepublication 2,000-to-2,001 file and 100-to-101 version rejection with unchanged canonical/cache state after hrn-00137; block final integration."
+  - "id": "hrn-00144-C0002"
+    "created_at": "2026-08-27T21:43:22.646Z"
+    "created_by": "OpenCode"
+    "body": "YOLO Build complete for proposed-state boundaries. Valid 2,000-to-2,001 file and 100-to-101 lineage-version transitions reject before publication with canonical/cache state unchanged; bounded regression tests pass. Full configured quality/build gates pass. Status remains open; next boundary is Verify."

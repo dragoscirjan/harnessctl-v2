@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M0ZVKEAZV5B6AV87C3AMBY8B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00135 | verify | regression hrn-00143 | blocked
+details: "Epic hrn-00135. Phase verify. Fresh mise run quality/build, Changeset, package artifacts, stale-provider, diff gates pass. Review round 15 finds LLD/docs/tests state canonical-only Gitea blocking; required behavior covers modified historical cvs_gitea and sdlc_cvs_gitea under force/non-force. Reuse open Bug hrn-00143. No Verify repair. Issues open. Report /tmp/opencode/hrn-00135-verify-review-final.md. Next: work-build hrn-00135."
+source:
+  kind: artifact
+  ref: hrn-00135
+  revision: v1:69fb1132c3229e1c99cfd1c91007619fb97115717f507786adb3148ae7a9f9cd
+created_at: 2026-08-26T20:18:51.359Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M0ZTV8SJHMJZCA7X5SK1069C
+tags:
+  - blocked
+  - documentation
+  - gitea
+  - hrn-00143
+  - verify

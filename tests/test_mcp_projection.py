@@ -111,14 +111,54 @@ def test_cvs_intents_use_canonical_ids_and_recognize_exact_legacy_ids(
     recognized = recognized_server_intents(config, "all")
 
     assert [intent.server_id for intent in desired] == [f"sdlc_cvs_{provider}"]
-    assert [intent.server_id for intent in recognized] == [f"cvs_{provider}"]
+    assert recognized[0].server_id == f"cvs_{provider}"
     assert replace(recognized[0], server_id=desired[0].server_id) == desired[0]
+    if provider == "gitea":
+        assert [intent.server_id for intent in recognized[1:]] == [
+            "cvs_gitea",
+            "sdlc_cvs_gitea",
+        ]
+        for historical in recognized[1:]:
+            assert historical.command == "forgejo-mcp"
+            assert historical.args == (
+                "--transport",
+                "stdio",
+                "--url",
+                "https://gitea.example.test",
+            )
+            assert historical.environment == (("FORGEJO_ACCESS_TOKEN", "GITEA_TOKEN"),)
+    else:
+        assert len(recognized) == 1
 
 
-@pytest.mark.parametrize("provider", ["gitea", "forgejo"])
-def test_local_forge_projection_maps_only_token_name(provider: str) -> None:
-    intent = _intent(provider, token_env="FORGE_TOKEN")
+def test_local_gitea_projection_is_provider_exclusive() -> None:
+    intent = _intent("gitea", token_env="GITEA_SOURCE_TOKEN")
 
+    assert intent.compatibility_version == "1.6.0"
+    assert render_opencode_mcp(intent) == {
+        "type": "local",
+        "command": [
+            "gitea-mcp",
+            "--transport",
+            "stdio",
+            "--host",
+            intent.url,
+        ],
+        "environment": {"GITEA_ACCESS_TOKEN": "{env:GITEA_SOURCE_TOKEN}"},
+    }
+    assert render_pi_mcp(intent) == {
+        "command": "gitea-mcp",
+        "args": ["--transport", "stdio", "--host", intent.url],
+        "env": {"GITEA_ACCESS_TOKEN": "${GITEA_SOURCE_TOKEN}"},
+        "lifecycle": "lazy",
+    }
+    assert "forgejo" not in json.dumps(render_opencode_mcp(intent)).lower()
+
+
+def test_local_forgejo_projection_is_provider_exclusive() -> None:
+    intent = _intent("forgejo", token_env="FORGE_TOKEN")
+
+    assert intent.compatibility_version == "2.33.0"
     assert render_opencode_mcp(intent) == {
         "type": "local",
         "command": [
@@ -136,6 +176,14 @@ def test_local_forge_projection_maps_only_token_name(provider: str) -> None:
         "env": {"FORGEJO_ACCESS_TOKEN": "${FORGE_TOKEN}"},
         "lifecycle": "lazy",
     }
+    assert "gitea" not in json.dumps(render_opencode_mcp(intent)).lower()
+
+
+def test_documents_do_not_create_mcp_intents_or_routes() -> None:
+    intents = required_server_intents(deepcopy(DEFAULT_CONFIG), "all")
+
+    assert [intent.server_id for intent in intents] == ["sdlc_cvs_github"]
+    assert [intent.requesting_routes for intent in intents] == [("cvs",)]
 
 
 def test_provider_neutral_local_projection_omits_optional_url_and_empty_environment() -> None:
@@ -251,6 +299,63 @@ def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
     assert deduplicated[0].requesting_routes == ("cvs", "issues")
     with pytest.raises(ConfigError, match="fixed ID sdlc_cvs_github"):
         deduplicate_server_intents([intent, replace(duplicate, token_env="ISSUES_TOKEN")])
+
+
+@pytest.mark.parametrize(
+    ("provider", "tool", "url", "token_env", "command", "target_env"),
+    [
+        (
+            "gitea",
+            "tea",
+            "https://gitea.example.test",
+            "GITEA_TOKEN",
+            "gitea-mcp",
+            "GITEA_ACCESS_TOKEN",
+        ),
+        (
+            "forgejo",
+            "forgejo-cli",
+            "https://forgejo.example.test",
+            "FORGEJO_TOKEN",
+            "forgejo-mcp",
+            "FORGEJO_ACCESS_TOKEN",
+        ),
+    ],
+)
+def test_same_provider_cvs_and_issues_deduplicate_with_route_attribution(
+    provider: str,
+    tool: str,
+    url: str,
+    token_env: str,
+    command: str,
+    target_env: str,
+) -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["cvs"]["remote"] = {
+        "provider": provider,
+        "tools": tool,
+        "url": url,
+        "token_env": token_env,
+    }
+    config["issues"] = {
+        "root": ".harnessctl/issues",
+        "prefix": "hrn-",
+        "type": provider,
+        "tools": tool,
+        "remote": {"url": url, "token_env": token_env},
+    }
+
+    candidates = required_server_intents(config, "all")
+    deduplicated = deduplicate_server_intents(candidates)
+
+    assert [intent.requesting_routes for intent in candidates] == [("cvs",), ("issues",)]
+    assert len(deduplicated) == 1
+    shared = deduplicated[0]
+    assert shared.server_id == f"sdlc_cvs_{provider}"
+    assert shared.requesting_routes == ("cvs", "issues")
+    assert render_opencode_mcp(shared)["command"][0] == command
+    assert render_opencode_mcp(shared)["environment"] == {target_env: f"{{env:{token_env}}}"}
+    assert render_pi_mcp(shared)["env"] == {target_env: f"${{{token_env}}}"}
 
 
 def test_opencode_merge_preserves_unrelated_content_and_avoids_rewrite(
@@ -534,6 +639,36 @@ def test_modified_legacy_cvs_entry_is_preserved_during_canonical_install(
         "cvs_github": modified,
         "sdlc_cvs_github": generated,
     }
+
+
+@pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+@pytest.mark.parametrize("server_id", ["cvs_gitea", "sdlc_cvs_gitea"])
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("modified", [False, True])
+def test_historical_gitea_entry_requires_replacement_in_same_plan(
+    tmp_path: Path,
+    container_name: str,
+    server_id: str,
+    force: bool,
+    modified: bool,
+) -> None:
+    path = tmp_path / "host.json"
+    historical = {"command": ["forgejo-mcp", "--transport", "stdio"]}
+    current = {**historical, **({"operator": True} if modified else {})}
+    original = json.dumps({container_name: {server_id: current}})
+    path.write_text(original, encoding="utf-8")
+
+    with pytest.warns(UserWarning, match=f"preserving historical MCP ID {server_id}"):
+        merged = _merge_host_json(
+            path,
+            container_name,
+            {},
+            recognized={server_id: (historical,)},
+            force=force,
+        )
+
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])

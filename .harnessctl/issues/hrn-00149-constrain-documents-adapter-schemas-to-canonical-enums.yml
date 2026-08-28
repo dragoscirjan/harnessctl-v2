@@ -1,0 +1,26 @@
+"version": 1
+"id": "hrn-00149"
+"type": "bug"
+"title": "Constrain Documents adapter schemas to canonical enums"
+"status": "open"
+"created_at": "2026-08-28T19:11:05.760Z"
+"updated_at": "2026-08-28T20:39:31.642Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"metadata":
+  "affected_stories":
+    - "hrn-00137"
+    - "hrn-00139"
+  "severity": "medium"
+  "source": "verify-round-3"
+"body": "# Constrain Documents adapter schemas to canonical enums\n\n## Summary\n\nOpenCode and Pi publish broader Documents tool schemas than the canonical domain. Create/update/version status fields and list kind/status fields accept arbitrary strings at the adapter boundary even though authority permits exactly four kinds and three statuses.\n\n## Scope\n\n- Reuse canonical `DOCUMENT_KINDS` and `DOCUMENT_STATUSES` in OpenCode and Pi schemas.\n- Constrain `document_create`, `document_update`, and `document_version` kind/status inputs to canonical enums.\n- Constrain `document_list` kind/status filters to canonical enums.\n- Preserve generic runtime validation, metadata handling, normalized results, and all nine tool contracts.\n\n## Acceptance Criteria\n\n- [ ] OpenCode and Pi schemas accept only `hld`, `lld`, `design-overview`, and `gdd` for every kind input.\n- [ ] OpenCode and Pi schemas accept only `draft`, `review`, and `approved` for every status input.\n- [ ] Adapter parity tests cover create, list, update, and version schema acceptance/rejection for kind and status.\n- [ ] Generic behavior and existing lifecycle/package tests remain green.\n- [ ] Focused and full configured quality/build gates pass.\n\n## Evidence\n\nVerify round 3 found unrestricted `schema.string()` status/list fields in `extensions/opencode-tools/document-tools.ts:20,48,66-67` and unrestricted TypeBox strings in `extensions/pi-tools/document-tools.ts:21,39,61-62`. Existing tests constrain create-kind and list-location only. This violates Epic `hrn-00135` acceptance criterion 1 and Stories `hrn-00137`/`hrn-00139` adapter equivalence requirements."
+"comments":
+  - "id": "hrn-00149-C0001"
+    "created_at": "2026-08-28T19:44:50.156Z"
+    "created_by": "lead-engineer"
+    "body": "Build repair complete; Bug remains open for Verify. OpenCode and Pi create/list/update/version schemas now use canonical Documents enums: kinds `hld,lld,design-overview,gdd`; statuses `draft,review,approved`. Adapter regressions assert exact accepted/rejected OpenCode values and exact Pi literal sets. Focused matrix 95 passed; OpenCode 2 and Pi 3 tests passed; `mise run quality`, `mise run build`, canonical validators, and `git diff --check` passed. Independent Build review approved."
+  - "id": "hrn-00149-C0002"
+    "created_at": "2026-08-28T20:39:31.642Z"
+    "created_by": "openai/gpt-5.6-sol"
+    "body": "Verify round 6 PASS; Bug remains open pending separate closure. Restarted OpenCode loaded rebuilt plugin. OpenCode/Pi create/list/update/version schemas expose exact canonical kinds `hld,lld,design-overview,gdd` and statuses `draft,review,approved`; parity tests and package checks pass. Fresh `mise run quality`, `mise run build`, canonical validators, and `git diff --check` passed. Independent Verify round 6 APPROVED with no adapter finding."

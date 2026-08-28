@@ -1,0 +1,30 @@
+"version": 1
+"id": "hrn-00146"
+"type": "bug"
+"title": "Revalidate retired Documents skill before deletion"
+"status": "open"
+"created_at": "2026-08-28T07:31:08.427Z"
+"updated_at": "2026-08-28T11:30:37.087Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"metadata":
+  "affected_acceptance":
+    - 9
+    - 13
+  "phase": "verify"
+  "related_story": "hrn-00139"
+"body": "# Revalidate retired Documents skill before deletion\n\n## Defect\n\n`install()` fingerprints exact retired `sdlc-documents/SKILL.md` output during planning, performs unrelated writes, then unlinks the planned file and directory without revalidating identity or bytes. An operator edit or replacement during that interval is deleted.\n\n## Impact\n\nThis violates `hrn-00135` acceptance for preserving modified operator content and `hrn-00139` transactional retired-skill cleanup under force and non-force installs.\n\n## Reproduction\n\nGiven an exact managed retired Documents skill tree, mutate `SKILL.md` from an injected write operation after cleanup planning but before deletion. Installation succeeds and removes the changed tree.\n\n## Likely Cause\n\n`src/harnessctl/install.py` classifies cleanup at lines 146-148, but deletion at lines 519-526 checks only repository containment and does not repeat the historical fingerprint or path identity validation.\n\n## Acceptance Criteria\n\n- Immediately before deletion, revalidate the exact retired file and containing directory identity, type, shape, size, and SHA-256 against the planned owned state.\n- Preserve changed, replaced, nonregular, symlinked, or otherwise unowned state byte-for-byte and emit the deterministic modified-tree warning.\n- Apply equivalent behavior for OpenCode, Pi, `all`, normal, and force installs.\n- Preserve transactional rollback and unrelated repository state.\n- Add deterministic race regressions for file mutation and pathname replacement between planning and deletion.\n- Focused and configured quality/build checks pass before Verify.\n\n## Verify Evidence\n\nFresh `mise run quality` and `mise run build` passed on 2026-08-28, but an independent read-only review reproduced operator-state deletion. No repair occurred during Verify."
+"comments":
+  - "id": "hrn-00146-C0001"
+    "created_at": "2026-08-28T08:46:32.920Z"
+    "created_by": "OpenCode"
+    "body": "Build complete: retired `sdlc-documents` cleanup now revalidates exact file/directory identity, type, shape, size, and SHA immediately before an atomic tree quarantine. Changed, replaced, symlinked, nonregular, or recreated operator state is preserved with deterministic warning; rollback uses exclusive no-follow restoration and never overwrites competing operator state. Race regressions cover planning changes, same-byte replacement, deletion-boundary replacement, later failure, multi-host restoration, recreated paths, and exclusive-create competition. Focused 30 tests, full `mise run quality`, `mise run build`, Ruff, formatting, package audits, release artifacts, and `git diff --check` pass. Independent review approved. Issue remains open for Verify."
+  - "id": "hrn-00146-C0002"
+    "created_at": "2026-08-28T09:26:49.492Z"
+    "created_by": "OpenCode"
+    "body": "Verify failed after fresh configured quality/build gates passed. Independent reproduction recreated `sdlc-documents` at its original path immediately after atomic quarantine: operator state survived, but no required modified-tree warning was emitted because post-rename checks inspect only quarantine. Acceptance 9/13 remain blocked. No repair occurred in Verify. User selected Build."
+  - "id": "hrn-00146-C0003"
+    "created_at": "2026-08-28T11:30:37.087Z"
+    "created_by": "OpenCode"
+    "body": "Build C0003: completed operator-safe retired Documents skill cleanup warning repair. Post-quarantine recreation now emits the deterministic preservation warning without allowing warnings-as-errors to interrupt cleanup. Atomic quarantine is protected from ambiguous rename completion through final deletion; rollback evidence is registered before irreversible unlink, and injected rename/lstat/final-check interruptions restore exact managed bytes without deleting or overwriting operator state. Focused race/HOME matrix: 42 passed. Independent review round 6 approved. Full `mise run quality`, `mise run build`, package audits, release artifacts, Ruff/format, validators, and `git diff --check` pass. Bug remains open for Verify; no closure/commit/remote/Release action."

@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M12N9MGD0K3TB2AXQHDPF02R
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | hrn-00145 ancestor cleanup | implemented; gates pass
+details: "Pre-manifest failure now unwinds every invocation-created empty control ancestor deepest-first with identity checks; preserves pre-existing/replaced/nonempty/unowned state; concurrent unrestorable replacement fails closed with quarantine evidence. 29 focused tests pass; independent review approved; `mise run quality` passes: generic-tools 297, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped; `mise run build` and 5 artifact tests pass. Deterministic resources regenerated. Issues open. No Verify/Release/closure/commit/remote/destructive action. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: hrn-00145-C0003; hrn-00135-C0015; local Build gates
+  revision: null
+created_at: 2026-08-27T22:26:21.837Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12MH2SXFV7VNX3SN1HMHW05
+tags:
+  - build
+  - checkpoint
+  - hrn-00135
+  - hrn-00145
+  - migration
+  - recovery

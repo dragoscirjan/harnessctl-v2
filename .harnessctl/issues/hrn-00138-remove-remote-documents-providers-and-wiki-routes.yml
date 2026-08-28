@@ -1,0 +1,30 @@
+"version": 1
+"id": "hrn-00138"
+"type": "story"
+"title": "Remove remote Documents providers and wiki routes"
+"status": "open"
+"created_at": "2026-08-25T20:45:20.782Z"
+"updated_at": "2026-08-27T21:43:21.546Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00135"
+"depends_on":
+  - "hrn-00136"
+  - "hrn-00137"
+"metadata":
+  "estimate": "3-5 engineering days"
+  "order": 3
+"body": "# Remove remote Documents providers and wiki routes\n\n## Goal\n\nDelete the unintended remote/provider Documents architecture while preserving local Documents and unrelated CVS/Issues behavior.\n\n## Scope\n\n- Remove GitHub, GitLab, Gitea, and Forgejo Documents branches from Python and TypeScript config, generated JSON Schema, templates, examples, fixtures, docs, and tests.\n- Remove Documents wiki contracts, provider capability mappings, credentials fields, MCP intents, fixed IDs/reservations, lookup paths, and remote guidance.\n- Reject legacy remote Documents config with a bounded removal instruction; never convert it to filesystem authority or retry through another route.\n- Preserve CVS and Issues provider configuration, commands, historical Gitea reconciliation, and operator-owned host data.\n- Add active-surface stale-provider audits with explicit exclusions for immutable comments, memory, changelog history, and superseded designs.\n\n## Acceptance Criteria\n\n- [ ] Current runtime and generated schemas accept no remote Documents authority, provider field, repository/URL/token field, or custom root/prefix.\n- [ ] No Documents wiki contract, MCP intent/ID/reservation, credential mapping, provider fixture, or operator guidance remains active or packaged.\n- [ ] Legacy remote config fails before local barrier/filesystem/cache access and without fallback or mutation.\n- [ ] CVS/Issues Gitea and Forgejo behavior remains byte- and route-compatible, including migration and rollback regressions.\n- [ ] Python, TypeScript, schema, installer, artifact, docs, package, and stale-active-surface tests pass."
+"comments":
+  - "id": "hrn-00138-C0001"
+    "created_at": "2026-08-26T13:40:53.308Z"
+    "created_by": "OpenCode"
+    "body": "Build complete: added strict filesystem/GitHub/GitLab/Gitea/Forgejo Documents configuration and provider-specific wiki routes. GitHub/GitLab avoid false MCP write claims; Gitea and Forgejo use separate fixed IDs and pinned contracts. Route-aware lookup, safe repository metadata, managed-ID reservation, provider fixtures, and schema parity checks pass."
+  - "id": "hrn-00138-C0002"
+    "created_at": "2026-08-26T21:12:23.284Z"
+    "created_by": "OpenCode"
+    "body": "Plan scope inverted from remote route delivery to complete removal of remote Documents providers/wiki contracts. Preserve unrelated CVS/Issues provider behavior. Execute after hrn-00136 and hrn-00137."
+  - "id": "hrn-00138-C0003"
+    "created_at": "2026-08-27T21:43:21.546Z"
+    "created_by": "OpenCode"
+    "body": "YOLO Build complete for remote Documents removal. Runtime/config/schema/docs/artifacts reject remote provider/wiki/credential/MCP surfaces while preserving unrelated CVS/Issues behavior; active/package stale-surface regressions pass. Full configured quality/build gates pass. Status remains open; next boundary is Verify."

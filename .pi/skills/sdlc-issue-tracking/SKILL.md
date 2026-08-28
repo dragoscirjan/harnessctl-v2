@@ -20,7 +20,7 @@ Manage initiatives, epics, stories, tasks, and bugs. Use this hierarchy where pr
 
 Write clear, testable acceptance criteria. When useful, describe a feature as “As a …, I want …, so that …” or a defect with `Given` / `When` / `Then` Gherkin steps.
 
-Keep progress comments concise: status, links to produced artifacts, next step or blocker, and agent attribution. Link to `.specs/`, task documents, and source artifacts instead of pasting their bodies.
+Keep progress comments concise: status, links to produced artifacts, next step or blocker, and agent attribution. Link to active canonical Documents, task documents, and source artifacts instead of pasting their bodies.
 
 Record an execution failure as an issue comment only when its target issue is known and the configured tooling, repository context, authentication when applicable, and comment capability remain operational. If the provider, CLI, authentication, repository resolution, or comment operation fails, stop and report directly to the user. Never retry failure reporting through the broken issue channel.
 

@@ -1,0 +1,26 @@
+schema_version: 1
+id: 01M12QSZG2VJS0Z7D5WJ6PMQW9
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00135
+summary: hrn-00135 | Build | hrn-00145 nested cleanup | implemented; gates pass
+details: "Manifest-authenticated exact-tree cleanup preserves nested/replaced operator state; 512 MiB includes ownership evidence; marker/control deletion restart-safe via identity-bound quarantine; pre-existing empty control preserved. Independent review approved. Focused 35 pass. `mise run quality`: generic-tools 303, OpenCode 2, Pi 3, Python 631 passed/2 native-Windows skipped; `mise run build`, resource/package/provenance/artifact checks pass. Resources regenerated. Issues open. No Verify/Release/closure/commit/remote/destructive action. Next boundary: Verify."
+source:
+  kind: tool-observation
+  ref: hrn-00145-C0005; hrn-00135-C0016; local Build gates
+  revision: null
+created_at: 2026-08-27T23:10:14.530Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M12N9MGD0K3TB2AXQHDPF02R
+tags:
+  - build
+  - checkpoint
+  - hrn-00135
+  - hrn-00145
+  - migration
+  - recovery
