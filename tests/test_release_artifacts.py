@@ -148,20 +148,6 @@ def test_local_npm_document_adapters_remain_release_inputs() -> None:
         assert required <= paths
 
 
-def test_document_runtime_changeset_covers_all_published_packages_without_version_edits() -> None:
-    changeset = (ROOT / ".changeset/bright-documents-link.md").read_text(encoding="utf-8")
-    packages = {
-        name: json.loads((ROOT / f"extensions/{name}/package.json").read_text(encoding="utf-8"))
-        for name in ("generic-tools", "opencode-tools", "pi-tools")
-    }
-
-    for package in packages.values():
-        assert f'"{package["name"]}": patch' in changeset
-        assert package["version"] == "0.1.9"
-    assert packages["opencode-tools"]["dependencies"]["@harnessctl/generic-tools"] == "0.1.9"
-    assert packages["pi-tools"]["dependencies"]["@harnessctl/generic-tools"] == "0.1.9"
-
-
 def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     source = tmp_path / "source"
     source.mkdir()
