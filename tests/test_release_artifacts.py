@@ -81,7 +81,9 @@ def _write_pi_adapter_config(project: Path) -> None:
     settings = project / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_text(
-        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        '{"packages":["npm:@harnessctl/pi-tools@latest",'
+        '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
+        '"npm:pi-mcp-adapter@2.26.0"]}\n',
         encoding="utf-8",
     )
 

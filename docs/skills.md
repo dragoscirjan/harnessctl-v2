@@ -127,8 +127,10 @@ loaded only when their named condition occurs. Memory policy is compiled once in
 OpenCode and Pi adapter packages expose generic configuration, filesystem issue,
 repository-local Documents, and repository-memory tools. Documents lifecycle guidance is
 part of the existing SDLC Plan reference, not a separate skill. Pi installs
-`npm:@harnessctl/pi-tools@latest` project-locally;
-its `pi.extensions` manifest loads the tool registration extension.
+`npm:@harnessctl/pi-tools@latest` and
+`npm:@juicesharp/rpiv-ask-user-question@2.7.1` project-locally. The former's
+`pi.extensions` manifest loads the harnessctl tool registrations; the latter provides
+the `ask_user_question` option picker in interactive Pi sessions.
 
 The issue-tracking skill is self-contained and provider-specific. Filesystem mode
 documents normalized harnessctl tools and revision handling. Remote modes document

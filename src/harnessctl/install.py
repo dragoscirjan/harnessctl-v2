@@ -105,6 +105,7 @@ OPENCODE_CONFIG = Path(".opencode/opencode.json")
 PI_MCP_CONFIG = Path(".pi/mcp.json")
 PI_SETTINGS = Path(".pi/settings.json")
 PI_ADAPTER = "npm:pi-mcp-adapter@2.26.0"
+PI_ASK_USER_QUESTION = "npm:@juicesharp/rpiv-ask-user-question@2.7.1"
 PI_TOOLS = "npm:@harnessctl/pi-tools@latest"
 PI_TIMEOUT_SECONDS = 120
 PI_RESIDUAL_EFFECTS = (
@@ -396,7 +397,11 @@ def install(
             )
             if pi_content is not None:
                 rendered_targets.append((pi_mcp_path, pi_content))
-        required_pi_packages = (PI_TOOLS, *((PI_ADAPTER,) if intents else ()))
+        required_pi_packages = (
+            PI_TOOLS,
+            PI_ASK_USER_QUESTION,
+            *((PI_ADAPTER,) if intents else ()),
+        )
         pi_state = _inspect_pi_packages(root)
         if any(source not in pi_state.configured for source in required_pi_packages):
             pi_executable = _preflight_pi_launcher()
@@ -1094,6 +1099,7 @@ def _inspect_pi_packages(root: Path) -> _PiPackageState:
     configured: set[str] = set()
     for required, identifying_fragment in (
         (PI_ADAPTER, "pi-mcp-adapter"),
+        (PI_ASK_USER_QUESTION, "@juicesharp/rpiv-ask-user-question"),
         (PI_TOOLS, "@harnessctl/pi-tools"),
     ):
         exact_count = sources.count(required)
@@ -1138,7 +1144,7 @@ def _authorize_pi_package_install(
 def _pi_invocation(
     pi_path: str, action: str, source: str = PI_ADAPTER, *, windows: bool | None = None
 ) -> tuple[list[str], bool]:
-    if source not in {PI_ADAPTER, PI_TOOLS}:
+    if source not in {PI_ADAPTER, PI_ASK_USER_QUESTION, PI_TOOLS}:
         raise ValueError(f"unsupported Pi package source: {source}")
     package_args = [action, "-l", source, "--approve"]
     suffix = Path(pi_path).suffix.lower()

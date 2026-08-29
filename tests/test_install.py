@@ -150,7 +150,9 @@ def write_pinned_pi_adapter(root: Path) -> None:
     settings = root / ".pi/settings.json"
     settings.parent.mkdir(parents=True, exist_ok=True)
     settings.write_text(
-        '{"packages":["npm:@harnessctl/pi-tools@latest","npm:pi-mcp-adapter@2.26.0"]}\n',
+        '{"packages":["npm:@harnessctl/pi-tools@latest",'
+        '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
+        '"npm:pi-mcp-adapter@2.26.0"]}\n',
         encoding="utf-8",
     )
 
@@ -3352,6 +3354,7 @@ def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
     settings.parent.mkdir(parents=True)
     settings_before = (
         b'{"operator":true,"packages":["npm:@harnessctl/pi-tools@latest",'
+        b'"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
         b'{"source":"npm:pi-mcp-adapter@2.26.0"}]}\n'
     )
     settings.write_bytes(settings_before)
@@ -3380,6 +3383,8 @@ def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
     [
         ("npm:@harnessctl/pi-tools@latest", {"extensions": []}),
         ("npm:@harnessctl/pi-tools@latest", {"autoload": False}),
+        ("npm:@juicesharp/rpiv-ask-user-question@2.7.1", {"extensions": []}),
+        ("npm:@juicesharp/rpiv-ask-user-question@2.7.1", {"autoload": False}),
         ("npm:pi-mcp-adapter@2.26.0", {"extensions": []}),
         ("npm:pi-mcp-adapter@2.26.0", {"autoload": False}),
     ],
@@ -3391,6 +3396,7 @@ def test_pi_rejects_disabled_required_package_extensions_before_mutation(
     settings.parent.mkdir(parents=True)
     packages: list[object] = [
         "npm:@harnessctl/pi-tools@latest",
+        "npm:@juicesharp/rpiv-ask-user-question@2.7.1",
         "npm:pi-mcp-adapter@2.26.0",
     ]
     packages[packages.index(filtered_source)] = {
@@ -3488,10 +3494,12 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
         assert not (tmp_path / ".pi/mcp.json").exists()
         settings = tmp_path / ".pi/settings.json"
         settings.parent.mkdir(parents=True, exist_ok=True)
-        packages = [
-            "npm:@harnessctl/pi-tools@latest",
-            *(["npm:pi-mcp-adapter@2.26.0"] if "pi-mcp-adapter" in args[3] else []),
-        ]
+        packages = (
+            json.loads(settings.read_text(encoding="utf-8")).get("packages", [])
+            if settings.exists()
+            else []
+        )
+        packages.append(args[3])
         settings.write_text(json.dumps({"packages": packages}) + "\n", encoding="utf-8")
         assert kwargs["cwd"] == tmp_path.resolve()
         assert kwargs["shell"] is False
@@ -3513,11 +3521,56 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
             _mock_pi_path(),
             "install",
             "-l",
+            "npm:@juicesharp/rpiv-ask-user-question@2.7.1",
+            "--approve",
+        ],
+        [
+            _mock_pi_path(),
+            "install",
+            "-l",
             "npm:pi-mcp-adapter@2.26.0",
             "--approve",
         ],
     ]
     assert (tmp_path / ".pi/mcp.json").is_file()
+
+
+def test_pi_installs_ask_user_question_without_mcp_intents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text('{"packages":["npm:@harnessctl/pi-tools@latest"]}\n', encoding="utf-8")
+    calls: list[list[str]] = []
+    monkeypatch.setattr(install_module, "required_server_intents", lambda *_args: [])
+    monkeypatch.setattr(install_module, "recognized_server_intents", lambda *_args: {})
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda name: _mock_pi_path() if name == "pi" else None,
+    )
+
+    def fake_run(args: list[str], **_kwargs: object) -> SimpleNamespace:
+        calls.append(args)
+        document = json.loads(settings.read_text(encoding="utf-8"))
+        document["packages"].append(args[3])
+        settings.write_text(json.dumps(document) + "\n", encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+    monkeypatch.setattr(install_module.subprocess, "run", fake_run)
+
+    install(tmp_path, "pi", allow_pi_package_install=True)
+
+    assert calls == [
+        [
+            _mock_pi_path(),
+            "install",
+            "-l",
+            "npm:@juicesharp/rpiv-ask-user-question@2.7.1",
+            "--approve",
+        ]
+    ]
+    assert not (tmp_path / ".pi/mcp.json").exists()
 
 
 def test_pi_failure_removes_transaction_adapter_and_restores_exact_tree(
@@ -3556,7 +3609,7 @@ def test_pi_failure_removes_transaction_adapter_and_restores_exact_tree(
     with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
         install(tmp_path, "pi", allow_pi_mcp_adapter_install=True)
 
-    assert actions == ["install", "install", "remove", "remove"]
+    assert actions == ["install", "install", "install", "remove", "remove", "remove"]
     assert _tree_manifest(tmp_path) == before
 
 
@@ -3601,7 +3654,7 @@ def test_pi_rollback_uses_before_images_captured_before_package_mutation(
     with pytest.raises(BaseExceptionGroup, match="rollback was incomplete"):
         install(tmp_path, "pi", force=True, allow_pi_mcp_adapter_install=True)
 
-    assert actions == ["install", "install", "remove", "remove"]
+    assert actions == ["install", "install", "install", "remove", "remove", "remove"]
     assert _tree_manifest(tmp_path) == before
 
 

@@ -1,6 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@harnessctl/opencode-tools@latest"],
+  "plugin": [
+    "@harnessctl/opencode-tools@0.1.10"
+  ],
   "mcp": {
     "sdlc_cvs_github": {
       "type": "remote",
@@ -13,7 +15,11 @@
     },
     "sdlc_code_index": {
       "type": "local",
-      "command": ["cgc", "mcp", "start"],
+      "command": [
+        "cgc",
+        "mcp",
+        "start"
+      ],
       "enabled": true,
       "timeout": 30000
     }
