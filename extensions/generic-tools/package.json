@@ -21,7 +21,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./contracts/*.json": "./contracts/*.json"
   },
   "files": ["dist", "contracts/*.json"],
   "publishConfig": {
@@ -30,7 +31,8 @@
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
-    "contracts:generate": "tsx generate-contracts.ts && prettier --write contracts/*.json",
+    "contracts:generate": "tsx generate-contracts.ts",
+    "contracts:check": "tsx generate-contracts.ts --check",
     "prepack": "npm run contracts:generate && npm run build",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",

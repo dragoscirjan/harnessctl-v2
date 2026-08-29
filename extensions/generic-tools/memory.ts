@@ -410,16 +410,19 @@ function assertCanonicalIssueGraph(cwd: string): void {
 function settingsFor(cwd: string): MemorySettings {
   const config = readConfig(cwd);
   if (config instanceof ConfigError) throw new MemoryError(config.message);
-  const memory = mapping(config.memory, 'memory');
+  const memory = mapping(config.skills.memory, 'skills.memory');
+  if (memory.enabled !== true)
+    throw new MemoryError(
+      'Memory operation requires skills.memory.enabled=true; the local Memory capability is disabled.',
+    );
   if (memory.backend !== 'repository') throw new MemoryError('Repository memory backend is not configured.');
   const namespace = mapping(memory.namespace, 'memory.namespace');
   const retrieval = mapping(memory.retrieval, 'memory.retrieval');
-  const repository = mapping(memory.repository, 'memory.repository');
   return {
     organizationId: stringValue(namespace.organization_id, 'memory.namespace.organization_id'),
     projectId: stringValue(namespace.project_id, 'memory.namespace.project_id'),
     defaultTopic: stringValue(namespace.default_topic, 'memory.namespace.default_topic'),
-    root: safeProjectPath(stringValue(repository.root, 'memory.repository.root')),
+    root: safeProjectPath(stringValue(memory.root, 'memory.root')),
     limit: bounded(retrieval.limit, 1, 100, 'memory.retrieval.limit'),
     maxChars: bounded(retrieval.max_chars, 256, 100_000, 'memory.retrieval.max_chars'),
     includeSuperseded: booleanValue(retrieval.include_superseded, 'memory.retrieval.include_superseded'),

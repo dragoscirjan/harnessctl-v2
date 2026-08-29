@@ -3,7 +3,7 @@ import {
   getConfigValue,
   parseConfig,
   readConfig,
-  validateAndMigrateConfig,
+  validateConfig,
   ConfigError,
   type ConfigDocument,
 } from './config.js';
@@ -93,16 +93,17 @@ export {
   encodeCanonicalDocument,
 } from './documents-contract.js';
 
-export { ConfigError, createConfig, getConfigValue, parseConfig, readConfig, validateAndMigrateConfig };
+export { ConfigError, createConfig, getConfigValue, parseConfig, readConfig, validateConfig };
 export type { ConfigDocument };
 export {
+  CONFIG_V1_DEFAULTS,
   FILESYSTEM_DOCUMENT_TOOLS,
-  configV2Schema,
+  configV1Schema,
   memoryDocumentSchema,
   memoryRecordSchema,
   memoryTombstoneSchema,
 } from './schemas.js';
-export type { CvsLocal, McpOutputLimitMode, RemoteProvider, RemoteService } from './schemas.js';
+export type { ConfigV1, CvsLocal, McpOutputLimitMode, RemoteProvider, RemoteService } from './schemas.js';
 export {
   MemoryConflictError,
   MemoryError,

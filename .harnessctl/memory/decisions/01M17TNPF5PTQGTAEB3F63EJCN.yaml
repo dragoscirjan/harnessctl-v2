@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M17TNPF5PTQGTAEB3F63EJCN
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00160 | Build | Config version/base change | paused for Plan
+details: |-
+  Epic: hrn-00160
+  Phase: Build
+  Item: hrn-00161
+  Done: initial v3 contract slice implemented; focused local checks passed; branch moved to feat/hrn-00160-config-v1 from main 14ac2e1.
+  Decision: user requires Config v1, not v3; unreleased SDLC targets first stable contract.
+  Blocker: approved issues/doc-00015/doc-00016 and implementation use v3 assumptions/names; Plan revision required before Build resumes.
+  Delivery: pre-existing hrn-00157 dirty work preserved in named stash.
+  Verification: not run; Build boundary only.
+source:
+  kind: user-confirmed
+  ref: hrn-00160
+  revision: null
+created_at: 2026-08-29T22:36:32.101Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M17SVXF6HVEEPECYCNT1YB3G
+tags:
+  - blocked
+  - build
+  - config-v1
+  - hrn-00160
+  - replan

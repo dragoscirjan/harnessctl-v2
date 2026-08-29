@@ -3,13 +3,13 @@
 ## Current implementation
 
 Python and TypeScript validators accept `filesystem`, `github`, `gitlab`, `gitea`,
-and `forgejo`. The provider selection compiles the OpenCode issue-tracking skill; it
+`forgejo`, and `bitbucket`. The provider selection compiles the issue-tracking skill; it
 does not add a remote adapter. Generic local issue tools operate only when
-`issues.type=filesystem` and fail before filesystem, barrier, or cache access in remote
+`skills.issues.provider.type=filesystem` and fail before filesystem, barrier, or cache access in remote
 mode.
 
 For filesystem mode, generic tools store one canonical versioned YAML document per
-issue under `issues.root`, default `.harnessctl/issues`; archived documents move under
+issue under `skills.issues.root`, default `.harnessctl/issues`; archived documents move under
 its `archived/` child. YAML is authoritative. The shared SQLite file is only a
 disposable cache, never an issue backend or repair source.
 
@@ -29,7 +29,7 @@ edited repository data. `issue_archive` recursively archives an issue and active
 descendants with rollback on ordinary failure.
 
 `issue_link_document` accepts real files beneath configured `paths.tasks` and active
-canonical files beneath the fixed `.harnessctl/documents` root. Use kind `task` for task
+canonical files beneath configured `skills.documents.root`. Use kind `task` for task
 artifacts and `document` for canonical design records. The tool stores only the
 repository-relative path. Archive paths, symlinks, traversal, absolute paths, missing
 files, oversized files, and retired legacy roots are rejected. See [Documents](documents.md).
@@ -42,8 +42,9 @@ tool registration are separate concerns.
 
 Configuration-driven CLI/MCP guidance and host MCP projection for GitHub, GitLab,
 Gitea, and Forgejo are implemented. No harnessctl remote adapter, API client, provider
-migration, CLI installer, command runner, repository selector, credential store, or Pi
-issue skill exists. Local issue operations are not a remote-provider interface.
+migration, CLI installer, command runner, repository selector, or credential store exists.
+OpenCode and Pi both receive the configured issue-tracking skill. Local issue operations
+are not a remote-provider interface.
 
 Routing pairs GitHub with `gh`, GitLab with `glab`, Gitea with `tea`, and
 Forgejo with `forgejo-cli`. The CLI must already be installed. Remote configuration
@@ -52,76 +53,96 @@ token; the token value remains only in the environment and must never appear in 
 Agents must confirm an ambiguous repository before mutation and must not fall back to
 filesystem or another provider when a selected route fails.
 
-Remote Issues enumerate both the provider's valid CLI capabilities and its fixed-ID MCP
-capabilities. The agent chooses the suitable available capability for each operation;
-there is no configured selector or required MCP-first order. It must choose before a
-mutation starts. After mutation begins, every result, error, timeout, cancellation, or
-ambiguity is terminal for that route and the agent must never switch routes for the same
-mutation. CVS configuration and runtime success never determine the Issues choice.
+Remote Issues always enumerate the provider's valid CLI capabilities. They enumerate MCP
+capabilities only when optional `mcpName` configuration yields an available projected
+server. The agent chooses the suitable available capability for each operation; there is
+no configured selector or required MCP-first order. It must choose before a mutation
+starts. After mutation begins, every result, error, timeout, cancellation, or ambiguity is
+terminal for that route and the agent must never switch routes for the same mutation. CVS
+configuration and runtime success never determine the Issues choice.
 
-| Provider | CLI           | Required URL          | Required token environment variable |
-| -------- | ------------- | --------------------- | ----------------------------------- |
-| GitHub   | `gh`          | `https://github.com`  | `GH_TOKEN`                          |
-| GitLab   | `glab`        | `https://gitlab.com`  | `GITLAB_TOKEN`                      |
-| Gitea    | `tea`         | Explicit instance URL | `GITEA_TOKEN`                       |
-| Forgejo  | `forgejo-cli` | Explicit instance URL | `FORGEJO_TOKEN`                     |
+| Provider  | CLI           | Required URL            | Example token environment variable |
+| --------- | ------------- | ----------------------- | ---------------------------------- |
+| GitHub    | `gh`          | `https://github.com`    | `GH_TOKEN`                         |
+| GitLab    | `glab`        | `https://gitlab.com`    | `GITLAB_TOKEN`                     |
+| Gitea     | `tea`         | Explicit instance URL   | `GITEA_TOKEN`                      |
+| Forgejo   | `forgejo-cli` | Explicit instance URL   | `FORGEJO_TOKEN`                    |
+| Bitbucket | `git`         | `https://bitbucket.org` | `BITBUCKET_TOKEN`                  |
+
+`token_env` may use any valid uppercase environment-variable name. `mcpName` is optional
+for GitHub, GitLab, Gitea, and Forgejo; omitting it makes that route CLI-only and produces
+no managed provider MCP entry. Bitbucket prohibits `mcpName` and is always CLI-only.
 
 ### GitHub
 
 ```yaml
-issues:
-  type: github
-  tools: gh
-  remote:
-    url: https://github.com
-    token_env: GH_TOKEN
+version: 1
+skills:
+  issues:
+    provider:
+      type: github
+      tools: gh
+      mcpName: sdlc_cvs_github
+      url: https://github.com
+      token_env: GH_TOKEN
 ```
 
 ### GitLab
 
 ```yaml
-issues:
-  type: gitlab
-  tools: glab
-  remote:
-    url: https://gitlab.com
-    token_env: GITLAB_TOKEN
+version: 1
+skills:
+  issues:
+    provider:
+      type: gitlab
+      tools: glab
+      mcpName: sdlc_cvs_gitlab
+      url: https://gitlab.com
+      token_env: GITLAB_TOKEN
 ```
 
 ### Gitea
 
 ```yaml
-issues:
-  type: gitea
-  tools: tea
-  remote:
-    url: https://gitea.example.com
-    token_env: GITEA_TOKEN
+version: 1
+skills:
+  issues:
+    provider:
+      type: gitea
+      tools: tea
+      mcpName: sdlc_cvs_gitea
+      url: https://gitea.example.com
+      token_env: GITEA_TOKEN
 ```
 
 ### Forgejo
 
 ```yaml
-issues:
-  type: forgejo
-  tools: forgejo-cli
-  remote:
-    url: https://forgejo.example.com
-    token_env: FORGEJO_TOKEN
+version: 1
+skills:
+  issues:
+    provider:
+      type: forgejo
+      tools: forgejo-cli
+      mcpName: sdlc_cvs_forgejo
+      url: https://forgejo.example.com
+      token_env: FORGEJO_TOKEN
 ```
 
 Replace only the example self-hosted URL. Every remote provider requires
-`issues.remote`; filesystem rejects it. `issues.root` and `issues.prefix` apply only
+the complete `skills.issues.provider` mapping; filesystem rejects Git connection fields. `skills.issues.root` and `skills.issues.prefix` apply only
 to filesystem and are ignored remotely.
 
 Local tools remain registered but reject remote mode before reading or writing
 filesystem issues, entering the local barrier, or touching SQLite. The generated
-OpenCode and Pi issue-tracking skills contain only the selected provider's valid CLI and
-MCP capability guidance. They do not install provider tools or grant access. Pi uses
-`.pi/skills/sdlc-issue-tracking/SKILL.md`; MCP host configuration uses the pinned adapter.
+OpenCode and Pi issue-tracking skills contain only the selected provider's valid CLI
+guidance and, when projected, MCP capability guidance. They do not install provider tools
+or grant access. Pi uses `.pi/skills/sdlc-issue-tracking/SKILL.md`; MCP host configuration
+uses the pinned adapter.
 
-Remote Issues use fixed IDs `sdlc_cvs_github`, `sdlc_cvs_gitlab`,
-`sdlc_cvs_gitea`, and `sdlc_cvs_forgejo`. Identical CVS and Issues definitions deduplicate; a same-ID URL,
+The examples use `sdlc_cvs_github`, `sdlc_cvs_gitlab`, `sdlc_cvs_gitea`, and
+`sdlc_cvs_forgejo`; configured `mcpName` values determine the actual IDs. Identical CVS
+and Issues definitions deduplicate; a same-ID URL,
 environment-name, endpoint, command, version, OAuth, header, or toolset mismatch fails
 instead of choosing one domain. GitHub and GitLab use official hosted MCP services.
 Gitea uses operator-installed official `gitea-mcp` 1.6.0; Forgejo uses external

@@ -2,21 +2,23 @@
 
 ## Current implementation
 
-Configuration version 2 independently selects a local version-control system and a
+Configuration version 1 independently selects a local version-control system and a
 remote collaboration provider. Local operations use `git` or `jj` directly and never
-use MCP. Remote operations use one configured provider whose valid CLI and MCP
-capabilities are both enumerated. The generated OpenCode CVS skill applies per-operation
-selection, context, consent, and output
-guidance. Harnessctl does not implement Git, Jujutsu, provider APIs, provider CLIs, MCP
-servers, authentication, or merge authorization.
+use MCP. Remote operations use one configured provider and always enumerate its valid CLI
+capabilities. MCP capabilities are enumerated only when optional `mcpName` is configured
+and its service is available; omitting `mcpName` produces CLI-only guidance and no managed
+MCP projection. The generated OpenCode CVS skill applies per-operation selection, context,
+consent, and output guidance. Harnessctl does not implement Git, Jujutsu, provider APIs,
+provider CLIs, MCP servers, authentication, or merge authorization.
 
 The installer currently:
 
 - generates `.opencode/skills/sdlc-cvs/SKILL.md` and
   `.pi/skills/sdlc-cvs/SKILL.md`;
-- merges required fixed IDs into `.opencode/opencode.json` and `.pi/mcp.json`;
-- preserves unrelated host settings and rejects conflicting owned values unless narrow
-  `--force` replacement is requested;
+- merges configured provider MCP IDs into `.opencode/opencode.json` and `.pi/mcp.json`
+  when `mcpName` is present and the provider MCP service is available;
+- preserves unrelated host settings and permanently adopts pre-existing or divergent
+  same-ID MCP values as operator-owned, including under `--force`;
 - deduplicates identical CVS and Issues server definitions and rejects same-ID
   differences;
 - installs neither provider CLIs nor `gitea-mcp`/`forgejo-mcp`; and
@@ -30,50 +32,61 @@ extension, and MCP host configuration through verified project-local discovery p
 The default CVS mapping is complete and valid:
 
 ```yaml
-version: 2
-cvs:
-  local: git
-  remote:
-    provider: github
-    tools: gh
-    url: https://github.com
-    token_env: GH_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: git
+    provider:
+      type: github
+      tools: gh
+      mcpName: sdlc_cvs_github
+      url: https://github.com
+      token_env: GH_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
 Use `local: jj` to select Jujutsu without changing the remote provider:
 
 ```yaml
-version: 2
-cvs:
-  local: jj
-  remote:
-    provider: github
-    tools: gh
-    url: https://github.com
-    token_env: GH_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: jj
+    provider:
+      type: github
+      tools: gh
+      mcpName: sdlc_cvs_github
+      url: https://github.com
+      token_env: GH_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
-Every remote provider exposes its valid CLI and MCP capabilities. `tools`, URL, and token
-name must match the selected provider; changing provider requires a complete explicit
-remote mapping.
+Every remote provider exposes its valid CLI capability. Its MCP capability is optional:
+set `mcpName` to the host key to project, or omit it to generate CLI-only guidance and no
+managed provider MCP entry. `tools` and URL must match the selected provider. `token_env`
+may be any valid uppercase environment-variable name; the table uses conventional
+examples. Changing provider requires a complete explicit provider mapping.
 
-| Provider | Exact CLI     | MCP capability     | Collaboration URL           | Environment-variable name |
-| -------- | ------------- | ------------------ | --------------------------- | ------------------------- |
-| GitHub   | `gh`          | `sdlc_cvs_github`  | `https://github.com`        | `GH_TOKEN`                |
-| GitLab   | `glab`        | `sdlc_cvs_gitlab`  | `https://gitlab.com`        | `GITLAB_TOKEN`            |
-| Gitea    | `tea`         | `sdlc_cvs_gitea`   | Explicit HTTPS instance URL | `GITEA_TOKEN`             |
-| Forgejo  | `forgejo-cli` | `sdlc_cvs_forgejo` | Explicit HTTPS instance URL | `FORGEJO_TOKEN`           |
+| Provider | Exact CLI     | Example `mcpName`  | Collaboration URL           | Example environment-variable name |
+| -------- | ------------- | ------------------ | --------------------------- | --------------------------------- |
+| GitHub   | `gh`          | `sdlc_cvs_github`  | `https://github.com`        | `GH_TOKEN`                        |
+| GitLab   | `glab`        | `sdlc_cvs_gitlab`  | `https://gitlab.com`        | `GITLAB_TOKEN`                    |
+| Gitea    | `tea`         | `sdlc_cvs_gitea`   | Explicit HTTPS instance URL | `GITEA_TOKEN`                     |
+| Forgejo  | `forgejo-cli` | `sdlc_cvs_forgejo` | Explicit HTTPS instance URL | `FORGEJO_TOKEN`                   |
 
-Fresh installs emit only these `sdlc_cvs_*` IDs. During upgrades, harnessctl removes a
-legacy `cvs_*` entry only when its value exactly matches a recognized generated
-definition. Modified legacy and operator-owned entries remain byte-for-byte unchanged
-and produce a warning; no compatibility alias is installed. Canonical-ID conflicts retain
-the normal narrow `--force` behavior, and all selected-host changes share the installer
-transaction and rollback.
+Fresh installs emit the configured `mcpName` when present and the provider MCP service is
+available. During upgrades, harnessctl removes a legacy `cvs_*` entry only when its value
+exactly matches a recognized generated definition. Modified legacy and operator-owned
+entries remain byte-for-byte unchanged and produce a warning; no compatibility alias is
+installed. Configured-ID collisions that are not exact recognized generated values remain
+operator-owned and unchanged under force and non-force installs. All selected-host changes
+share the installer transaction and rollback.
 
 Gitea has one additional exact historical migration. A previously generated
 Forgejo-backed Gitea definition under either `cvs_gitea` or `sdlc_cvs_gitea` is replaced
@@ -81,66 +94,83 @@ transactionally with the official Gitea definition. A modified historical defini
 either `cvs_gitea` or `sdlc_cvs_gitea` remains byte-preserved with a warning and blocks
 planned canonical replacement under force and non-force. Recognition requires the old local
 `forgejo-mcp` executable signature; argument, environment, and optional-member changes remain
-preserved. Unrelated canonical conflicts retain the normal narrow force-replacement behavior.
+preserved. Unrelated MCP conflicts remain operator-owned and unchanged under force and
+non-force installs.
 
 ### GitHub
 
 ```yaml
-version: 2
-cvs:
-  local: git
-  remote:
-    provider: github
-    tools: gh
-    url: https://github.com
-    token_env: GH_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: git
+    provider:
+      type: github
+      tools: gh
+      mcpName: sdlc_cvs_github
+      url: https://github.com
+      token_env: GH_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
 ### GitLab
 
 ```yaml
-version: 2
-cvs:
-  local: git
-  remote:
-    provider: gitlab
-    tools: glab
-    url: https://gitlab.com
-    token_env: GITLAB_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: git
+    provider:
+      type: gitlab
+      tools: glab
+      mcpName: sdlc_cvs_gitlab
+      url: https://gitlab.com
+      token_env: GITLAB_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
 ### Gitea
 
 ```yaml
-version: 2
-cvs:
-  local: jj
-  remote:
-    provider: gitea
-    tools: tea
-    url: https://gitea.example.com
-    token_env: GITEA_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: jj
+    provider:
+      type: gitea
+      tools: tea
+      mcpName: sdlc_cvs_gitea
+      url: https://gitea.example.com
+      token_env: GITEA_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
 ### Forgejo
 
 ```yaml
-version: 2
-cvs:
-  local: git
-  remote:
-    provider: forgejo
-    tools: forgejo-cli
-    url: https://forgejo.example.com
-    token_env: FORGEJO_TOKEN
+version: 1
+skills:
+  cvs:
+    enabled: true
+    local: git
+    provider:
+      type: forgejo
+      tools: forgejo-cli
+      mcpName: sdlc_cvs_forgejo
+      url: https://forgejo.example.com
+      token_env: FORGEJO_TOKEN
 mcp:
   output_limit_mode: bounded-guidance
+mcpServers: {}
 ```
 
 Replace only the example self-hosted URL. Gitea and Forgejo require HTTPS and reject
@@ -154,11 +184,11 @@ adapter output guard. OpenCode and `all` reject `hard`.
 
 ## Per-operation capability choice
 
-The generated guidance enumerates both valid routes: the exact configured provider CLI
-and the provider's fixed-ID MCP service. The agent chooses the suitable available route
-for each operation after checking authentication, repository context, compatibility,
-and required capability. There is no configured selector and no mandatory MCP-first or
-CLI-first order.
+The generated guidance always enumerates the exact configured provider CLI. It also
+enumerates the provider MCP service when optional `mcpName` configuration yields an
+available projected server. The agent chooses the suitable available route for each
+operation after checking authentication, repository context, compatibility, and required
+capability. There is no configured selector and no mandatory MCP-first or CLI-first order.
 
 The agent must choose before invoking a mutation. After mutation begins, success, error,
 timeout, cancellation, or ambiguity is terminal for that route; it must never switch
@@ -172,11 +202,13 @@ provider. Presence does not prove runtime authentication, compatibility, or oper
 capability. CLI capability is independently available only when `tea` or `forgejo-cli`,
 respectively, is present. Neither MCP executable is a CLI.
 
-## Fixed MCP services and support boundary
+## MCP services and support boundary
 
-Server IDs are generated and fixed; they are not configurable.
+Server IDs come from optional `mcpName` configuration. The values below are conventional
+examples from the generated defaults, not mandatory IDs. Omitting `mcpName` produces no
+managed MCP projection for that provider route.
 
-| Provider | Fixed ID           | Supported server contract                                                                                                              | Ownership and license boundary                                                                |
+| Provider | Example ID         | Supported server contract                                                                                                              | Ownership and license boundary                                                                |
 | -------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | GitHub   | `sdlc_cvs_github`  | Official hosted endpoint `https://api.githubcopilot.com/mcp/`; requested toolsets `repos,issues,pull_requests,actions,git`; PAT header | Official GitHub hosted service; service terms apply. No local server package is distributed.  |
 | GitLab   | `sdlc_cvs_gitlab`  | Official endpoint `https://gitlab.com/api/v4/mcp`; native OAuth and Dynamic Client Registration                                        | Official GitLab hosted service; service terms apply. No token reference is generated for MCP. |
@@ -351,9 +383,10 @@ size remain outside harnessctl control.
 
 The following are not implemented: provider API adapters; CLI installation or login;
 OAuth completion by harnessctl; repository or issue migration; provider substitution;
-automatic merge; configurable MCP IDs or server arguments; arbitrary MCP servers;
-stable per-tool catalogs for GitLab, Gitea, or Forgejo; file uploads; Pi CVS or Issues
-skill distribution; and guarantees that an installed server remains available,
+automatic merge; configurable known-provider server arguments; arbitrary
+host-native fields beyond Config v1 URL/command declarations;
+stable per-tool catalogs for GitLab, Gitea, or Forgejo; file uploads; and guarantees that
+an installed server remains available,
 authenticated, compatible, or authorized at runtime.
 
 CVS and Issues are independent policy domains. They may deduplicate an identical MCP

@@ -6,8 +6,6 @@ import {
   DOCUMENT_KINDS,
   DOCUMENT_LIMITS,
   DOCUMENT_STATUSES,
-  DOCUMENT_ID_PREFIX,
-  DOCUMENT_ROOT,
   DocumentError,
   canonicalDocumentFilename,
   computeDocumentRevision,
@@ -129,8 +127,9 @@ export function createFilesystemDocumentProvider(
 ): FilesystemDocumentProvider {
   const config = localDocumentConfig(cwd, 'createFilesystemDocumentProvider');
   const clock = options.clock ?? (() => new Date());
-  const locked = <T>(operation: (lease: BarrierLease) => T, mutation = false): T =>
-    withLocalBarrier(
+  const locked = <T>(name: string, operation: (lease: BarrierLease) => T, mutation = false): T => {
+    assertLocalDocumentCapability(cwd, name);
+    return withLocalBarrier(
       cwd,
       (lease) => {
         recoverDocumentTransaction(cwd, config, lease);
@@ -142,8 +141,15 @@ export function createFilesystemDocumentProvider(
       },
       options.lockWaitMs,
     );
-  const moveLocked = (id: string, revision: string, destination: DocumentLocation): DocumentOperationReport =>
-    withLocalBarrier(
+  };
+  const moveLocked = (
+    name: string,
+    id: string,
+    revision: string,
+    destination: DocumentLocation,
+  ): DocumentOperationReport => {
+    assertLocalDocumentCapability(cwd, name);
+    return withLocalBarrier(
       cwd,
       (lease) => {
         recoverDocumentTransaction(cwd, config, lease);
@@ -154,29 +160,30 @@ export function createFilesystemDocumentProvider(
       },
       options.lockWaitMs,
     );
+  };
   return {
-    parseId: (text) => parseDocumentIdWithPrefix(text, config.prefix),
-    create: (input) => locked((lease) => createUnlocked(cwd, config, clock, lease, input), true),
+    parseId: (text) => {
+      assertLocalDocumentCapability(cwd, 'parseDocumentId');
+      return parseDocumentIdWithPrefix(text, config.prefix);
+    },
+    create: (input) => locked('createDocument', (lease) => createUnlocked(cwd, config, clock, lease, input), true),
     list: (input = {}) => {
       const normalized = normalizeListOptions(input);
-      return locked(() => listUnlocked(cwd, config, normalized));
+      return locked('listDocuments', () => listUnlocked(cwd, config, normalized));
     },
-    get: (id, version) => locked(() => getUnlocked(cwd, config, id, version)),
-    update: (id, changes) => locked((lease) => updateUnlocked(cwd, config, clock, lease, id, changes), true),
-    version: (id, changes) => locked((lease) => versionUnlocked(cwd, config, clock, lease, id, changes), true),
+    get: (id, version) => locked('getDocument', () => getUnlocked(cwd, config, id, version)),
+    update: (id, changes) =>
+      locked('updateDocument', (lease) => updateUnlocked(cwd, config, clock, lease, id, changes), true),
+    version: (id, changes) =>
+      locked('versionDocument', (lease) => versionUnlocked(cwd, config, clock, lease, id, changes), true),
     validate: (id) =>
-      withLocalBarrier(
-        cwd,
-        (lease) => {
-          recoverDocumentTransaction(cwd, config, lease);
-          const report = validateUnlocked(cwd, config, id);
-          if (report.valid) ensureLocalCache(lease, loadLocalSnapshot(lease));
-          return report;
-        },
-        options.lockWaitMs,
-      ),
-    archive: (id, revision) => moveLocked(id, revision, 'archive'),
-    restore: (id, revision) => moveLocked(id, revision, 'active'),
+      locked('validateDocuments', (lease) => {
+        const report = validateUnlocked(cwd, config, id);
+        if (report.valid) ensureLocalCache(lease, loadLocalSnapshot(lease));
+        return report;
+      }),
+    archive: (id, revision) => moveLocked('archiveDocument', id, revision, 'archive'),
+    restore: (id, revision) => moveLocked('restoreDocument', id, revision, 'active'),
   };
 }
 
@@ -922,18 +929,26 @@ interface StorageConfig {
 function localDocumentConfig(cwd: string, operation: string): StorageConfig {
   const config = readConfig(cwd);
   if (config instanceof ConfigError) throw new DocumentError('configuration', config.message);
-  if (!isRecord(config.documents))
+  if (!isRecord(config.skills.documents))
     throw new DocumentError('configuration', 'documents configuration must be a mapping');
-  if (
-    config.documents.type !== 'filesystem' ||
-    config.documents.root !== DOCUMENT_ROOT ||
-    config.documents.prefix !== DOCUMENT_ID_PREFIX
-  )
+  const documents = config.skills.documents;
+  if (documents.enabled !== true)
     throw new DocumentError(
       'configuration',
-      `${operation} requires the fixed ${DOCUMENT_ROOT} authority and ${DOCUMENT_ID_PREFIX} prefix`,
+      `${operation} requires skills.documents.enabled=true; the local Documents capability is disabled.`,
     );
-  return { root: DOCUMENT_ROOT, prefix: DOCUMENT_ID_PREFIX };
+  if (documents.provider.type !== 'filesystem')
+    throw new DocumentError(
+      'configuration',
+      `${operation} cannot use harnessctl local document tools with skills.documents.provider.type=${documents.provider.type}; remote document behavior is provider-owned.`,
+    );
+  if (typeof documents.root !== 'string' || typeof documents.prefix !== 'string')
+    throw new DocumentError('configuration', 'filesystem Documents root and prefix are required');
+  return { root: documents.root, prefix: documents.prefix };
+}
+
+function assertLocalDocumentCapability(cwd: string, operation: string): void {
+  localDocumentConfig(cwd, operation);
 }
 
 function documentPath(root: string, location: DocumentLocation, metadata: CanonicalDocumentMetadata): string {

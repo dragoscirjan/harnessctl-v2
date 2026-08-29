@@ -22,15 +22,19 @@ import { parseDocument } from 'yaml';
 import { ConfigError, readConfig, type ConfigDocument } from './config.js';
 import {
   DOCUMENT_LIMITS,
-  DOCUMENT_ID_PREFIX,
-  DOCUMENT_ROOT,
   canonicalDocumentFilename,
   computeDocumentRevision,
   decodeDocument,
   type CanonicalDocumentMetadata,
 } from './documents-contract.js';
 import { decodeIssueDocument, type CanonicalIssueDocument } from './issues-contract.js';
-import { memoryRecordSchema, memoryTombstoneSchema, type MemoryRecord, type MemoryTombstone } from './schemas.js';
+import {
+  memoryRecordSchema,
+  memoryTombstoneSchema,
+  type ConfigV1,
+  type MemoryRecord,
+  type MemoryTombstone,
+} from './schemas.js';
 
 const require = createRequire(import.meta.url);
 const LOCK_PATH = '.harnessctl/cache/local-operations.lock';
@@ -265,9 +269,9 @@ export function loadLocalSnapshot(lease: BarrierLease, documentOverlay?: Documen
   const hash = createHash('sha256').update(`${CACHE_IDENTITY}\0${SCHEMA_VERSION}\0`);
   hash.update(
     deterministicJson({
-      issues: config.issues,
-      memory: config.memory,
-      documents: config.documents,
+      issues: config.skills.issues,
+      memory: config.skills.memory,
+      documents: config.skills.documents,
     }),
   );
   for (const entry of [...issues.bytes, ...memory.bytes, ...documents.bytes].sort((left, right) =>
@@ -286,17 +290,14 @@ export function loadLocalSnapshot(lease: BarrierLease, documentOverlay?: Documen
 
 function loadDocuments(
   root: string,
-  config: ConfigDocument,
+  config: ConfigV1,
   overlay: DocumentSnapshotOverlay = new Map(),
 ): { projections: DocumentProjection[]; bytes: Array<{ path: string; bytes: Uint8Array }> } {
-  const documents = mapping(config.documents, 'documents');
-  if (documents.type !== 'filesystem' || documents.root !== DOCUMENT_ROOT || documents.prefix !== DOCUMENT_ID_PREFIX)
-    throw new LocalPersistenceError(
-      'configuration',
-      `documents authority must use fixed root ${DOCUMENT_ROOT} and prefix ${DOCUMENT_ID_PREFIX}`,
-    );
-  const documentRoot = DOCUMENT_ROOT;
-  const prefix = DOCUMENT_ID_PREFIX;
+  const documents = mapping(config.skills.documents, 'skills.documents');
+  const documentProvider = mapping(documents.provider, 'skills.documents.provider');
+  if (documents.enabled !== true || documentProvider.type !== 'filesystem') return { projections: [], bytes: [] };
+  const documentRoot = safePath(stringValue(documents.root, 'documents.root'));
+  const prefix = stringValue(documents.prefix, 'documents.prefix');
   assertSafeAncestor(root, documentRoot);
   const projections: DocumentProjection[] = [];
   const bytes: Array<{ path: string; bytes: Uint8Array }> = [];
@@ -308,10 +309,10 @@ function loadDocuments(
       throw new LocalPersistenceError('resource_limit', `document file limit exceeded at ${path}`);
     aggregateBytes += fileBytes.byteLength;
     if (aggregateBytes > DOCUMENT_LIMITS.aggregateBytes)
-      throw new LocalPersistenceError('resource_limit', `aggregate document byte limit exceeded at ${path}`);
+      throw new LocalPersistenceError('resource_limit', `aggregate canonical document byte limit exceeded at ${path}`);
     const decoded = decodeDocument(fileBytes);
     if (!new RegExp(`^${escapeRegex(prefix)}\\d{5,}$`, 'u').test(decoded.metadata.id))
-      throw new LocalPersistenceError('path_safety', `document ID is not canonical: ${path}`);
+      throw new LocalPersistenceError('path_safety', `document ID is not canonical for the configured prefix: ${path}`);
     if (canonicalDocumentFilename(decoded.metadata) !== path.slice(path.lastIndexOf('/') + 1))
       throw new LocalPersistenceError('path_safety', `document filename does not match metadata: ${path}`);
     const identity = `${decoded.metadata.id}\0${decoded.metadata.version}`;
@@ -412,13 +413,14 @@ export function synchronizeLocalCache(lease: BarrierLease, snapshot: LocalSnapsh
 
 function loadIssues(
   root: string,
-  config: ConfigDocument,
+  config: ConfigV1,
 ): {
   projections: IssueProjection[];
   bytes: Array<{ path: string; bytes: Uint8Array }>;
 } {
-  const issues = mapping(config.issues, 'issues');
-  if (issues.type !== 'filesystem') return { projections: [], bytes: [] };
+  const issues = mapping(config.skills.issues, 'skills.issues');
+  const provider = mapping(issues.provider, 'skills.issues.provider');
+  if (issues.enabled !== true || provider.type !== 'filesystem') return { projections: [], bytes: [] };
   const issueRoot = safePath(stringValue(issues.root, 'issues.root'));
   const prefix = typeof issues.prefix === 'string' ? issues.prefix : undefined;
   if (prefix === undefined) throw new LocalPersistenceError('configuration', 'issues.prefix must be a string');
@@ -460,19 +462,18 @@ function loadIssues(
 
 function loadMemories(
   root: string,
-  config: ConfigDocument,
+  config: ConfigV1,
 ): {
   enabled: boolean;
   records: MemoryProjection[];
   tombstones: TombstoneProjection[];
   bytes: Array<{ path: string; bytes: Uint8Array }>;
 } {
-  const memory = mapping(config.memory, 'memory');
+  const memory = mapping(config.skills.memory, 'skills.memory');
   if (memory.enabled !== true || memory.backend !== 'repository')
     return { enabled: false, records: [], tombstones: [], bytes: [] };
-  const repository = mapping(memory.repository, 'memory.repository');
   const namespace = mapping(memory.namespace, 'memory.namespace');
-  const memoryRoot = safePath(stringValue(repository.root, 'memory.repository.root'));
+  const memoryRoot = safePath(stringValue(memory.root, 'memory.root'));
   assertSafeAncestor(root, memoryRoot);
   const absoluteRoot = resolve(root, memoryRoot);
   const records: MemoryProjection[] = [];

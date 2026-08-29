@@ -10,7 +10,11 @@
 
 ### Patch Changes
 
-- Add the fixed repository-local Documents lifecycle and safe active-document issue links.
+- Establish the generated Config v1 schema/default contract and credential-reference-only
+  generic MCP declarations, with permanent preservation of pre-existing or edited host
+  entries.
+- Add the repository-local Documents lifecycle, safe custom Config v1 roots, and safe
+  active-document issue links.
 
 ## 0.1.9
 
@@ -28,7 +32,7 @@
 
 ### Patch Changes
 
-- [#33](https://github.com/dragoscirjan/harnessctl-v2/pull/33) [`33f9db0`](https://github.com/dragoscirjan/harnessctl-v2/commit/33f9db0f26c7d39f17c89b8da951833027dade29) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add the opt-in, default-disabled `workflow.tdd.enabled` configuration contract.
+- [#33](https://github.com/dragoscirjan/harnessctl-v2/pull/33) [`33f9db0`](https://github.com/dragoscirjan/harnessctl-v2/commit/33f9db0f26c7d39f17c89b8da951833027dade29) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Add the opt-in, default-disabled `skills.tdd.enabled` configuration contract.
 
 ## 0.1.6
 

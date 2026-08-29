@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -287,7 +287,7 @@ describe('Pi adapter', () => {
       };
 
       expect(defaultTasksPath?.content[0]?.text).toBe('".harnessctl/tasks"');
-      expect(result?.content[0]?.text).toBe('2');
+      expect(result?.content[0]?.text).toBe('1');
       expect(emptyMetadataRecord.metadata.metadata).toBeUndefined();
       expect(createdDocument.id).toBe('doc-00001');
       expect(documentVersion.content[0]?.text).toContain('"version":2');
@@ -335,6 +335,7 @@ describe('Pi adapter', () => {
 
     try {
       await toolNamed(tools, 'config_create').execute('config', {}, undefined, undefined, { cwd });
+      writeFileSync(join(cwd, '.harnessctl/config.yaml'), 'version: 1\nskills:\n  memory:\n    enabled: true\n');
       const stored = await toolNamed(tools, 'memory_store').execute(
         'store',
         {

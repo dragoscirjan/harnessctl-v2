@@ -13,7 +13,6 @@ import pytest
 
 from harnessctl.config import (
     DEFAULT_CONFIG,
-    FILESYSTEM_DOCUMENT_TOOLS,
     ConfigError,
     load_config,
 )
@@ -42,6 +41,8 @@ from harnessctl.templates import (
 install_module = importlib.import_module("harnessctl.install")
 config_module = importlib.import_module("harnessctl.config")
 RETIRED_DOCUMENT_SKILL_FIXTURE = Path(__file__).parent / "fixtures/retired-sdlc-documents-SKILL.md"
+FILESYSTEM_DOCUMENT_TOOLS = str(DEFAULT_CONFIG["skills"]["documents"]["provider"]["tools"])
+DEFAULT_MCP_SERVERS = deepcopy(DEFAULT_CONFIG["mcpServers"])
 
 
 def _mock_pi_path() -> str:
@@ -63,6 +64,7 @@ def _sdlc_context(
     memory_enabled: bool,
     tdd_enabled: bool = False,
     code_index_enabled: bool = False,
+    documents_root: str = ".harnessctl/documents",
 ) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
@@ -70,6 +72,7 @@ def _sdlc_context(
         "retrieval_max_chars": 2048,
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "documents_root": documents_root,
     }
 
 
@@ -77,15 +80,15 @@ def _write_enabled_memory_config(root: Path, memory_root: str = ".harnessctl/mem
     config = root / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text(
-        f"""version: 2
-communication:
+        f"""version: 1
+skills:
   caveman: {{enabled: true, mode: balanced}}
-memory:
-  enabled: true
-  backend: repository
-  namespace: {{organization_id: acme, project_id: widget, default_topic: general}}
-  retrieval: {{limit: 5, max_chars: 4000, include_superseded: false}}
-  repository: {{root: {memory_root}}}
+  memory:
+    enabled: true
+    backend: repository
+    namespace: {{organization_id: acme, project_id: widget, default_topic: general}}
+    retrieval: {{limit: 5, max_chars: 4000, include_superseded: false}}
+    root: {memory_root}
 """,
         encoding="utf-8",
     )
@@ -94,24 +97,34 @@ memory:
 def write_project_config(root: Path, content: str) -> None:
     config = root / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True, exist_ok=True)
-    config.write_text(f"version: 2\n{content}", encoding="utf-8")
+    config.write_text(f"version: 1\n{content}", encoding="utf-8")
 
 
 def write_tdd_config(root: Path, *, enabled: bool) -> None:
     write_project_config(
         root,
-        f"workflow:\n  tdd:\n    enabled: {'true' if enabled else 'false'}\n",
+        f"skills:\n  tdd:\n    enabled: {'true' if enabled else 'false'}\n",
     )
 
 
 def write_sdlc_code_index_config(
-    root: Path, *, enabled: bool, mcp_server: str = "sdlc-code-index"
+    root: Path, *, enabled: bool, mcp_name: str = "sdlc-code-index"
 ) -> None:
+    declarations = ""
+    if enabled and mcp_name != "sdlc_code_index":
+        declarations = (
+            "mcpServers:\n"
+            "  sdlc_cvs_github:\n"
+            "    url: https://api.githubcopilot.com/mcp/\n"
+            '    headers: {Authorization: "Bearer {env:GH_TOKEN}"}\n'
+            f"  {mcp_name}:\n"
+            "    command: operator-index\n"
+        )
     write_project_config(
         root,
-        "skills:\n  sdlc-code-index:\n"
+        declarations + "skills:\n  codeIndex:\n"
         f"    enabled: {'true' if enabled else 'false'}\n"
-        f"    mcp_server: {mcp_server}\n",
+        f"    mcpName: {mcp_name}\n",
     )
 
 
@@ -134,14 +147,35 @@ def write_cvs_provider_config(root: Path, provider: str) -> dict[str, object]:
         "gitea": "GITEA_TOKEN",
         "forgejo": "FORGEJO_TOKEN",
     }
+    declarations = {
+        "github": (
+            "    url: https://api.githubcopilot.com/mcp/\n"
+            '    headers: {Authorization: "Bearer {env:GH_TOKEN}", '
+            'X-MCP-Toolsets: "repos,issues,pull_requests,actions,git"}\n'
+        ),
+        "gitlab": "    url: https://gitlab.com/api/v4/mcp\n",
+        "gitea": (
+            "    command: gitea-mcp\n"
+            "    args: [--transport, stdio, --host, https://gitea.example.test]\n"
+            "    environment: {GITEA_ACCESS_TOKEN: GITEA_TOKEN}\n"
+        ),
+        "forgejo": (
+            "    command: forgejo-mcp\n"
+            "    args: [--transport, stdio, --url, https://forgejo.example.test]\n"
+            "    environment: {FORGEJO_ACCESS_TOKEN: FORGEJO_TOKEN}\n"
+        ),
+    }
     write_project_config(
         root,
-        "cvs:\n"
-        "  remote:\n"
-        f"    provider: {provider}\n"
-        f"    tools: {tools[provider]}\n"
-        f"    url: {urls[provider]}\n"
-        f"    token_env: {token_envs[provider]}\n",
+        f"mcpServers:\n  sdlc_cvs_{provider}:\n{declarations[provider]}"
+        "skills:\n"
+        "  cvs:\n"
+        "    provider:\n"
+        f"      type: {provider}\n"
+        f"      tools: {tools[provider]}\n"
+        f"      mcpName: sdlc_cvs_{provider}\n"
+        f"      url: {urls[provider]}\n"
+        f"      token_env: {token_envs[provider]}\n",
     )
     return load_config(root)
 
@@ -198,13 +232,15 @@ def test_python_and_typescript_document_tool_order_matches_strict_contract() -> 
     ).read_text(encoding="utf-8")
     json_schema = json.loads(
         (
-            Path(__file__).parents[1] / "extensions/generic-tools/contracts/config-v2.schema.json"
+            Path(__file__).parents[1] / "extensions/generic-tools/contracts/config-v1.schema.json"
         ).read_text(encoding="utf-8")
     )
 
     assert f"'{FILESYSTEM_DOCUMENT_TOOLS}'" in typescript_schema
     assert (
-        json_schema["properties"]["documents"]["properties"]["tools"]["const"]
+        json_schema["properties"]["skills"]["properties"]["documents"]["properties"]["provider"][
+            "anyOf"
+        ][0]["properties"]["tools"]["const"]
         == FILESYSTEM_DOCUMENT_TOOLS
     )
 
@@ -259,11 +295,12 @@ def test_install_all_creates_project_local_targets(tmp_path: Path) -> None:
     skill_tree_count = sum(
         len(SKILL_RESOURCE_TEMPLATES[skill]) + 1 for skill in ("sdlc", "sdlc-code")
     )
-    assert len(installed) == len(TEMPLATES) * 2 + 9 + skill_tree_count * 2
+    assert len(installed) == len(TEMPLATES) * 2 + 10 + skill_tree_count * 2
     for command in TEMPLATES:
         assert (tmp_path / f".opencode/commands/{command}.md").exists()
         assert (tmp_path / f".pi/prompts/{command}.md").exists()
-    assert not (tmp_path / ".harnessctl").exists()
+    assert (tmp_path / ".harnessctl/mcp-provenance-v1.json").exists()
+    assert not (tmp_path / ".harnessctl/config.yaml").exists()
     assert (tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md").exists()
     assert (tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md").exists()
     for skill in (
@@ -1464,7 +1501,7 @@ def test_disabling_tdd_retains_dormant_generated_skill(tmp_path: Path) -> None:
 def test_enabled_sdlc_code_index_installs_equivalent_selected_host_skills(
     tmp_path: Path,
 ) -> None:
-    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_server="operator-index")
+    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_name="operator-index")
     write_pinned_pi_adapter(tmp_path)
 
     installed = install(tmp_path, "all")
@@ -1571,7 +1608,7 @@ def test_disabled_sdlc_code_index_warning_failure_rolls_back_memory_directories(
 ) -> None:
     write_project_config(
         tmp_path,
-        "memory:\n  enabled: true\nskills:\n  sdlc-code-index:\n    enabled: false\n",
+        "skills:\n  memory:\n    enabled: true\n  codeIndex:\n    enabled: false\n",
     )
     if harness in ("pi", "all"):
         write_pinned_pi_adapter(tmp_path)
@@ -1667,49 +1704,24 @@ def test_config_rejects_windows_native_escape_paths(tmp_path: Path, unsafe_path:
         "\n".join(
             [
                 "version: 1",
-                "memory:",
-                "  repository:",
+                "skills:",
+                "  memory:",
                 f"    root: '{unsafe_path}'",
             ]
         ),
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigError, match="must stay inside project root"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
 def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     first = load_config(tmp_path)
 
+    assert first == DEFAULT_CONFIG
     assert first["paths"]["tasks"] == ".harnessctl/tasks"
-    assert first["issues"]["root"] == ".harnessctl/issues"
-    assert first["issues"]["prefix"] == "hrn-"
-    assert first["documents"] == {
-        "root": ".harnessctl/documents",
-        "prefix": "doc-",
-        "type": "filesystem",
-        "tools": (
-            "document_id,document_create,document_list,document_get,document_update,"
-            "document_version,document_validate,document_archive,document_restore"
-        ),
-    }
-    assert first["cvs"] == {
-        "local": "git",
-        "remote": {
-            "provider": "github",
-            "tools": "gh",
-            "url": "https://github.com",
-            "token_env": "GH_TOKEN",
-        },
-    }
-    assert first["mcp"] == {
-        "output_limit_mode": "bounded-guidance",
-    }
-    assert first["skills"] == {
-        "sdlc-code-index": {"enabled": False, "mcp_server": "sdlc-code-index"}
-    }
-    assert first["issues"]["tools"].split(",") == [
+    assert first["skills"]["issues"]["provider"]["tools"].split(",") == [
         "issue_id",
         "issue_create",
         "issue_list",
@@ -1732,28 +1744,28 @@ def test_config_serves_defaults_without_creating_file(tmp_path: Path) -> None:
     "documents",
     [
         {"root": "../documents"},
-        {"root": "custom/documents"},
         {"prefix": "custom-"},
-        {"type": "github", "remote": {"repository": "owner/repo"}},
         {"unknown": True},
-        {"tools": "document_create"},
+        {"provider": {"type": "filesystem", "tools": "document_create"}},
     ],
 )
-def test_config_rejects_removed_remote_or_custom_documents_early(
+def test_config_rejects_invalid_or_custom_documents_early(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     documents: dict[str, object],
 ) -> None:
     path = tmp_path / ".harnessctl/config.yaml"
     path.parent.mkdir(parents=True)
-    path.write_text(json.dumps({"version": 2, "documents": documents}), encoding="utf-8")
+    path.write_text(
+        json.dumps({"version": 1, "skills": {"documents": documents}}), encoding="utf-8"
+    )
     monkeypatch.setattr(
         install_module.shutil,
         "which",
         lambda _name: (_ for _ in ()).throw(AssertionError("config rejection must precede probes")),
     )
 
-    with pytest.raises(ConfigError, match="remove the documents override"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         install(tmp_path, "opencode")
     assert not (tmp_path / ".opencode").exists()
 
@@ -1763,14 +1775,14 @@ def test_removed_documents_config_rejection_precedes_retired_skill_cleanup(
 ) -> None:
     retired = write_exact_retired_document_skill(tmp_path, "opencode")
     before = _tree_manifest(retired)
-    write_project_config(tmp_path, "documents:\n  type: gitea\n  remote: {}\n")
+    write_project_config(tmp_path, "skills:\n  documents:\n    provider:\n      type: gitea\n")
     monkeypatch.setattr(
         install_module.shutil,
         "which",
         lambda _name: (_ for _ in ()).throw(AssertionError("must reject before probing")),
     )
 
-    with pytest.raises(ConfigError, match="remove the documents override"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         install(tmp_path, "opencode")
 
     assert _tree_manifest(retired) == before
@@ -1792,11 +1804,11 @@ def test_config_rejects_unsafe_issue_roots(tmp_path: Path, unsafe_root: str) -> 
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
-        f"version: 2\nissues:\n  root: '{unsafe_root}'\n",
+        f"version: 1\nskills:\n  issues:\n    root: '{unsafe_root}'\n",
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigError, match="issues.root must stay inside project root"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -1805,73 +1817,70 @@ def test_config_rejects_control_characters_in_issue_root(tmp_path: Path, escaped
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
-        f'version: 2\nissues:\n  root: "{escaped_root}"\n',
+        f'version: 1\nskills:\n  issues:\n    root: "{escaped_root}"\n',
         encoding="utf-8",
     )
 
-    with pytest.raises(ConfigError, match="issues.root must stay inside project root"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
-def test_config_deep_merges_partial_v2_over_defaults(tmp_path: Path) -> None:
+def test_config_deep_merges_partial_v1_over_defaults(tmp_path: Path) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
-        "version: 2\nmemory:\n  enabled: true\n  retrieval:\n    limit: 3\n",
+        "version: 1\nskills:\n  memory:\n    enabled: true\n    retrieval:\n      limit: 3\n",
         encoding="utf-8",
     )
 
     config = load_config(tmp_path)
 
-    assert config["memory"]["enabled"] is True
-    assert config["memory"]["backend"] == "repository"
-    assert config["memory"]["retrieval"] == {
+    assert config["skills"]["memory"]["enabled"] is True
+    assert config["skills"]["memory"]["backend"] == "repository"
+    assert config["skills"]["memory"]["retrieval"] == {
         "limit": 3,
         "max_chars": 12_000,
         "include_superseded": False,
     }
-    assert config["communication"]["caveman"] == {
+    assert config["skills"]["caveman"] == {
         "enabled": True,
         "mode": "strict",
     }
     assert config["workflow"] == {
         "default_task_type": "bug",
-        "tdd": {"enabled": False},
     }
     assert config["mcp"] == {"output_limit_mode": "bounded-guidance"}
-    assert config["skills"] == {
-        "sdlc-code-index": {"enabled": False, "mcp_server": "sdlc-code-index"}
+    assert config["mcpServers"] == DEFAULT_MCP_SERVERS
+    assert config["skills"]["codeIndex"] == {
+        "enabled": False,
+        "mcpName": "sdlc_code_index",
     }
+    assert config["skills"]["tdd"] == {"enabled": False}
 
 
 @pytest.mark.parametrize("enabled", [True, False])
-def test_config_accepts_tdd_workflow_setting_and_preserves_unknown_fields(
-    tmp_path: Path, enabled: bool
-) -> None:
-    config_path = tmp_path / ".harnessctl/config.yaml"
-    config_path.parent.mkdir(parents=True)
-    config_path.write_text(
-        "workflow:\n"
-        "  custom_policy: retained\n"
-        "  tdd:\n"
-        f"    enabled: {str(enabled).lower()}\n"
-        "    custom_policy: retained\n",
-        encoding="utf-8",
+def test_config_accepts_tdd_skill_setting(tmp_path: Path, enabled: bool) -> None:
+    write_project_config(
+        tmp_path,
+        f"skills:\n  tdd:\n    enabled: {str(enabled).lower()}\n",
     )
 
-    assert load_config(tmp_path)["workflow"] == {
-        "default_task_type": "bug",
-        "custom_policy": "retained",
-        "tdd": {"enabled": enabled, "custom_policy": "retained"},
-    }
+    assert load_config(tmp_path)["skills"]["tdd"] == {"enabled": enabled}
 
 
-def test_config_rejects_non_boolean_tdd_workflow_setting(tmp_path: Path) -> None:
+def test_config_rejects_unknown_workflow_fields(tmp_path: Path) -> None:
+    write_project_config(tmp_path, "workflow:\n  custom_policy: rejected\n")
+
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
+        load_config(tmp_path)
+
+
+def test_config_rejects_non_boolean_tdd_skill_setting(tmp_path: Path) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text("workflow:\n  tdd:\n    enabled: 1\n", encoding="utf-8")
+    config_path.write_text("version: 1\nskills:\n  tdd:\n    enabled: 1\n", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match=r"workflow\.tdd\.enabled must be boolean"):
+    with pytest.raises(ConfigError, match=r"skills\.tdd\.enabled"):
         load_config(tmp_path)
 
 
@@ -1880,9 +1889,9 @@ def test_config_rejects_unreleased_top_level_code_index_with_migration_guidance(
 ) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text("code_index:\n  provider: graphify\n", encoding="utf-8")
+    config_path.write_text("version: 1\ncode_index:\n  provider: graphify\n", encoding="utf-8")
 
-    with pytest.raises(ConfigError, match=r"code_index.*skills\.sdlc-code-index"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -1890,9 +1899,10 @@ def test_config_defaults_to_disabled_external_code_index_skill(tmp_path: Path) -
     config = load_config(tmp_path)
 
     assert config["mcp"] == {"output_limit_mode": "bounded-guidance"}
-    assert config["skills"]["sdlc-code-index"] == {
+    assert config["mcpServers"] == DEFAULT_MCP_SERVERS
+    assert config["skills"]["codeIndex"] == {
         "enabled": False,
-        "mcp_server": "sdlc-code-index",
+        "mcpName": "sdlc_code_index",
     }
 
 
@@ -1912,14 +1922,11 @@ def test_config_defaults_to_disabled_external_code_index_skill(tmp_path: Path) -
 def test_config_accepts_portable_external_code_index_server_name(
     tmp_path: Path, server_name: str
 ) -> None:
-    write_project_config(
-        tmp_path,
-        f"skills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: {server_name}\n",
-    )
+    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_name=server_name)
 
-    assert load_config(tmp_path)["skills"]["sdlc-code-index"] == {
+    assert load_config(tmp_path)["skills"]["codeIndex"] == {
         "enabled": True,
-        "mcp_server": server_name,
+        "mcpName": server_name,
     }
 
 
@@ -1933,8 +1940,6 @@ def test_config_accepts_portable_external_code_index_server_name(
         "index_",
         "index.server",
         "index server",
-        "cvs_github",
-        "sdlc_cvs_github",
         "a" * 65,
     ],
 )
@@ -1943,28 +1948,27 @@ def test_config_rejects_invalid_external_code_index_server_name(
 ) -> None:
     write_project_config(
         tmp_path,
-        f"skills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: {server_name}\n",
+        f"skills:\n  codeIndex:\n    enabled: true\n    mcpName: {server_name}\n",
     )
 
-    with pytest.raises(ConfigError, match=r"skills\.sdlc-code-index\.mcp_server"):
+    with pytest.raises(ConfigError, match=r"skills\.codeIndex\.mcpName"):
         load_config(tmp_path)
 
 
-def test_config_rejects_legacy_mcp_servers_before_merge(tmp_path: Path) -> None:
+def test_config_accepts_declared_mcp_servers(tmp_path: Path) -> None:
     write_project_config(
         tmp_path,
-        "mcp:\n  servers:\n    sdlc-code-index:\n      enabled: false\n",
+        "mcpServers:\n  operator-index:\n    command: indexer\nskills:\n  cvs: {enabled: false}\n",
     )
 
-    with pytest.raises(ConfigError, match=r"mcp\.servers.*skills\.sdlc-code-index"):
-        load_config(tmp_path)
+    assert load_config(tmp_path)["mcpServers"] == {"operator-index": {"command": "indexer"}}
 
 
 @pytest.mark.parametrize(
     "yaml",
     [
-        "version: 1\nversion: 2\n",
-        "mcp:\n  output_limit_mode: hard\n  output_limit_mode: bounded-guidance\n",
+        "version: 1\nversion: 1\n",
+        "version: 1\nmcp:\n  output_limit_mode: hard\n  output_limit_mode: bounded-guidance\n",
     ],
 )
 def test_config_rejects_duplicate_yaml_keys(tmp_path: Path, yaml: str) -> None:
@@ -2013,16 +2017,21 @@ def test_config_accepts_and_normalizes_remote_provider_tools(
 ) -> None:
     write_project_config(
         tmp_path,
-        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
-        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+        "skills:\n  issues:\n    provider:\n"
+        f'      type: {provider}\n      tools: "{tools.strip()}"\n'
+        f"      url: {url}\n      token_env: {token_env}\n",
     )
 
-    assert load_config(tmp_path)["issues"] == {
+    assert load_config(tmp_path)["skills"]["issues"] == {
+        "enabled": True,
         "root": ".harnessctl/issues",
         "prefix": "hrn-",
-        "type": provider,
-        "tools": normalized,
-        "remote": {"url": url, "token_env": token_env},
+        "provider": {
+            "type": provider,
+            "tools": normalized,
+            "url": url,
+            "token_env": token_env,
+        },
     }
 
 
@@ -2030,11 +2039,11 @@ def test_config_accepts_and_normalizes_remote_provider_tools(
 def test_config_requires_explicit_remote_tools(tmp_path: Path, provider: str) -> None:
     write_project_config(
         tmp_path,
-        f"issues:\n  type: {provider}\n"
-        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+        f"skills:\n  issues:\n    provider:\n      type: {provider}\n"
+        "      url: https://example.com\n      token_env: TOKEN\n",
     )
 
-    with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.tools"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2050,11 +2059,11 @@ def test_config_requires_explicit_remote_tools(tmp_path: Path, provider: str) ->
 def test_config_rejects_provider_tool_mismatches(tmp_path: Path, provider: str, tools: str) -> None:
     write_project_config(
         tmp_path,
-        f'issues:\n  type: {provider}\n  tools: "{tools}"\n'
-        "  remote:\n    url: https://example.com\n    token_env: TOKEN\n",
+        f'skills:\n  issues:\n    provider:\n      type: {provider}\n      tools: "{tools}"\n'
+        "      url: https://example.com\n      token_env: TOKEN\n",
     )
 
-    with pytest.raises(ConfigError, match=r"issues\.tools"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2062,30 +2071,35 @@ def test_config_rejects_provider_tool_mismatches(tmp_path: Path, provider: str, 
 def test_config_rejects_unsafe_remote_tool_text(tmp_path: Path, tools: str) -> None:
     write_project_config(
         tmp_path,
-        f'issues:\n  type: forgejo\n  tools: "{tools}"\n'
-        "  remote:\n    url: https://forgejo.example.com\n    token_env: FORGEJO_TOKEN\n",
+        f'skills:\n  issues:\n    provider:\n      type: forgejo\n      tools: "{tools}"\n'
+        "      url: https://forgejo.example.com\n      token_env: FORGEJO_TOKEN\n",
     )
 
-    with pytest.raises(ConfigError, match=r"issues\.tools"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
 @pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
 def test_config_requires_remote_connection(tmp_path: Path, provider: str) -> None:
     tools = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}
-    write_project_config(tmp_path, f"issues:\n  type: {provider}\n  tools: {tools[provider]}\n")
+    write_project_config(
+        tmp_path,
+        "skills:\n  issues:\n    provider:\n"
+        f"      type: {provider}\n      tools: {tools[provider]}\n",
+    )
 
-    with pytest.raises(ConfigError, match=rf"issues\.type={provider} requires issues\.remote"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
 def test_config_rejects_remote_connection_for_filesystem(tmp_path: Path) -> None:
     write_project_config(
         tmp_path,
-        "issues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n",
+        "skills:\n  issues:\n    provider:\n      url: https://github.com\n"
+        "      token_env: GH_TOKEN\n",
     )
 
-    with pytest.raises(ConfigError, match="not allowed"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2109,23 +2123,23 @@ def test_config_rejects_invalid_remote_connection(
     tool = {"github": "gh", "gitlab": "glab", "gitea": "tea", "forgejo": "forgejo-cli"}[provider]
     write_project_config(
         tmp_path,
-        f"issues:\n  type: {provider}\n  tools: {tool}\n"
-        f"  remote:\n    url: {url}\n    token_env: {token_env}\n",
+        f"skills:\n  issues:\n    provider:\n      type: {provider}\n      tools: {tool}\n"
+        f"      url: {url}\n      token_env: {token_env}\n",
     )
 
-    with pytest.raises(ConfigError, match=error):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
 def test_config_rejects_remote_url_with_embedded_line_break(tmp_path: Path) -> None:
     write_project_config(
         tmp_path,
-        "issues:\n  type: gitea\n  tools: tea\n  remote:\n"
-        '    url: "https://gitea.example.com/path\\ninjected"\n'
-        "    token_env: GITEA_TOKEN\n",
+        "skills:\n  issues:\n    provider:\n      type: gitea\n      tools: tea\n"
+        '      url: "https://gitea.example.com/path\\ninjected"\n'
+        "      token_env: GITEA_TOKEN\n",
     )
 
-    with pytest.raises(ConfigError, match=r"remote\.url"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2149,16 +2163,19 @@ def test_config_accepts_every_cvs_provider_combination(
 ) -> None:
     write_project_config(
         tmp_path,
-        f"cvs:\n  local: {local}\n  remote:\n    provider: {provider}\n"
-        f"    tools: {tool}\n    url: {url}\n"
-        f"    token_env: {token_env}\n",
+        f"mcpServers:\n  sdlc_cvs_{provider}:\n    command: operator-mcp\n"
+        f"skills:\n  cvs:\n    local: {local}\n    provider:\n      type: {provider}\n"
+        f"      tools: {tool}\n      mcpName: sdlc_cvs_{provider}\n      url: {url}\n"
+        f"      token_env: {token_env}\n",
     )
 
-    assert load_config(tmp_path)["cvs"] == {
+    assert load_config(tmp_path)["skills"]["cvs"] == {
+        "enabled": True,
         "local": local,
-        "remote": {
-            "provider": provider,
+        "provider": {
+            "type": provider,
             "tools": tool,
+            "mcpName": f"sdlc_cvs_{provider}",
             "url": url,
             "token_env": token_env,
         },
@@ -2168,14 +2185,16 @@ def test_config_accepts_every_cvs_provider_combination(
 def test_config_keeps_remote_issue_connection_independent_from_cvs(tmp_path: Path) -> None:
     write_project_config(
         tmp_path,
-        "issues:\n  type: github\n  tools: gh\n"
-        "  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n",
+        "skills:\n  issues:\n    provider:\n      type: github\n      tools: gh\n"
+        "      url: https://github.com\n      token_env: ISSUE_TOKEN\n",
     )
 
     config = load_config(tmp_path)
 
-    assert config["cvs"]["remote"]["token_env"] == "GH_TOKEN"
-    assert config["issues"]["remote"] == {
+    assert config["skills"]["cvs"]["provider"]["token_env"] == "GH_TOKEN"
+    assert config["skills"]["issues"]["provider"] == {
+        "type": "github",
+        "tools": "gh",
         "url": "https://github.com",
         "token_env": "ISSUE_TOKEN",
     }
@@ -2184,10 +2203,10 @@ def test_config_keeps_remote_issue_connection_independent_from_cvs(tmp_path: Pat
 @pytest.mark.parametrize(
     "content",
     [
-        "cvs:\n  remote:\n    transport: auto\n",
-        "issues:\n  type: gitlab\n  tools: glab\n"
-        "  remote:\n    transport: mcp\n    url: https://gitlab.com\n"
-        "    token_env: ISSUE_TOKEN\n",
+        "skills:\n  cvs:\n    provider:\n      transport: auto\n",
+        "skills:\n  issues:\n    provider:\n      type: gitlab\n      tools: glab\n"
+        "      transport: mcp\n      url: https://gitlab.com\n"
+        "      token_env: ISSUE_TOKEN\n",
     ],
 )
 def test_config_rejects_removed_transport_settings(tmp_path: Path, content: str) -> None:
@@ -2196,7 +2215,7 @@ def test_config_rejects_removed_transport_settings(tmp_path: Path, content: str)
         content,
     )
 
-    with pytest.raises(ConfigError, match="unknown keys"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2204,19 +2223,19 @@ def test_config_rejects_removed_transport_settings(tmp_path: Path, content: str)
 def test_config_requires_complete_explicit_cvs_provider_override(
     tmp_path: Path, provider: str
 ) -> None:
-    write_project_config(tmp_path, f"cvs:\n  remote:\n    provider: {provider}\n")
+    write_project_config(tmp_path, f"skills:\n  cvs:\n    provider:\n      type: {provider}\n")
 
-    with pytest.raises(ConfigError, match=r"cvs\.remote\.(tools|url|token_env)"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
 @pytest.mark.parametrize(
     "content",
     [
-        "cvs:\n  local: svn\n",
-        "cvs:\n  remote:\n    tools: glab\n",
-        "cvs:\n  remote:\n    url: https://github.example.com\n",
-        "cvs:\n  remote:\n    token_env: ghp_secret\n",
+        "skills:\n  cvs:\n    local: svn\n",
+        "skills:\n  cvs:\n    provider:\n      tools: glab\n",
+        "skills:\n  cvs:\n    provider:\n      url: https://github.example.com\n",
+        "skills:\n  cvs:\n    provider:\n      token_env: ghp_secret\n",
         "mcp:\n  output_limit_mode: unlimited\n",
     ],
 )
@@ -2230,12 +2249,12 @@ def test_config_rejects_invalid_cvs_and_mcp_values(tmp_path: Path, content: str)
 @pytest.mark.parametrize(
     "content",
     [
-        "issues:\n  unexpected: true\n",
-        "issues:\n  type: github\n  tools: gh\n"
-        "  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n"
-        "    unexpected: true\n",
-        "cvs:\n  unexpected: true\n",
-        "cvs:\n  remote:\n    mcp_id: cvs_github\n",
+        "skills:\n  issues:\n    unexpected: true\n",
+        "skills:\n  issues:\n    provider:\n      type: github\n      tools: gh\n"
+        "      url: https://github.com\n      token_env: GH_TOKEN\n"
+        "      unexpected: true\n",
+        "skills:\n  cvs:\n    unexpected: true\n",
+        "skills:\n  cvs:\n    provider:\n      mcp_id: cvs_github\n",
         "mcp:\n  server_id: cvs_github\n",
     ],
 )
@@ -2244,7 +2263,7 @@ def test_config_rejects_unknown_nested_keys_and_configurable_mcp_ids(
 ) -> None:
     write_project_config(tmp_path, content)
 
-    with pytest.raises(ConfigError, match="unknown keys"):
+    with pytest.raises(ConfigError, match="Invalid Config v1"):
         load_config(tmp_path)
 
 
@@ -2258,19 +2277,22 @@ def test_config_accepts_hard_output_limit_as_host_neutral_policy(tmp_path: Path)
 
 
 def test_config_normalizes_exact_filesystem_tool_set(tmp_path: Path) -> None:
-    canonical = DEFAULT_CONFIG["issues"]["tools"]
-    reordered = " , ".join(reversed(canonical.split(",")))
-    write_project_config(tmp_path, f'issues:\n  tools: "{reordered}"\n')
+    canonical = DEFAULT_CONFIG["skills"]["issues"]["provider"]["tools"]
+    write_project_config(
+        tmp_path, f'skills:\n  issues:\n    provider:\n      tools: "{canonical}"\n'
+    )
 
-    assert load_config(tmp_path)["issues"]["tools"] == canonical
+    assert load_config(tmp_path)["skills"]["issues"]["provider"]["tools"] == canonical
 
     for invalid in (
         ",".join(canonical.split(",")[1:]),
         f"{canonical},extra",
         f"{canonical},issue_id",
     ):
-        write_project_config(tmp_path, f'issues:\n  tools: "{invalid}"\n')
-        with pytest.raises(ConfigError, match="must be exactly"):
+        write_project_config(
+            tmp_path, f'skills:\n  issues:\n    provider:\n      tools: "{invalid}"\n'
+        )
+        with pytest.raises(ConfigError, match="Invalid Config v1"):
             load_config(tmp_path)
 
 
@@ -2278,13 +2300,13 @@ def test_config_requires_caveman_when_memory_is_enabled(tmp_path: Path) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
-        "memory:\n  enabled: true\ncommunication:\n  caveman:\n    enabled: false\n",
+        "version: 1\nskills:\n  memory:\n    enabled: true\n  caveman:\n    enabled: false\n",
         encoding="utf-8",
     )
 
     with pytest.raises(
         ConfigError,
-        match=r"memory\.enabled=true requires communication\.caveman\.enabled=true",
+        match=r"skills\.caveman",
     ):
         load_config(tmp_path)
 
@@ -2293,14 +2315,14 @@ def test_config_allows_disabled_memory_and_caveman(tmp_path: Path) -> None:
     config_path = tmp_path / ".harnessctl/config.yaml"
     config_path.parent.mkdir(parents=True)
     config_path.write_text(
-        "memory:\n  enabled: false\ncommunication:\n  caveman:\n    enabled: false\n",
+        "version: 1\nskills:\n  memory:\n    enabled: false\n  caveman:\n    enabled: false\n",
         encoding="utf-8",
     )
 
     config = load_config(tmp_path)
 
-    assert config["memory"]["enabled"] is False
-    assert config["communication"]["caveman"]["enabled"] is False
+    assert config["skills"]["memory"]["enabled"] is False
+    assert config["skills"]["caveman"]["enabled"] is False
 
 
 def test_command_metadata_exactly_covers_templates() -> None:
@@ -2310,7 +2332,7 @@ def test_command_metadata_exactly_covers_templates() -> None:
 
 def test_memory_disabled_prompts_compile_memory_out() -> None:
     enabled_config = deepcopy(DEFAULT_CONFIG)
-    enabled_config["memory"]["enabled"] = True
+    enabled_config["skills"]["memory"]["enabled"] = True
 
     for command in TEMPLATES:
         disabled = render_prompt(command, "opencode")
@@ -2321,7 +2343,7 @@ def test_memory_disabled_prompts_compile_memory_out() -> None:
 
 def test_enabled_pi_prompts_delegate_memory_hooks() -> None:
     config = deepcopy(DEFAULT_CONFIG)
-    config["memory"]["enabled"] = True
+    config["skills"]["memory"]["enabled"] = True
 
     for command in TEMPLATES:
         rendered = render_prompt(command, "pi", config=config)
@@ -2340,9 +2362,9 @@ def test_enabled_pi_prompts_delegate_memory_hooks() -> None:
 
 def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None:
     enabled_config = deepcopy(DEFAULT_CONFIG)
-    enabled_config["memory"]["enabled"] = True
-    enabled_config["memory"]["retrieval"]["limit"] = 3
-    enabled_config["memory"]["retrieval"]["max_chars"] = 2048
+    enabled_config["skills"]["memory"]["enabled"] = True
+    enabled_config["skills"]["memory"]["retrieval"]["limit"] = 3
+    enabled_config["skills"]["memory"]["retrieval"]["max_chars"] = 2048
     for command in TEMPLATES:
         rendered = render_prompt(command, "opencode", config=enabled_config)
         assert "memory_search" not in rendered
@@ -2354,6 +2376,7 @@ def test_enabled_opencode_prompts_delegate_bounded_shared_memory_hooks() -> None
         retrieval_max_chars=2048,
         tdd_enabled=False,
         code_index_enabled=False,
+        documents_root=".harnessctl/documents",
     )["references/checkpoint.md"]
     normalized = " ".join(checkpoint.split())
     assert "limit 3, 2048 chars" in normalized
@@ -2420,7 +2443,7 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
     installed = install(tmp_path, "opencode")
 
     assert len(installed) == (
-        12 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + len(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
+        13 + len(SKILL_RESOURCE_TEMPLATES["sdlc"]) + len(SKILL_RESOURCE_TEMPLATES["sdlc-code"])
     )
     for command in TEMPLATES:
         rendered = (tmp_path / f".opencode/commands/{command}.md").read_text(encoding="utf-8")
@@ -2461,6 +2484,29 @@ def test_all_install_produces_byte_equivalent_sdlc_skill_trees(tmp_path: Path) -
     opencode = tmp_path / ".opencode/skills/sdlc"
     pi = tmp_path / ".pi/skills/sdlc"
     assert _tree_manifest(opencode) == _tree_manifest(pi)
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
+def test_install_compiles_custom_documents_root_into_plan_guidance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
+) -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["skills"]["documents"]["root"] = "project/design-records"
+    monkeypatch.setattr("harnessctl.install.load_config", lambda _root: config)
+    if harness in ("pi", "all"):
+        write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, harness)
+
+    host_roots = [".opencode"] if harness == "opencode" else [".pi"]
+    if harness == "all":
+        host_roots = [".opencode", ".pi"]
+    for host_root in host_roots:
+        reference = (tmp_path / host_root / "skills/sdlc/references/plan-design.md").read_text(
+            encoding="utf-8"
+        )
+        assert "Canonical design Markdown lives only under `project/design-records`." in reference
+        assert ".harnessctl/documents" not in reference
 
 
 def test_committed_sdlc_code_trees_match_current_installer_render(
@@ -2596,9 +2642,9 @@ def test_install_failure_restores_exact_tree_and_preserves_existing_paths(
         original_initialize = install_module._initialize_memory_paths
 
         def fail_during_initialize(
-            root: Path, repository: dict[str, object], created: list[Path]
+            root: Path, memory: dict[str, object], created: list[Path]
         ) -> None:
-            original_initialize(root, repository, created)
+            original_initialize(root, memory, created)
             raise OSError("injected memory initialization failure")
 
         monkeypatch.setattr(install_module, "_initialize_memory_paths", fail_during_initialize)
@@ -2624,11 +2670,12 @@ def test_install_does_not_modify_unrelated_opencode_package_fields(tmp_path: Pat
     config.parent.mkdir(parents=True)
     config.write_text(
         "version: 1\n"
-        "memory:\n"
-        "  enabled: true\n"
-        "  namespace:\n"
-        "    organization_id: acme\n"
-        "    project_id: widget\n",
+        "skills:\n"
+        "  memory:\n"
+        "    enabled: true\n"
+        "    namespace:\n"
+        "      organization_id: acme\n"
+        "      project_id: widget\n",
         encoding="utf-8",
     )
 
@@ -2659,6 +2706,295 @@ def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_install_compiles_generic_mcp_servers(tmp_path: Path, harness: str) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n"
+        "  remote-docs:\n"
+        "    url: https://mcp.example.test/api\n"
+        '    headers: {Authorization: "Bearer {env:DOCS_TOKEN}", X-Mode: static}\n'
+        "    opencode: {enabled: false, native: {labels: [docs, 2, null]}}\n"
+        "    pi: {timeout: 5000, native: {retry: true}}\n"
+        "  local-index:\n"
+        "    command: missing-operator-installed-indexer\n"
+        "    args: [serve]\n"
+        "    environment: {INDEX_TOKEN: SOURCE_TOKEN}\n"
+        "    cwd: tools/mcp\n"
+        "    opencode: {enabled: true}\n"
+        "    pi: {timeout: 7000}\n"
+        "skills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, harness)
+    if harness == "opencode":
+        entries = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))[
+            "mcp"
+        ]
+        assert entries["remote-docs"] == {
+            "enabled": False,
+            "native": {"labels": ["docs", 2, None]},
+            "type": "remote",
+            "url": "https://mcp.example.test/api",
+            "headers": {"Authorization": "Bearer {env:DOCS_TOKEN}", "X-Mode": "static"},
+        }
+        assert entries["local-index"] == {
+            "enabled": True,
+            "type": "local",
+            "command": ["missing-operator-installed-indexer", "serve"],
+            "environment": {"INDEX_TOKEN": "{env:SOURCE_TOKEN}"},
+            "cwd": "tools/mcp",
+        }
+    else:
+        entries = json.loads((tmp_path / ".pi/mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+        assert entries["remote-docs"] == {
+            "timeout": 5000,
+            "native": {"retry": True},
+            "url": "https://mcp.example.test/api",
+            "headers": {"Authorization": "Bearer ${DOCS_TOKEN}", "X-Mode": "static"},
+            "lifecycle": "lazy",
+        }
+        assert entries["local-index"] == {
+            "timeout": 7000,
+            "command": "missing-operator-installed-indexer",
+            "args": ["serve"],
+            "lifecycle": "lazy",
+            "env": {"INDEX_TOKEN": "${SOURCE_TOKEN}"},
+            "cwd": "tools/mcp",
+        }
+
+
+@pytest.mark.parametrize(
+    ("harness", "core", "override", "path"),
+    [
+        (
+            "opencode",
+            "url: https://mcp.example.test/api",
+            "opencode: {url: https://replacement.example.test}",
+            "mcpServers.custom.opencode.url",
+        ),
+        (
+            "pi",
+            "command: custom-mcp",
+            "pi: {command: replacement-mcp}",
+            "mcpServers.custom.pi.command",
+        ),
+    ],
+)
+def test_install_rejects_host_override_that_replaces_portable_core(
+    tmp_path: Path, harness: str, core: str, override: str, path: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        f"mcpServers:\n  custom:\n    {core}\n    {override}\nskills:\n  cvs: {{enabled: false}}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+
+    with pytest.raises(ConfigError) as caught:
+        install(tmp_path, harness)
+
+    assert caught.value.validation_paths == (path,)
+    host = (
+        tmp_path / ".opencode/opencode.json" if harness == "opencode" else tmp_path / ".pi/mcp.json"
+    )
+    assert not host.exists()
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_removing_generic_mcp_declaration_removes_exact_generated_host_entry(
+    tmp_path: Path, harness: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  removable:\n    url: https://mcp.example.test/api\n"
+        "skills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, harness)
+
+    write_project_config(tmp_path, "mcpServers: {}\nskills:\n  cvs: {enabled: false}\n")
+    install(tmp_path, harness, force=True)
+
+    host = (
+        tmp_path / ".opencode/opencode.json" if harness == "opencode" else tmp_path / ".pi/mcp.json"
+    )
+    container = "mcp" if harness == "opencode" else "mcpServers"
+    assert "removable" not in json.loads(host.read_text(encoding="utf-8"))[container]
+    provenance = json.loads(
+        (tmp_path / ".harnessctl/mcp-provenance-v1.json").read_text(encoding="utf-8")
+    )
+    assert provenance["hosts"][harness] == {}
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_removing_generic_declaration_preserves_modified_generated_entry(
+    tmp_path: Path, harness: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  customized:\n    command: fixture-mcp\n    args: [serve]\n"
+        "skills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, harness)
+    host = (
+        tmp_path / ".opencode/opencode.json" if harness == "opencode" else tmp_path / ".pi/mcp.json"
+    )
+    container = "mcp" if harness == "opencode" else "mcpServers"
+    document = json.loads(host.read_text(encoding="utf-8"))
+    document[container]["customized"]["operator"] = "preserved"
+    host.write_text(json.dumps(document, separators=(",", ":")) + "\n", encoding="utf-8")
+    original_entry = document[container]["customized"]
+    write_project_config(tmp_path, "mcpServers: {}\nskills:\n  cvs: {enabled: false}\n")
+
+    with pytest.warns(UserWarning, match=r"customized.*operator-owned"):
+        install(tmp_path, harness, force=True)
+
+    assert json.loads(host.read_text(encoding="utf-8"))[container]["customized"] == original_entry
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+@pytest.mark.parametrize("force", [False, True])
+def test_exact_preexisting_generic_entry_is_never_claimed_or_removed(
+    tmp_path: Path, harness: str, force: bool
+) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  preexisting:\n    url: https://mcp.example.test/api\n"
+        "skills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        entry = {"type": "remote", "url": "https://mcp.example.test/api"}
+        host_document = {
+            "operatorRaw": {"weight": 100, "escaped": "a"},
+            "plugin": [install_module.OPENCODE_TOOLS_PLUGIN],
+            container: {"preexisting": entry},
+        }
+    else:
+        write_pinned_pi_adapter(tmp_path)
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        entry = {"url": "https://mcp.example.test/api", "lifecycle": "lazy"}
+        host_document = {
+            "operatorRaw": {"weight": 100, "escaped": "a"},
+            container: {"preexisting": entry},
+            "settings": {"outputGuard": install_module.OUTPUT_GUARD},
+        }
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text(
+        json.dumps(host_document, separators=(",", ":"))
+        .replace('"weight":100', '"weight":1e+02')
+        .replace('"escaped":"a"', '"escaped":"\\u0061"')
+        + "\n",
+        encoding="utf-8",
+    )
+    compact_entry = json.dumps(entry, separators=(",", ":")).encode()
+
+    with pytest.warns(UserWarning) as warning_records:
+        install(tmp_path, harness, force=force)
+
+    warning = "\n".join(str(record.message) for record in warning_records)
+    assert "preexisting" in warning
+    assert "host target" in warning
+    assert "Remove or rename" in warning
+    assert "mcp.example.test" not in warning
+    assert compact_entry in host.read_bytes()
+    installed_bytes = host.read_bytes()
+
+    write_project_config(tmp_path, "mcpServers: {}\nskills:\n  cvs: {enabled: false}\n")
+    install(tmp_path, harness, force=True)
+
+    assert host.read_bytes() == installed_bytes
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_operator_edit_matching_new_desired_projection_is_never_reclaimed(
+    tmp_path: Path, harness: str
+) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  chain:\n    command: fixture-a\nskills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, harness)
+    if harness == "opencode":
+        host = tmp_path / ".opencode/opencode.json"
+        container = "mcp"
+        replacement = {
+            "type": "local",
+            "command": ["fixture-b"],
+            "environment": {"lowercase_key": "{env:SECRET_SOURCE}"},
+        }
+    else:
+        host = tmp_path / ".pi/mcp.json"
+        container = "mcpServers"
+        replacement = {
+            "command": "fixture-b",
+            "args": [],
+            "lifecycle": "lazy",
+            "env": {"lowercase_key": "${SECRET_SOURCE}"},
+        }
+    document = json.loads(host.read_text(encoding="utf-8"))
+    document[container]["chain"] = replacement
+    host.write_text(json.dumps(document, separators=(",", ":")) + "\n", encoding="utf-8")
+    operator_bytes = host.read_bytes()
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n"
+        "  chain:\n"
+        "    command: fixture-b\n"
+        "    environment: {lowercase_key: SECRET_SOURCE}\n"
+        "skills:\n  cvs: {enabled: false}\n",
+    )
+
+    with pytest.warns(UserWarning) as warning_records:
+        install(tmp_path, harness, force=True)
+
+    warning = "\n".join(str(record.message) for record in warning_records)
+    assert "chain" in warning
+    assert "host target" in warning
+    assert "Remove or rename" in warning
+    assert "SECRET_SOURCE" not in warning
+    assert host.read_bytes() == operator_bytes
+    write_project_config(tmp_path, "mcpServers: {}\nskills:\n  cvs: {enabled: false}\n")
+    install(tmp_path, harness, force=True)
+    assert host.read_bytes() == operator_bytes
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
+def test_exact_generated_generic_entry_updates_then_removes(tmp_path: Path, harness: str) -> None:
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  managed:\n    command: fixture-a\nskills:\n  cvs: {enabled: false}\n",
+    )
+    if harness == "pi":
+        write_pinned_pi_adapter(tmp_path)
+    install(tmp_path, harness)
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  managed:\n    command: fixture-b\nskills:\n  cvs: {enabled: false}\n",
+    )
+    install(tmp_path, harness, force=True)
+    host = (
+        tmp_path / ".opencode/opencode.json" if harness == "opencode" else tmp_path / ".pi/mcp.json"
+    )
+    container = "mcp" if harness == "opencode" else "mcpServers"
+    entry = json.loads(host.read_text(encoding="utf-8"))[container]["managed"]
+    assert entry["command"] == (["fixture-b"] if harness == "opencode" else "fixture-b")
+
+    write_project_config(tmp_path, "mcpServers: {}\nskills:\n  cvs: {enabled: false}\n")
+    install(tmp_path, harness, force=True)
+    assert "managed" not in json.loads(host.read_text(encoding="utf-8"))[container]
+
+
+@pytest.mark.parametrize("harness", ["opencode", "pi"])
 @pytest.mark.parametrize("force", [False, True])
 @pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
 def test_install_migrates_exact_legacy_cvs_mcp_id(
@@ -2670,7 +3006,13 @@ def test_install_migrates_exact_legacy_cvs_mcp_id(
 ) -> None:
     monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
     config = write_cvs_provider_config(tmp_path, provider)
-    legacy = recognized_server_intents(config, harness)[0]
+    legacy = next(
+        intent
+        for intent in recognized_server_intents(config, harness)
+        if intent.server_id == f"cvs_{provider}"
+        and (provider != "gitea" or intent.command == "gitea-mcp")
+    )
+    desired = install_module.required_server_intents(config, harness)[0]
     if harness == "opencode":
         host = tmp_path / ".opencode/opencode.json"
         container = "mcp"
@@ -2694,7 +3036,9 @@ def test_install_migrates_exact_legacy_cvs_mcp_id(
     document = json.loads(rendered)
     entries = document[container]
     assert legacy.server_id not in entries
-    assert entries[f"sdlc_cvs_{provider}"] == generated
+    assert entries[f"sdlc_cvs_{provider}"] == (
+        render_opencode_mcp(desired) if harness == "opencode" else render_pi_mcp(desired)
+    )
     assert entries["operator"] == {"keep": True}
     assert document["operatorRaw"] == {"weight": 100, "escaped": "a"}
     assert f'"operatorRaw": {operator_raw}' in rendered
@@ -2868,7 +3212,7 @@ def test_all_historical_gitea_migration_rolls_back_both_hosts(
 @pytest.mark.parametrize("force", [False, True])
 @pytest.mark.parametrize("modification", ["add", "environment", "url", "remove_environment"])
 @pytest.mark.parametrize("server_id", ["cvs_gitea", "sdlc_cvs_gitea"])
-def test_modified_forgejo_backed_gitea_definition_blocks_replacement(
+def test_modified_forgejo_backed_gitea_definition_is_adopted_as_operator_owned(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     harness: str,
@@ -2890,6 +3234,7 @@ def test_modified_forgejo_backed_gitea_definition_blocks_replacement(
         hosts.append((tmp_path / ".opencode/opencode.json", "mcp", render_opencode_mcp))
     if harness in ("pi", "all"):
         hosts.append((tmp_path / ".pi/mcp.json", "mcpServers", render_pi_mcp))
+    expected: dict[Path, dict[str, object]] = {}
     for host, container, renderer in hosts:
         modified = renderer(historical)
         environment_key = "environment" if container == "mcp" else "env"
@@ -2907,26 +3252,30 @@ def test_modified_forgejo_backed_gitea_definition_blocks_replacement(
         modified_raw = json.dumps(modified, separators=(",", ":")).replace(
             '"operatorWeight":100', '"operatorWeight":1e+02'
         )
+        expected[host] = modified
         host.parent.mkdir(parents=True, exist_ok=True)
         host.write_text(
             f'{{"operatorRaw":{{"escaped":"\\u0061"}},'
             f'"{container}":{{"{historical.server_id}":{modified_raw}}}}}\n',
             encoding="utf-8",
         )
-    before = _tree_manifest(tmp_path)
-
-    with (
-        pytest.warns(UserWarning, match=f"preserving modified historical MCP ID {server_id}"),
-        pytest.raises(FileExistsError, match=rf"modified historical.*{server_id}.*blocks"),
+    with pytest.warns(
+        UserWarning, match=rf"preserving modified MCP ID {server_id}.*operator-owned"
     ):
         install(tmp_path, harness, force=force)
 
-    assert _tree_manifest(tmp_path) == before
+    desired = install_module.required_server_intents(config, harness)[0]
+    for host, container, renderer in hosts:
+        entries = json.loads(host.read_text(encoding="utf-8"))[container]
+        assert entries[server_id] == expected[host]
+        if server_id != desired.server_id:
+            assert entries[desired.server_id] == renderer(desired)
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi"])
-def test_unrelated_gitea_canonical_conflict_retains_force_replacement(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str
+@pytest.mark.parametrize("force", [False, True])
+def test_unrelated_gitea_canonical_conflict_is_preserved_even_with_force(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, harness: str, force: bool
 ) -> None:
     monkeypatch.setattr(install_module.shutil, "which", lambda name: f"/bin/{name}")
     config = write_cvs_provider_config(tmp_path, "gitea")
@@ -2934,13 +3283,11 @@ def test_unrelated_gitea_canonical_conflict_retains_force_replacement(
     if harness == "opencode":
         host = tmp_path / ".opencode/opencode.json"
         container = "mcp"
-        renderer = render_opencode_mcp
         unrelated = {"type": "local", "command": ["operator-mcp", "serve"]}
     else:
         write_pinned_pi_adapter(tmp_path)
         host = tmp_path / ".pi/mcp.json"
         container = "mcpServers"
-        renderer = render_pi_mcp
         unrelated = {"command": "operator-mcp", "args": ["serve"], "lifecycle": "lazy"}
     host.parent.mkdir(parents=True, exist_ok=True)
     host.write_text(
@@ -2948,13 +3295,10 @@ def test_unrelated_gitea_canonical_conflict_retains_force_replacement(
         encoding="utf-8",
     )
 
-    with pytest.raises(FileExistsError, match="sdlc_cvs_gitea"):
-        install(tmp_path, harness)
-    install(tmp_path, harness, force=True)
+    with pytest.warns(UserWarning, match=r"sdlc_cvs_gitea.*operator-owned"):
+        install(tmp_path, harness, force=force)
 
-    assert json.loads(host.read_text(encoding="utf-8"))[container][desired.server_id] == renderer(
-        desired
-    )
+    assert json.loads(host.read_text(encoding="utf-8"))[container][desired.server_id] == unrelated
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi"])
@@ -3051,7 +3395,7 @@ def test_repository_does_not_own_codegraphcontext_tooling() -> None:
     assert all("codegraphcontext" not in task for task in mise["tasks"])
 
 
-def test_install_does_not_probe_or_generate_external_code_index_server(
+def test_install_projects_declared_code_index_server_without_provider_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     probed: list[str] = []
@@ -3062,13 +3406,21 @@ def test_install_does_not_probe_or_generate_external_code_index_server(
 
     monkeypatch.setattr(install_module.shutil, "which", record_probe)
 
-    write_sdlc_code_index_config(tmp_path, enabled=True, mcp_server="operator-index")
+    write_project_config(
+        tmp_path,
+        "mcpServers:\n  operator-index:\n    command: operator-index\n"
+        "skills:\n  cvs: {enabled: false}\n  codeIndex:\n"
+        "    enabled: true\n    mcpName: operator-index\n",
+    )
     install(tmp_path, "opencode")
 
     assert "mise" not in probed
     assert "cgc" not in probed
     document = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
-    assert "operator-index" not in document["mcp"]
+    assert document["mcp"]["operator-index"] == {
+        "type": "local",
+        "command": ["operator-index"],
+    }
     assert "sdlc-code-index" not in document["mcp"]
 
 
@@ -3134,10 +3486,14 @@ def test_external_code_index_host_entry_survives_owned_conflict(
     host.parent.mkdir(parents=True, exist_ok=True)
     host.write_bytes(content)
 
-    with pytest.raises(FileExistsError, match="sdlc_cvs_github"):
+    with pytest.warns(UserWarning, match=r"sdlc_cvs_github.*operator-owned"):
         install(tmp_path, harness)
 
-    assert host.read_bytes() == content
+    rendered = host.read_text(encoding="utf-8")
+    entries = json.loads(rendered)["mcp" if harness == "opencode" else "mcpServers"]
+    assert entries["sdlc_cvs_github"] is None
+    assert entries["sdlc-code-index"] == {"weight": 100}
+    assert '"weight":1e+02' in rendered
 
 
 @pytest.mark.parametrize("harness", ["opencode", "pi"])
@@ -3277,15 +3633,10 @@ def test_opencode_host_ancestor_symlink_is_rejected_without_writing_referent(
     assert sorted(path.name for path in referent_directory.iterdir()) == ["opencode.json"]
 
 
-def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
+def test_declared_local_mcp_is_projected_without_provider_binary_inference(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    write_project_config(
-        tmp_path,
-        "cvs:\n  remote:\n    provider: gitea\n"
-        "    tools: tea\n    url: https://gitea.example.test\n"
-        "    token_env: GITEA_TOKEN\n",
-    )
+    write_cvs_provider_config(tmp_path, "gitea")
     monkeypatch.setattr(install_module.shutil, "which", lambda _name: None)
 
     installed = install(tmp_path, "opencode")
@@ -3294,7 +3645,7 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     assert host in installed
     document = json.loads(host.read_text(encoding="utf-8"))
     assert document["plugin"] == ["@harnessctl/opencode-tools@0.1.10"]
-    assert "sdlc_cvs_gitea" not in document.get("mcp", {})
+    assert document["mcp"]["sdlc_cvs_gitea"]["command"][0] == "gitea-mcp"
     assert "sdlc-code-index" not in document.get("mcp", {})
 
 
@@ -3351,15 +3702,10 @@ def test_install_does_not_delete_stale_document_mcp_entries_by_name(
     assert '"operatorRaw":"\\u0061","weight":1e+02' in content
 
 
-def test_local_mcp_missing_binary_still_installs_cli_skill(
+def test_declared_local_mcp_and_cli_guidance_do_not_depend_on_binary_probe(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    write_project_config(
-        tmp_path,
-        "cvs:\n  remote:\n    provider: forgejo\n"
-        "    tools: forgejo-cli\n    url: https://forgejo.example.test\n"
-        "    token_env: FORGEJO_TOKEN\n",
-    )
+    write_cvs_provider_config(tmp_path, "forgejo")
     monkeypatch.setattr(install_module.shutil, "which", lambda _name: None)
 
     installed = install(tmp_path, "opencode")
@@ -3367,7 +3713,7 @@ def test_local_mcp_missing_binary_still_installs_cli_skill(
     skill = tmp_path / ".opencode/skills/sdlc-cvs/SKILL.md"
     assert skill in installed
     assert "- Remote CLI: `forgejo-cli`." in skill.read_text(encoding="utf-8")
-    assert "- Remote MCP: unavailable." in skill.read_text(encoding="utf-8")
+    assert "- Remote MCP prefix: `sdlc_cvs_forgejo`." in skill.read_text(encoding="utf-8")
 
 
 def test_pi_tools_stale_version_updates_to_current_package(

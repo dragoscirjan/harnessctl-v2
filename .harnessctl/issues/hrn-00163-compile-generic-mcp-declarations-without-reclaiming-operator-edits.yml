@@ -1,0 +1,26 @@
+"version": 1
+"id": "hrn-00163"
+"type": "story"
+"title": "Compile generic MCP declarations without reclaiming operator edits"
+"status": "done"
+"created_at": "2026-08-29T22:20:43.667Z"
+"updated_at": "2026-08-30T15:37:14.322Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00160"
+"depends_on":
+  - "hrn-00161"
+  - "hrn-00162"
+"metadata":
+  "estimate": "M"
+  "order": 3
+"body": "# Compile generic MCP declarations without reclaiming operator edits\n\n## Objective\n\nCompile Config v1 host-neutral URL/command MCP declarations into OpenCode and Pi configuration while permanently preserving pre-existing or operator-modified host entries.\n\n## Scope\n\n- Validate mutually exclusive URL-oriented and command-oriented declarations without a transport/type field.\n- Convert declarations to projection-neutral server intent.\n- Infer and render host-native transport only in OpenCode/Pi adapters.\n- Reconcile exact generated and recognized historical entries.\n- Adopt every other same-ID entry as operator-owned, preserve it byte-for-byte, and warn.\n- Remove overwrite/delete behavior for operator-owned entries, including force paths.\n\n## Acceptance Criteria\n\n- Config v1 has no MCP transport discriminator.\n- Adapters select the correct host-native transport from declaration shape.\n- Absent entries are created; exact desired entries are idempotent; exact recognized generated entries may update or be removed.\n- Pre-existing collisions and post-generation edits remain byte-preserved under normal and force compilation.\n- Unrelated host configuration remains unchanged.\n- Warnings identify server ID, host target, and safe manual remediation without exposing credentials.\n- Tests cover URL and command projection, creation, update, removal, historical values, collisions, edits, normal/force behavior, and both hosts.\n\n## Dependencies\n\nDepends on `hrn-00161` and `hrn-00162`.\n\n## Artifacts\n\nImplements MCP decisions in the Config v1 successors of `doc-00015` and `doc-00016`.\n\n## Estimate\n\nM.\n\n## Non-Goals\n\nInstalling, starting, authenticating, monitoring, or operating MCP servers; arbitrary host-native fields; forced ownership reclamation; Config v2/v3 compatibility."
+"comments":
+  - "id": "hrn-00163-C0001"
+    "created_at": "2026-08-30T14:41:09.697Z"
+    "created_by": "OpenCode"
+    "body": "Implemented Config v1 generic MCP projection and permanent adopt-on-edit reconciliation. URL/command declarations produce neutral intents; OpenCode/Pi adapters infer host transport. Added trustworthy generated provenance for exact lifecycle update/removal; absent and exact desired paths are idempotent. Any pre-existing, modified, unproven, or provenance-divergent same-ID entry becomes permanently operator-owned, remains byte-preserved, and cannot be reclaimed, overwritten, or deleted under normal or force paths, even if it later equals desired output. Warnings identify ID/host/remediation without credential values. Lowercase environment targets align with Config v1 while credential source references retain safety validation. Tests cover both hosts, creation, idempotence, historical/generated update/removal, modified and pre-existing collisions, force, provenance chains, unrelated preservation, and credential-safe warnings. Build checks: 649 Python tests, Ruff format/lint, `git diff --check`; independent review round 3 approved with 214 focused tests and no findings. Full Verify and concurrent host-file mutation remain Verify-phase risks. No Verify, Release, commit, remote, destructive, or stash action performed."
+  - "id": "hrn-00163-C0002"
+    "created_at": "2026-08-30T15:37:14.322Z"
+    "created_by": "OpenCode"
+    "body": "Post-closure documentation review found and corrected one residual ownership signal gap: an unproven pre-existing same-ID entry that byte-equaled desired output was preserved but silent. It now remains permanently operator-owned, warns with credential-safe ID/host/remediation in normal and force modes, and survives later declaration removal on OpenCode/Pi. Proven managed lifecycle remains unchanged. Added both-host normal/force regressions. Full Python Build check after correction: 657 passed; Ruff and `git diff --check` passed."

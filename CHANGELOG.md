@@ -2,9 +2,16 @@
 
 ## Unreleased
 
-- Add a fixed repository-local `.harnessctl/documents` authority for HLD, LLD,
-  design-overview, and GDD records with nine normalized lifecycle tools and thin OpenCode
-  and Pi adapters.
+- Establish Config v1 as the first stable public configuration contract, generated from
+  one TypeScript authority and consumed by both TypeScript and Python. Unreleased Config
+  v2/v3 files require manual rewrite with explicit `version: 1`; no compatibility reader
+  or automatic migration ships.
+- Add credential-reference-only URL and command `mcpServers` declarations with host-native
+  OpenCode/Pi inference. Exact generated entries remain managed; pre-existing or edited
+  entries remain operator-owned and unchanged, including under `--force`.
+- Add a repository-local Documents authority, defaulting to `.harnessctl/documents` with
+  safe custom Config v1 roots, for HLD, LLD, design-overview, and GDD records with nine
+  normalized lifecycle tools and thin OpenCode and Pi adapters.
 - Integrate Documents creation, review, versioning, validation, and issue linking into the
   existing SDLC Plan reference without generating a Documents agent or skill.
 - Ship no `.specs` or `.ai.tmp` migration or link compatibility; `.specs-v1` remains inert
@@ -25,7 +32,7 @@
   rollback on migration failure.
 - **Breaking:** namespace five generated support skills under `sdlc-`: `caveman`, `cvs`,
   `develop-tdd`, `issue-tracking`, and `memory`. Existing `sdlc`, `sdlc-code`, and
-  `sdlc-code-index` skill IDs, configuration key `skills.sdlc-code-index`, and external MCP
+  `sdlc-code-index` skill IDs, configuration key `skills.codeIndex`, and external MCP
   IDs remain unchanged.
 - Fresh installs generate only current skill IDs. Normal and `--force` upgrades preserve
   the five legacy support roots without traversal and disclose exact paths;

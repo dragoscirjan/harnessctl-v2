@@ -1,0 +1,21 @@
+"version": 1
+"id": "hrn-00162"
+"type": "story"
+"title": "Migrate TypeScript and Python config consumers to v1"
+"status": "done"
+"created_at": "2026-08-29T22:20:29.706Z"
+"updated_at": "2026-08-30T14:17:03.321Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00160"
+"depends_on":
+  - "hrn-00161"
+"metadata":
+  "estimate": "L"
+  "order": 2
+"body": "# Migrate TypeScript and Python config consumers to v1\n\n## Objective\n\nMove both runtimes and all capability consumers to the normalized first-stable Config v1 model without preserving a duplicate Python contract.\n\n## Scope\n\n- Migrate the generic-tools loader and capability consumers to Config v1.\n- Make the Python installer load generated Config v1 defaults and validate with generated JSON Schema.\n- Add the standards-based Python validation dependency and package artifact resolution.\n- Preserve safe YAML parsing and align merge semantics.\n- Add shared cross-runtime conformance fixtures.\n- Require explicit `version: 1`; reject missing and non-1 documents with deterministic stable-v1 rewrite guidance.\n- Rewrite repository-owned development configs, examples, and fixtures from unreleased v2/v3 to stable v1.\n\n## Acceptance Criteria\n\n- TypeScript and Python accept and normalize the same valid Config v1 fixtures.\n- TypeScript and Python reject the same invalid fixtures; explicitly allowed presentation differences are documented in fixtures.\n- Python does not restate Config v1 fields, defaults, enums, or cross-field rules.\n- Every current config consumer reads the Config v1 normalized model.\n- Missing and non-1 versions fail fast with a link or path to stable-v1 guidance.\n- No Config v2/v3 compatibility reader or automatic migration path remains.\n- Source, wheel, and npm layouts resolve matching Config v1 contract artifacts and fingerprints.\n\n## Dependencies\n\nDepends on `hrn-00161`.\n\n## Artifacts\n\nImplements `doc-00015` and `doc-00016` Config v1 successors.\n\n## Estimate\n\nL. The change spans both runtimes, all consumers, repository fixtures, package layouts, and error behavior.\n\n## Non-Goals\n\nConfig v2/v3 migration code, backward-compatible reads, MCP host ownership changes, release execution."
+"comments":
+  - "id": "hrn-00162-C0001"
+    "created_at": "2026-08-30T11:56:32.860Z"
+    "created_by": "OpenCode"
+    "body": "Config v1 consumer migration completed across generic-tools, OpenCode/Pi extensions, Python installer/runtime, repository config, shared conformance fixtures, generated artifacts/fingerprints, packaging, tests, and documentation. Exact Config v1 names follow the approved root sketch: `skills` capabilities including `tdd`, top-level `mcpServers`, nested providers, `codeIndex`, and `mcpName`; all extension consumers use the normalized object. Review fixes cover contract drift gating, blank commands, invalid ports, exact cross-runtime paths/normalization, custom filesystem document roots, disabled capability enforcement, remote authority rejection, and Bitbucket `mcpName`. Build checks passed: 629 Python tests, 198 workspace TypeScript tests, contract freshness, strict typechecks, lint, builds, package checks, formatting, `git diff --check`, and 8 OpenCode model integrations. Pi deterministic tests/build pass; external Pi model integration emitted no tool calls (`toolNames=[]`) and remains Verify-phase environment evidence. No Verify, Release, commit, remote, destructive, or stash action performed."

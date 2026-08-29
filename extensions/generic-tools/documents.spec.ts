@@ -28,6 +28,7 @@ import {
   DocumentError,
   archiveDocument,
   createDocument,
+  createFilesystemDocumentProvider,
   getDocument,
   listDocuments,
   parseDocumentId,
@@ -57,17 +58,65 @@ afterEach(() => {
 });
 
 describe('filesystem documents', () => {
-  it('rejects a remote authority before touching filesystem or cache state', () => {
+  it('honors a schema-valid custom filesystem root in canonical operations and cache projection', () => {
     const root = repository();
     writeFileSync(
       join(root, '.harnessctl/config.yaml'),
-      'version: 2\ndocuments:\n  type: github\n  tools: gh\n  remote:\n    repository: owner/repository\n    url: https://github.com\n    token_env: GH_TOKEN\n',
+      'version: 1\nskills:\n  documents:\n    root: project/documents\n',
+      'utf8',
+    );
+
+    const created = createDocument(root, { title: 'Custom authority', kind: 'hld' });
+
+    expect(created.path).toBe('project/documents/doc-00001-custom-authority-v1.md');
+    expect(getDocument(root, created.id)).toEqual(expect.objectContaining({ revision: created.revision }));
+    expect(listDocuments(root)).toEqual([expect.objectContaining({ id: created.id })]);
+    expect(existsSync(join(root, created.path))).toBe(true);
+    expect(existsSync(join(root, '.harnessctl/documents'))).toBe(false);
+    expect(existsSync(join(root, '.harnessctl/cache/harnessctl.sqlite'))).toBe(true);
+  });
+
+  it('rejects disabled local operations before touching filesystem or cache state', () => {
+    const root = repository();
+    const provider = createFilesystemDocumentProvider(root);
+    writeFileSync(
+      join(root, '.harnessctl/config.yaml'),
+      'version: 1\nskills:\n  documents:\n    enabled: false\n',
       'utf8',
     );
     rmSync(join(root, '.harnessctl/documents'), { recursive: true, force: true });
     rmSync(join(root, '.harnessctl/cache'), { recursive: true, force: true });
 
-    expect(() => createDocument(root, { title: 'Blocked', kind: 'hld' })).toThrow(/remote Documents providers/u);
+    for (const operation of [
+      () => parseDocumentId('doc-00001', root),
+      () => provider.create({ title: 'Blocked provider', kind: 'hld' }),
+      () => createDocument(root, { title: 'Blocked', kind: 'hld' }),
+      () => listDocuments(root),
+    ])
+      expect(operation).toThrow(/skills\.documents\.enabled=true.*disabled/u);
+    expect(validateDocuments(root)).toEqual({
+      valid: false,
+      findings: [
+        expect.objectContaining({ message: expect.stringMatching(/skills\.documents\.enabled=true.*disabled/u) }),
+      ],
+    });
+    expect(existsSync(join(root, '.harnessctl/documents'))).toBe(false);
+    expect(existsSync(join(root, '.harnessctl/cache'))).toBe(false);
+  });
+
+  it('rejects a remote authority before touching filesystem or cache state', () => {
+    const root = repository();
+    writeFileSync(
+      join(root, '.harnessctl/config.yaml'),
+      'version: 1\nskills:\n  documents:\n    provider:\n      type: github\n      tools: gh\n      url: https://github.com\n      token_env: GH_TOKEN\n',
+      'utf8',
+    );
+    rmSync(join(root, '.harnessctl/documents'), { recursive: true, force: true });
+    rmSync(join(root, '.harnessctl/cache'), { recursive: true, force: true });
+
+    expect(() => createDocument(root, { title: 'Blocked', kind: 'hld' })).toThrow(
+      /remote document behavior is provider-owned/u,
+    );
     expect(existsSync(join(root, '.harnessctl/documents'))).toBe(false);
     expect(existsSync(join(root, '.harnessctl/cache'))).toBe(false);
   });
@@ -684,7 +733,7 @@ describe('filesystem documents', () => {
       if (invalidAuthority === 'broken memory relationship') {
         const configPath = join(root, '.harnessctl/config.yaml');
         const config = parseDocument(readFileSync(configPath, 'utf8'));
-        config.setIn(['memory', 'enabled'], true);
+        config.setIn(['skills', 'memory', 'enabled'], true);
         writeFileSync(configPath, config.toString());
         const record = storeMemory(root, {
           memory_type: 'semantic',
@@ -811,7 +860,7 @@ describe('filesystem documents', () => {
     const root = repository();
     writeFileSync(
       join(root, '.harnessctl', 'config.yaml'),
-      'version: 2\ndocuments:\n  type: github\n  root: .harnessctl/documents\n  prefix: doc-\n  tools: gh\n',
+      'version: 1\nskills:\n  documents:\n    root: .harnessctl/documents\n    prefix: doc-\n    provider:\n      type: github\n      tools: gh\n      url: https://github.com\n      token_env: GH_TOKEN\n',
     );
     expect(() => parseDocumentId('doc-00001', root)).toThrow(/documents/u);
     expect(existsSync(join(root, '.harnessctl', 'documents'))).toBe(false);

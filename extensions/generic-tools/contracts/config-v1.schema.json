@@ -1,0 +1,1087 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessctl.dev/contracts/config-v1.schema.json",
+  "title": "harnessctl project configuration v1",
+  "description": "Capability-oriented harnessctl project configuration v1.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "skills": {
+            "type": "object",
+            "properties": {
+              "memory": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": ["enabled"]
+              }
+            },
+            "required": ["memory"]
+          }
+        },
+        "required": ["skills"]
+      },
+      "then": {
+        "properties": {
+          "skills": {
+            "type": "object",
+            "properties": {
+              "caveman": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": ["enabled"]
+              }
+            },
+            "required": ["caveman"]
+          }
+        },
+        "required": ["skills"]
+      }
+    }
+  ],
+  "x-harnessctl-config-refinements": ["enabled-mcp-references-exist"],
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+            }
+          ]
+        },
+        "tasks": {
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+            }
+          ]
+        },
+        "reports": {
+          "type": "string",
+          "minLength": 1,
+          "allOf": [
+            {
+              "pattern": "\\S"
+            },
+            {
+              "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+            }
+          ]
+        }
+      },
+      "required": ["root", "tasks", "reports"],
+      "additionalProperties": false
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "default_task_type": {
+          "type": "string",
+          "enum": ["initiative", "epic", "story", "task", "bug"]
+        }
+      },
+      "required": ["default_task_type"],
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "output_limit_mode": {
+          "type": "string",
+          "enum": ["bounded-guidance", "hard"]
+        }
+      },
+      "required": ["output_limit_mode"],
+      "additionalProperties": false
+    },
+    "mcpServers": {
+      "description": "Explicit MCP compiler registry. Each map key is the required server identity and each value must contain exactly one portable connection core: url or command.",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+      },
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "format": "uri",
+                "type": "string",
+                "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:[/?#]\\S*)?$"
+              },
+              "headers": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^(?:[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029{}]|\\{env:[A-Z][A-Z0-9_]*\\})*$"
+                }
+              },
+              "opencode": {
+                "description": "JSON-compatible host-native settings that do not replace adapter-owned connection fields.",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "not": {}
+                      },
+                      "url": {
+                        "not": {}
+                      },
+                      "command": {
+                        "not": {}
+                      },
+                      "headers": {
+                        "not": {}
+                      },
+                      "environment": {
+                        "not": {}
+                      },
+                      "cwd": {
+                        "not": {}
+                      },
+                      "auth": {
+                        "not": {}
+                      },
+                      "oauth": {
+                        "not": {}
+                      }
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  }
+                ]
+              },
+              "pi": {
+                "description": "JSON-compatible host-native settings that do not replace adapter-owned connection fields.",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "not": {}
+                      },
+                      "command": {
+                        "not": {}
+                      },
+                      "args": {
+                        "not": {}
+                      },
+                      "headers": {
+                        "not": {}
+                      },
+                      "env": {
+                        "not": {}
+                      },
+                      "cwd": {
+                        "not": {}
+                      },
+                      "lifecycle": {
+                        "not": {}
+                      },
+                      "auth": {
+                        "not": {}
+                      },
+                      "oauth": {
+                        "not": {}
+                      }
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  }
+                ]
+              }
+            },
+            "required": ["url"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "minLength": 1,
+                "allOf": [
+                  {
+                    "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                  },
+                  {
+                    "pattern": "\\S"
+                  }
+                ]
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                }
+              },
+              "environment": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                },
+                "additionalProperties": {
+                  "description": "Name of an environment variable whose value is resolved by the host adapter.",
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$"
+                }
+              },
+              "cwd": {
+                "type": "string",
+                "minLength": 1,
+                "allOf": [
+                  {
+                    "pattern": "\\S"
+                  },
+                  {
+                    "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                  }
+                ]
+              },
+              "opencode": {
+                "description": "JSON-compatible host-native settings that do not replace adapter-owned connection fields.",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "not": {}
+                      },
+                      "url": {
+                        "not": {}
+                      },
+                      "command": {
+                        "not": {}
+                      },
+                      "headers": {
+                        "not": {}
+                      },
+                      "environment": {
+                        "not": {}
+                      },
+                      "cwd": {
+                        "not": {}
+                      },
+                      "auth": {
+                        "not": {}
+                      },
+                      "oauth": {
+                        "not": {}
+                      }
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  }
+                ]
+              },
+              "pi": {
+                "description": "JSON-compatible host-native settings that do not replace adapter-owned connection fields.",
+                "allOf": [
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "url": {
+                        "not": {}
+                      },
+                      "command": {
+                        "not": {}
+                      },
+                      "args": {
+                        "not": {}
+                      },
+                      "headers": {
+                        "not": {}
+                      },
+                      "env": {
+                        "not": {}
+                      },
+                      "cwd": {
+                        "not": {}
+                      },
+                      "lifecycle": {
+                        "not": {}
+                      },
+                      "auth": {
+                        "not": {}
+                      },
+                      "oauth": {
+                        "not": {}
+                      }
+                    },
+                    "additionalProperties": {
+                      "$ref": "#/$defs/__schema0"
+                    }
+                  }
+                ]
+              }
+            },
+            "required": ["command"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "skills": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "provider": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "filesystem"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    }
+                  },
+                  "required": ["type", "tools"],
+                  "additionalProperties": false
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "github"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "gh"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://github.com"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "gitlab"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "glab"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://gitlab.com"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "gitea"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "tea"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "format": "uri",
+                          "type": "string",
+                          "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "forgejo"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "forgejo-cli"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "format": "uri",
+                          "type": "string",
+                          "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "bitbucket"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "git"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://bitbucket.org"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "required": ["enabled", "root", "prefix", "provider"],
+          "additionalProperties": false
+        },
+        "documents": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "prefix": {
+              "type": "string",
+              "const": "doc-"
+            },
+            "provider": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "filesystem"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    }
+                  },
+                  "required": ["type", "tools"],
+                  "additionalProperties": false
+                },
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "github"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "gh"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://github.com"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "gitlab"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "glab"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://gitlab.com"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "gitea"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "tea"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "format": "uri",
+                          "type": "string",
+                          "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "forgejo"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "forgejo-cli"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "format": "uri",
+                          "type": "string",
+                          "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "bitbucket"
+                        },
+                        "tools": {
+                          "type": "string",
+                          "const": "git"
+                        },
+                        "mcpName": {
+                          "type": "string",
+                          "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                        },
+                        "url": {
+                          "type": "string",
+                          "const": "https://bitbucket.org"
+                        },
+                        "token_env": {
+                          "type": "string",
+                          "pattern": "^[A-Z][A-Z0-9_]*$"
+                        }
+                      },
+                      "required": ["type", "tools", "url", "token_env"],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "required": ["enabled", "root", "prefix", "provider"],
+          "additionalProperties": false
+        },
+        "cvs": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "local": {
+              "type": "string",
+              "enum": ["git", "jj"]
+            },
+            "provider": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "github"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "gh"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    },
+                    "url": {
+                      "type": "string",
+                      "const": "https://github.com"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "required": ["type", "tools", "url", "token_env"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "gitlab"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "glab"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    },
+                    "url": {
+                      "type": "string",
+                      "const": "https://gitlab.com"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "required": ["type", "tools", "url", "token_env"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "gitea"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "tea"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "type": "string",
+                      "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "required": ["type", "tools", "url", "token_env"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "forgejo"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "forgejo-cli"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "type": "string",
+                      "pattern": "^https:\\/\\/(?![^/\\s]*@)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029`${}])(?:\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?(?:\\/[^\\s?#]*)?$"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "required": ["type", "tools", "url", "token_env"],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "bitbucket"
+                    },
+                    "tools": {
+                      "type": "string",
+                      "const": "git"
+                    },
+                    "mcpName": {
+                      "type": "string",
+                      "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+                    },
+                    "url": {
+                      "type": "string",
+                      "const": "https://bitbucket.org"
+                    },
+                    "token_env": {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "required": ["type", "tools", "url", "token_env"],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "required": ["enabled", "local", "provider"],
+          "additionalProperties": false
+        },
+        "caveman": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["strict", "balanced"]
+            }
+          },
+          "required": ["enabled", "mode"],
+          "additionalProperties": false
+        },
+        "tdd": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": ["enabled"],
+          "additionalProperties": false
+        },
+        "codeIndex": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mcpName": {
+              "type": "string",
+              "pattern": "^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$"
+            }
+          },
+          "required": ["enabled", "mcpName"],
+          "additionalProperties": false
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "root": {
+              "type": "string",
+              "minLength": 1,
+              "allOf": [
+                {
+                  "pattern": "\\S"
+                },
+                {
+                  "pattern": "^(?!\\/)(?![A-Za-z]:)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029])(?!.*\\\\)(?!.*`)(?!.*\\/\\/)(?!.*\\/$)(?!.*(?:^|\\/)\\.{1,2}(?:\\/|$)).+$"
+                }
+              ]
+            },
+            "backend": {
+              "type": "string",
+              "const": "repository"
+            },
+            "namespace": {
+              "type": "object",
+              "properties": {
+                "organization_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                },
+                "project_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                },
+                "default_topic": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                }
+              },
+              "required": ["organization_id", "project_id", "default_topic"],
+              "additionalProperties": false
+            },
+            "retrieval": {
+              "type": "object",
+              "properties": {
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "max_chars": {
+                  "type": "integer",
+                  "minimum": 256,
+                  "maximum": 100000
+                },
+                "include_superseded": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["limit", "max_chars", "include_superseded"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["enabled", "root", "backend", "namespace", "retrieval"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["issues", "documents", "cvs", "caveman", "tdd", "codeIndex", "memory"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["version", "paths", "workflow", "mcp", "mcpServers", "skills"],
+  "additionalProperties": false,
+  "$defs": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema0"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]*$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/__schema0"
+          }
+        }
+      ]
+    }
+  }
+}

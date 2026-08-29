@@ -96,15 +96,18 @@ def test_install_registers_cvs_skill_with_narrow_config_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config = deepcopy(DEFAULT_CONFIG)
-    config["cvs"] = {
+    config["skills"]["cvs"] = {
+        "enabled": True,
         "local": "jj",
-        "remote": {
-            "provider": "forgejo",
+        "provider": {
+            "type": "forgejo",
             "tools": "forgejo-cli",
+            "mcpName": "sdlc_cvs_forgejo",
             "url": "https://forgejo.example.com",
             "token_env": "FORGEJO_TOKEN",
         },
     }
+    config["mcpServers"] = {"sdlc_cvs_forgejo": {"command": "operator-forgejo-mcp"}}
     monkeypatch.setattr("harnessctl.install.load_config", lambda _root: config)
     monkeypatch.setattr("harnessctl.install.shutil.which", lambda _name: "/bin/forgejo-mcp")
 

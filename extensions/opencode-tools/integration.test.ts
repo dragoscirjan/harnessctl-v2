@@ -28,7 +28,11 @@ describe('OpenCode SDK integration', () => {
 
     try {
       createConfig(cwd);
-      writeFileSync(resolve(cwd, '.harnessctl/config.yaml'), 'issues:\n  prefix: TSK-\n', 'utf8');
+      writeFileSync(
+        resolve(cwd, '.harnessctl/config.yaml'),
+        'version: 1\nskills:\n  issues:\n    prefix: TSK-\n',
+        'utf8',
+      );
       writeOpenCodeProjectConfig(cwd);
 
       const result = await promptOpenCode(
@@ -56,7 +60,7 @@ describe('OpenCode SDK integration', () => {
       expect(result.toolNames).toContain('config_create');
       expect(existsSync(resolve(cwd, '.harnessctl/config.yaml'))).toBe(true);
       expect(readConfig(cwd)).toMatchObject({
-        version: 2,
+        version: 1,
         paths: { tasks: '.harnessctl/tasks' },
       });
       expect(result.text.toLowerCase()).toContain('created');
@@ -141,13 +145,10 @@ describe('OpenCode SDK integration', () => {
           'issue_comment',
           'issue_validate',
         ]);
-        const issue = readIssueFixture(cwd, 'hrn-00001');
-        expect(issue).toContain('title: Updated lifecycle task');
-        expect(issue).toContain('status: done');
-        expect(issue).toContain('## Summary');
-        expect(getIssue(cwd, 'hrn-00001').comments).toEqual([
-          expect.objectContaining({ body: 'Reviewed', created_by: 'integration' }),
-        ]);
+        const issue = getIssue(cwd, 'hrn-00001');
+        expect(issue.metadata).toMatchObject({ title: 'Updated lifecycle task', status: 'done' });
+        expect(issue.body).toContain('## Summary');
+        expect(issue.comments).toEqual([expect.objectContaining({ body: 'Reviewed', created_by: 'integration' })]);
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }

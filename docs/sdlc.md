@@ -101,7 +101,7 @@ tooling override defaults. `work-continue` inherits this behavior whenever it re
 Build by loading the current Build reference. Plan, Verify, Release, and non-Build
 Continue do not activate `sdlc-code`.
 
-When `workflow.tdd.enabled` is true at installation, the generated Build reference loads
+When `skills.tdd.enabled` is true at installation, the generated Build reference loads
 `sdlc-develop-tdd` before implementation and requires observable Red, Green, and Refactor
 steps for each slice. When `work-continue` resumes Build, its generated Continue policy
 loads that Build reference before implementation, preserving the same TDD boundaries.

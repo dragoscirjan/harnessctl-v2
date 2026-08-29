@@ -1,12 +1,15 @@
 # Documents
 
-## Fixed Authority
+## Repository Authority
 
-Canonical active design Markdown lives directly under the fixed repository-local
-`.harnessctl/documents` root and uses the `doc-` ID prefix. The four kinds are exactly
+Canonical active design Markdown lives directly under the safe project-relative
+`skills.documents.root`, which defaults to `.harnessctl/documents`, and uses the fixed
+`doc-` ID prefix. A Config v1 override may select another safe repository-local root. The
+four kinds are exactly
 `hld`, `lld`, `design-overview`, and `gdd`; statuses are `draft`, `review`, and
-`approved`. Remote providers, custom roots and prefixes, wiki routes, Documents MCP IDs,
-an agent, and a generated `sdlc-documents` skill are not supported.
+`approved`. Custom prefixes, wiki routes, a Documents agent, and a generated
+`sdlc-documents` skill are not supported. Git provider mappings are accepted configuration,
+but local Documents tools fail closed and leave remote behavior provider-owned.
 
 The normalized tool set is exactly `document_id`, `document_create`, `document_list`,
 `document_get`, `document_update`, `document_version`, `document_validate`,
@@ -27,7 +30,7 @@ the approved active canonical path rather than copying the body into an issue or
 Run both `document_validate` and `issue_validate` after linking and before checkpointing.
 
 Earlier versions remain immutable and supersession derives from version order. Archive
-moves the complete active lineage beneath `.harnessctl/documents/archive`; restore is its
+moves the complete active lineage beneath `<skills.documents.root>/archive`; restore is its
 explicit collision-safe inverse. Neither operation is deletion. Path-changing update,
 archive, and restore preflight issue references and fail closed rather than rewriting issue
 links. The current normalized issue tools have no document-unlink operation, so do not edit

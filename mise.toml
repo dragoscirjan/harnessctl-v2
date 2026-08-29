@@ -92,6 +92,10 @@ run = "npm run typecheck:strict"
 description = "Build and inspect all publishable Node packages"
 run = "npm run packages:check"
 
+[tasks.contracts-check]
+description = "Verify generated Config and memory contracts are current"
+run = "npm run contracts:check"
+
 [tasks.node-quality]
 description = "Run Node type checks, tests, and package inspection sequentially"
 depends = ["node-test"]
@@ -167,6 +171,7 @@ run = [
     "python-deadcode",
     "actions-lint",
     "mermaid-check",
+    "contracts-check",
   ] },
 ]
 

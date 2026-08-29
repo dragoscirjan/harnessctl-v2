@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M17VHKS968XAAJ4C385FR0W7
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00160 | Build | hrn-00161 dependency conflict | paused for Plan
+details: |-
+  Epic: hrn-00160
+  Phase: Build
+  Item: hrn-00161
+  Done: approved authority, branch, paused diff, runtime imports, and tests reconciled; no resumed source edits.
+  Blocker: 00161 requires Config v2 authority/artifacts removed and excludes runtime migration; current TypeScript loader/tests require configV2Schema/config-v2.schema.json; 00162 owns migration but depends on 00161.
+  Evidence: hrn-00161-C0002.
+  Next: Plan correction: 00161 adds canonical generated v1 while temporary internal v2 remains; 00162 migrates consumers then removes v2.
+  Verification: not run; Build stopped at approved scope conflict.
+source:
+  kind: tool-observation
+  ref: hrn-00161-C0002
+  revision: null
+created_at: 2026-08-29T22:51:46.857Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M17V69Z129CKSKKX6V03FGS2
+tags:
+  - blocked
+  - build
+  - config-v1
+  - hrn-00160
+  - replan

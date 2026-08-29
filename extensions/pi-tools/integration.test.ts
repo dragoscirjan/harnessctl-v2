@@ -26,7 +26,11 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
 
       try {
         createConfig(cwd);
-        writeFileSync(join(cwd, '.harnessctl/config.yaml'), 'issues:\n  prefix: TSK-\n', 'utf8');
+        writeFileSync(
+          join(cwd, '.harnessctl/config.yaml'),
+          'version: 1\nskills:\n  issues:\n    prefix: TSK-\n',
+          'utf8',
+        );
         const result = await promptPi(
           cwd,
           'Using the issue_id tool, detect every issue ID in this message: TSK-12345 and TSK-67890. Return the JSON array from the tool.',
@@ -56,7 +60,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         expect(result.toolNames).toEqual(['config_create']);
         expect(existsSync(join(cwd, '.harnessctl/config.yaml'))).toBe(true);
         expect(readConfig(cwd)).toMatchObject({
-          version: 2,
+          version: 1,
           paths: { tasks: '.harnessctl/tasks' },
         });
         expect(result.text.toLowerCase()).toContain('created');

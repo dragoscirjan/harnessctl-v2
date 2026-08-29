@@ -1,103 +1,41 @@
-"""Project configuration loading for skill installation."""
+"""Config v1 loading backed exclusively by generated TypeScript contracts."""
 
 from __future__ import annotations
 
-import re
+import hashlib
+import json
+import math
 from copy import deepcopy
-from pathlib import Path, PurePosixPath
+from importlib.resources import files
+from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 
 import yaml
+from jsonschema import Draft202012Validator
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
-FILESYSTEM_ISSUE_TOOLS = (
-    "issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,"
-    "issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,"
-    "issue_archive"
+CODE_INDEX_SKILL_ID = "codeIndex"
+CONFIG_V1_REWRITE_GUIDANCE = (
+    "Config v1 requires explicit version: 1. Manually rewrite .harnessctl/config.yaml "
+    "using docs/configuration.md; automatic migration is not supported."
 )
-FILESYSTEM_DOCUMENT_TOOLS = (
-    "document_id,document_create,document_list,document_get,document_update,"
-    "document_version,document_validate,document_archive,document_restore"
-)
-REMOTE_ISSUE_TYPES = frozenset({"github", "gitlab", "gitea", "forgejo"})
-REMOTE_ISSUE_PROVIDERS = {
-    "github": {"tool": "gh", "url": "https://github.com", "token_env": "GH_TOKEN"},
-    "gitlab": {"tool": "glab", "url": "https://gitlab.com", "token_env": "GITLAB_TOKEN"},
-    "gitea": {"tool": "tea", "url": None, "token_env": "GITEA_TOKEN"},
-    "forgejo": {"tool": "forgejo-cli", "url": None, "token_env": "FORGEJO_TOKEN"},
-}
-CVS_LOCALS = frozenset({"git", "jj"})
-MCP_OUTPUT_LIMIT_MODES = frozenset({"bounded-guidance", "hard"})
-CODE_INDEX_SKILL_ID = "sdlc-code-index"
-_MCP_SERVER_NAME = re.compile(r"[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?")
-_MANAGED_CVS_MCP_SERVER_IDS = frozenset(f"sdlc_cvs_{provider}" for provider in REMOTE_ISSUE_TYPES)
-_FIXED_DOCUMENTS_CONFIG = {
-    "root": ".harnessctl/documents",
-    "prefix": "doc-",
-    "type": "filesystem",
-    "tools": FILESYSTEM_DOCUMENT_TOOLS,
-}
-_REMOVED_DOCUMENTS_CONFIG_MESSAGE = (
-    "remote or custom Documents configuration is no longer supported; remove the documents "
-    "override and use the fixed repository-local .harnessctl/documents authority"
-)
-
-DEFAULT_CONFIG: dict[str, Any] = {
-    "version": 2,
-    "issues": {
-        "root": ".harnessctl/issues",
-        "prefix": "hrn-",
-        "type": "filesystem",
-        "tools": FILESYSTEM_ISSUE_TOOLS,
-    },
-    "documents": deepcopy(_FIXED_DOCUMENTS_CONFIG),
-    "cvs": {
-        "local": "git",
-        "remote": {
-            "provider": "github",
-            "tools": "gh",
-            "url": "https://github.com",
-            "token_env": "GH_TOKEN",
-        },
-    },
-    "mcp": {"output_limit_mode": "bounded-guidance"},
-    "skills": {
-        CODE_INDEX_SKILL_ID: {
-            "enabled": False,
-            "mcp_server": CODE_INDEX_SKILL_ID,
-        }
-    },
-    "paths": {
-        "root": ".harnessctl",
-        "tasks": ".harnessctl/tasks",
-        "reports": ".harnessctl/reports",
-    },
-    "workflow": {"default_task_type": "bug", "tdd": {"enabled": False}},
-    "communication": {"caveman": {"enabled": True, "mode": "strict"}},
-    "memory": {
-        "enabled": False,
-        "backend": "repository",
-        "namespace": {
-            "organization_id": "local",
-            "project_id": "project",
-            "default_topic": "general",
-        },
-        "retrieval": {"limit": 8, "max_chars": 12_000, "include_superseded": False},
-        "repository": {
-            "root": ".harnessctl/memory",
-        },
-    },
-}
+_SCHEMA_NAME = "config-v1.schema.json"
+_DEFAULTS_NAME = "config-v1.defaults.json"
+_FINGERPRINTS_NAME = "config-v1.fingerprints.json"
+_SUPPORTED_CONFIG_REFINEMENTS = ("enabled-mcp-references-exist",)
 
 
 class ConfigError(ValueError):
     """Invalid harnessctl configuration."""
 
+    def __init__(self, message: str, validation_paths: tuple[str, ...] = ()) -> None:
+        super().__init__(message)
+        self.validation_paths = validation_paths
+
 
 class _ConfigLoader(yaml.SafeLoader):
-    """Safe YAML loader that rejects ambiguous or non-string mapping keys."""
+    """Safe YAML loader that rejects duplicate and non-string mapping keys."""
 
     def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict[str, Any]:
         self.flatten_mapping(node)
@@ -122,8 +60,41 @@ class _ConfigLoader(yaml.SafeLoader):
         return mapping
 
 
+def _contract_bytes(name: str) -> bytes:
+    return files("harnessctl").joinpath("contracts", name).read_bytes()
+
+
+def _load_contracts() -> tuple[dict[str, Any], dict[str, Any]]:
+    schema_bytes = _contract_bytes(_SCHEMA_NAME)
+    defaults_bytes = _contract_bytes(_DEFAULTS_NAME)
+    fingerprints = json.loads(_contract_bytes(_FINGERPRINTS_NAME))
+    if not isinstance(fingerprints, dict) or fingerprints.get("algorithm") != "sha256":
+        raise RuntimeError("invalid Config v1 fingerprint manifest")
+    expected = fingerprints.get("artifacts")
+    if not isinstance(expected, dict):
+        raise RuntimeError("invalid Config v1 fingerprint manifest")
+    for name, content in ((_SCHEMA_NAME, schema_bytes), (_DEFAULTS_NAME, defaults_bytes)):
+        if hashlib.sha256(content).hexdigest() != expected.get(name):
+            raise RuntimeError(f"Config v1 artifact fingerprint mismatch: {name}")
+    schema = json.loads(schema_bytes)
+    defaults = json.loads(defaults_bytes)
+    if not isinstance(schema, dict) or not isinstance(defaults, dict):
+        raise RuntimeError("Config v1 artifacts must contain JSON objects")
+    Draft202012Validator.check_schema(schema)
+    if tuple(schema.get("x-harnessctl-config-refinements", ())) != (_SUPPORTED_CONFIG_REFINEMENTS):
+        raise RuntimeError("unsupported or missing Config v1 runtime refinements")
+    return schema, defaults
+
+
+_CONFIG_V1_SCHEMA, DEFAULT_CONFIG = _load_contracts()
+_CONFIG_V1_VALIDATOR = Draft202012Validator(
+    _CONFIG_V1_SCHEMA,
+    format_checker=Draft202012Validator.FORMAT_CHECKER,
+)
+
+
 def load_config(cwd: Path) -> dict[str, Any]:
-    """Load, migrate, and validate project config without mutating it."""
+    """Load and validate a Config v1 document without mutating it."""
     path = cwd / ".harnessctl/config.yaml"
     try:
         content = path.read_text(encoding="utf-8")
@@ -142,28 +113,138 @@ def load_config(cwd: Path) -> dict[str, Any]:
         raise ConfigError(f"unable to read {path}: {problem}{location}") from error
     if not isinstance(value, dict):
         raise ConfigError("configuration root must be a YAML mapping")
-    version = value.get("version")
-    if version not in (None, 1, 2):
-        raise ConfigError(f"unsupported configuration version: {version}")
-    if "code_index" in value:
-        raise ConfigError(
-            "code_index is no longer supported; configure skills.sdlc-code-index instead"
-        )
-    source_mcp = value.get("mcp")
-    if isinstance(source_mcp, dict) and "servers" in source_mcp:
-        raise ConfigError(
-            "mcp.servers is no longer supported; configure skills.sdlc-code-index and "
-            "manage external MCP servers in the host configuration"
-        )
-    _reject_removed_documents_configuration(value)
-    _require_explicit_remote_configuration(value)
+    if value.get("version") != 1 or isinstance(value.get("version"), bool):
+        raise ConfigError(CONFIG_V1_REWRITE_GUIDANCE, ("version",))
     config = _merge(DEFAULT_CONFIG, value)
-    config["version"] = 2
-    _validate(config)
+    if "mcpServers" in value:
+        config["mcpServers"] = deepcopy(value["mcpServers"])
+    _validate_host_overrides(config)
+    errors = sorted(
+        _CONFIG_V1_VALIDATOR.iter_errors(config),
+        key=lambda error: tuple(str(segment) for segment in error.absolute_path),
+    )
+    if errors:
+        details = "\n".join(
+            f"- {_error_path(error.absolute_path)}: {error.message}" for error in errors
+        )
+        paths = tuple(
+            sorted({_error_path(path) for error in errors for path in _deepest_error_paths(error)})
+        )
+        raise ConfigError(f"Invalid Config v1:\n{details}", paths)
+    _validate_config_refinements(config)
     return config
 
 
+def _validate_config_refinements(config: dict[str, Any]) -> None:
+    """Apply cross-key refinements declared by the generated Config v1 contract."""
+    skills = config["skills"]
+    references = (
+        (
+            skills["cvs"]["enabled"],
+            skills["cvs"]["provider"].get("mcpName"),
+            "skills.cvs.provider.mcpName",
+        ),
+        (
+            skills["issues"]["enabled"] and skills["issues"]["provider"]["type"] != "filesystem",
+            skills["issues"]["provider"].get("mcpName"),
+            "skills.issues.provider.mcpName",
+        ),
+        (
+            skills["documents"]["enabled"]
+            and skills["documents"]["provider"]["type"] != "filesystem",
+            skills["documents"]["provider"].get("mcpName"),
+            "skills.documents.provider.mcpName",
+        ),
+        (
+            skills[CODE_INDEX_SKILL_ID]["enabled"],
+            skills[CODE_INDEX_SKILL_ID]["mcpName"],
+            "skills.codeIndex.mcpName",
+        ),
+    )
+    missing = tuple(
+        path
+        for enabled, server_id, path in references
+        if enabled and server_id is not None and server_id not in config["mcpServers"]
+    )
+    if missing:
+        details = "\n".join(f"- {path}: references a missing mcpServers key" for path in missing)
+        raise ConfigError(f"Invalid Config v1:\n{details}", missing)
+
+
+def _validate_host_overrides(config: dict[str, Any]) -> None:
+    """Reject YAML values outside the JSON data model at exact override paths."""
+    servers = config.get("mcpServers")
+    if not isinstance(servers, dict):
+        return
+    for server_id, declaration in servers.items():
+        if not isinstance(declaration, dict):
+            continue
+        for host in ("opencode", "pi"):
+            if host in declaration:
+                _validate_json_value(
+                    declaration[host],
+                    f"mcpServers.{server_id}.{host}",
+                    set(),
+                )
+
+
+def _validate_json_value(value: Any, path: str, ancestors: set[int]) -> None:
+    if value is None or isinstance(value, (str, bool, int)):
+        return
+    if isinstance(value, float):
+        if math.isfinite(value):
+            return
+        raise ConfigError(
+            f"Invalid Config v1:\n- {path}: host override numbers must be finite",
+            (path,),
+        )
+    if isinstance(value, list):
+        _enter_json_container(value, path, ancestors)
+        for index, item in enumerate(value):
+            _validate_json_value(item, f"{path}.{index}", ancestors)
+        ancestors.remove(id(value))
+        return
+    if isinstance(value, dict):
+        _enter_json_container(value, path, ancestors)
+        for key, item in value.items():
+            key_path = f"{path}.{key}"
+            if any(
+                ord(character) < 32 or 127 <= ord(character) <= 159 or character in "\u2028\u2029"
+                for character in key
+            ):
+                raise ConfigError(
+                    "Invalid Config v1:\n"
+                    f"- {key_path}: host override keys must not contain control characters",
+                    (key_path,),
+                )
+            _validate_json_value(item, key_path, ancestors)
+        ancestors.remove(id(value))
+        return
+    raise ConfigError(
+        f"Invalid Config v1:\n- {path}: host override values must be JSON-compatible",
+        (path,),
+    )
+
+
+def _enter_json_container(
+    value: list[Any] | dict[str, Any], path: str, ancestors: set[int]
+) -> None:
+    identity = id(value)
+    if identity in ancestors:
+        raise ConfigError(
+            f"Invalid Config v1:\n- {path}: host override values must not contain cycles",
+            (path,),
+        )
+    ancestors.add(identity)
+
+
 def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    if (
+        isinstance(base.get("type"), str)
+        and isinstance(override.get("type"), str)
+        and base["type"] != override["type"]
+    ):
+        return deepcopy(override)
     result = deepcopy(base)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(result.get(key), dict):
@@ -173,301 +254,17 @@ def _merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _mapping(parent: dict[str, Any], key: str) -> dict[str, Any]:
-    value = parent.get(key)
-    if not isinstance(value, dict):
-        raise ConfigError(f"{key} must be a mapping")
-    return value
+def _error_path(path: Any) -> str:
+    segments = [str(segment) for segment in path]
+    return ".".join(segments) if segments else "<root>"
 
 
-def _validate(config: dict[str, Any]) -> None:
-    issues = _mapping(config, "issues")
-    _allowed_keys(issues, {"root", "prefix", "type", "tools", "remote"}, "issues")
-    _safe_path(issues, "root", "issues")
-    prefix = issues.get("prefix")
-    if not isinstance(prefix, str) or not all(
-        character.isascii() and (character.isalnum() or character in "_-") for character in prefix
-    ):
-        raise ConfigError(
-            "issues.prefix must contain only ASCII letters, digits, underscores, or hyphens"
-        )
-    issue_type = issues.get("type")
-    if issue_type not in {"filesystem", *REMOTE_ISSUE_TYPES}:
-        raise ConfigError("issues.type must be filesystem, github, gitlab, gitea, or forgejo")
-    _normalize_issue_tools(issues, issue_type)
-    _validate_issue_remote(issues, issue_type)
-
-    documents = _mapping(config, "documents")
-    if documents != _FIXED_DOCUMENTS_CONFIG:
-        raise ConfigError(_REMOVED_DOCUMENTS_CONFIG_MESSAGE)
-
-    cvs = _mapping(config, "cvs")
-    _allowed_keys(cvs, {"local", "remote"}, "cvs")
-    if cvs.get("local") not in CVS_LOCALS:
-        raise ConfigError("cvs.local must be git or jj")
-    remote = _mapping(cvs, "remote")
-    _allowed_keys(
-        remote,
-        {"provider", "tools", "url", "token_env"},
-        "cvs.remote",
-    )
-    _validate_remote_service(remote, "cvs.remote", "provider")
-
-    mcp = _mapping(config, "mcp")
-    _allowed_keys(mcp, {"output_limit_mode"}, "mcp")
-    if mcp.get("output_limit_mode") not in MCP_OUTPUT_LIMIT_MODES:
-        raise ConfigError("mcp.output_limit_mode must be bounded-guidance or hard")
-
-    skills = _mapping(config, "skills")
-    _allowed_keys(skills, {CODE_INDEX_SKILL_ID}, "skills")
-    code_index = _mapping(skills, CODE_INDEX_SKILL_ID)
-    namespace = f"skills.{CODE_INDEX_SKILL_ID}"
-    _allowed_keys(code_index, {"enabled", "mcp_server"}, namespace)
-    if not isinstance(code_index.get("enabled"), bool):
-        raise ConfigError(f"{namespace}.enabled must be boolean")
-    mcp_server = code_index.get("mcp_server")
-    if (
-        not isinstance(mcp_server, str)
-        or _MCP_SERVER_NAME.fullmatch(mcp_server) is None
-        or mcp_server.startswith("cvs_")
-        or mcp_server in _MANAGED_CVS_MCP_SERVER_IDS
-    ):
-        raise ConfigError(
-            f"{namespace}.mcp_server must be 1-64 lowercase ASCII letters, digits, "
-            "underscores, or hyphens; start and end alphanumeric; "
-            "cvs_ and managed sdlc_cvs_* IDs are reserved"
-        )
-
-    tdd = _mapping(_mapping(config, "workflow"), "tdd")
-    if not isinstance(tdd.get("enabled"), bool):
-        raise ConfigError("workflow.tdd.enabled must be boolean")
-
-    caveman = _mapping(_mapping(config, "communication"), "caveman")
-    if not isinstance(caveman.get("enabled"), bool):
-        raise ConfigError("communication.caveman.enabled must be boolean")
-    if caveman.get("mode") not in ("strict", "balanced"):
-        raise ConfigError("communication.caveman.mode must be strict or balanced")
-
-    memory = _mapping(config, "memory")
-    if not isinstance(memory.get("enabled"), bool):
-        raise ConfigError("memory.enabled must be boolean")
-    if memory["enabled"] and not caveman["enabled"]:
-        raise ConfigError("memory.enabled=true requires communication.caveman.enabled=true")
-    if memory.get("backend") != "repository":
-        raise ConfigError("memory.backend must be repository in config v2")
-    namespace = _mapping(memory, "namespace")
-    for key in ("organization_id", "project_id", "default_topic"):
-        if not isinstance(namespace.get(key), str) or not namespace[key].strip():
-            raise ConfigError(f"memory.namespace.{key} must be a non-empty string")
-    retrieval = _mapping(memory, "retrieval")
-    _bounded_integer(retrieval, "limit", 1, 100)
-    _bounded_integer(retrieval, "max_chars", 256, 100_000)
-    if not isinstance(retrieval.get("include_superseded"), bool):
-        raise ConfigError("memory.retrieval.include_superseded must be boolean")
-    repository = _mapping(memory, "repository")
-    _safe_path(repository, "root", "memory.repository")
-
-
-def _reject_removed_documents_configuration(source: dict[str, Any]) -> None:
-    """Reject retired Documents branches before defaults or external probes are considered."""
-    documents = source.get("documents")
-    if documents is None:
-        return
-    if not isinstance(documents, dict) or any(
-        key not in _FIXED_DOCUMENTS_CONFIG or value != _FIXED_DOCUMENTS_CONFIG[key]
-        for key, value in documents.items()
-    ):
-        raise ConfigError(_REMOVED_DOCUMENTS_CONFIG_MESSAGE)
-
-
-def _require_explicit_remote_configuration(source: dict[str, Any]) -> None:
-    issues = source.get("issues")
-    if (
-        isinstance(issues, dict)
-        and issues.get("type") in REMOTE_ISSUE_TYPES
-        and "tools" not in issues
-    ):
-        raise ConfigError(
-            f"issues.type={issues['type']} requires issues.tools to be selected explicitly"
-        )
-    if (
-        isinstance(issues, dict)
-        and issues.get("type") in REMOTE_ISSUE_TYPES
-        and "remote" not in issues
-    ):
-        raise ConfigError(f"issues.type={issues['type']} requires issues.remote")
-
-    cvs = source.get("cvs")
-    if not isinstance(cvs, dict) or not isinstance(cvs.get("remote"), dict):
-        return
-    remote = cvs["remote"]
-    provider = remote.get("provider")
-    if provider is None or provider == "github":
-        return
-    for key in ("tools", "url", "token_env"):
-        if key not in remote:
-            raise ConfigError(
-                f"cvs.remote.provider={provider} requires cvs.remote.{key} "
-                "to be selected explicitly"
-            )
-
-
-def _normalize_issue_tools(issues: dict[str, Any], issue_type: str) -> None:
-    value = issues.get("tools")
-    if not isinstance(value, str):
-        raise ConfigError("issues.tools must be a string")
-    tools = [tool.strip() for tool in value.split(",")]
-    if any(
-        not tool
-        or not all(
-            character.isascii() and (character.isalnum() or character in "_-") for character in tool
-        )
-        for tool in tools
-    ):
-        raise ConfigError(
-            "issues.tools entries must be safe executable identifiers without "
-            "arguments, paths, assignments, or shell operators"
-        )
-    if issue_type == "filesystem":
-        required = FILESYSTEM_ISSUE_TOOLS.split(",")
-        if (
-            len(tools) != len(required)
-            or len(set(tools)) != len(tools)
-            or any(tool not in required for tool in tools)
-        ):
-            raise ConfigError(
-                f"issues.tools must be exactly {FILESYSTEM_ISSUE_TOOLS} for issues.type=filesystem"
-            )
-        issues["tools"] = FILESYSTEM_ISSUE_TOOLS
-        return
-    expected = REMOTE_ISSUE_PROVIDERS[issue_type]["tool"]
-    if tools != [expected]:
-        raise ConfigError(f"issues.tools must be exactly {expected} for issues.type={issue_type}")
-    issues["tools"] = expected
-
-
-def _validate_issue_remote(issues: dict[str, Any], issue_type: str) -> None:
-    remote = issues.get("remote")
-    if issue_type == "filesystem":
-        if remote is not None:
-            raise ConfigError("issues.remote is not allowed for issues.type=filesystem")
-        return
-    if not isinstance(remote, dict):
-        raise ConfigError("issues.remote must be a mapping")
-    _allowed_keys(remote, {"url", "token_env"}, "issues.remote")
-    if set(remote) != {"url", "token_env"}:
-        raise ConfigError("issues.remote must contain exactly url and token_env")
-    service = {"provider": issue_type, **remote, "tools": issues["tools"]}
-    _validate_remote_service(service, "issues.remote", "provider")
-    remote["url"] = service["url"]
-
-
-def _validate_remote_service(remote: dict[str, Any], namespace: str, provider_key: str) -> None:
-    provider = remote.get(provider_key)
-    if provider not in REMOTE_ISSUE_TYPES:
-        raise ConfigError(f"{namespace}.{provider_key} must be github, gitlab, gitea, or forgejo")
-    expected = REMOTE_ISSUE_PROVIDERS[provider]
-    tools = remote.get("tools")
-    if not isinstance(tools, str):
-        raise ConfigError(f"{namespace}.tools must be a string")
-    normalized_tools = _tool_identifiers(tools, f"{namespace}.tools")
-    if normalized_tools != [expected["tool"]]:
-        raise ConfigError(
-            f"{namespace}.tools must be exactly {expected['tool']} for "
-            f"{namespace}.{provider_key}={provider}"
-        )
-    remote["tools"] = expected["tool"]
-    url = _validate_remote_url(remote.get("url"), namespace)
-    expected_url = expected["url"]
-    if expected_url is not None and url != expected_url:
-        raise ConfigError(
-            f"{namespace}.url must be exactly {expected_url} for "
-            f"{namespace}.{provider_key}={provider}"
-        )
-    remote["url"] = url
-    _validate_environment_name(remote.get("token_env"), f"{namespace}.token_env")
-
-
-def _validate_remote_url(value: Any, namespace: str) -> str:
-    url = value
-    if (
-        not isinstance(url, str)
-        or not url.strip()
-        or not url.isprintable()
-        or any(character.isspace() for character in url)
-        or any(character in url for character in "`${}")
-    ):
-        raise ConfigError(f"{namespace}.url must be a non-empty absolute HTTPS URL")
-    try:
-        parsed = urlsplit(url)
-        port = parsed.port
-    except ValueError as error:
-        raise ConfigError(f"{namespace}.url must be a valid absolute HTTPS URL") from error
-    if (
-        parsed.scheme != "https"
-        or not parsed.netloc
-        or parsed.hostname is None
-        or parsed.username is not None
-        or parsed.password is not None
-        or port is not None
-        and not 1 <= port <= 65535
-        or parsed.query
-        or parsed.fragment
-    ):
-        raise ConfigError(f"{namespace}.url must be an absolute HTTPS URL without credentials")
-    return url
-
-
-def _validate_environment_name(value: Any, namespace: str) -> None:
-    if not isinstance(value, str) or re.fullmatch(r"[A-Z][A-Z0-9_]*", value) is None:
-        raise ConfigError(
-            f"{namespace} must be an uppercase environment variable name, not a token value"
-        )
-
-
-def _allowed_keys(parent: dict[str, Any], allowed: set[str], namespace: str) -> None:
-    unknown = sorted(set(parent) - allowed)
-    if unknown:
-        raise ConfigError(f"{namespace} contains unknown keys: {', '.join(unknown)}")
-
-
-def _tool_identifiers(value: str, namespace: str) -> list[str]:
-    tools = [tool.strip() for tool in value.split(",")]
-    if any(
-        not tool
-        or not all(
-            character.isascii() and (character.isalnum() or character in "_-") for character in tool
-        )
-        for tool in tools
-    ):
-        raise ConfigError(
-            f"{namespace} entries must be safe executable identifiers without "
-            "arguments, paths, assignments, or shell operators"
-        )
-    return tools
-
-
-def _bounded_integer(parent: dict[str, Any], key: str, low: int, high: int) -> None:
-    value = parent.get(key)
-    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
-        raise ConfigError(f"memory.retrieval.{key} must be an integer from {low} to {high}")
-
-
-def _safe_path(parent: dict[str, Any], key: str, namespace: str) -> PurePosixPath:
-    value = parent.get(key)
-    if not isinstance(value, str) or not value.strip():
-        raise ConfigError(f"{namespace}.{key} must be a non-empty string")
-    if (
-        value == "."
-        or "//" in value
-        or value.endswith("/")
-        or "\\" in value
-        or "`" in value
-        or not value.isprintable()
-        or (len(value) >= 2 and value[0].isalpha() and value[1] == ":")
-    ):
-        raise ConfigError(f"{namespace}.{key} must stay inside project root")
-    path = PurePosixPath(value)
-    if path.is_absolute() or "." in path.parts or ".." in path.parts:
-        raise ConfigError(f"{namespace}.{key} must stay inside project root")
-    return path
+def _deepest_error_paths(error: Any) -> list[Any]:
+    """Return the most specific portable paths from a composed schema error."""
+    candidates = [
+        nested_path for nested in error.context for nested_path in _deepest_error_paths(nested)
+    ]
+    if not candidates:
+        return [error.absolute_path]
+    maximum_depth = max(len(path) for path in candidates)
+    return [path for path in candidates if len(path) == maximum_depth]

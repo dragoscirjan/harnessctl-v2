@@ -20,6 +20,32 @@ import {
 } from './local-persistence.js';
 
 describe('local SQLite runtime selection', () => {
+  it('does not read disabled local authorities into a shared snapshot', () => {
+    const root = mkdtempSync(join(tmpdir(), 'harnessctl-disabled-snapshot-'));
+    try {
+      createConfig(root);
+      writeFileSync(
+        join(root, '.harnessctl/config.yaml'),
+        'version: 1\nskills:\n  issues:\n    enabled: false\n  documents:\n    enabled: false\n  memory:\n    enabled: false\n',
+      );
+      mkdirSync(join(root, '.harnessctl/issues'), { recursive: true });
+      mkdirSync(join(root, '.harnessctl/documents'), { recursive: true });
+      mkdirSync(join(root, '.harnessctl/memory/facts'), { recursive: true });
+      writeFileSync(join(root, '.harnessctl/issues/broken.yml'), 'not: canonical');
+      writeFileSync(join(root, '.harnessctl/documents/broken.md'), 'not canonical');
+      writeFileSync(join(root, '.harnessctl/memory/facts/broken.yaml'), 'not: canonical');
+
+      const snapshot = withLocalBarrier(root, (lease) => loadLocalSnapshot(lease));
+
+      expect(snapshot.issues).toEqual([]);
+      expect(snapshot.documents).toEqual([]);
+      expect(snapshot.memories).toEqual([]);
+      expect(snapshot.tombstones).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('supports the minimum runtimes and documents the pinned CI runtimes', () => {
     expect(selectSqliteRuntime({ node: '22.13.0' })).toBe('node');
     expect(selectSqliteRuntime({ node: '24.15.0' })).toBe('node');

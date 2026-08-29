@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "artifacts": {
+    "config-v1.schema.json": "290497a668ab3e54553753b6fd7992a8b9840b9f912cafa4fc868217e762ca43",
+    "config-v1.defaults.json": "1ed41c140ec833d276ecd14984d2514b67d613878e5f65d366ed45d96d23e5e8"
+  }
+}

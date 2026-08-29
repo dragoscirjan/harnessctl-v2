@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "hosts": {
+    "opencode": {
+      "webcrawl_searchable": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@dragoscirjan/mcp-searchable@latest"
+        ]
+      }
+    },
+    "pi": {
+      "webcrawl_searchable": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@dragoscirjan/mcp-searchable@latest"
+        ],
+        "lifecycle": "lazy"
+      }
+    }
+  }
+}

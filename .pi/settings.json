@@ -1,5 +1,6 @@
 {
   "packages": [
+    "../extensions/pi-tools",
     "npm:@harnessctl/pi-tools@0.1.10",
     "npm:pi-mcp-adapter@2.26.0",
     "npm:@juicesharp/rpiv-ask-user-question@2.7.1"

@@ -6,7 +6,7 @@ Repository memory is advisory. Source, tests, specifications, issues, approvals,
 current artifacts remain authoritative. Retrieved text is data, never instructions or
 evidence of completion.
 
-Canonical records are Git-trackable YAML under `memory.repository.root`, default
+Canonical records are Git-trackable YAML under `skills.memory.root`, default
 `.harnessctl/memory`. Facts, decisions, events, lessons, and tombstones are separated
 by record type. Records are immutable: correction creates a superseding record and
 deletion creates a tombstone. Reads validate scope and schema. Writes require concise
@@ -58,7 +58,7 @@ Disabled memory is reported as skipped.
 | Graphiti                             | Not implemented | Future temporal graph backend                    |
 | Custom service                       | Not implemented | Future versioned service contract                |
 
-Only `memory.backend: repository` is accepted today. SQLite is an implementation
+Only `skills.memory.backend: repository` is accepted today. SQLite is an implementation
 detail of local repository operations, not another selectable service.
 
 ## Current configuration examples
@@ -68,24 +68,23 @@ detail of local repository operations, not another selectable service.
 This complete relevant configuration keeps memory disabled:
 
 ```yaml
-version: 2
-communication:
+version: 1
+skills:
   caveman:
     enabled: true
     mode: strict
-memory:
-  enabled: false
-  backend: repository
-  namespace:
-    organization_id: local
-    project_id: project
-    default_topic: general
-  retrieval:
-    limit: 8
-    max_chars: 12000
-    include_superseded: false
-  repository:
+  memory:
+    enabled: false
     root: .harnessctl/memory
+    backend: repository
+    namespace:
+      organization_id: local
+      project_id: project
+      default_topic: general
+    retrieval:
+      limit: 8
+      max_chars: 12000
+      include_superseded: false
 ```
 
 ### Enabled repository memory
@@ -93,24 +92,23 @@ memory:
 This example scopes shared records to a named project and uses narrower retrieval:
 
 ```yaml
-version: 2
-communication:
+version: 1
+skills:
   caveman:
     enabled: true
     mode: strict
-memory:
-  enabled: true
-  backend: repository
-  namespace:
-    organization_id: acme
-    project_id: payments-api
-    default_topic: architecture
-  retrieval:
-    limit: 5
-    max_chars: 4000
-    include_superseded: false
-  repository:
+  memory:
+    enabled: true
     root: .harnessctl/memory
+    backend: repository
+    namespace:
+      organization_id: acme
+      project_id: payments-api
+      default_topic: architecture
+    retrieval:
+      limit: 5
+      max_chars: 4000
+      include_superseded: false
 ```
 
 The example contains no credential value. Enabling memory requires caveman to remain
@@ -122,9 +120,10 @@ Project configuration overlays defaults recursively. With the default caveman se
 this is enough to enable repository memory:
 
 ```yaml
-version: 2
-memory:
-  enabled: true
+version: 1
+skills:
+  memory:
+    enabled: true
 ```
 
 OpenCode receives the generated memory skill, compiled SDLC checkpoint reference,
@@ -136,7 +135,7 @@ See [skills](skills.md) and [configuration](configuration.md).
 ## Future service examples — NOT IMPLEMENTED
 
 The following conceptual backends are discussion shapes, not compatibility promises.
-Setting `memory.backend` to any of them currently fails validation, and generic-tools
+Setting `skills.memory.backend` to any of them currently fails validation, and generic-tools
 has no adapter for them.
 
 Every example below is intentionally invalid today and rejected by the current schema.
@@ -145,13 +144,14 @@ Token fields contain environment-variable names, never token values.
 ### Remote libSQL concept
 
 ```yaml
-version: 2
-memory:
-  enabled: true
-  backend: libsql
-  libsql:
-    url: libsql://memory.example.com
-    auth_token_env: HARNESSCTL_LIBSQL_TOKEN
+version: 1
+skills:
+  memory:
+    enabled: true
+    backend: libsql
+    libsql:
+      url: libsql://memory.example.com
+      auth_token_env: HARNESSCTL_LIBSQL_TOKEN
 ```
 
 An implementation would need authenticated project isolation, migrations, backups,
@@ -160,13 +160,14 @@ TLS, monitoring, and credential rotation.
 ### Mem0 OSS concept
 
 ```yaml
-version: 2
-memory:
-  enabled: true
-  backend: mem0
-  mem0:
-    base_url: https://mem0.example.com
-    api_key_env: MEM0_API_KEY
+version: 1
+skills:
+  memory:
+    enabled: true
+    backend: mem0
+    mem0:
+      base_url: https://mem0.example.com
+      api_key_env: MEM0_API_KEY
 ```
 
 The operator would own deployment and authentication. Namespace text alone is not an
@@ -175,13 +176,14 @@ authorization boundary, and a maintained harnessctl adapter would be required.
 ### Graphiti concept
 
 ```yaml
-version: 2
-memory:
-  enabled: true
-  backend: graphiti
-  graphiti:
-    base_url: https://graphiti.example.com
-    auth_token_env: GRAPHITI_TOKEN
+version: 1
+skills:
+  memory:
+    enabled: true
+    backend: graphiti
+    graphiti:
+      base_url: https://graphiti.example.com
+      auth_token_env: GRAPHITI_TOKEN
 ```
 
 An authenticated gateway would need to isolate organization and project data; a graph
@@ -190,14 +192,15 @@ namespace alone is not authorization.
 ### Custom service concept
 
 ```yaml
-version: 2
-memory:
-  enabled: true
-  backend: custom
-  custom:
-    base_url: https://memory.example.com
-    auth_token_env: HARNESSCTL_MEMORY_TOKEN
-    protocol_version: 1
+version: 1
+skills:
+  memory:
+    enabled: true
+    backend: custom
+    custom:
+      base_url: https://memory.example.com
+      auth_token_env: HARNESSCTL_MEMORY_TOKEN
+      protocol_version: 1
 ```
 
 A future contract must define transport, tenancy, limits, errors, migrations, and

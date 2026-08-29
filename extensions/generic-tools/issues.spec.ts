@@ -54,7 +54,11 @@ function repository(prefix = ''): string {
   const root = mkdtempSync(join(tmpdir(), 'harnessctl-issues-'));
   roots.push(root);
   createConfig(root);
-  writeFileSync(join(root, '.harnessctl/config.yaml'), `issues:\n  prefix: "${prefix}"\n`, 'utf8');
+  writeFileSync(
+    join(root, '.harnessctl/config.yaml'),
+    `version: 1\nskills:\n  issues:\n    prefix: "${prefix}"\n`,
+    'utf8',
+  );
   return root;
 }
 
@@ -71,7 +75,7 @@ function remoteRepository(type: string, tools: string): string {
   if (remote === undefined) throw new Error(`Unsupported test issue provider: ${type}`);
   writeFileSync(
     join(root, '.harnessctl/config.yaml'),
-    `version: 2\nissues:\n  root: dormant/issues\n  prefix: hrn-\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${remote.url}\n    token_env: ${remote.token_env}\n`,
+    `version: 1\nskills:\n  issues:\n    root: dormant/issues\n    prefix: hrn-\n    provider:\n      type: ${type}\n      tools: ${tools}\n      url: ${remote.url}\n      token_env: ${remote.token_env}\n`,
     'utf8',
   );
   return root;
@@ -93,6 +97,37 @@ afterEach(() => {
 });
 
 describe('issue public operations', () => {
+  it('rejects disabled local operations before touching filesystem or cache state', () => {
+    const root = repository();
+    const provider = createFilesystemIssueProvider(root);
+    writeFileSync(
+      join(root, '.harnessctl/config.yaml'),
+      'version: 1\nskills:\n  issues:\n    enabled: false\n',
+      'utf8',
+    );
+    rmSync(join(root, '.harnessctl/issues'), { recursive: true, force: true });
+    rmSync(join(root, '.harnessctl/cache'), { recursive: true, force: true });
+
+    for (const operation of [
+      () => parseIssueIds('hrn-00001', root),
+      () => parseIssueId('hrn-00001', root),
+      () => provider.create({ type: 'task', title: 'Blocked provider' }),
+      () => createFilesystemIssueProvider(root),
+      () => createIssueRecord(root, { type: 'task', title: 'Blocked' }),
+      () => listIssueSummaries(root),
+    ])
+      expect(operation).toThrow(/skills\.issues\.enabled=true.*disabled/u);
+    expect(validateIssues(root)).toEqual({
+      valid: false,
+      findings: [
+        expect.objectContaining({ message: expect.stringMatching(/skills\.issues\.enabled=true.*disabled/u) }),
+      ],
+    });
+    expect(validateCanonicalIssueGraph(root)).toEqual({ valid: true, findings: [] });
+    expect(existsSync(join(root, '.harnessctl/issues'))).toBe(false);
+    expect(existsSync(join(root, '.harnessctl/cache'))).toBe(false);
+  });
+
   it.each([
     ['github', 'gh'],
     ['gitlab', 'glab'],
@@ -117,7 +152,9 @@ describe('issue public operations', () => {
       ['archiveIssueReport', () => archiveIssueReport(root, 'hrn-00001')],
     ];
     for (const [name, operation] of operations) {
-      expect(operation).toThrow(new RegExp(`${name}.*issues\\.type=${type}.*${tools}.*issues\\.type=filesystem`, 'u'));
+      expect(operation).toThrow(
+        new RegExp(`${name}.*issues\\.provider\\.type=${type}.*${tools}.*issues\\.provider\\.type=filesystem`, 'u'),
+      );
       expect(treeManifest(root)).toEqual(before);
     }
     expect(validateIssues(root)).toEqual({
@@ -127,7 +164,10 @@ describe('issue public operations', () => {
           severity: 'error',
           category: 'configuration',
           message: expect.stringMatching(
-            new RegExp(`validateIssues.*issues\\.type=${type}.*${tools}.*issues\\.type=filesystem`, 'u'),
+            new RegExp(
+              `validateIssues.*issues\\.provider\\.type=${type}.*${tools}.*issues\\.provider\\.type=filesystem`,
+              'u',
+            ),
           ),
         }),
       ],
@@ -141,7 +181,10 @@ describe('issue public operations', () => {
   it('preserves configured IDs, filenames, summaries, and provider config snapshot', () => {
     const root = repository('TASK-');
     const provider = createFilesystemIssueProvider(root);
-    writeFileSync(join(root, '.harnessctl/config.yaml'), 'issues:\n  root: other/issues\n  prefix: X-\n');
+    writeFileSync(
+      join(root, '.harnessctl/config.yaml'),
+      'version: 1\nskills:\n  issues:\n    root: other/issues\n    prefix: X-\n',
+    );
     const created = provider.create({ type: 'task', title: 'Stable issue' });
     expect(created).toMatchObject({
       id: 'TASK-00001',
@@ -149,7 +192,7 @@ describe('issue public operations', () => {
       location: 'active',
     });
     expect(provider.list()).toEqual([expect.objectContaining({ id: created.id, revision: created.revision })]);
-    writeFileSync(join(root, '.harnessctl/config.yaml'), 'issues:\n  prefix: "TASK-"\n');
+    writeFileSync(join(root, '.harnessctl/config.yaml'), 'version: 1\nskills:\n  issues:\n    prefix: "TASK-"\n');
     expect(parseIssueIds('TASK-00001 and TASK-00002 and TASK-00001', root)).toEqual(['TASK-00001', 'TASK-00002']);
     expect(parseIssueId('see TASK-00001', root)).toBe('TASK-00001');
   });
@@ -353,18 +396,19 @@ describe('issue public operations', () => {
     ).toEqual(expect.objectContaining({ metadata: expect.objectContaining({ title: 'Still mutable' }) }));
   });
 
-  it('rejects dormant local document paths when Documents authority is remote', () => {
+  it('does not read dormant local document paths when Documents authority is remote', () => {
     const root = repository();
     writeFileSync(
       join(root, '.harnessctl/config.yaml'),
-      'version: 2\ndocuments:\n  type: github\n  tools: gh\n  remote:\n    repository: owner/repo\n    url: https://github.com\n    token_env: GH_TOKEN\n',
+      'version: 1\nskills:\n  documents:\n    provider:\n      type: github\n      tools: gh\n      url: https://github.com\n      token_env: GH_TOKEN\n',
       'utf8',
     );
     mkdirSync(join(root, '.harnessctl/documents'), { recursive: true });
     writeFileSync(join(root, '.harnessctl/documents/doc-00001-dormant-v1.md'), '# Dormant\n');
-    expect(() => createIssueRecord(root, { type: 'task', title: 'Remote documents' })).toThrow(
-      /remote Documents providers/u,
+    expect(createIssueRecord(root, { type: 'task', title: 'Remote documents' })).toEqual(
+      expect.objectContaining({ id: 'hrn-00001' }),
     );
+    expect(readFileSync(join(root, '.harnessctl/documents/doc-00001-dormant-v1.md'), 'utf8')).toBe('# Dormant\n');
   });
 
   it('archives derived descendants and retains the compatibility operation token', () => {

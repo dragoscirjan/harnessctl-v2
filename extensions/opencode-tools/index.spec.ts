@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -89,6 +89,7 @@ describe('OpenCode adapter', () => {
 
       const defaultTasksPath = await tools.config_get?.execute({ path: 'paths.tasks' }, context);
       await tools.config_create?.execute({}, context);
+      writeFileSync(join(cwd, '.harnessctl/config.yaml'), 'version: 1\nskills:\n  memory:\n    enabled: true\n');
       const result = await tools.config_get?.execute({ path: 'version' }, context);
       const document = await tools['document_create']?.execute(
         { title: 'Adapter document', kind: 'hld', body: 'Adapter body.' },
@@ -200,7 +201,7 @@ describe('OpenCode adapter', () => {
       const createdIssue = JSON.parse(String(issue)) as { id: string; metadata: { metadata: { huge: number } } };
 
       expect(defaultTasksPath).toBe('".harnessctl/tasks"');
-      expect(result).toBe('2');
+      expect(result).toBe('1');
       expect(createdDocument.id).toBe('doc-00001');
       expect(emptyMetadataDocument.metadata.metadata).toBeUndefined();
       expect(versionedDocument).toContain('"version":2');

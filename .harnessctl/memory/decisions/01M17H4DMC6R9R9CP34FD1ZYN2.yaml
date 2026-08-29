@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M17H4DMC6R9R9CP34FD1ZYN2
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: sdlc
+summary: proposed-sdlc_code_index-config | plan | Epic plan | approved
+details: |-
+  Epic: proposed-sdlc_code_index-config
+  Command/phase: work-plan
+  Item: repository-local Pi `sdlc_code_index` MCP config validity
+  Done: exact Epic plan approved; no issue mutation; no Build/Verify/Release
+  Decisions: Epic mode, no Initiative; no design artifact; no child issue mutations
+  Next: create/track Epic if desired, then `work-build <epic-id>`
+  Blockers: current Pi session may need `/reload` or restart for server visibility; external provider state remains user-owned
+  Artifacts: `.pi/mcp.json`, `.pi/skills/sdlc-code-index/SKILL.md`, `.harnessctl/issues/hrn-00105-*`, `hrn-00103-*`, `hrn-00132-*`
+source:
+  kind: discussion
+  ref: current session
+  revision: null
+created_at: 2026-08-29T19:49:48.812Z
+created_by: pi
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - code-index
+  - mcp
+  - plan
+  - sdlc

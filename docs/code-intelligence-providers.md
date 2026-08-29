@@ -12,13 +12,14 @@ The user owns the host entry and every provider lifecycle decision. Opt-in maps 
 one user-selected host key into guidance:
 
 ```yaml
+version: 1
 skills:
-  sdlc-code-index:
+  codeIndex:
     enabled: true
-    mcp_server: <exact-user-owned-host-key>
+    mcpName: <exact-user-owned-host-key>
 ```
 
-`skills.sdlc-code-index.mcp_server` only names the user's existing host entry. It does
+`skills.codeIndex.mcpName` only names the user's existing host entry. It does
 not declare a provider, create an entry, or transfer ownership to harnessctl. MCP output
 is advisory and must be checked against source, configuration, tests, and version-control
 state. See the [provider-neutral contract](code-intelligence.md).
@@ -106,7 +107,7 @@ user-owned `.pi/mcp.json` may use `"command": "cgc"` and
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: codegraphcontext` names the exact user-owned host
+For that example only, `mcpName: codegraphcontext` names the exact user-owned host
 key. Harnessctl does not recognize or manage CodeGraphContext. [CGC-10]
 
 ### 8. Lifecycle and storage
@@ -185,7 +186,7 @@ user-owned `.pi/mcp.json` may use `"command": "gitnexus"` and `"args": ["mcp"]`.
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: gitnexus` names the exact user-owned host key. It
+For that example only, `mcpName: gitnexus` names the exact user-owned host key. It
 does not authorize or repeat the historical research invocation. [GN-09]
 
 ### 8. Lifecycle and storage
@@ -268,7 +269,7 @@ composition is **Supported**, untested, using command `python` and args
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: graphify` names the exact user-owned host key.
+For that example only, `mcpName: graphify` names the exact user-owned host key.
 Harnessctl does not build `graphify-out/` or start Graphify. [GF-13]
 
 ### 8. Lifecycle and storage
@@ -353,7 +354,7 @@ strings in user-owned `.pi/mcp.json`. [H2]-[H5]
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: repomix` names the exact user-owned host key. It is
+For that example only, `mcpName: repomix` names the exact user-owned host key. It is
 not an external-server lifecycle declaration. [R3], [H1]
 
 ### 8. Lifecycle and storage
@@ -434,7 +435,7 @@ from the process environment. [F3], [H2]-[H5]
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: fastcode` matches the user-owned external key, not
+For that example only, `mcpName: fastcode` matches the user-owned external key, not
 the internal FastMCP label. [F16], [H1]
 
 ### 8. Lifecycle and storage
@@ -517,7 +518,7 @@ user-owned `.pi/mcp.json` may use `"command": "ccc"` and `"args": ["mcp"]`. [C4]
 
 ### 7. Server mapping
 
-For that example only, `mcp_server: cocoindex-code` names the exact user-owned host key.
+For that example only, `mcpName: cocoindex-code` names the exact user-owned host key.
 Harnessctl does not manage `ccc` or its daemon. [C9], [C14]
 
 ### 8. Lifecycle and storage
@@ -569,7 +570,7 @@ and [telemetry disclosure](https://github.com/cocoindex-io/cocoindex-code/blob/9
 Unreleased harnessctl builds may have generated provider-specific MCP entries. Current
 harnessctl does not own or reconcile them. Audit user-owned `.opencode/opencode.json` and
 `.pi/mcp.json`; remove or retain each old entry according to current intent, then map
-only the exact retained host key through `skills.sdlc-code-index.mcp_server`.
+only the exact retained host key through `skills.codeIndex.mcpName`.
 
 Disabling code intelligence preserves an existing generated skill and warns instead of
 deleting it. If removal is intended, manually review the warned generated skill path.

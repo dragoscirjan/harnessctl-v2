@@ -184,11 +184,14 @@ Implemented in `src/harnessctl/`:
 - Explicit `--force` overwrite behavior.
 - OpenCode and Pi target generation.
 - Configurable direct Git or Jujutsu guidance and provider-specific CVS routing.
-- Fixed-ID GitHub, GitLab, Gitea, and Forgejo MCP projection into OpenCode and Pi host
-  files, with independently configured CVS and Issues policies.
+- Registry-only MCP projection: each explicit `mcpServers` key is compiled into OpenCode
+  and Pi formats. CVS, Issues, Documents, and code-index `mcpName` values are references;
+  provider metadata never synthesizes a server definition.
+- Host-neutral URL and command declarations compile without taking ownership of
+  pre-existing or operator-edited host entries.
 - Packaged command, skill, and reference templates included in built wheels.
 - Nine repository-local Documents tools for HLD, LLD, design-overview, and GDD
-  lifecycles under the fixed `.harnessctl/documents` authority.
+  lifecycles under configured `skills.documents.root`, default `.harnessctl/documents`.
 - Opt-in, provider-neutral `sdlc-code-index` retrieval guidance with local source
   verification and Glob/Grep fallback when index evidence is unavailable or unsuitable.
 - Always-installed `sdlc-code` Build guidance with generic clean-code policy and 26
@@ -201,9 +204,12 @@ do not. See the
 [SDLC guide](docs/sdlc.md) for the exact command set, budgets, and host boundaries.
 
 Enabled code intelligence installs the same generated `sdlc-code-index` skill for selected
-OpenCode and Pi hosts. The user separately owns the configured external MCP registration,
-runtime, credentials, index, and data; harnessctl never projects or manages them. The
-generated `work-refresh` policy may invoke only an exact live-schema-supported,
+OpenCode and Pi hosts and references the exact `mcpServers` key named by
+`skills.codeIndex.mcpName`. Host registration is compiled only from that explicit registry
+declaration and remains independent of whether code-index guidance is enabled; enabling the
+skill never synthesizes a provider-derived definition. Harnessctl manages only an exact
+provenance-backed generated host entry. The user owns the external runtime, credentials,
+index, and data. The generated `work-refresh` policy may invoke only an exact live-schema-supported,
 repository-scoped refresh operation after fresh consent; this transfers no provider
 ownership. See the
 [code-intelligence guide](docs/code-intelligence.md).
@@ -213,7 +219,7 @@ ownership. See the
 Implemented in `extensions/generic-tools/`:
 
 - One versioned, canonical YAML document per issue under configurable
-  `issues.root` (default `.harnessctl/issues`), or its `archived/` child after
+  `skills.issues.root` (default `.harnessctl/issues`), or its `archived/` child after
   archival.
 - Complete issue-managed state in that document, including the Markdown body,
   relationships, metadata, document links, and append-only comments.
@@ -240,8 +246,9 @@ are derived from a single persisted direction rather than duplicated across file
 
 The generic runtime exposes exactly `document_id`, `document_create`, `document_list`,
 `document_get`, `document_update`, `document_version`, `document_validate`,
-`document_archive`, and `document_restore`. Canonical Markdown is fixed beneath
-`.harnessctl/documents`; valid kinds are `hld`, `lld`, `design-overview`, and `gdd`.
+`document_archive`, and `document_restore`. Canonical Markdown is stored beneath
+the safe project-relative `skills.documents.root`, default `.harnessctl/documents`; valid
+kinds are `hld`, `lld`, `design-overview`, and `gdd`.
 OpenCode and Pi register equivalent thin adapters. Plan owns the design lifecycle through
 its existing SDLC reference; no Documents agent or generated `sdlc-documents` skill is
 installed.
@@ -276,7 +283,7 @@ operation creates or repairs the cache.
 
 #### Canonical issue storage compatibility
 
-Canonical YAML storage operates on an empty configured `issues.root` or a root that
+Canonical YAML storage operates on an empty configured `skills.issues.root` or a root that
 already contains canonical issue files. Legacy `<issues.root>/<id>/issue.md` and mixed
 layouts are unsupported and fail closed. Harnessctl provides no legacy migration;
 repositories must be converted outside these tools before canonical operations begin.
@@ -390,7 +397,7 @@ Harnessctl-generated skills use the `sdlc-` namespace. Five support skills are r
 `caveman` to `sdlc-caveman`, `cvs` to `sdlc-cvs`, `develop-tdd` to
 `sdlc-develop-tdd`, `issue-tracking` to `sdlc-issue-tracking`, and `memory` to
 `sdlc-memory`. The existing `sdlc`, `sdlc-code`, and `sdlc-code-index` IDs remain
-unchanged, as does the functional configuration key `skills.sdlc-code-index`.
+unchanged, as does the functional configuration key `skills.codeIndex`.
 
 The installer writes `sdlc-code` to
 `.opencode/skills/sdlc-code/`, `.pi/skills/sdlc-code/`, or both.
