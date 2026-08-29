@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M16YFG9KXWH4YK6BYNACH3EG
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00151 | Release | stale issues | closed delivered Epics and children
+details: |-
+  Epic: hrn-00151
+  Command/phase: release-style issue reconciliation / Release
+  Item: stale delivered issue closure
+  Done: closed children hrn-00130, hrn-00131, hrn-00133, hrn-00134, hrn-00136-hrn-00149; closed Epics hrn-00115, hrn-00121, hrn-00129, hrn-00132, hrn-00135, hrn-00150; added hrn-00151-C0002; issue_validate all active issues valid.
+  Evidence: local main=origin/main 3d3b22c1dc7bd195744f3743bfc32fde6808caff; first-parent merges PR #39 hrn-00115, #40 hrn-00121, #41 hrn-00129, #43 hrn-00132, #47 hrn-00135, #52 hrn-00150.
+  Decisions: Plan/Build checkpoints retained; Release checkpoint added. hrn-00151 remains in_progress.
+  Blockers: none for requested stale issue closure.
+  Next: decide whether to close hrn-00151 or commit issue/memory changes.
+source:
+  kind: tool-observation
+  ref: issue_transition/issue_comment/issue_validate/git main hrn-00151 release-style reconciliation
+  revision: null
+created_at: 2026-08-29T14:23:49.043Z
+created_by: openai/gpt-5.6-sol
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - hrn-00151
+  - release
+  - sdlc

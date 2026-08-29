@@ -2,9 +2,9 @@
 "id": "hrn-00115"
 "type": "epic"
 "title": "Add composable coding guidance to SDLC Build"
-"status": "open"
+"status": "closed"
 "created_at": "2026-08-23T11:53:41.699Z"
-"updated_at": "2026-08-23T13:32:09.464Z"
+"updated_at": "2026-08-29T14:18:14.023Z"
 "created_by": "OpenCode"
 "metadata":
   "design": "lightweight"

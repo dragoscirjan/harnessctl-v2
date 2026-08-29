@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M16WJV8FHBBW6N7K2EW1EVP3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00151 | Plan | Epic plan | created approved executable Epic plan
+details: |-
+  Epic: hrn-00151
+  Command/phase: work-plan / Plan
+  Item: Reconcile stale open Epics after main merge
+  Done: Created .harnessctl/issues/hrn-00151-reconcile-stale-open-epics-after-main-merge.yml; issue_validate hrn-00151 valid.
+  Decisions: Design none; no closures in Plan; closure requires Build/Release evidence and fresh exact consent.
+  Artifacts: .harnessctl/issues/hrn-00151-reconcile-stale-open-epics-after-main-merge.yml
+  Blockers: Closure blocked until evidence + consent.
+  Next: work-build hrn-00151
+source:
+  kind: tool-observation
+  ref: issue_create/issue_update/issue_validate hrn-00151
+  revision: null
+created_at: 2026-08-29T13:50:41.423Z
+created_by: openai/gpt-5.6-sol
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - hrn-00151
+  - plan
+  - sdlc

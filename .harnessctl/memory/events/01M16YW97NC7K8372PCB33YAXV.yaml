@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M16YW97NC7K8372PCB33YAXV
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00151 | Release | closure | closed stale-reconciliation Epic
+details: |-
+  Epic: hrn-00151
+  Command/phase: closure / Release
+  Item: close final stale-reconciliation Epic
+  Done: transitioned hrn-00151 to closed; issue_validate all active issues valid; open issues none; in_progress issues none.
+  Evidence: hrn-00151-C0002 closed stale delivered children/Epics; hrn-00151-C0003 finalized Build boundary; hrn-00151 status closed revision v1:d41f3269f27ba85a7739950418ebd2239c8d7a6f69b83d44e55a96de565ad120.
+  Decisions: Plan/Build checkpoints retained; Release checkpoint superseded.
+  Blockers: none.
+  Next: commit issue/memory authority changes if desired.
+source:
+  kind: tool-observation
+  ref: issue_transition hrn-00151 closed; issue_validate; issue_list open/in_progress
+  revision: null
+created_at: 2026-08-29T14:30:47.797Z
+created_by: openai/gpt-5.6-sol
+confidence: verified
+status: active
+supersedes:
+  - 01M16YFG9KXWH4YK6BYNACH3EG
+tags:
+  - checkpoint
+  - hrn-00151
+  - release
+  - sdlc
