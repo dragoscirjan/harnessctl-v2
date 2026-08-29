@@ -51,10 +51,11 @@ Modified, additional, special, unreadable, or symlink entries preserve the compl
 and produce an exact-path warning. This fingerprint rule also applies under `--force`.
 
 Memory requires caveman. Every OpenCode installation registers
-`@harnessctl/opencode-tools@latest` in `.opencode/opencode.json`; config and issue tools
-therefore remain available even when memory is disabled. Older local plugin shims are
-retired. The memory skill receives only compiled retrieval limits and repository root,
-not the whole configuration.
+`@harnessctl/opencode-tools@0.1.10` in `.opencode/opencode.json`; stale managed
+`@harnessctl/opencode-tools@...` entries are bumped to the packaged tools version. Config
+and issue tools therefore remain available even when memory is disabled. Older local
+plugin shims are retired. The memory skill receives only compiled retrieval limits and
+repository root, not the whole configuration.
 
 `sdlc-code` is always installed as byte-equivalent OpenCode and Pi trees containing one
 generic policy and 26 bundled references. Build loads the root once, then reads only
@@ -127,7 +128,8 @@ loaded only when their named condition occurs. Memory policy is compiled once in
 OpenCode and Pi adapter packages expose generic configuration, filesystem issue,
 repository-local Documents, and repository-memory tools. Documents lifecycle guidance is
 part of the existing SDLC Plan reference, not a separate skill. Pi installs
-`npm:@harnessctl/pi-tools@latest` and
+`npm:@harnessctl/pi-tools@0.1.10`, bumping stale managed `npm:@harnessctl/pi-tools@...`
+entries to the packaged tools version, and installs
 `npm:@juicesharp/rpiv-ask-user-question@2.7.1` project-locally. The former's
 `pi.extensions` manifest loads the harnessctl tool registrations; the latter provides
 the `ask_user_question` option picker in interactive Pi sessions.

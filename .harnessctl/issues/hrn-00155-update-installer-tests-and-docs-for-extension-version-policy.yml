@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00155"
+"type": "task"
+"title": "Update installer tests and docs for extension version policy"
+"status": "done"
+"created_at": "2026-08-29T14:43:26.203Z"
+"updated_at": "2026-08-29T14:52:38.248Z"
+"created_by": "pi"
+"assigned_to": "pi"
+"parent": "hrn-00152"
+"body": "# Update installer tests and docs for extension version policy\n\n## Summary\n\nUpdate tests and operator docs to encode latest-by-default and explicit pinned-version behavior.\n\n## Scope\n\n- `tests/test_install.py` OpenCode plugin tests.\n- `tests/test_install.py` Pi package tests.\n- Relevant docs that mention `.opencode/opencode.json`, `.pi/settings.json`, `@harnessctl/opencode-tools`, or `npm:@harnessctl/pi-tools`.\n\n## Acceptance\n\n- Tests cover default latest install.\n- Tests cover preserving explicit pinned versions.\n- Tests cover upgrading stale unpinned managed defaults.\n- Tests cover duplicates/conflicts and extension-filter rejection.\n- Docs state: managed extensions install latest unless a specific version is locked.\n"
+"comments": []

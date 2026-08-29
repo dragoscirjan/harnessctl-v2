@@ -81,7 +81,7 @@ def _write_pi_adapter_config(project: Path) -> None:
     settings = project / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_text(
-        '{"packages":["npm:@harnessctl/pi-tools@latest",'
+        '{"packages":["npm:@harnessctl/pi-tools@0.1.10",'
         '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
         '"npm:pi-mcp-adapter@2.26.0"]}\n',
         encoding="utf-8",
@@ -133,6 +133,13 @@ def test_release_runs_only_after_main_push_quality_succeeds() -> None:
     assert release_job["secrets"] == "inherit"
     assert release_job["permissions"] == {"contents": "write", "pull-requests": "write"}
     assert ci["concurrency"]["cancel-in-progress"] == "${{ github.event_name == 'pull_request' }}"
+
+    quality = yaml.load(
+        (ROOT / ".github/workflows/ci.quality.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    run_quality = quality["jobs"]["quality"]["steps"][2]
+    assert run_quality["env"]["VITEST_COVERAGE"] == ("${{ inputs.extended && 'true' || 'false' }}")
 
 
 def test_local_npm_document_adapters_remain_release_inputs() -> None:
@@ -724,7 +731,7 @@ for provider, connection in providers.items():
     opencode = json.loads(
         (enabled_opencode / ".opencode/opencode.json").read_text(encoding="utf-8")
     )
-    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert "@harnessctl/opencode-tools@0.1.10" in opencode["plugin"]
     assert "sdlc_cvs_github" in opencode["mcp"]
     assert "cvs_github" not in opencode["mcp"]
     assert not (enabled_opencode / ".opencode/plugins/harnessctl-memory.js").exists()

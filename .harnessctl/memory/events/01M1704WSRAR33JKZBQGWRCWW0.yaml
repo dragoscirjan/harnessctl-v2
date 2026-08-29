@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M1704WSRAR33JKZBQGWRCWW0
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00152 | Build | managed extension version policy | local slice implemented
+details: |-
+  Epic: hrn-00152
+  Command/phase: work-build / Build
+  Item: hrn-00153, hrn-00154, hrn-00155
+  Done: added managed package source parser/policy in src/harnessctl/install.py; OpenCode preserves concrete @harnessctl/opencode-tools pins and normalizes unversioned/default latest; Pi accepts concrete npm:@harnessctl/pi-tools pins while missing installs use npm:@harnessctl/pi-tools@latest; docs/tests updated. User confirmed concrete version means lock. User approved transitioning Tasks to done.
+  Artifacts: src/harnessctl/install.py; tests/test_install.py; docs/cvs.md; docs/skills.md; README.md
+  Verification: uv run ruff check src/harnessctl/install.py tests/test_install.py; uv run pytest tests/test_install.py; uv run pytest tests/test_docs.py tests/test_release_artifacts.py -q
+  Next: work-verify hrn-00152
+  Blockers: none
+source:
+  kind: tool-observation
+  ref: work-build hrn-00152
+  revision: null
+created_at: 2026-08-29T14:52:58.552Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - hrn-00152
+  - sdlc

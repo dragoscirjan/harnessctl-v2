@@ -288,7 +288,8 @@ and repository-memory tools. Adapter tests cover equivalent Documents registrati
 delegation on both hosts.
 
 Automatic memory installation supports OpenCode and Pi. Pi receives all six commands,
-its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
+its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools` at
+the packaged tools version; stale managed `.pi/settings.json` entries are bumped. Its
 `pi.extensions` package manifest loads the tool extension. Pi also receives the pinned
 MIT-licensed `@juicesharp/rpiv-ask-user-question` extension, which provides the
 `ask_user_question` option picker in interactive Pi sessions.

@@ -186,7 +186,7 @@ def test_pi_install_adds_specialized_issue_skill(
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_text(
-        '{"packages":["npm:@harnessctl/pi-tools@latest",'
+        '{"packages":["npm:@harnessctl/pi-tools@0.1.10",'
         '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
         '"npm:pi-mcp-adapter@2.26.0"]}\n',
         encoding="utf-8",

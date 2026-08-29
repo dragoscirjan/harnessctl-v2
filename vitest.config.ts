@@ -10,7 +10,7 @@ export default defineConfig({
   maxConcurrency: Number(process.env.VITEST_MAX_CONCURRENCY ?? 2),
   testTimeout: 15_000,
   coverage: {
-    enabled: true,
+    enabled: process.env.VITEST_COVERAGE !== 'false',
     provider: 'v8',
     reporter: ['text', 'html', 'lcov'],
   },
