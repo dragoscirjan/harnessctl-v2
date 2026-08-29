@@ -8,6 +8,12 @@
       },
       "auth": "bearer",
       "lifecycle": "lazy"
+    },
+    "sdlc_code_index": {
+      "command": "cgc",
+      "args": ["mcp", "start"],
+      "lifecycle": "lazy",
+      "requestTimeoutMs": 30000
     }
   },
   "settings": {
