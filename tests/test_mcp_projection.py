@@ -338,6 +338,26 @@ def test_local_forgejo_projection_is_provider_exclusive() -> None:
     assert "gitea" not in json.dumps(render_opencode_mcp(intent)).lower()
 
 
+def test_enabled_web_retrieval_projects_sdlc_web_crawl_for_both_hosts() -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["mcp"]["web_retrieval"]["enabled"] = True
+
+    intents = required_server_intents(config, "all")
+    web = next(intent for intent in intents if intent.server_id == "sdlc_web_crawl")
+
+    assert web.provider == "web-retrieval"
+    assert web.requesting_routes == ("web-retrieval",)
+    assert render_opencode_mcp(web) == {
+        "type": "local",
+        "command": ["npx", "-y", "@dragoscirjan/mcp-searchable@latest"],
+    }
+    assert render_pi_mcp(web) == {
+        "command": "npx",
+        "args": ["-y", "@dragoscirjan/mcp-searchable@latest"],
+        "lifecycle": "lazy",
+    }
+
+
 def test_documents_do_not_create_mcp_intents_or_routes() -> None:
     intents = required_server_intents(deepcopy(DEFAULT_CONFIG), "all")
 

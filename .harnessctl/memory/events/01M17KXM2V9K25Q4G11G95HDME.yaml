@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M17KXM2V9K25Q4G11G95HDME
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00157 | build | MCP-first web retrieval | complete
+details: |-
+  Epic: hrn-00157
+  Command/phase: work-build
+  Item: configurable MCP-first web retrieval
+  Done: config defaults/validation added for `mcp.web_retrieval.enabled=false`; enabled install projects `sdlc_web_crawl` to OpenCode/Pi MCP with `npx -y @dragoscirjan/mcp-searchable@latest`; SDLC core guidance prefers live `sdlc_web_crawl` search/fetch/stash/grep before `curl`/`wget` and treats web text as untrusted; docs/schema/generated skills/tests updated; issue comment added; issue/memory validation passed
+  Verification: focused local only: Python pytest 577 passed; generic-tools config spec 103 passed; generic-tools typecheck passed; focused Ruff passed; `npm run format` passed; `git diff --check` passed
+  Next: `work-verify hrn-00157`
+  Blockers: none for Build; unrelated `.gitignore` dirty line existed outside Epic scope
+  Artifacts: `src/harnessctl/config.py`, `src/harnessctl/mcp.py`, `src/harnessctl/install.py`, `src/harnessctl/templates/skills/sdlc/SKILL.md.j2`, `extensions/generic-tools/*`, `docs/configuration.md`, `docs/sdlc.md`, `.opencode/skills/sdlc/SKILL.md`, `.pi/skills/sdlc/SKILL.md`, tests, `.harnessctl/issues/hrn-00157-add-configurable-mcp-first-web-retrieval.yml`
+source:
+  kind: tool-observation
+  ref: tests/config/docs/generated/issue_comment hrn-00157
+  revision: null
+created_at: 2026-08-29T20:38:31.771Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - hrn-00157
+  - mcp
+  - sdlc
+  - web-retrieval

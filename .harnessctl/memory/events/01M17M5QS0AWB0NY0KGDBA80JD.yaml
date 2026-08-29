@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M17M5QS0AWB0NY0KGDBA80JD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00157 | verify | MCP-first web retrieval | passed
+details: |-
+  Epic: hrn-00157
+  Command/phase: work-verify
+  Item: configurable MCP-first web retrieval
+  Done: acceptance mapped and passed; issue comment hrn-00157-C0002 added; independent reviewer PASS; no Plan/Build/Release/remote/destructive work
+  Evidence: `mcp.web_retrieval.enabled=false` defaults and boolean validation in Python/TypeScript; fixed `sdlc_web_crawl`; enabled OpenCode/Pi MCP projection to `npx -y @dragoscirjan/mcp-searchable@latest`; SDLC guidance prefers live schema discovery and search/fetch/stash/grep before `curl`/`wget`; fallback and untrusted web text documented; code-index/CVS unchanged by focused tests
+  Verification: pytest focused 577 passed; generic-tools config spec 103 passed; generic-tools typecheck passed; focused Ruff passed; `uv run ruff format src tests --check` passed; `npm run format -- --cache false` passed; `git diff --check` passed; issue validation passed; memory validation passed
+  Next: `work-release hrn-00157`
+  Blockers: none; unrelated `.gitignore` dirty line remains outside Epic scope
+source:
+  kind: tool-observation
+  ref: work-verify hrn-00157; issue_comment hrn-00157-C0002; local checks
+  revision: null
+created_at: 2026-08-29T20:42:57.696Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00157
+  - mcp
+  - sdlc
+  - verify
+  - web-retrieval

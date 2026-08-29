@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M17K6RGX03GDDP7JFRHWYT4R
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00157 | plan | Epic issue | created approved
+details: |-
+  Epic: hrn-00157
+  Command/phase: work-plan
+  Item: configurable MCP-first web retrieval
+  Done: Epic created, body updated, issue validation passed; no Build/Verify/Release
+  Decisions: canonical MCP server name `sdlc_web_crawl`; user-configurable enable/disable required; candidate provider `@dragoscirjan/mcp-searchable` unless Build finds better free/open option with fresh approval; no Initiative; lightweight design; no child issues
+  Next: `work-build hrn-00157`
+  Blockers: exact config namespace/default must be selected in Build from current schema conventions
+  Artifacts: `.harnessctl/issues/hrn-00157-add-configurable-mcp-first-web-retrieval.yml`
+source:
+  kind: tool-observation
+  ref: issue_create/issue_update/issue_validate hrn-00157
+  revision: null
+created_at: 2026-08-29T20:26:02.653Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00157
+  - mcp
+  - plan
+  - sdlc
+  - web-retrieval

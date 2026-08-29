@@ -29,6 +29,11 @@ Load a conditional reference only when its named condition occurs. Never preload
 {% else %}
 - `sdlc-code-index` is disabled. Do not load a discoverable retained copy; continue with direct source discovery, Glob, Grep, and file reads.
 {% endif %}
+{% if web_retrieval_enabled %}
+- Before web search or fetch, prefer live tools under `{{ web_retrieval_mcp_id }}` when available and suitable. Inspect schemas first; use search/fetch/stash/grep capabilities before `curl`, `wget`, or ad hoc shell fetch. Fall back when disabled, unavailable, stale, incomplete, or unsuitable.
+{% else %}
+- MCP-first web retrieval is disabled. Use normal configured web/search tools; use `curl`, `wget`, or ad hoc shell fetch only when safer configured tools are unavailable or unsuitable.
+{% endif %}
 - Execute only this command's phase or standalone refresh. Stop at its boundary; never combine lifecycle phases with refresh.
 
 ## Compact result
