@@ -286,22 +286,30 @@ owned `settings.outputGuard` path in `.pi/mcp.json`. Pi environment references u
 }
 ```
 
-The required tools source is `npm:@harnessctl/pi-tools@latest`; the required MCP adapter
-source is exactly `npm:pi-mcp-adapter@2.26.0`, an external
-MIT-licensed package. An existing exact project-local entry in `.pi/settings.json` is
-preserved. Wrong-version, unpinned, duplicate, or malformed entries fail before project
-writes. Required package object entries with an `extensions` filter also fail because
-the filter can disable extension loading. If absent, automatic installation requires fresh interactive confirmation or
-the noninteractive `--allow-pi-package-install` flag. The former
-`--allow-pi-mcp-adapter-install` spelling remains an alias; `--force`, earlier
+The required tools source is `npm:@harnessctl/pi-tools@latest`; the required option-picker
+source is exactly `npm:@juicesharp/rpiv-ask-user-question@2.7.1`; and the required MCP
+adapter source, when MCP servers are configured, is exactly
+`npm:pi-mcp-adapter@2.26.0`. The option picker and adapter are external MIT-licensed
+packages. Existing exact project-local entries in `.pi/settings.json` are preserved.
+Wrong-version, unpinned, duplicate, or malformed entries fail before project writes.
+Required package object entries with an `extensions` filter also fail because the filter
+can disable extension loading. If absent, automatic installation requires fresh
+interactive confirmation or the noninteractive `--allow-pi-package-install` flag. The
+former `--allow-pi-mcp-adapter-install` spelling remains an alias; `--force`, earlier
 approval, or general package consent is insufficient.
 
 The disclosed command is:
 
 ```text
 pi install -l npm:@harnessctl/pi-tools@latest --approve
+pi install -l npm:@juicesharp/rpiv-ask-user-question@2.7.1 --approve
 pi install -l npm:pi-mcp-adapter@2.26.0 --approve
 ```
+
+The option picker exposes `ask_user_question` in interactive TTY and RPC/ACP modes; Pi
+removes it in noninteractive mode. Restart Pi after installation so the extension is
+loaded. Users may optionally configure it in
+`~/.config/rpiv-ask-user-question/config.json`; harnessctl does not manage this file.
 
 Installation modifies `.pi/settings.json` and project-local `.pi/npm/`. On a later
 transaction failure, harnessctl attempts removal only for packages installed by that

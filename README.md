@@ -289,7 +289,9 @@ delegation on both hosts.
 
 Automatic memory installation supports OpenCode and Pi. Pi receives all six commands,
 its configured skills under `.pi/skills/`, and project-local `@harnessctl/pi-tools`; its
-`pi.extensions` package manifest loads the tool extension.
+`pi.extensions` package manifest loads the tool extension. Pi also receives the pinned
+MIT-licensed `@juicesharp/rpiv-ask-user-question` extension, which provides the
+`ask_user_question` option picker in interactive Pi sessions.
 
 OpenCode and Pi receive generated CVS and Issues skills. Pi MCP host configuration uses
 the consent-gated, pinned `npm:pi-mcp-adapter@2.26.0` prerequisite.

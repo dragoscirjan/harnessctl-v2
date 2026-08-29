@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M16RHM4QCV82FYEYBCX2F4PQ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00150 | Plan | executable Epic | approved and validated
+details: |-
+  Epic: hrn-00150
+  Phase: Plan
+  Item: Pi ask-user-question package
+  Done: exact plan approved; Epic created, populated, issue_validate valid
+  Decisions: standalone Epic; design none; pin npm:@juicesharp/rpiv-ask-user-question@2.7.1
+  Blockers: none
+  Artifact: .harnessctl/issues/hrn-00150-install-ask-user-question-extension-for-pi.yml
+  Verification: issue authority only; Build/Verify/Release not run
+source:
+  kind: artifact
+  ref: hrn-00150
+  revision: v1:157976439bc3b74c4f616beecf0e77e74d3d8c1a54e909fac8fff36a8423e004
+created_at: 2026-08-29T12:40:07.063Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00150
+  - installer
+  - pi
+  - plan

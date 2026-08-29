@@ -728,6 +728,10 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     ):
         assert path in cvs
     assert "npm:pi-mcp-adapter@2.26.0" in cvs
+    assert "npm:@juicesharp/rpiv-ask-user-question@2.7.1" in cvs
+    assert "ask_user_question" in cvs
+    assert "interactive TTY and RPC/ACP modes" in normalized
+    assert "does not manage this file" in normalized
     assert "gitea-mcp` 1.6.0" in cvs
     assert "forgejo-mcp` 2.33.0" in cvs
     assert '"command": ["gitea-mcp", "--transport", "stdio", "--host"' in cvs

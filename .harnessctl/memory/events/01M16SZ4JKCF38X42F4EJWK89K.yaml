@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M16SZ4JKCF38X42F4EJWK89K
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00150
+summary: Build complete; Verify pending.
+details: "Epic hrn-00150 in_progress. Branch feat/hrn-00150-pi-ask-user-question. Added pinned npm:@juicesharp/rpiv-ask-user-question@2.7.1 to Pi/all lifecycle, exact validation, tests, docs. Focused pytest: 463 passed, 11 expected warnings. Ruff lint/format passed on changed Python. No live npm install, commit, remote, Verify, or Release. Next: work-verify."
+source:
+  kind: artifact
+  ref: hrn-00150
+  revision: v1:1c48ffbca46abef75ed7f04ad5a3c06c8dcace5e57b6f6eff6e84ffb5d5cb467
+created_at: 2026-08-29T13:04:58.451Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M16RHM4QCV82FYEYBCX2F4PQ
+tags:
+  - build
+  - installer
+  - pi
+  - sdlc

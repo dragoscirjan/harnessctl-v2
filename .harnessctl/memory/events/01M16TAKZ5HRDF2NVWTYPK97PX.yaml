@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M16TAKZ5HRDF2NVWTYPK97PX
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00150
+summary: Verify blocked; Release not ready. Targeted 423 tests and Python format/lint pass; full quality fails at node-format on unrelated pre-existing files.
+details: Epic hrn-00150 remains in_progress on feat/hrn-00150-pi-ask-user-question. `mise run quality` stopped because Prettier flags only `.opencode/opencode.json` and `.pi/settings.json`, both pre-existing unrelated modifications. Criterion 10 and final acceptance review pending. Classified worktree/config failure, not product defect; no Bug, repair, code edit, commit, remote, Build, or Release. Issue comment hrn-00150-C0002; issue validation passed.
+source:
+  kind: artifact
+  ref: hrn-00150
+  revision: v1:80d278535093feb215f0fe8fcb9109e7e73aad49b064f8cb979a0b8195000db9
+created_at: 2026-08-29T13:11:14.661Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M16SZ4JKCF38X42F4EJWK89K
+tags:
+  - ask-user-question
+  - blocked
+  - pi
+  - sdlc
+  - verify
