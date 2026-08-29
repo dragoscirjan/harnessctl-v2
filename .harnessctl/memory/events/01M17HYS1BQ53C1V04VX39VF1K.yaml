@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M17HYS1BQ53C1V04VX39VF1K
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00156 | build | Pi MCP config | complete
+details: |-
+  Epic: hrn-00156
+  Command/phase: work-build
+  Item: repository-local Pi `sdlc_code_index` MCP config
+  Done: `.pi/mcp.json` uses `command: cgc`, `args: [mcp, start]`, `lifecycle: lazy`, `requestTimeoutMs: 30000`; invalid `type`, `enabled`, `timeout` absent; `sdlc_cvs_github` assertions passed; issue comment added; issue validation passed
+  Verification: focused local only: jq assertions; `cgc mcp tools`; Pi MCP status lists `sdlc_code_index`; MCP connect exposes 29 tools
+  Next: `work-verify hrn-00156`
+  Blockers: none for Build
+  Artifacts: `.pi/mcp.json`, `.harnessctl/issues/hrn-00156-keep-repository-local-pi-sdlc-code-index-mcp-config-valid.yml`
+source:
+  kind: tool-observation
+  ref: jq/cgc/mcp/issue_comment/issue_validate hrn-00156
+  revision: null
+created_at: 2026-08-29T20:04:12.459Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - code-index
+  - hrn-00156
+  - mcp
+  - sdlc

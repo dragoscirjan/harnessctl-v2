@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M17J8635SS8R0MKWGT46XG60
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00156 | verify | acceptance | passed
+details: |-
+  Epic: hrn-00156
+  Command/phase: work-verify
+  Item: repository-local Pi `sdlc_code_index` MCP config
+  Done: acceptance mapped and passed; no Plan/Build/Release
+  Verification: jq JSON/config assertions; `git diff --check`; issue validation; Pi MCP status lists `sdlc_code_index`; server connect exposes 29 tools; independent reviewer passed correctness/maintainability/security/privacy/compatibility with only prior live-status gap, now covered by MCP status/connect
+  Defect handling: one CLI grep check failed because rich `cgc mcp tools` output omitted exact underscored names; classified verification-command mismatch, not product defect; MCP metadata is authority for exposed tool names
+  Next: `work-release hrn-00156`
+  Blockers: none for Verify
+  Artifacts: `.pi/mcp.json`, `.harnessctl/issues/hrn-00156-keep-repository-local-pi-sdlc-code-index-mcp-config-valid.yml`
+source:
+  kind: tool-observation
+  ref: jq/git diff --check/mcp/issue_validate/reviewer hrn-00156
+  revision: null
+created_at: 2026-08-29T20:09:20.741Z
+created_by: pi
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - code-index
+  - hrn-00156
+  - mcp
+  - sdlc
+  - verify
