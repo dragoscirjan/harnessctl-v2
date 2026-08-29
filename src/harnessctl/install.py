@@ -99,14 +99,16 @@ CODE_INDEX_SKILL = Path("sdlc-code-index/SKILL.md")
 TDD_SKILL = Path("sdlc-develop-tdd/SKILL.md")
 OPENCODE_PLUGIN = Path(".opencode/plugins/harnessctl-memory.js")
 LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode-tools';\n"
-OPENCODE_TOOLS_PLUGIN = "@harnessctl/opencode-tools@latest"
+OPENCODE_TOOLS_VERSION = "0.1.10"
+OPENCODE_TOOLS_PLUGIN = f"@harnessctl/opencode-tools@{OPENCODE_TOOLS_VERSION}"
 LOCAL_CACHE = Path(".harnessctl/cache/harnessctl.sqlite")
 OPENCODE_CONFIG = Path(".opencode/opencode.json")
 PI_MCP_CONFIG = Path(".pi/mcp.json")
 PI_SETTINGS = Path(".pi/settings.json")
 PI_ADAPTER = "npm:pi-mcp-adapter@2.26.0"
 PI_ASK_USER_QUESTION = "npm:@juicesharp/rpiv-ask-user-question@2.7.1"
-PI_TOOLS = "npm:@harnessctl/pi-tools@latest"
+PI_TOOLS_VERSION = "0.1.10"
+PI_TOOLS = f"npm:@harnessctl/pi-tools@{PI_TOOLS_VERSION}"
 PI_TIMEOUT_SECONDS = 120
 PI_RESIDUAL_EFFECTS = (
     "project-local .pi/npm, package-manager metadata, downloads, caches, "
@@ -402,6 +404,10 @@ def install(
             PI_ASK_USER_QUESTION,
             *((PI_ADAPTER,) if intents else ()),
         )
+        pi_settings_path = _target(root, PI_SETTINGS)
+        pi_settings_content = _merge_pi_settings(pi_settings_path)
+        if pi_settings_content is not None:
+            rendered_targets.append((pi_settings_path, pi_settings_content))
         pi_state = _inspect_pi_packages(root)
         if any(source not in pi_state.configured for source in required_pi_packages):
             pi_executable = _preflight_pi_launcher()
@@ -410,6 +416,7 @@ def install(
         _target(root, Path(".gitignore")),
         _target(root, OPENCODE_CONFIG),
         _target(root, PI_MCP_CONFIG),
+        _target(root, PI_SETTINGS),
     }
     _validate_plan(root, rendered_targets, config, harness, retired_targets)
     legacy_skill_roots = _detect_legacy_skill_roots(root, harnesses)
@@ -612,8 +619,40 @@ def install(
 
 
 @dataclass(frozen=True)
+class _ManagedPackageSource:
+    source: str
+    prefix: str
+    package: str
+    version: str | None
+
+    @property
+    def is_default_latest(self) -> bool:
+        return self.version in (None, "latest")
+
+
+@dataclass(frozen=True)
 class _PiPackageState:
     configured: frozenset[str]
+
+
+def _parse_managed_package_source(
+    source: str, package: str, *, prefix: str = ""
+) -> _ManagedPackageSource | None:
+    if not source.startswith(prefix):
+        return None
+    specifier = source[len(prefix) :]
+    if specifier == package:
+        return _ManagedPackageSource(source=source, prefix=prefix, package=package, version=None)
+    if not specifier.startswith(f"{package}@"):
+        return None
+    version = specifier[len(package) + 1 :]
+    if not version:
+        return None
+    return _ManagedPackageSource(source=source, prefix=prefix, package=package, version=version)
+
+
+def _is_managed_package_source(source: str, package: str, *, prefix: str = "") -> bool:
+    return _parse_managed_package_source(source, package, prefix=prefix) is not None
 
 
 def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]:
@@ -871,21 +910,22 @@ def _merge_opencode_json(
 
     changed = original is None
     managed = [
-        item
-        for item in plugins
-        if item == "@harnessctl/opencode-tools" or item.startswith("@harnessctl/opencode-tools@")
+        source
+        for source in plugins
+        if _is_managed_package_source(source, "@harnessctl/opencode-tools")
     ]
-    if managed != [OPENCODE_TOOLS_PLUGIN]:
-        if managed and not force:
-            raise FileExistsError(f"conflicting harnessctl OpenCode plugin in {path}: {managed}")
-        plugins[:] = [
-            item
-            for item in plugins
-            if item != "@harnessctl/opencode-tools"
-            and not item.startswith("@harnessctl/opencode-tools@")
-        ]
+    if len(managed) > 1:
+        raise ValueError(f"duplicate harnessctl OpenCode plugin entries in {path}: {managed}")
+    if not managed:
         plugins.append(OPENCODE_TOOLS_PLUGIN)
         changed = True
+    else:
+        managed_source = _parse_managed_package_source(managed[0], "@harnessctl/opencode-tools")
+        if managed_source is None:
+            raise ValueError(f"malformed harnessctl OpenCode plugin in {path}: {managed[0]}")
+        if managed[0] != OPENCODE_TOOLS_PLUGIN:
+            plugins[plugins.index(managed[0])] = OPENCODE_TOOLS_PLUGIN
+            changed = True
 
     required = {intent.server_id: render_opencode_mcp(intent) for intent in intents}
     recognized = recognized or {}
@@ -1078,6 +1118,37 @@ def _reject_modified_historical_replacement_conflicts(
         )
 
 
+def _merge_pi_settings(path: Path) -> str | None:
+    settings, original = _load_json_object(path, "Pi project settings")
+    packages = settings.get("packages")
+    if packages is None:
+        return None
+    if not isinstance(packages, list):
+        raise ValueError(f"packages must be an array in {path}")
+    changed = False
+    for entry in packages:
+        if isinstance(entry, str):
+            source = entry
+        elif isinstance(entry, dict) and isinstance(entry.get("source"), str):
+            source = entry["source"]
+            if entry.get("autoload") is False or "extensions" in entry:
+                continue
+        else:
+            raise ValueError(f"malformed package entry in {path}")
+        if not _is_managed_package_source(source, "@harnessctl/pi-tools", prefix="npm:"):
+            continue
+        if source == PI_TOOLS:
+            continue
+        if isinstance(entry, str):
+            packages[packages.index(entry)] = PI_TOOLS
+        else:
+            entry["source"] = PI_TOOLS
+        changed = True
+    if not changed:
+        return None
+    return _dump_json_preserving_unchanged_members(settings, original)
+
+
 def _inspect_pi_packages(root: Path) -> _PiPackageState:
     settings_path = _target(root, PI_SETTINGS)
     settings, _ = _load_json_object(settings_path, "Pi project settings")
@@ -1100,7 +1171,6 @@ def _inspect_pi_packages(root: Path) -> _PiPackageState:
     for required, identifying_fragment in (
         (PI_ADAPTER, "pi-mcp-adapter"),
         (PI_ASK_USER_QUESTION, "@juicesharp/rpiv-ask-user-question"),
-        (PI_TOOLS, "@harnessctl/pi-tools"),
     ):
         exact_count = sources.count(required)
         related_sources = [source for source in sources if identifying_fragment in source]
@@ -1116,6 +1186,21 @@ def _inspect_pi_packages(root: Path) -> _PiPackageState:
             raise ValueError(f"Pi package {required} must load all extensions in {settings_path}")
         if exact_count == 1:
             configured.add(required)
+
+    pi_tools_sources = [
+        source
+        for source in sources
+        if _is_managed_package_source(source, "@harnessctl/pi-tools", prefix="npm:")
+    ]
+    if len(pi_tools_sources) > 1:
+        raise ValueError(
+            f"duplicate Pi package entries for @harnessctl/pi-tools in {settings_path}"
+        )
+    if pi_tools_sources:
+        if pi_tools_sources[0] in extension_filtered_sources:
+            raise ValueError(f"Pi package {PI_TOOLS} must load all extensions in {settings_path}")
+        if pi_tools_sources[0] == PI_TOOLS:
+            configured.add(PI_TOOLS)
     return _PiPackageState(configured=frozenset(configured))
 
 
@@ -1781,7 +1866,10 @@ def _smoke_check(
 
     config, _ = _load_json_object(root / OPENCODE_CONFIG, "OpenCode configuration")
     plugins = config.get("plugin")
-    if not isinstance(plugins, list) or OPENCODE_TOOLS_PLUGIN not in plugins:
+    if not isinstance(plugins, list) or not any(
+        isinstance(plugin, str) and _is_managed_package_source(plugin, "@harnessctl/opencode-tools")
+        for plugin in plugins
+    ):
         raise RuntimeError("OpenCode tools plugin registration smoke check failed")
 
     if not check_memory:

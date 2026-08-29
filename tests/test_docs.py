@@ -744,7 +744,7 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     )
     assert "Recognition requires the old local `forgejo-mcp` executable signature" in normalized
     assert "Environment-variable names only" in cvs
-    assert "npm:@harnessctl/pi-tools@latest" in cvs
+    assert "npm:@harnessctl/pi-tools@0.1.10" in cvs
     assert "every skill in the current managed registry" in normalized
 
 

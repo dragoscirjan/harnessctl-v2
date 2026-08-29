@@ -150,7 +150,7 @@ def write_pinned_pi_adapter(root: Path) -> None:
     settings = root / ".pi/settings.json"
     settings.parent.mkdir(parents=True, exist_ok=True)
     settings.write_text(
-        '{"packages":["npm:@harnessctl/pi-tools@latest",'
+        '{"packages":["npm:@harnessctl/pi-tools@0.1.10",'
         '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
         '"npm:pi-mcp-adapter@2.26.0"]}\n',
         encoding="utf-8",
@@ -2409,7 +2409,7 @@ def test_install_enabled_repository_memory_and_adapter(tmp_path: Path) -> None:
     assert tmp_path / ".opencode/skills/sdlc-caveman/SKILL.md" in installed
     assert tmp_path / ".opencode/skills/sdlc-memory/SKILL.md" in installed
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
-    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert "@harnessctl/opencode-tools@0.1.10" in opencode["plugin"]
     assert not (tmp_path / ".opencode/plugins/harnessctl-memory.js").exists()
     assert (tmp_path / ".harnessctl/memory/facts").is_dir()
     assert "/.harnessctl/cache/" in (tmp_path / ".gitignore").read_text()
@@ -2433,7 +2433,7 @@ def test_install_disabled_memory_compiles_out_integration(tmp_path: Path) -> Non
     assert "Memory checkpoint unavailable" in checkpoint
     assert "memory_store" not in checkpoint
     opencode = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
-    assert "@harnessctl/opencode-tools@latest" in opencode["plugin"]
+    assert "@harnessctl/opencode-tools@0.1.10" in opencode["plugin"]
     assert not (tmp_path / ".opencode/skills/sdlc-memory").exists()
     assert not (tmp_path / ".opencode/plugins").exists()
     assert not (tmp_path / ".opencode/package.json").exists()
@@ -2651,7 +2651,7 @@ def test_opencode_mcp_merge_preserves_operator_configuration(tmp_path: Path) -> 
 
     document = json.loads(host.read_text(encoding="utf-8"))
     assert document["$schema"] == "schema"
-    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@latest"]
+    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@0.1.10"]
     assert document["mcp"]["operator"] == {"x": 1}
     assert document["mcp"]["sdlc_cvs_github"]["headers"]["Authorization"] == (
         "Bearer {env:GH_TOKEN}"
@@ -3172,17 +3172,40 @@ def test_external_code_index_host_entry_survives_install_rollback(
     assert _tree_manifest(tmp_path) == before
 
 
-def test_opencode_plugin_version_conflicts_unless_forced(tmp_path: Path) -> None:
+def test_opencode_stale_plugin_version_updates_to_current_package(tmp_path: Path) -> None:
     host = tmp_path / ".opencode/opencode.json"
     host.parent.mkdir(parents=True)
-    host.write_text('{"plugin":["operator","@harnessctl/opencode-tools@0.1.4"]}\n')
+    host.write_text('{"plugin":["operator","@harnessctl/opencode-tools@0.1.9"]}\n')
 
-    with pytest.raises(FileExistsError, match="conflicting harnessctl OpenCode plugin"):
+    install(tmp_path, "opencode")
+
+    document = json.loads(host.read_text(encoding="utf-8"))
+    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@0.1.10"]
+
+
+def test_opencode_unversioned_plugin_updates_to_latest(tmp_path: Path) -> None:
+    host = tmp_path / ".opencode/opencode.json"
+    host.parent.mkdir(parents=True)
+    host.write_text('{"plugin":["operator","@harnessctl/opencode-tools"]}\n')
+
+    install(tmp_path, "opencode")
+
+    document = json.loads(host.read_text(encoding="utf-8"))
+    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@0.1.10"]
+
+
+def test_opencode_duplicate_managed_plugins_fail_before_mutation(tmp_path: Path) -> None:
+    host = tmp_path / ".opencode/opencode.json"
+    host.parent.mkdir(parents=True)
+    host.write_text(
+        '{"plugin":["@harnessctl/opencode-tools@0.1.10","@harnessctl/opencode-tools@0.1.4"]}\n'
+    )
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="duplicate harnessctl OpenCode plugin"):
         install(tmp_path, "opencode")
 
-    install(tmp_path, "opencode", force=True)
-    document = json.loads(host.read_text(encoding="utf-8"))
-    assert document["plugin"] == ["operator", "@harnessctl/opencode-tools@latest"]
+    assert _tree_manifest(tmp_path) == before
 
 
 def test_opencode_install_removes_exact_legacy_plugin_shim(tmp_path: Path) -> None:
@@ -3197,7 +3220,7 @@ def test_opencode_install_removes_exact_legacy_plugin_shim(tmp_path: Path) -> No
 
     assert not shim.exists()
     document = json.loads((tmp_path / ".opencode/opencode.json").read_text(encoding="utf-8"))
-    assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
+    assert document["plugin"] == ["@harnessctl/opencode-tools@0.1.10"]
 
 
 def test_opencode_legacy_plugin_cleanup_rolls_back_on_failure(
@@ -3270,7 +3293,7 @@ def test_local_mcp_is_omitted_when_forgejo_server_is_absent(
     host = tmp_path / ".opencode/opencode.json"
     assert host in installed
     document = json.loads(host.read_text(encoding="utf-8"))
-    assert document["plugin"] == ["@harnessctl/opencode-tools@latest"]
+    assert document["plugin"] == ["@harnessctl/opencode-tools@0.1.10"]
     assert "sdlc_cvs_gitea" not in document.get("mcp", {})
     assert "sdlc-code-index" not in document.get("mcp", {})
 
@@ -3347,13 +3370,68 @@ def test_local_mcp_missing_binary_still_installs_cli_skill(
     assert "- Remote MCP: unavailable." in skill.read_text(encoding="utf-8")
 
 
+def test_pi_tools_stale_version_updates_to_current_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@0.1.9",'
+        '"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
+        '"npm:pi-mcp-adapter@2.26.0"]}\n',
+        encoding="utf-8",
+    )
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        install_module.shutil,
+        "which",
+        lambda name: _mock_pi_path() if name == "pi" else None,
+    )
+
+    def fake_run(args: list[str], **_kwargs: object) -> SimpleNamespace:
+        calls.append(args)
+        document = json.loads(settings.read_text(encoding="utf-8"))
+        document["packages"][0] = args[3]
+        settings.write_text(json.dumps(document) + "\n", encoding="utf-8")
+        return SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+    monkeypatch.setattr(install_module.subprocess, "run", fake_run)
+
+    install(tmp_path, "pi", allow_pi_package_install=True)
+
+    assert calls == [
+        [_mock_pi_path(), "install", "-l", "npm:@harnessctl/pi-tools@0.1.10", "--approve"]
+    ]
+    document = json.loads(settings.read_text(encoding="utf-8"))
+    assert document["packages"] == [
+        "npm:@harnessctl/pi-tools@0.1.10",
+        "npm:@juicesharp/rpiv-ask-user-question@2.7.1",
+        "npm:pi-mcp-adapter@2.26.0",
+    ]
+
+
+def test_pi_duplicate_tools_versions_fail_before_mutation(tmp_path: Path) -> None:
+    settings = tmp_path / ".pi/settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(
+        '{"packages":["npm:@harnessctl/pi-tools@0.1.10","npm:@harnessctl/pi-tools@0.1.4"]}\n',
+        encoding="utf-8",
+    )
+    before = _tree_manifest(tmp_path)
+
+    with pytest.raises(ValueError, match="duplicate Pi package entries"):
+        install(tmp_path, "pi")
+
+    assert _tree_manifest(tmp_path) == before
+
+
 def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
     tmp_path: Path,
 ) -> None:
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
     settings_before = (
-        b'{"operator":true,"packages":["npm:@harnessctl/pi-tools@latest",'
+        b'{"operator":true,"packages":["npm:@harnessctl/pi-tools@0.1.10",'
         b'"npm:@juicesharp/rpiv-ask-user-question@2.7.1",'
         b'{"source":"npm:pi-mcp-adapter@2.26.0"}]}\n'
     )
@@ -3381,8 +3459,10 @@ def test_pi_preinstalled_adapter_is_preserved_and_output_guard_is_merged(
 @pytest.mark.parametrize(
     ("filtered_source", "package_filter"),
     [
-        ("npm:@harnessctl/pi-tools@latest", {"extensions": []}),
-        ("npm:@harnessctl/pi-tools@latest", {"autoload": False}),
+        ("npm:@harnessctl/pi-tools@0.1.10", {"extensions": []}),
+        ("npm:@harnessctl/pi-tools@0.1.10", {"autoload": False}),
+        ("npm:@harnessctl/pi-tools@0.1.4", {"extensions": []}),
+        ("npm:@harnessctl/pi-tools@0.1.4", {"autoload": False}),
         ("npm:@juicesharp/rpiv-ask-user-question@2.7.1", {"extensions": []}),
         ("npm:@juicesharp/rpiv-ask-user-question@2.7.1", {"autoload": False}),
         ("npm:pi-mcp-adapter@2.26.0", {"extensions": []}),
@@ -3394,8 +3474,13 @@ def test_pi_rejects_disabled_required_package_extensions_before_mutation(
 ) -> None:
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
+    pi_tools_source = (
+        filtered_source
+        if filtered_source.startswith("npm:@harnessctl/pi-tools@")
+        else "npm:@harnessctl/pi-tools@0.1.10"
+    )
     packages: list[object] = [
-        "npm:@harnessctl/pi-tools@latest",
+        pi_tools_source,
         "npm:@juicesharp/rpiv-ask-user-question@2.7.1",
         "npm:pi-mcp-adapter@2.26.0",
     ]
@@ -3514,7 +3599,7 @@ def test_pi_noninteractive_opt_in_installs_exact_pin_before_project_files(
             _mock_pi_path(),
             "install",
             "-l",
-            "npm:@harnessctl/pi-tools@latest",
+            "npm:@harnessctl/pi-tools@0.1.10",
             "--approve",
         ],
         [
@@ -3540,7 +3625,7 @@ def test_pi_installs_ask_user_question_without_mcp_intents(
 ) -> None:
     settings = tmp_path / ".pi/settings.json"
     settings.parent.mkdir(parents=True)
-    settings.write_text('{"packages":["npm:@harnessctl/pi-tools@latest"]}\n', encoding="utf-8")
+    settings.write_text('{"packages":["npm:@harnessctl/pi-tools@0.1.10"]}\n', encoding="utf-8")
     calls: list[list[str]] = []
     monkeypatch.setattr(install_module, "required_server_intents", lambda *_args: [])
     monkeypatch.setattr(install_module, "recognized_server_intents", lambda *_args: {})

@@ -1,0 +1,12 @@
+"version": 1
+"id": "hrn-00153"
+"type": "task"
+"title": "Define managed extension install-source version policy"
+"status": "done"
+"created_at": "2026-08-29T14:43:25.346Z"
+"updated_at": "2026-08-29T14:52:37.508Z"
+"created_by": "pi"
+"assigned_to": "pi"
+"parent": "hrn-00152"
+"body": "# Define managed extension install-source version policy\n\n## Summary\n\nDefine helper model for managed extension source identity, default latest source, and explicit pinned source.\n\n## Scope\n\n- Support OpenCode bare plugin source syntax, e.g. `@harnessctl/opencode-tools@latest`.\n- Support Pi package source syntax, e.g. `npm:@harnessctl/pi-tools@latest`.\n- Cover future managed extension packages through shared helpers, not package-specific string checks only.\n\n## Acceptance\n\n- Helpers can identify the managed package identity independent of version/tag.\n- Helpers can produce default latest source.\n- Helpers can represent/preserve explicit locked source.\n- Invalid/malformed package entries still fail safely before mutation.\n"
+"comments": []

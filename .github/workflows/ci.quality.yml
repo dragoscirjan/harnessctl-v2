@@ -30,6 +30,8 @@ jobs:
       - name: Run quality gate
         run: mise run quality
         shell: bash
+        env:
+          VITEST_COVERAGE: ${{ inputs.extended && 'true' || 'false' }}
 
       - name: Build, inspect, and smoke-test packages
         run: mise run runtime-smoke
