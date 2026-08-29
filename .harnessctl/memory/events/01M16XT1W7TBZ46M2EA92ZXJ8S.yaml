@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M16XT1W7TBZ46M2EA92ZXJ8S
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00151 | Build | closure matrix | prepared local evidence matrix
+details: |-
+  Epic: hrn-00151
+  Command/phase: work-build / Build
+  Item: closure matrix for stale open Epics
+  Done: transitioned hrn-00151 to in_progress; added hrn-00151-C0001 matrix; issue_validate all active issues valid after comment.
+  Evidence: local main/origin/main 3d3b22c1dc7bd195744f3743bfc32fde6808caff; merges present PR #39 hrn-00115, #40 hrn-00121, #41 hrn-00129, #43 hrn-00132, #47 hrn-00135, #52 hrn-00150.
+  Decisions: no closures in Build; closures need work-release hrn-00151 and fresh exact per-issue consent.
+  Blockers: child issues still open under hrn-00129/hrn-00132/hrn-00135; close together or before parent if consented.
+  Artifacts: .harnessctl/issues/hrn-00151-reconcile-stale-open-epics-after-main-merge.yml comment hrn-00151-C0001
+  Next: work-release hrn-00151
+source:
+  kind: tool-observation
+  ref: issue_transition/issue_comment/issue_validate/git main hrn-00151
+  revision: null
+created_at: 2026-08-29T14:12:06.151Z
+created_by: openai/gpt-5.6-sol
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - checkpoint
+  - hrn-00151
+  - sdlc
