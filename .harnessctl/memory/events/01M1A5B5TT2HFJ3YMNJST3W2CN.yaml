@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1A5B5TT2HFJ3YMNJST3W2CN
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00157
+summary: hrn-00157 | Verify | Config v1 MCP-first web retrieval | passed
+details: |-
+  Epic: hrn-00157
+  Command/phase: Work Verify
+  Item: acceptance after hrn-00165 repair
+  Done: all acceptance mapped; full quality/runtime gates and dedicated correctness, maintainability, security/privacy, compatibility review pass.
+  Next: Release after separate child Bug status decision.
+  Blockers: none in product evidence; hrn-00165 remains open pending explicit closure confirmation.
+  Artifacts: hrn-00157-C0005
+  Verification: mise run quality; mise run runtime-smoke; Config parse; host/provenance and guidance parity; obsolete-name search; issue/memory validation; git diff check pass.
+source:
+  kind: artifact
+  ref: hrn-00157-C0005
+  revision: v1:9a743eb78adec2f74e4b46244d85ef3191a54049e1a03fe1177a4fb445618dbe
+created_at: 2026-08-30T20:21:30.586Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1A4WG0RVGQRSPKS64RVV15H
+tags:
+  - hrn-00157
+  - hrn-00165
+  - verify
+  - web-retrieval

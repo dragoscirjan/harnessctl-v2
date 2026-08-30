@@ -249,7 +249,7 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "25ed92fe3d5a3de3941451f21d0208dab8dee2c387668d71fb2b1209b9fa43c5"
+        "dac8e2ec74d388f88a552060dcaa0534c56a34ef57550222035b6a1b19f46c8f"
     )
 
 

@@ -42,7 +42,7 @@ shared skill tree is installed byte-for-byte identically at
 Agents load conditional references only when the matching condition occurs and never
 preload the full tree. Disabled memory compiles an unavailable-checkpoint policy;
 enabled memory compiles bounded retrieval and persistence guidance. When
-`mcp.web_retrieval.enabled` is true, the core skill also compiles MCP-first web
+`skills.webRetrieval.enabled` is true, the core skill also compiles MCP-first web
 research guidance that prefers live `sdlc_web_crawl` tools before shell fetch fallback.
 OpenCode and Pi therefore receive equivalent workflow instructions without an added
 agent runtime.

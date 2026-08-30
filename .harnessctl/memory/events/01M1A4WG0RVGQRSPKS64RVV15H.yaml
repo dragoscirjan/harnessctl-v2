@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1A4WG0RVGQRSPKS64RVV15H
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00157
+summary: hrn-00157 | Build | hrn-00165 no-invention guidance | implemented
+details: |-
+  Epic: hrn-00157
+  Command/phase: Work Build
+  Item: hrn-00165
+  Done: Enabled web guidance explicitly prohibits invented tool names, parameters, response fields; Pi/OpenCode outputs byte-identical; focused parity assertions and policy digest updated.
+  Next: work-verify hrn-00157.
+  Blockers: none at Build boundary.
+  Artifacts: hrn-00165-C0001
+  Verification: 535 focused tests; Ruff lint/format; generated-skill Prettier; host parity; Config v1 parse; git diff check pass.
+source:
+  kind: artifact
+  ref: hrn-00165-C0001
+  revision: v1:f9cfa3721f60c4386354572912902be09e831560c24c037935aa3433b47aba42
+created_at: 2026-08-30T20:13:29.496Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1A4ESW0X9E02CCQYK7XQHAG
+tags:
+  - build
+  - hrn-00165
+  - sdlc
+  - web-retrieval

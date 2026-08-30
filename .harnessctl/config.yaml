@@ -16,7 +16,7 @@ mcpServers:
   sdlc_code_index:
     command: cgc
     args: [mcp, start]
-  webcrawl_searchable:
+  sdlc_web_crawl:
     command: npx
     args: [-y, '@dragoscirjan/mcp-searchable@latest']
 skills:
@@ -51,6 +51,9 @@ skills:
   codeIndex:
     enabled: true
     mcpName: sdlc_code_index
+  webRetrieval:
+    enabled: true
+    mcpName: sdlc_web_crawl
   memory:
     enabled: true
     root: .harnessctl/memory

@@ -2,9 +2,9 @@
 "id": "hrn-00160"
 "type": "epic"
 "title": "Unify configuration under a capability-oriented Config v1 contract"
-"status": "open"
+"status": "closed"
 "created_at": "2026-08-29T22:19:10.837Z"
-"updated_at": "2026-08-29T22:45:10.304Z"
+"updated_at": "2026-08-30T17:26:03.763Z"
 "created_by": "OpenCode"
 "assigned_to": "OpenCode"
 "documents":

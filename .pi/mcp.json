@@ -10,19 +10,13 @@
     },
     "sdlc_code_index": {
       "command": "cgc",
-      "args": [
-        "mcp",
-        "start"
-      ],
+      "args": ["mcp", "start"],
       "lifecycle": "lazy",
       "requestTimeoutMs": 30000
     },
-    "webcrawl_searchable": {
+    "sdlc_web_crawl": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@dragoscirjan/mcp-searchable@latest"
-      ],
+      "args": ["-y", "@dragoscirjan/mcp-searchable@latest"],
       "lifecycle": "lazy"
     }
   },

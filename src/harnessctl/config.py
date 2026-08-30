@@ -16,6 +16,7 @@ from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
 CODE_INDEX_SKILL_ID = "codeIndex"
+WEB_RETRIEVAL_SKILL_ID = "webRetrieval"
 CONFIG_V1_REWRITE_GUIDANCE = (
     "Config v1 requires explicit version: 1. Manually rewrite .harnessctl/config.yaml "
     "using docs/configuration.md; automatic migration is not supported."
@@ -159,6 +160,11 @@ def _validate_config_refinements(config: dict[str, Any]) -> None:
             skills[CODE_INDEX_SKILL_ID]["enabled"],
             skills[CODE_INDEX_SKILL_ID]["mcpName"],
             "skills.codeIndex.mcpName",
+        ),
+        (
+            skills[WEB_RETRIEVAL_SKILL_ID]["enabled"],
+            skills[WEB_RETRIEVAL_SKILL_ID]["mcpName"],
+            "skills.webRetrieval.mcpName",
         ),
     )
     missing = tuple(

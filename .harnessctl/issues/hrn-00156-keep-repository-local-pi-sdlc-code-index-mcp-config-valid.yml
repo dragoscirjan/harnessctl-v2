@@ -2,9 +2,9 @@
 "id": "hrn-00156"
 "type": "epic"
 "title": "Keep repository-local Pi sdlc_code_index MCP config valid"
-"status": "open"
+"status": "closed"
 "created_at": "2026-08-29T20:01:43.170Z"
-"updated_at": "2026-08-29T20:15:22.964Z"
+"updated_at": "2026-08-30T17:26:03.380Z"
 "created_by": "pi"
 "assigned_to": "pi"
 "metadata":

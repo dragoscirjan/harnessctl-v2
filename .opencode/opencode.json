@@ -16,7 +16,7 @@
       "enabled": true,
       "timeout": 30000
     },
-    "webcrawl_searchable": {
+    "sdlc_web_crawl": {
       "type": "local",
       "command": ["npx", "-y", "@dragoscirjan/mcp-searchable@latest"]
     }

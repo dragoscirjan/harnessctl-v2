@@ -23,7 +23,7 @@
       "command": "cgc",
       "args": ["mcp", "start"]
     },
-    "webcrawl_searchable": {
+    "sdlc_web_crawl": {
       "command": "npx",
       "args": ["-y", "@dragoscirjan/mcp-searchable@latest"]
     }
@@ -68,6 +68,10 @@
     "codeIndex": {
       "enabled": false,
       "mcpName": "sdlc_code_index"
+    },
+    "webRetrieval": {
+      "enabled": false,
+      "mcpName": "sdlc_web_crawl"
     },
     "memory": {
       "enabled": false,

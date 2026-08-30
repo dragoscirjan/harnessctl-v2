@@ -340,13 +340,13 @@ def test_local_forgejo_projection_is_provider_exclusive() -> None:
 
 def test_enabled_web_retrieval_projects_sdlc_web_crawl_for_both_hosts() -> None:
     config = deepcopy(DEFAULT_CONFIG)
-    config["mcp"]["web_retrieval"]["enabled"] = True
+    config["skills"]["webRetrieval"]["enabled"] = True
 
     intents = required_server_intents(config, "all")
     web = next(intent for intent in intents if intent.server_id == "sdlc_web_crawl")
 
-    assert web.provider == "web-retrieval"
-    assert web.requesting_routes == ("web-retrieval",)
+    assert web.provider == "generic"
+    assert web.requesting_routes == ("mcpServers", "webRetrieval")
     assert render_opencode_mcp(web) == {
         "type": "local",
         "command": ["npx", "-y", "@dragoscirjan/mcp-searchable@latest"],
@@ -364,7 +364,7 @@ def test_documents_do_not_create_mcp_intents_or_routes() -> None:
     assert [intent.server_id for intent in intents] == [
         "sdlc_cvs_github",
         "sdlc_code_index",
-        "webcrawl_searchable",
+        "sdlc_web_crawl",
     ]
     assert [intent.requesting_routes for intent in intents] == [
         ("mcpServers", "cvs"),

@@ -64,6 +64,7 @@ def _sdlc_context(
     memory_enabled: bool,
     tdd_enabled: bool = False,
     code_index_enabled: bool = False,
+    web_retrieval_enabled: bool = False,
     documents_root: str = ".harnessctl/documents",
 ) -> dict[str, object]:
     return {
@@ -72,6 +73,8 @@ def _sdlc_context(
         "retrieval_max_chars": 2048,
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "web_retrieval_enabled": web_retrieval_enabled,
+        "web_retrieval_mcp_id": "sdlc_web_crawl",
         "documents_root": documents_root,
     }
 
@@ -1519,6 +1522,25 @@ def test_enabled_sdlc_code_index_installs_equivalent_selected_host_skills(
     assert opencode_sdlc == pi_sdlc
     assert b"When `sdlc-code-index` is available" in opencode_sdlc
     assert b"`sdlc-code-index` is disabled" not in opencode_sdlc
+
+
+def test_enabled_web_retrieval_compiles_equivalent_selected_host_guidance(
+    tmp_path: Path,
+) -> None:
+    write_project_config(
+        tmp_path,
+        "skills:\n  webRetrieval:\n    enabled: true\n    mcpName: sdlc_web_crawl\n",
+    )
+    write_pinned_pi_adapter(tmp_path)
+
+    install(tmp_path, "all")
+
+    opencode_sdlc = (tmp_path / ".opencode/skills/sdlc/SKILL.md").read_bytes()
+    pi_sdlc = (tmp_path / ".pi/skills/sdlc/SKILL.md").read_bytes()
+    assert opencode_sdlc == pi_sdlc
+    assert b"prefer live tools under `sdlc_web_crawl`" in opencode_sdlc
+    assert b"never invent tool names, parameters, or response fields" in opencode_sdlc
+    assert b"MCP-first web retrieval is disabled" not in opencode_sdlc
 
 
 def test_disabled_sdlc_code_index_is_absent_from_fresh_install(tmp_path: Path) -> None:

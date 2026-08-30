@@ -100,6 +100,7 @@ def _sdlc_context(
     memory_enabled: bool = True,
     tdd_enabled: bool = False,
     code_index_enabled: bool = True,
+    web_retrieval_enabled: bool = False,
     documents_root: str = ".harnessctl/documents",
 ) -> dict[str, object]:
     return {
@@ -108,6 +109,8 @@ def _sdlc_context(
         "retrieval_max_chars": 2048,
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "web_retrieval_enabled": web_retrieval_enabled,
+        "web_retrieval_mcp_id": "sdlc_web_crawl",
         "documents_root": documents_root,
     }
 
@@ -284,6 +287,18 @@ def test_core_skill_does_not_load_retained_code_index_when_disabled() -> None:
     assert "Do not load a discoverable retained copy" in normalized
     assert "continue with direct source discovery, Glob, Grep, and file reads" in normalized
     assert "When `sdlc-code-index` is available" not in normalized
+
+
+def test_core_skill_compiles_web_retrieval_preference_only_when_enabled() -> None:
+    enabled = render_skill("sdlc", **_sdlc_context(web_retrieval_enabled=True))
+    disabled = render_skill("sdlc", **_sdlc_context(web_retrieval_enabled=False))
+
+    assert "prefer live tools under `sdlc_web_crawl`" in enabled
+    assert "never invent tool names, parameters, or response fields" in enabled
+    assert "MCP-first web retrieval is disabled" not in enabled
+    assert "MCP-first web retrieval is disabled" in disabled
+    assert "prefer live tools under `sdlc_web_crawl`" not in disabled
+    assert "never invent tool names, parameters, or response fields" not in disabled
 
 
 @pytest.mark.parametrize("command", COMMANDS)

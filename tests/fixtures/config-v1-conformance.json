@@ -20,7 +20,7 @@
             }
           },
           "sdlc_code_index": { "command": "cgc", "args": ["mcp", "start"] },
-          "webcrawl_searchable": {
+          "sdlc_web_crawl": {
             "command": "npx",
             "args": ["-y", "@dragoscirjan/mcp-searchable@latest"]
           }
@@ -58,6 +58,7 @@
           "caveman": { "enabled": true, "mode": "strict" },
           "tdd": { "enabled": false },
           "codeIndex": { "enabled": false, "mcpName": "sdlc_code_index" },
+          "webRetrieval": { "enabled": false, "mcpName": "sdlc_web_crawl" },
           "memory": {
             "enabled": false,
             "root": ".harnessctl/memory",
@@ -137,6 +138,7 @@
           "caveman": { "enabled": true, "mode": "strict" },
           "tdd": { "enabled": true },
           "codeIndex": { "enabled": true, "mcpName": "constructor" },
+          "webRetrieval": { "enabled": false, "mcpName": "sdlc_web_crawl" },
           "memory": {
             "enabled": true,
             "root": ".harnessctl/memory",
@@ -224,6 +226,7 @@
           "caveman": { "enabled": true, "mode": "strict" },
           "tdd": { "enabled": false },
           "codeIndex": { "enabled": false, "mcpName": "sdlc_code_index" },
+          "webRetrieval": { "enabled": false, "mcpName": "sdlc_web_crawl" },
           "memory": {
             "enabled": false,
             "root": ".harnessctl/memory",

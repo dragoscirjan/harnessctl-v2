@@ -2,7 +2,7 @@
   "version": 1,
   "hosts": {
     "opencode": {
-      "webcrawl_searchable": {
+      "sdlc_web_crawl": {
         "type": "local",
         "command": [
           "npx",
@@ -12,7 +12,7 @@
       }
     },
     "pi": {
-      "webcrawl_searchable": {
+      "sdlc_web_crawl": {
         "command": "npx",
         "args": [
           "-y",

@@ -146,6 +146,25 @@ def test_enabled_skill_mcp_reference_must_exist(
     assert caught.value.validation_paths == (path,)
 
 
+def test_enabled_web_retrieval_reference_must_exist(tmp_path: Path) -> None:
+    _write_config(
+        tmp_path,
+        {
+            "version": 1,
+            "mcpServers": {},
+            "skills": {
+                "cvs": {"enabled": False},
+                "webRetrieval": {"enabled": True},
+            },
+        },
+    )
+
+    with pytest.raises(ConfigError) as caught:
+        load_config(tmp_path)
+
+    assert caught.value.validation_paths == ("skills.webRetrieval.mcpName",)
+
+
 @pytest.mark.parametrize(
     ("yaml_value", "suffix"),
     [
