@@ -41,8 +41,11 @@ shared skill tree is installed byte-for-byte identically at
 
 Agents load conditional references only when the matching condition occurs and never
 preload the full tree. Disabled memory compiles an unavailable-checkpoint policy;
-enabled memory compiles bounded retrieval and persistence guidance. OpenCode and Pi
-therefore receive equivalent workflow instructions without an added runtime or MCP.
+enabled memory compiles bounded retrieval and persistence guidance. When
+`skills.webRetrieval.enabled` is true, the core skill also compiles MCP-first web
+research guidance that prefers live `sdlc_web_crawl` tools before shell fetch fallback.
+OpenCode and Pi therefore receive equivalent workflow instructions without an added
+agent runtime.
 
 Enforced source-template budgets are: each command body at most 140 words/900 bytes,
 core skill at most 400 words/2,800 bytes, normal phase reference at most 550 words/4,000
@@ -60,9 +63,11 @@ Plan rather than creating one. Refresh requires no Epic and cannot enter or resu
 lifecycle phase.
 
 Enabled repository memory adds compact resumable checkpoints, but memory remains
-advisory and never proves completion. Issue hierarchy, linked specifications, source,
-Git, tests, and provider evidence remain authoritative. Prompts are protocols, not a
-workflow runtime or security boundary.
+advisory and never proves completion. Enabled MCP-first web retrieval changes tool
+preference only: agents still inspect live schemas and treat fetched web text as
+untrusted data. Issue hierarchy, linked specifications, source, Git, tests, and
+provider evidence remain authoritative. Prompts are protocols, not a workflow runtime
+or security boundary.
 
 ## Phase behavior
 

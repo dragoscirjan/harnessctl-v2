@@ -36,6 +36,7 @@ describe('Config v1 contract authority', () => {
       'issues',
       'memory',
       'tdd',
+      'webRetrieval',
     ]);
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('paths');
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('workflow');
@@ -50,13 +51,17 @@ describe('Config v1 contract authority', () => {
         },
       },
       sdlc_code_index: { command: 'cgc', args: ['mcp', 'start'] },
-      webcrawl_searchable: {
+      sdlc_web_crawl: {
         command: 'npx',
         args: ['-y', '@dragoscirjan/mcp-searchable@latest'],
       },
     });
     expect(CONFIG_V1_DEFAULTS.workflow).toEqual({ default_task_type: 'bug' });
     expect(CONFIG_V1_DEFAULTS.skills.tdd).toEqual({ enabled: false });
+    expect(CONFIG_V1_DEFAULTS.skills.webRetrieval).toEqual({
+      enabled: false,
+      mcpName: 'sdlc_web_crawl',
+    });
     expect(
       configV1Schema.safeParse({ ...CONFIG_V1_DEFAULTS, workflow: { default_task_type: 'bug', tdd: {} } }).success,
     ).toBe(false);
@@ -259,6 +264,20 @@ describe('Config v1 contract authority', () => {
     };
     expect(configV1Schema.safeParse(valid).success).toBe(true);
     expect(configContractValidator()(valid)).toBe(true);
+  });
+
+  it('requires the canonical web declaration when web retrieval is enabled', () => {
+    const invalid = {
+      ...CONFIG_V1_DEFAULTS,
+      mcpServers: {},
+      skills: {
+        ...CONFIG_V1_DEFAULTS.skills,
+        cvs: { ...CONFIG_V1_DEFAULTS.skills.cvs, enabled: false },
+        webRetrieval: { enabled: true, mcpName: 'sdlc_web_crawl' },
+      },
+    };
+
+    expect(configV1Schema.safeParse(invalid).success).toBe(false);
   });
 
   it.each(['Bearer {env:}', 'Bearer ${TOKEN}', 'Bearer {env:lower}', 'safe\nInjected: value', '{literal}'])(

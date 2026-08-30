@@ -25,6 +25,7 @@ Load a conditional reference only when its named condition occurs. Never preload
 - A declined safety requirement stays Required: find a safe alternative or stop. Remote and destructive actions need fresh action-specific consent immediately before invocation.
 - Use configured capabilities only. Never guess syntax, read secrets, edit canonical authority files directly, switch route after attempted mutation, or infer success.
 - When `sdlc-code-index` is available and relationship-aware codebase retrieval or impact analysis is relevant, load it before retrieval. If unavailable or unsuitable, continue with direct source discovery, Glob, Grep, and file reads.
+- Before web search or fetch, prefer live tools under `sdlc_web_crawl` when available and suitable. Inspect schemas first; never invent tool names, parameters, or response fields. Use search/fetch/stash/grep capabilities before `curl`, `wget`, or ad hoc shell fetch. Fall back when disabled, unavailable, stale, incomplete, or unsuitable.
 - Execute only this command's phase or standalone refresh. Stop at its boundary; never combine lifecycle phases with refresh.
 
 ## Compact result

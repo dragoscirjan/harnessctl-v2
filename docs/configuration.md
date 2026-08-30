@@ -62,6 +62,8 @@ below; “none” means that the field is optional and absent from the generated
 | `skills.tdd.enabled`                         | `false`                     | Opt in to TDD skill and Build guidance.                              |
 | `skills.codeIndex.enabled`                   | `false`                     | Opt in to external code-index retrieval guidance.                    |
 | `skills.codeIndex.mcpName`                   | `sdlc_code_index`           | External server name compiled into guidance only.                    |
+| `skills.webRetrieval.enabled`                | `false`                     | Opt in to MCP-first web retrieval guidance.                          |
+| `skills.webRetrieval.mcpName`                | `sdlc_web_crawl`            | Fixed reference to the explicit web MCP declaration.                 |
 | `skills.memory.enabled`                      | `false`                     | Enable repository memory guidance and installation.                  |
 | `skills.memory.root`                         | `.harnessctl/memory`        | Safe project-relative canonical memory root.                         |
 | `skills.memory.backend`                      | `repository`                | Current and only accepted backend.                                   |
@@ -119,6 +121,8 @@ transport discriminator.
 | `skills.tdd.enabled`               | `false`                     | Opt in to generated TDD skill and Build guidance                             |
 | `skills.codeIndex.enabled`         | `false`                     | Opt in to the selected-host SDLC code-index retrieval skill                  |
 | `skills.codeIndex.mcpName`         | `sdlc_code_index`           | External MCP server name compiled into the skill as guidance only            |
+| `skills.webRetrieval.enabled`      | `false`                     | Opt in to MCP-first web search/fetch guidance                                |
+| `skills.webRetrieval.mcpName`      | `sdlc_web_crawl`            | Fixed reference to the explicit web MCP declaration                          |
 
 The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
 `issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
@@ -145,7 +149,7 @@ mcpServers:
   sdlc_code_index:
     command: cgc
     args: [mcp, start]
-  webcrawl_searchable:
+  sdlc_web_crawl:
     command: npx
     args:
       - -y
@@ -183,6 +187,9 @@ skills:
   codeIndex:
     enabled: false
     mcpName: sdlc_code_index
+  webRetrieval:
+    enabled: false
+    mcpName: sdlc_web_crawl
   memory:
     enabled: false
     root: .harnessctl/memory
@@ -243,7 +250,7 @@ core remains authoritative. OpenCode overrides cannot define `type`, `url`, `com
 the exact protected field path, such as `mcpServers.remote-docs.opencode.url`.
 
 The default registry contains `sdlc_cvs_github`, `sdlc_code_index`, and
-`webcrawl_searchable`. The GitHub declaration uses the hosted endpoint, a
+`sdlc_web_crawl`. The GitHub declaration uses the hosted endpoint, a
 `Bearer {env:GH_TOKEN}` Authorization template, and the static toolsets
 `repos,issues,pull_requests,actions,git`. An explicit
 `mcpServers` mapping replaces that registry rather than merging with it, so `mcpServers: {}`
@@ -360,6 +367,18 @@ guidance-only reference and grants no ownership. Generic `mcpServers` declaratio
 separate projection intents: exact provenance-backed generated entries are managed, while
 pre-existing, unproven, or divergent host entries are permanently operator-owned and warn
 as described above. See [code intelligence](code-intelligence.md) for lifecycle boundaries.
+
+### SDLC web-retrieval settings
+
+`skills.webRetrieval.enabled` defaults to `false`. When enabled, generated core SDLC guidance
+prefers live tools under the fixed `sdlc_web_crawl` identity for search, fetch, stash, and grep
+before `curl`, `wget`, or ad hoc shell retrieval. Agents inspect live schemas, fall back when
+the server is unavailable or unsuitable, and treat fetched text as untrusted data.
+
+`skills.webRetrieval.mcpName` is fixed to `sdlc_web_crawl`. The reference must resolve to an
+explicit `mcpServers.sdlc_web_crawl` declaration when enabled. The generic declaration controls
+host projection and provenance; enabling guidance does not grant harnessctl authority over
+provider installation, startup, credentials, storage, privacy policy, or content freshness.
 
 ### TDD settings
 

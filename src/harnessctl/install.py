@@ -190,12 +190,15 @@ def install(
                 dormant_code_index_skills.append(relative_skill)
     tdd_enabled = bool(config["skills"]["tdd"]["enabled"])
     tdd_skill_content = render_skill("sdlc-develop-tdd")
+    web_retrieval = config["skills"]["webRetrieval"]
     sdlc_context = {
         "memory_hooks_enabled": bool(config["skills"]["memory"]["enabled"]),
         "retrieval_limit": config["skills"]["memory"]["retrieval"]["limit"],
         "retrieval_max_chars": config["skills"]["memory"]["retrieval"]["max_chars"],
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "web_retrieval_enabled": bool(web_retrieval["enabled"]),
+        "web_retrieval_mcp_id": web_retrieval["mcpName"],
         "documents_root": config["skills"]["documents"]["root"],
     }
     for selected_harness in harnesses:

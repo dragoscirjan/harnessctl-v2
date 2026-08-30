@@ -457,23 +457,29 @@ for command in TEMPLATES:
     assert 'memory_search' not in render_prompt(command, 'pi', config=config)
 checkpoint = render_skill_resources(
     'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000,
-    tdd_enabled=False, code_index_enabled=True, documents_root='.harnessctl/documents',
+    tdd_enabled=False, code_index_enabled=True, web_retrieval_enabled=False,
+    web_retrieval_mcp_id='sdlc_web_crawl', documents_root='.harnessctl/documents',
 )['references/checkpoint.md']
 assert 'memory_store' in checkpoint
 assert 'limit 5, 4000 chars' in checkpoint
 sdlc = render_skill(
     'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000,
-    tdd_enabled=False, code_index_enabled=True,
+    tdd_enabled=False, code_index_enabled=True, web_retrieval_enabled=True,
+    web_retrieval_mcp_id='sdlc_web_crawl', documents_root='.harnessctl/documents',
 )
 assert 'When `sdlc-code-index` is available' in sdlc
 assert 'relationship-aware codebase retrieval or impact analysis is relevant' in sdlc
 assert 'continue with direct source discovery, Glob, Grep, and file reads' in sdlc
+assert 'prefer live tools under `sdlc_web_crawl`' in sdlc
+assert 'never invent tool names, parameters, or response fields' in sdlc
 disabled_sdlc = render_skill(
     'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000,
-    tdd_enabled=False, code_index_enabled=False,
+    tdd_enabled=False, code_index_enabled=False, web_retrieval_enabled=False,
+    web_retrieval_mcp_id='sdlc_web_crawl', documents_root='.harnessctl/documents',
 )
 assert '`sdlc-code-index` is disabled' in disabled_sdlc
 assert 'Do not load a discoverable retained copy' in disabled_sdlc
+assert 'MCP-first web retrieval is disabled' in disabled_sdlc
 assert 'Red-Green-Refactor' in render_skill('sdlc-develop-tdd')
 try:
     render_skill('sdlc-documents')

@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1A4EEZJWVWEFTPHHCF717AH
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00157
+summary: hrn-00157 | Verify | explicit no-invention guidance | failed
+details: |-
+  Epic: hrn-00157
+  Command/phase: Work Verify
+  Item: acceptance criterion 5
+  Done: Full quality and runtime gates passed; dedicated review found guidance does not explicitly prohibit invented tool names, parameters, and response fields.
+  Next: Build child Bug hrn-00165; rerun Verify hrn-00157.
+  Blockers: Release blocked by hrn-00165.
+  Artifacts: hrn-00157-C0004; hrn-00165
+  Verification: mise run quality pass; mise run runtime-smoke pass; Config v1 parse, host guidance parity, git diff check pass.
+source:
+  kind: artifact
+  ref: hrn-001157-C0004
+  revision: v1:350f920be8292d71f33e151485e06100404fc96b456e0fb8469c6444f666ef1f
+created_at: 2026-08-30T20:05:49.682Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - defect
+  - sdlc
+  - verify
+  - web-retrieval

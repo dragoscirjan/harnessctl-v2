@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M19W4Q32XA7VYE2MGH87FJNR
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00157 | Build | Config v1 web retrieval | implemented
+details: |-
+  Epic: hrn-00157
+  Phase: Build
+  Done: Config v1 `skills.webRetrieval` default false; fixed `sdlc_web_crawl` reference; enabled-reference validation; generic OpenCode/Pi projection routes; installer-compiled enabled/disabled SDLC guidance; contracts, defaults, fingerprints, repository config, host outputs, docs, fixtures, tests updated.
+  Verification: focused Build checks pass: Python 653; Config v1 TS 55; release artifacts 5; contracts fresh; generic-tools typecheck/lint; Ruff; root Prettier; git diff check.
+  Decisions: Config v1 capability under `skills`; explicit `mcpServers` registry remains projection authority; no obsolete `mcp.web_retrieval` restoration.
+  Next: work-verify hrn-00157
+  Blockers: none. Filesystem authority tools require temporary omission of new config stanza until long-lived tool runtime reloads updated schema.
+source:
+  kind: tool-observation
+  ref: hrn-00157 focused Build checks and repository artifacts
+  revision: null
+created_at: 2026-08-30T17:40:41.698Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes:
+  - 01M17KXM2V9K25Q4G11G95HDME
+tags:
+  - build
+  - config-v1
+  - hrn-00157
+  - mcp
+  - web-retrieval

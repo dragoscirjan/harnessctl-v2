@@ -161,6 +161,9 @@ def _referencing_routes(config: Mapping[str, Any]) -> dict[str, tuple[str, ...]]
     code_index = skills["codeIndex"]
     if code_index["enabled"]:
         references.append(("codeIndex", code_index))
+    web_retrieval = skills["webRetrieval"]
+    if web_retrieval["enabled"]:
+        references.append(("webRetrieval", web_retrieval))
 
     routes: dict[str, list[str]] = {}
     for route, reference in references:

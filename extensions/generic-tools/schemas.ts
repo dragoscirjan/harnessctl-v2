@@ -216,6 +216,7 @@ const documentsSchema = z
   .strict();
 
 const cavemanSchema = z.object({ enabled: z.boolean(), mode: z.enum(['strict', 'balanced']) }).strict();
+const webRetrievalSchema = z.object({ enabled: z.boolean(), mcpName: z.literal('sdlc_web_crawl') }).strict();
 const memorySchema = z
   .object({
     enabled: z.boolean(),
@@ -290,6 +291,7 @@ export const configV1Schema = z
         caveman: cavemanSchema,
         tdd: z.object(genericSkillFields).strict(),
         codeIndex: z.object({ enabled: z.boolean(), mcpName: mcpNameSchema }).strict(),
+        webRetrieval: webRetrievalSchema,
         memory: memorySchema,
       })
       .strict(),
@@ -322,6 +324,11 @@ export const configV1Schema = z
         enabled: config.skills.codeIndex.enabled,
         mcpName: config.skills.codeIndex.mcpName,
         path: ['skills', 'codeIndex', 'mcpName'],
+      },
+      {
+        enabled: config.skills.webRetrieval.enabled,
+        mcpName: config.skills.webRetrieval.mcpName,
+        path: ['skills', 'webRetrieval', 'mcpName'],
       },
     ];
     for (const reference of references) {
@@ -360,7 +367,7 @@ export const CONFIG_V1_DEFAULTS = {
       },
     },
     sdlc_code_index: { command: 'cgc', args: ['mcp', 'start'] },
-    webcrawl_searchable: {
+    sdlc_web_crawl: {
       command: 'npx',
       args: ['-y', '@dragoscirjan/mcp-searchable@latest'],
     },
@@ -392,6 +399,7 @@ export const CONFIG_V1_DEFAULTS = {
     caveman: { enabled: true, mode: 'strict' },
     tdd: { enabled: false },
     codeIndex: { enabled: false, mcpName: 'sdlc_code_index' },
+    webRetrieval: { enabled: false, mcpName: 'sdlc_web_crawl' },
     memory: {
       enabled: false,
       root: '.harnessctl/memory',

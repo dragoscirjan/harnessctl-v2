@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1A67EVPQA1G1EGEXG2WC2K7
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00157
+summary: "hrn-00157 | Release | ready PR #61 | delivered"
+details: |-
+  Epic: hrn-00157 closed
+  Command/phase: Work Release
+  Done: commit 60db9f4 pushed; ready PR #61 created against main.
+  Delivery: https://github.com/dragoscirjan/harnessctl-v2/pull/61
+  Verification: mise run quality; mise run runtime-smoke; Config v1 parse; OpenCode/Pi parity; git diff check pass.
+  Next: review; merge requires fresh explicit consent.
+  Blockers: none.
+  No merge or deployment performed.
+source:
+  kind: artifact
+  ref: hrn-00157-C0006
+  revision: v1:a0b69b0389b849407861b3c0ce9683953b1f867ab58e212ea9cfb1c75b051de8
+created_at: 2026-08-30T20:36:57.334Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1A5B5TT2HFJ3YMNJST3W2CN
+tags:
+  - hrn-00157
+  - pr-61
+  - release
+  - web-retrieval

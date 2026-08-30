@@ -975,6 +975,20 @@
           "required": ["enabled", "mcpName"],
           "additionalProperties": false
         },
+        "webRetrieval": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "mcpName": {
+              "type": "string",
+              "const": "sdlc_web_crawl"
+            }
+          },
+          "required": ["enabled", "mcpName"],
+          "additionalProperties": false
+        },
         "memory": {
           "type": "object",
           "properties": {
@@ -1044,7 +1058,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["issues", "documents", "cvs", "caveman", "tdd", "codeIndex", "memory"],
+      "required": ["issues", "documents", "cvs", "caveman", "tdd", "codeIndex", "webRetrieval", "memory"],
       "additionalProperties": false
     }
   },
