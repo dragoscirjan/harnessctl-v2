@@ -4,7 +4,7 @@
 "title": "Add configurable MCP-first web retrieval"
 "status": "closed"
 "created_at": "2026-08-29T20:25:14.230Z"
-"updated_at": "2026-08-30T20:29:29.640Z"
+"updated_at": "2026-08-30T20:36:33.775Z"
 "created_by": "pi"
 "assigned_to": "pi"
 "metadata":
@@ -35,3 +35,7 @@
     "created_at": "2026-08-30T20:21:17.321Z"
     "created_by": "OpenCode"
     "body": "Verify passed after `hrn-00165` repair. All acceptance criteria map to current Config v1 source, generated OpenCode/Pi guidance, docs, contracts, projections, and tests. Fresh gates: `mise run quality` passed (697 Python tests; Node tests/types/lint/format/build/package checks; contracts, release artifacts, duplication/dead-code checks); `mise run runtime-smoke` passed under Node/Bun; Config v1 parse, exact host/provenance entries, generated host guidance parity, obsolete active-name search, issue/memory validation, and `git diff --check` passed. Dedicated correctness, maintainability, security/privacy, and compatibility review found no blocker. Live provider exercise Not needed due remote/privacy/storage effects outside declarative acceptance. Epic remains open; child Bug `hrn-00165` remains open pending separate closure confirmation. Next recommended phase: Release after issue-status decision."
+  - "id": "hrn-00157-C0006"
+    "created_at": "2026-08-30T20:36:33.775Z"
+    "created_by": "OpenCode"
+    "body": "Release complete through ready-PR boundary. Epic and child Bug `hrn-00165` are closed. Commit `60db9f4` is pushed on `feat/hrn-00157-mcp-web-retrieval`; ready PR #61: https://github.com/dragoscirjan/harnessctl-v2/pull/61. Final evidence: `mise run quality`, `mise run runtime-smoke`, Config v1 parse, generated OpenCode/Pi parity, and `git diff --check` passed. No merge or deployment performed."
