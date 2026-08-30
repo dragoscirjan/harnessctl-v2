@@ -2,6 +2,7 @@ import json
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -10,7 +11,6 @@ from harnessctl.install import _merge_host_json, _merge_pi_json
 from harnessctl.mcp import (
     GITHUB_MCP_URL,
     GITHUB_TOOLSETS,
-    GITLAB_MCP_URL,
     OUTPUT_GUARD,
     ServerIntent,
     deduplicate_server_intents,
@@ -34,9 +34,10 @@ def _intent(
         "gitea": "tea",
         "forgejo": "forgejo-cli",
     }
-    config["cvs"]["remote"] = {
-        "provider": provider,
+    config["skills"]["cvs"]["provider"] = {
+        "type": provider,
         "tools": tools[provider],
+        "mcpName": f"sdlc_cvs_{provider}",
         "url": url
         or {
             "github": "https://github.com",
@@ -46,12 +47,27 @@ def _intent(
         }[provider],
         "token_env": token_env or f"{provider.upper()}_TOKEN",
     }
-    return required_server_intents(config, "opencode")[0]
+    return next(
+        intent
+        for intent in recognized_server_intents(config, "opencode")
+        if intent.server_id == f"sdlc_cvs_{provider}"
+        and intent.provider == provider
+        and (provider != "gitea" or intent.command == "gitea-mcp")
+    )
 
 
-def test_github_and_gitlab_exact_host_projections() -> None:
-    github = _intent("github", token_env="GH_TOKEN")
-    gitlab = _intent("gitlab")
+def _config_without_generic_servers() -> dict[str, Any]:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["mcpServers"] = {}
+    return config
+
+
+def test_default_github_declaration_projects_exact_headers_for_both_hosts() -> None:
+    github = next(
+        intent
+        for intent in required_server_intents(deepcopy(DEFAULT_CONFIG), "all")
+        if intent.server_id == "sdlc_cvs_github"
+    )
 
     assert render_opencode_mcp(github) == {
         "type": "remote",
@@ -60,7 +76,6 @@ def test_github_and_gitlab_exact_host_projections() -> None:
             "Authorization": "Bearer {env:GH_TOKEN}",
             "X-MCP-Toolsets": GITHUB_TOOLSETS,
         },
-        "oauth": False,
     }
     assert render_pi_mcp(github) == {
         "url": GITHUB_MCP_URL,
@@ -68,36 +83,179 @@ def test_github_and_gitlab_exact_host_projections() -> None:
             "Authorization": "Bearer ${GH_TOKEN}",
             "X-MCP-Toolsets": GITHUB_TOOLSETS,
         },
-        "auth": "bearer",
         "lifecycle": "lazy",
     }
-    assert render_opencode_mcp(gitlab) == {
+
+
+def test_config_v1_url_and_command_declarations_compile_for_both_hosts() -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["mcpServers"] = {
+        "remote-docs": {
+            "url": "https://mcp.example.test/api",
+            "headers": {
+                "Authorization": "Bearer {env:DOCS_TOKEN}",
+                "X-Mode": "static",
+            },
+        },
+        "local-index": {
+            "command": "index-mcp",
+            "args": ["serve", "--stdio"],
+            "environment": {"INDEX_TOKEN": "SOURCE_TOKEN"},
+            "cwd": "tools/mcp",
+        },
+    }
+
+    intents = {intent.server_id: intent for intent in required_server_intents(config, "all")}
+
+    assert render_opencode_mcp(intents["remote-docs"]) == {
         "type": "remote",
-        "url": GITLAB_MCP_URL,
-        "oauth": {},
+        "url": "https://mcp.example.test/api",
+        "headers": {"Authorization": "Bearer {env:DOCS_TOKEN}", "X-Mode": "static"},
     }
-    assert render_pi_mcp(gitlab) == {
-        "url": GITLAB_MCP_URL,
-        "auth": "oauth",
-        "oauth": {},
+    assert render_pi_mcp(intents["remote-docs"]) == {
+        "url": "https://mcp.example.test/api",
+        "headers": {"Authorization": "Bearer ${DOCS_TOKEN}", "X-Mode": "static"},
         "lifecycle": "lazy",
     }
-    assert "TOKEN" not in json.dumps(render_opencode_mcp(gitlab))
+    assert render_opencode_mcp(intents["local-index"]) == {
+        "type": "local",
+        "command": ["index-mcp", "serve", "--stdio"],
+        "environment": {"INDEX_TOKEN": "{env:SOURCE_TOKEN}"},
+        "cwd": "tools/mcp",
+    }
+    assert render_pi_mcp(intents["local-index"]) == {
+        "command": "index-mcp",
+        "args": ["serve", "--stdio"],
+        "lifecycle": "lazy",
+        "env": {"INDEX_TOKEN": "${SOURCE_TOKEN}"},
+        "cwd": "tools/mcp",
+    }
+
+
+def test_host_overrides_are_copied_and_applied_only_to_the_matching_projection() -> None:
+    config = deepcopy(DEFAULT_CONFIG)
+    config["mcpServers"] = {
+        "custom": {
+            "url": "https://mcp.example.test/api",
+            "opencode": {
+                "enabled": False,
+                "native": {"labels": ["docs", 2, None]},
+            },
+            "pi": {
+                "timeout": 5000,
+                "native": {"retry": True},
+            },
+        }
+    }
+    original = deepcopy(config)
+
+    [intent] = required_server_intents(config, "all")
+    opencode = render_opencode_mcp(intent)
+    pi = render_pi_mcp(intent)
+
+    assert config == original
+    assert opencode == {
+        "enabled": False,
+        "native": {"labels": ["docs", 2, None]},
+        "type": "remote",
+        "url": "https://mcp.example.test/api",
+    }
+    assert pi == {
+        "timeout": 5000,
+        "native": {"retry": True},
+        "url": "https://mcp.example.test/api",
+        "lifecycle": "lazy",
+    }
+    opencode["native"]["labels"].append("rendered")
+    pi["native"]["retry"] = False
+    assert config == original
+    assert render_opencode_mcp(intent)["native"] == {"labels": ["docs", 2, None]}
+    assert render_pi_mcp(intent)["native"] == {"retry": True}
+
+
+def test_adapter_owned_fields_remain_authoritative_if_validation_is_bypassed() -> None:
+    intent = ServerIntent(
+        "custom",
+        "generic",
+        "https://mcp.example.test/api",
+        None,
+        None,
+        (),
+        False,
+        None,
+        None,
+        ("mcpServers",),
+        opencode_override={"type": "local", "url": "https://replacement.example.test"},
+        pi_override={"url": "https://replacement.example.test", "lifecycle": "eager"},
+    )
+
+    assert render_opencode_mcp(intent) == {
+        "type": "remote",
+        "url": "https://mcp.example.test/api",
+    }
+    assert render_pi_mcp(intent) == {
+        "url": "https://mcp.example.test/api",
+        "lifecycle": "lazy",
+    }
+
+
+def test_cvs_reference_accepts_url_or_command_without_provider_derived_intent() -> None:
+    config = _config_without_generic_servers()
+    config["mcpServers"] = {"sdlc_cvs_github": {"command": "operator-github-mcp"}}
+
+    [intent] = required_server_intents(config, "all")
+
+    assert intent.provider == "generic"
+    assert intent.command == "operator-github-mcp"
+    assert intent.requesting_routes == ("mcpServers", "cvs")
+
+
+@pytest.mark.parametrize("value", ["{env:}", "${TOKEN}", "{env:lower}", "safe\nInjected: value"])
+def test_header_renderer_rejects_malformed_templates(value: str) -> None:
+    intent = ServerIntent(
+        "remote",
+        "generic",
+        "https://mcp.example.test",
+        None,
+        None,
+        (),
+        False,
+        None,
+        None,
+        ("mcpServers",),
+        headers=(("Authorization", value),),
+    )
+
+    with pytest.raises(ConfigError, match="header templates"):
+        render_opencode_mcp(intent)
+
+
+def test_plain_bitbucket_provider_does_not_request_unimplemented_projection() -> None:
+    config = _config_without_generic_servers()
+    config["skills"]["cvs"]["provider"] = {
+        "type": "bitbucket",
+        "tools": "git",
+        "url": "https://bitbucket.org",
+        "token_env": "BITBUCKET_TOKEN",
+    }
+
+    assert required_server_intents(config, "all") == []
 
 
 @pytest.mark.parametrize("provider", ["github", "gitlab", "gitea", "forgejo"])
 def test_cvs_intents_use_canonical_ids_and_recognize_exact_legacy_ids(
     provider: str,
 ) -> None:
-    config = deepcopy(DEFAULT_CONFIG)
-    config["cvs"]["remote"] = {
-        "provider": provider,
+    config = _config_without_generic_servers()
+    config["skills"]["cvs"]["provider"] = {
+        "type": provider,
         "tools": {
             "github": "gh",
             "gitlab": "glab",
             "gitea": "tea",
             "forgejo": "forgejo-cli",
         }[provider],
+        "mcpName": f"sdlc_cvs_{provider}",
         "url": {
             "github": "https://github.com",
             "gitlab": "https://gitlab.com",
@@ -110,15 +268,16 @@ def test_cvs_intents_use_canonical_ids_and_recognize_exact_legacy_ids(
     desired = required_server_intents(config, "all")
     recognized = recognized_server_intents(config, "all")
 
-    assert [intent.server_id for intent in desired] == [f"sdlc_cvs_{provider}"]
-    assert recognized[0].server_id == f"cvs_{provider}"
-    assert replace(recognized[0], server_id=desired[0].server_id) == desired[0]
+    assert desired == []
+    assert recognized[0].server_id == f"sdlc_cvs_{provider}"
+    assert recognized[1].server_id == f"cvs_{provider}"
+    assert replace(recognized[1], server_id=recognized[0].server_id) == recognized[0]
     if provider == "gitea":
-        assert [intent.server_id for intent in recognized[1:]] == [
+        assert [intent.server_id for intent in recognized[2:]] == [
             "cvs_gitea",
             "sdlc_cvs_gitea",
         ]
-        for historical in recognized[1:]:
+        for historical in recognized[2:]:
             assert historical.command == "forgejo-mcp"
             assert historical.args == (
                 "--transport",
@@ -128,7 +287,7 @@ def test_cvs_intents_use_canonical_ids_and_recognize_exact_legacy_ids(
             )
             assert historical.environment == (("FORGEJO_ACCESS_TOKEN", "GITEA_TOKEN"),)
     else:
-        assert len(recognized) == 1
+        assert len(recognized) == 2
 
 
 def test_local_gitea_projection_is_provider_exclusive() -> None:
@@ -182,15 +341,22 @@ def test_local_forgejo_projection_is_provider_exclusive() -> None:
 def test_documents_do_not_create_mcp_intents_or_routes() -> None:
     intents = required_server_intents(deepcopy(DEFAULT_CONFIG), "all")
 
-    assert [intent.server_id for intent in intents] == ["sdlc_cvs_github"]
-    assert [intent.requesting_routes for intent in intents] == [("cvs",)]
+    assert [intent.server_id for intent in intents] == [
+        "sdlc_cvs_github",
+        "sdlc_code_index",
+        "webcrawl_searchable",
+    ]
+    assert [intent.requesting_routes for intent in intents] == [
+        ("mcpServers", "cvs"),
+        ("mcpServers",),
+        ("mcpServers",),
+    ]
 
 
 def test_provider_neutral_local_projection_omits_optional_url_and_empty_environment() -> None:
     intent = ServerIntent(
         "sdlc-code-index",
         "fixture",
-        "local",
         None,
         None,
         "fixture-mcp",
@@ -217,7 +383,6 @@ def test_provider_neutral_local_projection_maps_deterministic_environment_names(
     intent = ServerIntent(
         "sdlc-code-index",
         "fixture",
-        "local",
         None,
         None,
         "fixture-mcp",
@@ -226,15 +391,15 @@ def test_provider_neutral_local_projection_maps_deterministic_environment_names(
         None,
         None,
         ("code-index",),
-        (("FIXTURE_TOKEN", "SOURCE_TOKEN"), ("FIXTURE_CACHE", "SOURCE_CACHE")),
+        (("lowercase_key", "SOURCE_TOKEN"), ("FIXTURE_CACHE", "SOURCE_CACHE")),
     )
 
     assert render_opencode_mcp(intent)["environment"] == {
-        "FIXTURE_TOKEN": "{env:SOURCE_TOKEN}",
+        "lowercase_key": "{env:SOURCE_TOKEN}",
         "FIXTURE_CACHE": "{env:SOURCE_CACHE}",
     }
     assert render_pi_mcp(intent)["env"] == {
-        "FIXTURE_TOKEN": "${SOURCE_TOKEN}",
+        "lowercase_key": "${SOURCE_TOKEN}",
         "FIXTURE_CACHE": "${SOURCE_CACHE}",
     }
 
@@ -242,8 +407,7 @@ def test_provider_neutral_local_projection_maps_deterministic_environment_names(
 @pytest.mark.parametrize("harness", ["opencode", "pi", "all"])
 def test_external_code_index_skill_generates_no_code_index_mcp_intents(harness: str) -> None:
     config = deepcopy(DEFAULT_CONFIG)
-    config["mcp"] = {"output_limit_mode": "bounded-guidance"}
-    config["skills"] = {"sdlc-code-index": {"enabled": True, "mcp_server": "operator-index"}}
+    config["skills"]["codeIndex"] = {"enabled": True, "mcpName": "operator-index"}
 
     desired = required_server_intents(config, harness)
 
@@ -273,7 +437,6 @@ def test_provider_neutral_local_projection_rejects_invalid_environment_bindings(
     intent = ServerIntent(
         "sdlc-code-index",
         "fixture",
-        "local",
         None,
         None,
         "fixture-mcp",
@@ -302,14 +465,13 @@ def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
 
 
 @pytest.mark.parametrize(
-    ("provider", "tool", "url", "token_env", "command", "target_env"),
+    ("provider", "tool", "url", "token_env", "target_env"),
     [
         (
             "gitea",
             "tea",
             "https://gitea.example.test",
             "GITEA_TOKEN",
-            "gitea-mcp",
             "GITEA_ACCESS_TOKEN",
         ),
         (
@@ -317,43 +479,53 @@ def test_intents_deduplicate_identical_routes_and_reject_mismatch() -> None:
             "forgejo-cli",
             "https://forgejo.example.test",
             "FORGEJO_TOKEN",
-            "forgejo-mcp",
             "FORGEJO_ACCESS_TOKEN",
         ),
     ],
 )
-def test_same_provider_cvs_and_issues_deduplicate_with_route_attribution(
+def test_shared_generic_declaration_avoids_provider_derived_duplicates(
     provider: str,
     tool: str,
     url: str,
     token_env: str,
-    command: str,
     target_env: str,
 ) -> None:
-    config = deepcopy(DEFAULT_CONFIG)
-    config["cvs"]["remote"] = {
-        "provider": provider,
+    config = _config_without_generic_servers()
+    config["skills"]["cvs"]["provider"] = {
+        "type": provider,
         "tools": tool,
+        "mcpName": f"sdlc_cvs_{provider}",
         "url": url,
         "token_env": token_env,
     }
-    config["issues"] = {
+    config["skills"]["issues"] = {
+        "enabled": True,
         "root": ".harnessctl/issues",
         "prefix": "hrn-",
-        "type": provider,
-        "tools": tool,
-        "remote": {"url": url, "token_env": token_env},
+        "provider": {
+            "type": provider,
+            "tools": tool,
+            "mcpName": f"sdlc_cvs_{provider}",
+            "url": url,
+            "token_env": token_env,
+        },
+    }
+    config["mcpServers"] = {
+        f"sdlc_cvs_{provider}": {
+            "command": "operator-mcp",
+            "environment": {target_env: token_env},
+        }
     }
 
     candidates = required_server_intents(config, "all")
     deduplicated = deduplicate_server_intents(candidates)
 
-    assert [intent.requesting_routes for intent in candidates] == [("cvs",), ("issues",)]
+    assert [intent.requesting_routes for intent in candidates] == [("mcpServers", "cvs", "issues")]
     assert len(deduplicated) == 1
     shared = deduplicated[0]
     assert shared.server_id == f"sdlc_cvs_{provider}"
-    assert shared.requesting_routes == ("cvs", "issues")
-    assert render_opencode_mcp(shared)["command"][0] == command
+    assert shared.requesting_routes == ("mcpServers", "cvs", "issues")
+    assert render_opencode_mcp(shared)["command"][0] == "operator-mcp"
     assert render_opencode_mcp(shared)["environment"] == {target_env: f"{{env:{token_env}}}"}
     assert render_pi_mcp(shared)["env"] == {target_env: f"${{{token_env}}}"}
 
@@ -399,31 +571,35 @@ def test_host_merge_preserves_raw_unchanged_top_level_values(
     assert f'"operator": {operator_raw}' in merged
 
 
-def test_owned_conflict_requires_force_and_force_is_narrow(tmp_path: Path) -> None:
+@pytest.mark.parametrize("force", [False, True])
+def test_operator_owned_conflict_is_preserved_and_force_is_narrow(
+    tmp_path: Path, force: bool
+) -> None:
     path = tmp_path / "mcp.json"
     settings_operator_raw = '{"weight":1e+02,"escaped":"\\u0061"}'
     path.write_text(
         '{"unrelated":true,"mcpServers":'
         '{"sdlc_cvs_github":{"url":"wrong"},"operator":{}},'
-        f'"settings":{{"outputGuard":{{"maxBytes":1}},"operator":{settings_operator_raw}}}}}',
+        f'"settings":{{"outputGuard":{json.dumps(OUTPUT_GUARD)},'
+        f'"operator":{settings_operator_raw}}}}}',
         encoding="utf-8",
     )
     intent = _intent("github", token_env="GH_TOKEN")
 
-    with pytest.raises(FileExistsError, match="sdlc_cvs_github"):
-        _merge_pi_json(path, [intent], force=False)
-    merged = _merge_pi_json(path, [intent], force=True)
-    assert merged is not None
-    document = json.loads(merged)
+    original = path.read_text(encoding="utf-8")
+    with pytest.warns(UserWarning, match=r"sdlc_cvs_github.*host target.*Remove or rename"):
+        merged = _merge_pi_json(path, [intent], force=force)
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
+    document = json.loads(original)
     assert document["unrelated"] is True
     assert document["mcpServers"]["operator"] == {}
     assert document["settings"]["operator"] == {"weight": 100, "escaped": "a"}
-    assert document["settings"]["outputGuard"] == OUTPUT_GUARD
-    assert f'"operator": {settings_operator_raw}' in merged
+    assert document["mcpServers"]["sdlc_cvs_github"] == {"url": "wrong"}
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
-def test_owned_entry_switch_requires_force_and_replaces_only_fixed_id(
+def test_exact_recognized_entry_updates_without_force_and_preserves_siblings(
     tmp_path: Path, container_name: str
 ) -> None:
     path = tmp_path / "host.json"
@@ -440,20 +616,12 @@ def test_owned_entry_switch_requires_force_and_replaces_only_fixed_id(
     )
     recognized = {"sdlc-code-index": (old, new)}
 
-    with pytest.raises(FileExistsError, match="sdlc-code-index"):
-        _merge_host_json(
-            path,
-            container_name,
-            {"sdlc-code-index": new},
-            recognized=recognized,
-            force=False,
-        )
     merged = _merge_host_json(
         path,
         container_name,
         {"sdlc-code-index": new},
         recognized=recognized,
-        force=True,
+        force=False,
     )
 
     assert merged is not None
@@ -471,7 +639,10 @@ def test_owned_entry_switch_requires_force_and_replaces_only_fixed_id(
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
-def test_present_null_owned_entry_requires_force(tmp_path: Path, container_name: str) -> None:
+@pytest.mark.parametrize("force", [False, True])
+def test_present_null_operator_entry_is_preserved(
+    tmp_path: Path, container_name: str, force: bool
+) -> None:
     path = tmp_path / "host.json"
     expected = {"command": ["fixture-mcp", "serve"]}
     path.write_text(
@@ -479,27 +650,20 @@ def test_present_null_owned_entry_requires_force(tmp_path: Path, container_name:
         encoding="utf-8",
     )
 
-    with pytest.raises(FileExistsError, match="sdlc-code-index"):
-        _merge_host_json(
+    original = path.read_text(encoding="utf-8")
+    with pytest.warns(UserWarning, match=r"sdlc-code-index.*operator-owned"):
+        merged = _merge_host_json(
             path,
             container_name,
             {"sdlc-code-index": expected},
-            force=False,
+            force=force,
         )
-
-    merged = _merge_host_json(
-        path,
-        container_name,
-        {"sdlc-code-index": expected},
-        force=True,
-    )
-
-    assert merged is not None
-    assert json.loads(merged)[container_name]["sdlc-code-index"] == expected
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
-def test_owned_entry_comparison_distinguishes_booleans_from_numbers(
+def test_operator_entry_comparison_distinguishes_booleans_from_numbers(
     tmp_path: Path, container_name: str
 ) -> None:
     path = tmp_path / "host.json"
@@ -509,24 +673,16 @@ def test_owned_entry_comparison_distinguishes_booleans_from_numbers(
         encoding="utf-8",
     )
 
-    with pytest.raises(FileExistsError, match="sdlc-code-index"):
-        _merge_host_json(
+    original = path.read_text(encoding="utf-8")
+    with pytest.warns(UserWarning, match="operator-owned"):
+        merged = _merge_host_json(
             path,
             container_name,
             {"sdlc-code-index": expected},
             force=False,
         )
-
-    merged = _merge_host_json(
-        path,
-        container_name,
-        {"sdlc-code-index": expected},
-        force=True,
-    )
-
-    assert merged is not None
-    assert json.loads(merged)[container_name]["sdlc-code-index"] == expected
-    assert '"weight": false' not in merged
+    assert merged is None
+    assert path.read_text(encoding="utf-8") == original
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
@@ -567,8 +723,9 @@ def test_disabled_owned_entry_removes_only_exact_recognized_definition(
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
+@pytest.mark.parametrize("force", [False, True])
 def test_disabled_owned_entry_preserves_and_reports_modified_content(
-    tmp_path: Path, container_name: str
+    tmp_path: Path, container_name: str, force: bool
 ) -> None:
     path = tmp_path / "host.json"
     generated = {"command": ["fixture-mcp", "serve"]}
@@ -576,13 +733,13 @@ def test_disabled_owned_entry_preserves_and_reports_modified_content(
     original = json.dumps({container_name: {"sdlc-code-index": modified}})
     path.write_text(original, encoding="utf-8")
 
-    with pytest.warns(UserWarning, match="preserving modified MCP ID sdlc-code-index"):
+    with pytest.warns(UserWarning, match=r"sdlc-code-index.*operator-owned"):
         merged = _merge_host_json(
             path,
             container_name,
             {},
             recognized={"sdlc-code-index": (generated,)},
-            force=False,
+            force=force,
         )
 
     assert merged is None
@@ -625,7 +782,7 @@ def test_modified_legacy_cvs_entry_is_preserved_during_canonical_install(
     original = json.dumps({container_name: {"cvs_github": modified}})
     path.write_text(original, encoding="utf-8")
 
-    with pytest.warns(UserWarning, match="preserving modified MCP ID cvs_github"):
+    with pytest.warns(UserWarning, match=r"cvs_github.*operator-owned"):
         merged = _merge_host_json(
             path,
             container_name,
@@ -658,7 +815,18 @@ def test_historical_gitea_entry_requires_replacement_in_same_plan(
     original = json.dumps({container_name: {server_id: current}})
     path.write_text(original, encoding="utf-8")
 
-    with pytest.warns(UserWarning, match=f"preserving historical MCP ID {server_id}"):
+    if modified:
+        with pytest.warns(UserWarning, match=rf"{server_id}.*operator-owned"):
+            merged = _merge_host_json(
+                path,
+                container_name,
+                {},
+                recognized={server_id: (historical,)},
+                force=force,
+            )
+        assert merged is None
+        assert path.read_text(encoding="utf-8") == original
+    else:
         merged = _merge_host_json(
             path,
             container_name,
@@ -666,9 +834,8 @@ def test_historical_gitea_entry_requires_replacement_in_same_plan(
             recognized={server_id: (historical,)},
             force=force,
         )
-
-    assert merged is None
-    assert path.read_text(encoding="utf-8") == original
+        assert merged is not None
+        assert json.loads(merged)[container_name] == {}
 
 
 @pytest.mark.parametrize("container_name", ["mcp", "mcpServers"])
@@ -680,7 +847,7 @@ def test_recognized_entry_comparison_distinguishes_booleans_from_numbers(
     original = json.dumps({container_name: {"sdlc-code-index": modified}})
     path.write_text(original, encoding="utf-8")
 
-    with pytest.warns(UserWarning, match="preserving modified MCP ID sdlc-code-index"):
+    with pytest.warns(UserWarning, match=r"sdlc-code-index.*operator-owned"):
         merged = _merge_host_json(
             path,
             container_name,

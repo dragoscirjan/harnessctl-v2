@@ -107,7 +107,8 @@ def test_document_docs_cover_fixed_authority_and_removed_legacy_links() -> None:
     issues = (DOCS / "issues.md").read_text(encoding="utf-8")
     public_docs = "\n".join(path.read_text(encoding="utf-8") for path in DOCS.glob("*.md"))
 
-    assert "fixed repository-local" in documents
+    assert "safe project-relative" in documents
+    assert "another safe repository-local root" in documents
     assert ".harnessctl/documents" in documents
     assert "No `.specs` or `.ai.tmp` migration command or link compatibility ships" in documents
     assert "`.specs-v1` is inert repository history" in documents
@@ -248,20 +249,22 @@ def test_command_template_changes_force_transition_documentation_review() -> Non
     # Any shell or disclosed-policy change requires reviewing the graph and edge table
     # before deliberately updating this complete digest.
     assert digest.hexdigest() == (
-        "65210fc0b88d3dab24981bf0a55828e47492214cdef73b76074b453207b677ac"
+        "25ed92fe3d5a3de3941451f21d0208dab8dee2c387668d71fb2b1209b9fa43c5"
     )
 
 
 def test_plan_design_reference_owns_document_lifecycle_on_both_hosts() -> None:
     template = (SDLC_SKILL_TEMPLATES / "references/plan-design.md.j2").read_text(encoding="utf-8")
+    rendered = template.replace("{{ documents_root }}", ".harnessctl/documents")
     generated = [
         (ROOT / host / "skills/sdlc/references/plan-design.md").read_text(encoding="utf-8")
         for host in (".opencode", ".pi")
     ]
 
-    assert generated == [template, template]
+    assert generated == [rendered, rendered]
+    assert "`{{ documents_root }}`" in template
     for kind in ("hld", "lld", "design-overview", "gdd"):
-        assert kind in template.lower()
+        assert kind in rendered.lower()
     for tool in (
         "document_list",
         "document_get",
@@ -272,9 +275,9 @@ def test_plan_design_reference_owns_document_lifecycle_on_both_hosts() -> None:
         "issue_link_document",
         "issue_validate",
     ):
-        assert f"`{tool}`" in template
-    assert "specification tooling" not in template
-    normalized = " ".join(template.split())
+        assert f"`{tool}`" in rendered
+    assert "specification tooling" not in rendered
+    normalized = " ".join(rendered.split())
     assert "Separately confirm the transition to `review`" in normalized
     assert "separately confirm the transition to `approved`" in normalized
     assert "fresh exact revision immediately before mutation" in normalized
@@ -324,7 +327,7 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
     assert "Shared local SQLite" in memory
     assert "Disposable internal cache; not a backend" in memory
     assert "project-local `@harnessctl/pi-tools`" in memory
-    assert "Only `memory.backend: repository` is accepted today" in memory
+    assert "Only `skills.memory.backend: repository` is accepted today" in memory
     for token_env in (
         "HARNESSCTL_LIBSQL_TOKEN",
         "MEM0_API_KEY",
@@ -343,9 +346,9 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
     sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
     normalized_sdlc = " ".join(sdlc.split())
 
-    assert "`workflow.tdd.enabled`" in configuration
+    assert "`skills.tdd.enabled`" in configuration
     assert "default is `false`" in configuration
-    assert "workflow:\n  tdd:\n    enabled: true" in configuration
+    assert "skills:\n  tdd:\n    enabled: true" in configuration
     for path in (
         ".opencode/skills/sdlc-develop-tdd/SKILL.md",
         ".pi/skills/sdlc-develop-tdd/SKILL.md",
@@ -354,10 +357,106 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
     assert "does not delete" in skills
     assert "existing skill untouched and dormant" in configuration
     assert "remains dormant" in normalized_sdlc
-    assert "`workflow.tdd.enabled`" in sdlc
+    assert "`skills.tdd.enabled`" in sdlc
     assert "loads `sdlc-develop-tdd` before implementation" in normalized_sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
     assert "`work-continue` resumes Build" in normalized_sdlc
+
+
+def test_config_v1_reference_and_release_evidence_are_complete() -> None:
+    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
+    normalized = " ".join(configuration.split())
+
+    defaulted_fields = (
+        "version",
+        "paths.root",
+        "paths.tasks",
+        "paths.reports",
+        "workflow.default_task_type",
+        "mcp.output_limit_mode",
+        "mcpServers",
+        "skills.issues.enabled",
+        "skills.issues.root",
+        "skills.issues.prefix",
+        "skills.documents.enabled",
+        "skills.documents.root",
+        "skills.documents.prefix",
+        "skills.cvs.enabled",
+        "skills.cvs.local",
+        "skills.caveman.enabled",
+        "skills.caveman.mode",
+        "skills.tdd.enabled",
+        "skills.codeIndex.enabled",
+        "skills.codeIndex.mcpName",
+        "skills.memory.enabled",
+        "skills.memory.root",
+        "skills.memory.backend",
+        "skills.memory.namespace.organization_id",
+        "skills.memory.namespace.project_id",
+        "skills.memory.namespace.default_topic",
+        "skills.memory.retrieval.limit",
+        "skills.memory.retrieval.max_chars",
+        "skills.memory.retrieval.include_superseded",
+    )
+    for field in defaulted_fields:
+        assert f"`{field}`" in configuration
+    for field in (
+        "url",
+        "headers.<header-name>",
+        "command",
+        "args",
+        "environment.<target-name>",
+        "cwd",
+        "opencode",
+        "pi",
+    ):
+        assert f"`{field}`" in configuration
+    for phrase in (
+        "Declarations deliberately omit `type` and `transport`",
+        "OpenCode and Pi infer host-native",
+        "There are no provider-reserved IDs",
+        "Every projected host definition comes exclusively from `mcpServers`",
+        "Any enabled skill reference must still resolve after replacement",
+        "translate each explicit `{env:NAME}` reference",
+        "map key is the required server name and stable projection identity",
+        "exactly one portable connection core",
+        "Host override maps preserve nested JSON",
+        "Only the override matching the selected host",
+        "Adapter-owned fields are protected",
+        "permanently operator-owned",
+        "unproven entry byte-equivalent to the desired value",
+        "byte-preserves every such collision under normal and `--force` installs",
+        "emits an operator-owned warning without declaration or credential values",
+        "exact provenance-backed generated entries are managed",
+        "intent and active host behavior may differ",
+        "remove or rename the operator-owned host key manually",
+        "Unreleased development Config v2 and Config v3 files are not supported inputs",
+        "there is no compatibility reader, fallback, automatic migration, or in-place converter",
+        "Python behavior",
+        "Generic-tools behavior",
+        "Workspace behavior",
+        "Generation drift",
+        "Package artifacts",
+        "Fingerprints",
+        "Shared fixture comparison",
+    ):
+        assert phrase in normalized
+    assert "DOCS_MCP_TOKEN" in configuration
+    assert "INDEX_MCP_TOKEN" in configuration
+    assert "transport:" not in configuration
+
+
+def test_current_config_examples_use_v1_paths_and_document_root_semantics() -> None:
+    memory = (DOCS / "memory.md").read_text(encoding="utf-8")
+    code_index = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
+    providers = (DOCS / "code-intelligence-providers.md").read_text(encoding="utf-8")
+    documents = (DOCS / "documents.md").read_text(encoding="utf-8")
+
+    assert "repository:\n      root: .harnessctl/memory" not in memory
+    assert "version: 1\nskills:\n  codeIndex:" in code_index
+    assert "version: 1\nskills:\n  codeIndex:" in providers
+    assert "`skills.documents.root`, which defaults to `.harnessctl/documents`" in documents
+    assert "another safe repository-local root" in documents
 
 
 def test_docs_describe_sdlc_code_installation_and_build_boundaries() -> None:
@@ -392,10 +491,11 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     normalized = " ".join(guide.split())
     normalized_skills = " ".join(skills.split())
 
-    assert "`skills.sdlc-code-index.enabled`" in configuration
+    assert "`skills.codeIndex.enabled`" in configuration
     assert "default is `false`" in configuration
-    assert "`skills.sdlc-code-index.mcp_server`" in configuration
-    assert "reserved `cvs_` prefix" in configuration
+    assert "`skills.codeIndex.mcpName`" in configuration
+    assert "reserved `cvs_` prefix" not in configuration
+    assert "`cvs_` is permitted" in configuration
     for path in (
         ".opencode/skills/sdlc-code-index/SKILL.md",
         ".pi/skills/sdlc-code-index/SKILL.md",
@@ -414,15 +514,21 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     assert "Glob" in guide and "Grep" in guide
     assert "load `sdlc-code-index`" in normalized
     for phrase in (
-        "old top-level `code_index` key",
-        "all `mcp.servers` mappings are rejected",
+        "top-level `mcpServers` registry",
         "audit `.opencode/opencode.json` and `.pi/mcp.json` manually",
         "old provider package may be uninstalled",
         "separate user-authorized operation",
         "user-owned",
     ):
         assert phrase in normalized
-    assert "harnessctl never projects or manages them" in " ".join(root.split())
+    normalized_root = " ".join(root.split())
+    assert "provider metadata never synthesizes a server definition" in normalized_root
+    assert "references the exact `mcpServers` key" in normalized_root
+    assert (
+        "Host registration is compiled only from that explicit registry declaration"
+        in normalized_root
+    )
+    assert "harnessctl never projects or manages them" not in normalized_root
     assert "release-gated on `hrn-00085`" not in root
     assert "docs/code-intelligence.md" in root
 
@@ -705,7 +811,9 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
     for value in ("git", "jj"):
         assert f"`{value}`" in cvs
     assert "exact configured provider CLI" in normalized
-    assert "fixed-ID MCP service" in normalized
+    assert "optional `mcpName` configuration" in normalized
+    assert "Omitting `mcpName` produces no managed MCP projection" in normalized
+    assert "omitting `mcpName` produces CLI-only guidance" in normalized
     assert "There is no configured selector" in normalized
     assert "no mandatory MCP-first or CLI-first order" in normalized
     assert "must choose before invoking a mutation" in normalized
@@ -781,7 +889,7 @@ def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> N
         "Forgejo Wiki",
     ):
         assert removed not in current_docs
-    assert "remote providers are removed" in configuration
+    assert "Git provider mappings use the same strict provider contract" in configuration
     assert "currently registers eight" in skills
     assert "No Documents agent or skill is generated" in skills
 
@@ -794,6 +902,8 @@ def test_current_design_links_use_canonical_documents_paths() -> None:
     assert "--migrate-specs" not in root
     assert "migration runner" not in root
     for path in (
+        "doc-00015-config-v1-architecture-and-ownership-v2.md",
+        "doc-00016-config-v1-contract-generation-and-host-projection-v2.md",
         "doc-00013-repository-local-sdlc-design-document-management-v4.md",
         "doc-00014-repository-local-sdlc-design-document-management-v4.md",
     ):

@@ -1,0 +1,35 @@
+{
+  "runId": "8b6cdfe2",
+  "agent": "reviewer",
+  "task": "Read-only independent Verify review for Epic hrn-00156. Inspect .pi/mcp.json and .harnessctl/issues/hrn-00156-keep-repository-local-pi-sdlc-code-index-mcp-config-valid.yml. Map acceptance: sdlc_code_index appears/should appear in Pi MCP server list after reload/restart; command exactly cgc args mcp start; requestTimeoutMs and no invalid type/enabled/timeout; sdlc_cvs_github unchanged; no provider mutation/remote/destructive work. Assess correctness, maintainability, security/privacy, compatibility. Do not edit files, do not run provider mutation/index/watch/delete/reindex tools, do not use remote/destructive operations. Return concise findings with pass/fail and evidence gaps.",
+  "exitCode": 0,
+  "usage": {
+    "input": 15561,
+    "output": 4449,
+    "cacheRead": 38400,
+    "cacheWrite": 0,
+    "cost": 0.230475,
+    "turns": 6
+  },
+  "model": "openai-codex/gpt-5.5:high",
+  "attemptedModels": ["openai-codex/gpt-5.5:high"],
+  "modelAttempts": [
+    {
+      "model": "openai-codex/gpt-5.5:high",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 15561,
+        "output": 4449,
+        "cacheRead": 38400,
+        "cacheWrite": 0,
+        "cost": 0.230475,
+        "turns": 6
+      }
+    }
+  ],
+  "durationMs": 92461,
+  "toolCount": 12,
+  "transcriptPath": "/home/dragosc/Workspace/gh--harnessctl/harnessctl-v2/.pi-subagents/artifacts/8b6cdfe2_reviewer_0_transcript.jsonl",
+  "timestamp": 1788034130173
+}

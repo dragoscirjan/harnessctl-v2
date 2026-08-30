@@ -89,9 +89,9 @@ SDLC_CODE_REFERENCES = {
 
 def _memory_config() -> dict[str, object]:
     config = deepcopy(DEFAULT_CONFIG)
-    config["memory"]["enabled"] = True
-    config["memory"]["retrieval"]["limit"] = 3
-    config["memory"]["retrieval"]["max_chars"] = 2048
+    config["skills"]["memory"]["enabled"] = True
+    config["skills"]["memory"]["retrieval"]["limit"] = 3
+    config["skills"]["memory"]["retrieval"]["max_chars"] = 2048
     return config
 
 
@@ -100,6 +100,7 @@ def _sdlc_context(
     memory_enabled: bool = True,
     tdd_enabled: bool = False,
     code_index_enabled: bool = True,
+    documents_root: str = ".harnessctl/documents",
 ) -> dict[str, object]:
     return {
         "memory_hooks_enabled": memory_enabled,
@@ -107,6 +108,7 @@ def _sdlc_context(
         "retrieval_max_chars": 2048,
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "documents_root": documents_root,
     }
 
 
@@ -169,6 +171,15 @@ def test_sdlc_skill_resource_registry_is_complete_and_bounded() -> None:
         len(content.encode()) <= (4000 if path in PHASE_RESOURCE.values() else 2600)
         for path, content in resources.items()
     )
+
+
+def test_plan_design_reference_compiles_configured_documents_root() -> None:
+    reference = render_skill_resources(
+        "sdlc", **_sdlc_context(documents_root="project/design-records")
+    )["references/plan-design.md"]
+
+    assert "Canonical design Markdown lives only under `project/design-records`." in reference
+    assert ".harnessctl/documents" not in reference
 
 
 def test_sdlc_code_skill_and_resource_registry_are_complete() -> None:

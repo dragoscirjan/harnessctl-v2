@@ -60,9 +60,12 @@ def _write_enabled_config(project: Path) -> None:
     config = project / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True)
     config.write_text(
-        "memory:\n  enabled: true\n"
-        "skills:\n  sdlc-code-index:\n    enabled: true\n"
-        "    mcp_server: operator-index\n",
+        "version: 1\nmcpServers:\n"
+        "  sdlc_cvs_github:\n    url: https://api.githubcopilot.com/mcp/\n"
+        "  operator-index:\n    command: operator-index\n"
+        "skills:\n  memory:\n    enabled: true\n"
+        "  codeIndex:\n    enabled: true\n"
+        "    mcpName: operator-index\n",
         encoding="utf-8",
     )
 
@@ -71,8 +74,9 @@ def _write_remote_config(project: Path) -> None:
     config = project / ".harnessctl/config.yaml"
     config.parent.mkdir(parents=True)
     config.write_text(
-        "version: 2\nissues:\n  type: github\n  tools: gh\n"
-        "  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n",
+        "version: 1\nskills:\n  issues:\n    provider:\n      type: github\n      tools: gh\n"
+        "      mcpName: sdlc_cvs_github\n"
+        "      url: https://github.com\n      token_env: GH_TOKEN\n",
         encoding="utf-8",
     )
 
@@ -90,9 +94,14 @@ def _write_pi_adapter_config(project: Path) -> None:
 
 def _copy_runtime_dependency(package: str, site_packages: Path) -> None:
     spec = importlib.util.find_spec(package)
-    assert spec is not None and spec.submodule_search_locations
-    source = Path(next(iter(spec.submodule_search_locations)))
-    shutil.copytree(source, site_packages / package)
+    assert spec is not None
+    if spec.submodule_search_locations:
+        source = Path(next(iter(spec.submodule_search_locations)))
+        shutil.copytree(source, site_packages / package)
+        return
+    assert spec.origin is not None
+    source = Path(spec.origin)
+    shutil.copy2(source, site_packages / source.name)
 
 
 def test_pi_tools_package_declares_loadable_extension() -> None:
@@ -285,6 +294,9 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
     assert "templates/skills/sdlc-develop-tdd/SKILL.md.j2" in expected_resources
     assert "templates/skills/sdlc-code-index/SKILL.md.j2" in expected_resources
     assert "mcp.py" in expected_resources
+    assert "contracts/config-v1.schema.json" in expected_resources
+    assert "contracts/config-v1.defaults.json" in expected_resources
+    assert "contracts/config-v1.fingerprints.json" in expected_resources
 
     with zipfile.ZipFile(wheels[0]) as archive:
         wheel_members = set(archive.namelist())
@@ -356,7 +368,18 @@ def test_release_archives_and_isolated_wheel_install(tmp_path: Path) -> None:
             env=environment,
         ).stdout.strip()
     )
-    for dependency in ("jinja2", "markupsafe", "yaml"):
+    for dependency in (
+        "attr",
+        "attrs",
+        "jinja2",
+        "jsonschema",
+        "jsonschema_specifications",
+        "markupsafe",
+        "referencing",
+        "rpds",
+        "typing_extensions",
+        "yaml",
+    ):
         _copy_runtime_dependency(dependency, site_packages)
     _run(
         [
@@ -389,22 +412,31 @@ from harnessctl.templates import TEMPLATES, render_prompt, render_skill, render_
 checkout = Path(__import__('os').environ['HARNESSCTL_CHECKOUT']).resolve()
 assert checkout not in Path(harnessctl.__file__).resolve().parents
 config = deepcopy(DEFAULT_CONFIG)
-config['memory']['enabled'] = True
+config['skills']['memory']['enabled'] = True
 intent = required_server_intents(config, 'opencode')[0]
 assert render_opencode_mcp(intent)['url'] == 'https://api.githubcopilot.com/mcp/'
-for provider, tool, url, token_env, command, flag, target_env, version in (
+for provider, tool, url, token_env, command, flag, target_env in (
     ('gitea', 'tea', 'https://gitea.example.com', 'GITEA_TOKEN',
-     'gitea-mcp', '--host', 'GITEA_ACCESS_TOKEN', '1.6.0'),
+     'operator-gitea-mcp', '--host', 'GITEA_ACCESS_TOKEN'),
     ('forgejo', 'forgejo-cli', 'https://forgejo.example.com', 'FORGEJO_TOKEN',
-     'forgejo-mcp', '--url', 'FORGEJO_ACCESS_TOKEN', '2.33.0'),
+     'operator-forgejo-mcp', '--url', 'FORGEJO_ACCESS_TOKEN'),
 ):
     provider_config = deepcopy(DEFAULT_CONFIG)
-    provider_config['cvs']['remote'] = {
-        'provider': provider, 'tools': tool, 'url': url, 'token_env': token_env,
+    provider_config['skills']['cvs']['provider'] = {
+        'type': provider, 'tools': tool, 'mcpName': f'sdlc_cvs_{provider}',
+        'url': url, 'token_env': token_env,
+    }
+    provider_config['mcpServers'] = {
+        f'sdlc_cvs_{provider}': {
+            'command': command,
+            'args': ['--transport', 'stdio', flag, url],
+            'environment': {target_env: token_env},
+        },
     }
     provider_intent = required_server_intents(provider_config, 'opencode')[0]
     provider_rendered = render_opencode_mcp(provider_intent)
-    assert provider_intent.compatibility_version == version
+    assert provider_intent.provider == 'generic'
+    assert provider_intent.compatibility_version is None
     assert provider_rendered['command'] == [
         command, '--transport', 'stdio', flag, url,
     ]
@@ -425,7 +457,7 @@ for command in TEMPLATES:
     assert 'memory_search' not in render_prompt(command, 'pi', config=config)
 checkpoint = render_skill_resources(
     'sdlc', memory_hooks_enabled=True, retrieval_limit=5, retrieval_max_chars=4000,
-    tdd_enabled=False, code_index_enabled=True,
+    tdd_enabled=False, code_index_enabled=True, documents_root='.harnessctl/documents',
 )['references/checkpoint.md']
 assert 'memory_store' in checkpoint
 assert 'limit 5, 4000 chars' in checkpoint

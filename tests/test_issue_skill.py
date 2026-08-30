@@ -43,13 +43,16 @@ def _config(
     provider: str, tools: str, remote_url: str | None = None, token_env: str | None = None
 ) -> dict[str, object]:
     config = deepcopy(DEFAULT_CONFIG)
-    config["issues"]["type"] = provider
-    config["issues"]["tools"] = tools
+    config["skills"]["issues"]["provider"] = {"type": provider, "tools": tools}
     if provider != "filesystem":
-        config["issues"]["remote"] = {
-            "url": remote_url,
-            "token_env": token_env,
-        }
+        config["skills"]["issues"]["provider"].update(
+            {
+                "mcpName": f"sdlc_cvs_{provider}",
+                "url": remote_url,
+                "token_env": token_env,
+            }
+        )
+        config["mcpServers"] = {f"sdlc_cvs_{provider}": {"command": f"operator-{provider}-mcp"}}
     return config
 
 
@@ -161,7 +164,7 @@ def test_opencode_install_always_adds_specialized_issue_skill(
 ) -> None:
     tools, remote_url, token_env = connection
     config = _config(provider, tools, remote_url, token_env)
-    config["communication"]["caveman"]["enabled"] = False
+    config["skills"]["caveman"]["enabled"] = False
     monkeypatch.setattr(install_module, "load_config", lambda root: config)
     monkeypatch.setattr(install_module.shutil, "which", lambda _name: "/bin/forgejo-mcp")
 
@@ -234,7 +237,7 @@ def test_disabled_memory_ignores_operator_owned_memory_skill(
     memory_skill.parent.mkdir(parents=True)
     memory_skill.write_text("operator-owned\n", encoding="utf-8")
     config = _config("filesystem", FILESYSTEM_TOOLS)
-    config["communication"]["caveman"]["enabled"] = False
+    config["skills"]["caveman"]["enabled"] = False
     monkeypatch.setattr(install_module, "load_config", lambda root: config)
 
     install(tmp_path, "opencode")

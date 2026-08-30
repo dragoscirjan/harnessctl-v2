@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from copy import deepcopy
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from .config import ConfigError
@@ -19,8 +21,10 @@ CVS_MCP_SERVER_IDS = {
     provider: f"sdlc_cvs_{provider}" for provider in ("github", "gitlab", "gitea", "forgejo")
 }
 LEGACY_CVS_MCP_SERVER_IDS = {provider: f"cvs_{provider}" for provider in CVS_MCP_SERVER_IDS}
-SAME_ID_MCP_MIGRATIONS = frozenset({CVS_MCP_SERVER_IDS["gitea"]})
-_ENVIRONMENT_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
+_ENVIRONMENT_TARGET_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_ENVIRONMENT_REFERENCE_NAME = re.compile(r"[A-Z][A-Z0-9_]*")
+_HEADER_ENV_REFERENCE = re.compile(r"\{env:([A-Z][A-Z0-9_]*)\}")
+_HEADER_TEMPLATE = re.compile(r"(?:[^\x00-\x1f\x7f-\x9f\u2028\u2029{}]|\{env:[A-Z][A-Z0-9_]*\})*")
 
 
 @dataclass(frozen=True)
@@ -29,7 +33,6 @@ class ServerIntent:
 
     server_id: str
     provider: str
-    transport: str
     url: str | None
     token_env: str | None
     command: str | None
@@ -39,13 +42,16 @@ class ServerIntent:
     toolsets: str | None
     requesting_routes: tuple[str, ...]
     environment: tuple[tuple[str, str], ...] = ()
+    headers: tuple[tuple[str, str], ...] = ()
+    cwd: str | None = None
+    opencode_override: dict[str, Any] = field(default_factory=dict)
+    pi_override: dict[str, Any] = field(default_factory=dict)
 
     def definition(self) -> tuple[object, ...]:
         """Return every field that determines host server behavior."""
         return (
             self.server_id,
             self.provider,
-            self.transport,
             self.url,
             self.token_env,
             self.command,
@@ -54,35 +60,77 @@ class ServerIntent:
             self.compatibility_version,
             self.toolsets,
             self.environment,
+            self.headers,
+            self.cwd,
+            _canonical_override(self.opencode_override),
+            _canonical_override(self.pi_override),
         )
 
 
 def required_server_intents(config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
-    """Build candidate intents for independently configured CVS and Issues routes."""
+    """Build intents solely from explicit host-neutral MCP declarations."""
     if harness not in {"opencode", "pi", "all"}:
         raise ValueError(f"unsupported harness: {harness}")
-    services: list[tuple[str, Mapping[str, Any]]] = [("cvs", config["cvs"]["remote"])]
-    issues = config["issues"]
-    if issues["type"] != "filesystem":
-        services.append(
-            (
-                "issues",
-                {
-                    "provider": issues["type"],
-                    "tools": issues["tools"],
-                    **issues["remote"],
-                },
+    return _declared_server_intents(config, _referencing_routes(config))
+
+
+def _declared_server_intents(
+    config: Mapping[str, Any], referencing_routes: Mapping[str, tuple[str, ...]]
+) -> list[ServerIntent]:
+    """Convert host-neutral Config v1 declarations to projection-neutral intents."""
+    intents: list[ServerIntent] = []
+    for server_id, declaration in config.get("mcpServers", {}).items():
+        if "url" in declaration:
+            intents.append(
+                ServerIntent(
+                    server_id=str(server_id),
+                    provider="generic",
+                    url=str(declaration["url"]),
+                    token_env=None,
+                    command=None,
+                    args=(),
+                    oauth=False,
+                    compatibility_version=None,
+                    toolsets=None,
+                    requesting_routes=(
+                        "mcpServers",
+                        *referencing_routes.get(str(server_id), ()),
+                    ),
+                    headers=tuple(declaration.get("headers", {}).items()),
+                    opencode_override=deepcopy(declaration.get("opencode", {})),
+                    pi_override=deepcopy(declaration.get("pi", {})),
+                )
+            )
+            continue
+        intents.append(
+            ServerIntent(
+                server_id=str(server_id),
+                provider="generic",
+                url=None,
+                token_env=None,
+                command=str(declaration["command"]),
+                args=tuple(declaration.get("args", ())),
+                oauth=False,
+                compatibility_version=None,
+                toolsets=None,
+                requesting_routes=(
+                    "mcpServers",
+                    *referencing_routes.get(str(server_id), ()),
+                ),
+                environment=tuple(declaration.get("environment", {}).items()),
+                cwd=declaration.get("cwd"),
+                opencode_override=deepcopy(declaration.get("opencode", {})),
+                pi_override=deepcopy(declaration.get("pi", {})),
             )
         )
-    return [_intent(service, route) for route, service in services]
+    return intents
 
 
 def recognized_server_intents(config: Mapping[str, Any], harness: str) -> list[ServerIntent]:
     """Return historical generated definitions eligible for exact reconciliation."""
     recognized: list[ServerIntent] = []
-    for intent in required_server_intents(config, harness):
-        if intent.server_id not in CVS_MCP_SERVER_IDS.values():
-            continue
+    for intent in _historical_provider_intents(config):
+        recognized.append(intent)
         legacy_id = LEGACY_CVS_MCP_SERVER_IDS[intent.provider]
         recognized.append(replace(intent, server_id=legacy_id))
         if intent.provider == "gitea":
@@ -95,13 +143,61 @@ def recognized_server_intents(config: Mapping[str, Any], harness: str) -> list[S
     return recognized
 
 
+def _referencing_routes(config: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
+    """Associate enabled skill references with declarations without defining them."""
+    skills = config["skills"]
+    references: list[tuple[str, Mapping[str, Any]]] = []
+    cvs = skills["cvs"]
+    if cvs["enabled"] and "mcpName" in cvs["provider"]:
+        references.append(("cvs", cvs["provider"]))
+    for route in ("issues", "documents"):
+        skill = skills[route]
+        if (
+            skill["enabled"]
+            and skill["provider"]["type"] != "filesystem"
+            and "mcpName" in skill["provider"]
+        ):
+            references.append((route, skill["provider"]))
+    code_index = skills["codeIndex"]
+    if code_index["enabled"]:
+        references.append(("codeIndex", code_index))
+
+    routes: dict[str, list[str]] = {}
+    for route, reference in references:
+        routes.setdefault(str(reference["mcpName"]), []).append(route)
+    return {server_id: tuple(dict.fromkeys(values)) for server_id, values in routes.items()}
+
+
+def _historical_provider_intents(config: Mapping[str, Any]) -> list[ServerIntent]:
+    """Reconstruct only exact provider-derived definitions emitted before Config v1."""
+    skills = config["skills"]
+    services: list[tuple[str, Mapping[str, Any]]] = []
+    cvs = skills["cvs"]
+    if cvs["enabled"] and "mcpName" in cvs["provider"]:
+        services.append(("cvs", cvs["provider"]))
+    issues = skills["issues"]
+    if (
+        issues["enabled"]
+        and issues["provider"]["type"] != "filesystem"
+        and "mcpName" in issues["provider"]
+    ):
+        services.append(("issues", issues["provider"]))
+    unique: dict[tuple[object, ...], ServerIntent] = {}
+    for route, service in services:
+        if service["type"] not in CVS_MCP_SERVER_IDS:
+            continue
+        intent = _intent(service, route)
+        unique.setdefault(intent.definition(), intent)
+    return list(unique.values())
+
+
 def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
-    provider = str(service["provider"])
+    provider = str(service["type"])
+    server_id = str(service["mcpName"])
     if provider == "github":
         return ServerIntent(
-            CVS_MCP_SERVER_IDS[provider],
+            server_id,
             provider,
-            "remote",
             GITHUB_MCP_URL,
             str(service["token_env"]),
             None,
@@ -113,9 +209,8 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
         )
     if provider == "gitlab":
         return ServerIntent(
-            CVS_MCP_SERVER_IDS[provider],
+            server_id,
             provider,
-            "remote",
             GITLAB_MCP_URL,
             None,
             None,
@@ -125,12 +220,13 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
             None,
             (route,),
         )
+    if provider not in {"gitea", "forgejo"}:
+        raise ConfigError(f"MCP projection is not supported for provider {provider}")
     url = str(service["url"])
     if provider == "gitea":
         return ServerIntent(
-            CVS_MCP_SERVER_IDS[provider],
+            server_id,
             provider,
-            "local",
             url,
             str(service["token_env"]),
             "gitea-mcp",
@@ -142,9 +238,8 @@ def _intent(service: Mapping[str, Any], route: str) -> ServerIntent:
             (("GITEA_ACCESS_TOKEN", str(service["token_env"])),),
         )
     return ServerIntent(
-        CVS_MCP_SERVER_IDS[provider],
+        server_id,
         provider,
-        "local",
         url,
         str(service["token_env"]),
         "forgejo-mcp",
@@ -188,7 +283,7 @@ def deduplicate_server_intents(intents: list[ServerIntent]) -> list[ServerIntent
 
 def render_opencode_mcp(intent: ServerIntent) -> dict[str, Any]:
     """Render one exact OpenCode MCP server definition."""
-    if intent.transport == "local":
+    if intent.command is not None:
         rendered: dict[str, Any] = {
             "type": "local",
             "command": [intent.command, *intent.args],
@@ -198,24 +293,30 @@ def render_opencode_mcp(intent: ServerIntent) -> dict[str, Any]:
             rendered["environment"] = {
                 target: f"{{env:{source}}}" for target, source in environment
             }
-        return rendered
+        if intent.cwd is not None:
+            rendered["cwd"] = intent.cwd
+        return _merge_host_override(intent.opencode_override, rendered)
     if intent.url is None:
         raise ConfigError(f"remote MCP intent {intent.server_id} requires a URL")
     rendered: dict[str, Any] = {"type": "remote", "url": intent.url}
-    if intent.oauth:
+    if intent.headers:
+        rendered["headers"] = {
+            header: _render_header_template(value, "opencode") for header, value in intent.headers
+        }
+    elif intent.oauth:
         rendered["oauth"] = {}
-    else:
+    elif intent.token_env is not None:
         rendered["headers"] = {
             "Authorization": f"Bearer {{env:{intent.token_env}}}",
             "X-MCP-Toolsets": intent.toolsets,
         }
         rendered["oauth"] = False
-    return rendered
+    return _merge_host_override(intent.opencode_override, rendered)
 
 
 def render_pi_mcp(intent: ServerIntent) -> dict[str, Any]:
     """Render one exact pi-mcp-adapter server definition."""
-    if intent.transport == "local":
+    if intent.command is not None:
         rendered: dict[str, Any] = {
             "command": intent.command,
             "args": list(intent.args),
@@ -224,25 +325,76 @@ def render_pi_mcp(intent: ServerIntent) -> dict[str, Any]:
         environment = _environment_bindings(intent)
         if environment:
             rendered["env"] = {target: f"${{{source}}}" for target, source in environment}
-        return rendered
+        if intent.cwd is not None:
+            rendered["cwd"] = intent.cwd
+        return _merge_host_override(intent.pi_override, rendered)
     if intent.url is None:
         raise ConfigError(f"remote MCP intent {intent.server_id} requires a URL")
+    if intent.headers:
+        return _merge_host_override(
+            intent.pi_override,
+            {
+                "url": intent.url,
+                "headers": {
+                    header: _render_header_template(value, "pi") for header, value in intent.headers
+                },
+                "lifecycle": "lazy",
+            },
+        )
     if intent.oauth:
-        return {
-            "url": intent.url,
-            "auth": "oauth",
-            "oauth": {},
-            "lifecycle": "lazy",
-        }
-    return {
-        "url": intent.url,
-        "headers": {
-            "Authorization": f"Bearer ${{{intent.token_env}}}",
-            "X-MCP-Toolsets": intent.toolsets,
-        },
-        "auth": "bearer",
-        "lifecycle": "lazy",
-    }
+        return _merge_host_override(
+            intent.pi_override,
+            {
+                "url": intent.url,
+                "auth": "oauth",
+                "oauth": {},
+                "lifecycle": "lazy",
+            },
+        )
+    if intent.token_env is not None:
+        return _merge_host_override(
+            intent.pi_override,
+            {
+                "url": intent.url,
+                "headers": {
+                    "Authorization": f"Bearer ${{{intent.token_env}}}",
+                    "X-MCP-Toolsets": intent.toolsets,
+                },
+                "auth": "bearer",
+                "lifecycle": "lazy",
+            },
+        )
+    return _merge_host_override(intent.pi_override, {"url": intent.url, "lifecycle": "lazy"})
+
+
+def _merge_host_override(
+    override: Mapping[str, Any], authoritative: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Copy a host extension map and overlay adapter-owned fields authoritatively."""
+    rendered = deepcopy(dict(override))
+    rendered.update(deepcopy(dict(authoritative)))
+    return rendered
+
+
+def _canonical_override(override: Mapping[str, Any]) -> str:
+    """Return a deterministic, hashable identity for validated JSON settings."""
+    return json.dumps(
+        override, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":")
+    )
+
+
+def _render_header_template(value: str, harness: str) -> str:
+    """Translate validated host-neutral environment references without resolving them."""
+    if _HEADER_TEMPLATE.fullmatch(value) is None:
+        raise ConfigError(
+            "MCP header templates must contain only static text and well-formed "
+            "{env:NAME} references without control characters"
+        )
+    if harness == "opencode":
+        return value
+    if harness == "pi":
+        return _HEADER_ENV_REFERENCE.sub(lambda match: f"${{{match.group(1)}}}", value)
+    raise ValueError(f"unsupported harness: {harness}")
 
 
 def _environment_bindings(intent: ServerIntent) -> tuple[tuple[str, str], ...]:
@@ -251,12 +403,12 @@ def _environment_bindings(intent: ServerIntent) -> tuple[tuple[str, str], ...]:
     targets: set[str] = set()
     for target, source in intent.environment:
         if (
-            _ENVIRONMENT_NAME.fullmatch(target) is None
-            or _ENVIRONMENT_NAME.fullmatch(source) is None
+            _ENVIRONMENT_TARGET_NAME.fullmatch(target) is None
+            or _ENVIRONMENT_REFERENCE_NAME.fullmatch(source) is None
         ):
             raise ConfigError(
                 f"local MCP intent {intent.server_id} environment bindings "
-                "must use uppercase environment variable names"
+                "must use valid target names and uppercase source environment references"
             )
         if target in targets:
             raise ConfigError(

@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@harnessctl/opencode-tools@0.1.10"],
+  "plugin": ["../extensions/opencode-tools/dist/index.js", "@harnessctl/opencode-tools@0.1.10"],
   "mcp": {
     "sdlc_cvs_github": {
       "type": "remote",
@@ -8,14 +8,17 @@
       "headers": {
         "Authorization": "Bearer {env:GH_TOKEN}",
         "X-MCP-Toolsets": "repos,issues,pull_requests,actions,git"
-      },
-      "oauth": false
+      }
     },
     "sdlc_code_index": {
       "type": "local",
       "command": ["cgc", "mcp", "start"],
       "enabled": true,
       "timeout": 30000
+    },
+    "webcrawl_searchable": {
+      "type": "local",
+      "command": ["npx", "-y", "@dragoscirjan/mcp-searchable@latest"]
     }
   }
 }

@@ -1,0 +1,35 @@
+{
+  "runId": "039b3048",
+  "agent": "reviewer",
+  "task": "Read-only Verify review for Epic hrn-00157 after corrective Build. Do not edit. Review current HEAD commit/diff in /home/dragosc/Workspace/gh--harnessctl/harnessctl-v2 for acceptance fit, correctness, maintainability, security/privacy, compatibility, docs/ops, release readiness. Specific prior blocker: generic-tools schemas.spec validConfig missed mcp.web_retrieval. Return PASS/FAIL concise with evidence.",
+  "exitCode": 0,
+  "usage": {
+    "input": 101684,
+    "output": 3925,
+    "cacheRead": 55808,
+    "cacheWrite": 0,
+    "cost": 0.654074,
+    "turns": 6
+  },
+  "model": "openai-codex/gpt-5.5:high",
+  "attemptedModels": ["openai-codex/gpt-5.5:high"],
+  "modelAttempts": [
+    {
+      "model": "openai-codex/gpt-5.5:high",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 101684,
+        "output": 3925,
+        "cacheRead": 55808,
+        "cacheWrite": 0,
+        "cost": 0.654074,
+        "turns": 6
+      }
+    }
+  ],
+  "durationMs": 80131,
+  "toolCount": 12,
+  "transcriptPath": "/home/dragosc/Workspace/gh--harnessctl/harnessctl-v2/.pi-subagents/artifacts/039b3048_reviewer_0_transcript.jsonl",
+  "timestamp": 1788036906859
+}

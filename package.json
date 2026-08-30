@@ -7,6 +7,7 @@
   "scripts": {
     "prepare": "husky",
     "contracts:generate": "npm run contracts:generate --workspace @harnessctl/generic-tools",
+    "contracts:check": "npm run contracts:check --workspace @harnessctl/generic-tools",
     "changeset": "changeset",
     "version-packages": "changeset version && npm install --package-lock-only",
     "packages:build": "npm run build --workspace @harnessctl/generic-tools && npm run build --workspace @harnessctl/opencode-tools && npm run build --workspace @harnessctl/pi-tools",

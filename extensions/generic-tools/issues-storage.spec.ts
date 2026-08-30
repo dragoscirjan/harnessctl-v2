@@ -91,6 +91,7 @@ describe('issue filesystem', () => {
   it('uses the same non-reentrant barrier for issues and repository memory', () => {
     const root = repository();
     createConfig(root);
+    writeFileSync(join(root, '.harnessctl/config.yaml'), 'version: 1\nskills:\n  memory:\n    enabled: true\n');
     withIssueBarrier(root, () => {
       expect(() => listMemory(root)).toThrow(/non-reentrant/i);
     });

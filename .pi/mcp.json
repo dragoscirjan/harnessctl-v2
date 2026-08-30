@@ -6,14 +6,24 @@
         "Authorization": "Bearer ${GH_TOKEN}",
         "X-MCP-Toolsets": "repos,issues,pull_requests,actions,git"
       },
-      "auth": "bearer",
       "lifecycle": "lazy"
     },
     "sdlc_code_index": {
       "command": "cgc",
-      "args": ["mcp", "start"],
+      "args": [
+        "mcp",
+        "start"
+      ],
       "lifecycle": "lazy",
       "requestTimeoutMs": 30000
+    },
+    "webcrawl_searchable": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@dragoscirjan/mcp-searchable@latest"
+      ],
+      "lifecycle": "lazy"
     }
   },
   "settings": {

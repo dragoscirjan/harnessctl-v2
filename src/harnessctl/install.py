@@ -23,7 +23,6 @@ from typing import Any
 from .config import CODE_INDEX_SKILL_ID, ConfigError, load_config
 from .mcp import (
     OUTPUT_GUARD,
-    SAME_ID_MCP_MIGRATIONS,
     ServerIntent,
     deduplicate_server_intents,
     recognized_server_intents,
@@ -42,10 +41,6 @@ from .templates import (
 TARGETS = {
     "opencode": Path(".opencode/commands"),
     "pi": Path(".pi/prompts"),
-}
-_HISTORICAL_GITEA_REPLACEMENTS = {
-    "cvs_gitea": "sdlc_cvs_gitea",
-    "sdlc_cvs_gitea": "sdlc_cvs_gitea",
 }
 COMMANDS = tuple(TEMPLATES.keys())
 CURRENT_SDLC_COMMANDS = COMMANDS
@@ -102,6 +97,7 @@ LEGACY_PLUGIN_CONTENT = "export { CustomToolsPlugin } from '@harnessctl/opencode
 OPENCODE_TOOLS_VERSION = "0.1.10"
 OPENCODE_TOOLS_PLUGIN = f"@harnessctl/opencode-tools@{OPENCODE_TOOLS_VERSION}"
 LOCAL_CACHE = Path(".harnessctl/cache/harnessctl.sqlite")
+MCP_PROVENANCE = Path(".harnessctl/mcp-provenance-v1.json")
 OPENCODE_CONFIG = Path(".opencode/opencode.json")
 PI_MCP_CONFIG = Path(".pi/mcp.json")
 PI_SETTINGS = Path(".pi/settings.json")
@@ -171,6 +167,9 @@ def install(
     intents = deduplicate_server_intents(required_server_intents(config, harness))
     intents = _available_server_intents(intents)
     recognized_intents = recognized_server_intents(config, harness)
+    provenance_path = _target(root, MCP_PROVENANCE)
+    provenance, provenance_original = _load_mcp_provenance(provenance_path)
+    next_provenance = {host: dict(definitions) for host, definitions in provenance.items()}
     rendered_targets: list[tuple[Path, str]] = []
     command_targets: dict[Path, tuple[str, str]] = {}
     retired_targets: list[Path] = []
@@ -178,7 +177,7 @@ def install(
     code_index = config["skills"][CODE_INDEX_SKILL_ID]
     code_index_enabled = bool(code_index["enabled"])
     code_index_skill_content = (
-        render_skill("sdlc-code-index", mcp_server=code_index["mcp_server"])
+        render_skill("sdlc-code-index", mcp_server=code_index["mcpName"])
         if code_index_enabled
         else ""
     )
@@ -189,14 +188,15 @@ def install(
             relative_skill = skill_root / CODE_INDEX_SKILL
             if _target(root, relative_skill).is_file():
                 dormant_code_index_skills.append(relative_skill)
-    tdd_enabled = bool(config["workflow"]["tdd"]["enabled"])
+    tdd_enabled = bool(config["skills"]["tdd"]["enabled"])
     tdd_skill_content = render_skill("sdlc-develop-tdd")
     sdlc_context = {
-        "memory_hooks_enabled": bool(config["memory"]["enabled"]),
-        "retrieval_limit": config["memory"]["retrieval"]["limit"],
-        "retrieval_max_chars": config["memory"]["retrieval"]["max_chars"],
+        "memory_hooks_enabled": bool(config["skills"]["memory"]["enabled"]),
+        "retrieval_limit": config["skills"]["memory"]["retrieval"]["limit"],
+        "retrieval_max_chars": config["skills"]["memory"]["retrieval"]["max_chars"],
         "tdd_enabled": tdd_enabled,
         "code_index_enabled": code_index_enabled,
+        "documents_root": config["skills"]["documents"]["root"],
     }
     for selected_harness in harnesses:
         relative_directory = TARGETS[selected_harness]
@@ -224,16 +224,16 @@ def install(
             "sdlc",
             sdlc_context,
         )
-        cvs = config["cvs"]
-        cvs_remote = cvs["remote"]
-        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["provider"])
+        cvs = config["skills"]["cvs"]
+        cvs_remote = cvs["provider"]
+        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["type"])
         rendered_targets.append(
             (
                 _target(root, OPENCODE_SKILLS / "sdlc-cvs/SKILL.md"),
                 render_skill(
                     "sdlc-cvs",
                     local=cvs["local"],
-                    provider=cvs_remote["provider"],
+                    provider=cvs_remote["type"],
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
                     token_env=cvs_remote["token_env"],
@@ -242,18 +242,19 @@ def install(
                 ),
             )
         )
-        issues = config["issues"]
+        issues = config["skills"]["issues"]
+        issue_provider = issues["provider"]
         issue_context: dict[str, object] = {
-            "provider": issues["type"],
-            "tools": issues["tools"],
+            "provider": issue_provider["type"],
+            "tools": issue_provider["tools"],
         }
-        if issues["type"] == "filesystem":
+        if issue_provider["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
-            issue_mcp_id = _mcp_id(intents, "issues", issues["type"])
+            issue_mcp_id = _mcp_id(intents, "issues", issue_provider["type"])
             issue_context.update(
-                remote_url=issues["remote"]["url"],
-                token_env=issues["remote"]["token_env"],
+                remote_url=issue_provider["url"],
+                token_env=issue_provider["token_env"],
                 mcp_id=issue_mcp_id,
                 mcp_available=issue_mcp_id is not None,
             )
@@ -263,7 +264,7 @@ def install(
                 render_skill("sdlc-issue-tracking", **issue_context),
             )
         )
-        communication = config["communication"]["caveman"]
+        communication = config["skills"]["caveman"]
         if communication["enabled"]:
             rendered_targets.append(
                 (
@@ -271,9 +272,8 @@ def install(
                     render_skill("sdlc-caveman", mode=communication["mode"]),
                 )
             )
-        memory = config["memory"]
+        memory = config["skills"]["memory"]
         if memory["enabled"]:
-            repository = memory["repository"]
             retrieval = memory["retrieval"]
             rendered_targets.extend(
                 [
@@ -283,7 +283,7 @@ def install(
                             "sdlc-memory",
                             retrieval_limit=retrieval["limit"],
                             max_chars=retrieval["max_chars"],
-                            repository_root=repository["root"],
+                            repository_root=memory["root"],
                         ),
                     ),
                 ]
@@ -309,16 +309,16 @@ def install(
             "sdlc",
             sdlc_context,
         )
-        cvs = config["cvs"]
-        cvs_remote = cvs["remote"]
-        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["provider"])
+        cvs = config["skills"]["cvs"]
+        cvs_remote = cvs["provider"]
+        cvs_mcp_id = _mcp_id(intents, "cvs", cvs_remote["type"])
         rendered_targets.append(
             (
                 _target(root, PI_SKILLS / "sdlc-cvs/SKILL.md"),
                 render_skill(
                     "sdlc-cvs",
                     local=cvs["local"],
-                    provider=cvs_remote["provider"],
+                    provider=cvs_remote["type"],
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
                     token_env=cvs_remote["token_env"],
@@ -327,15 +327,19 @@ def install(
                 ),
             )
         )
-        issues = config["issues"]
-        issue_context = {"provider": issues["type"], "tools": issues["tools"]}
-        if issues["type"] == "filesystem":
+        issues = config["skills"]["issues"]
+        issue_provider = issues["provider"]
+        issue_context = {
+            "provider": issue_provider["type"],
+            "tools": issue_provider["tools"],
+        }
+        if issue_provider["type"] == "filesystem":
             issue_context.update(issue_root=issues["root"], issue_prefix=issues["prefix"])
         else:
-            issue_mcp_id = _mcp_id(intents, "issues", issues["type"])
+            issue_mcp_id = _mcp_id(intents, "issues", issue_provider["type"])
             issue_context.update(
-                remote_url=issues["remote"]["url"],
-                token_env=issues["remote"]["token_env"],
+                remote_url=issue_provider["url"],
+                token_env=issue_provider["token_env"],
                 mcp_id=issue_mcp_id,
                 mcp_available=issue_mcp_id is not None,
             )
@@ -347,15 +351,15 @@ def install(
                 ),
                 (
                     _target(root, PI_SKILLS / "sdlc-caveman/SKILL.md"),
-                    render_skill("sdlc-caveman", mode=config["communication"]["caveman"]["mode"]),
+                    render_skill("sdlc-caveman", mode=config["skills"]["caveman"]["mode"]),
                 ),
                 (
                     _target(root, PI_SKILLS / "sdlc-memory/SKILL.md"),
                     render_skill(
                         "sdlc-memory",
-                        retrieval_limit=config["memory"]["retrieval"]["limit"],
-                        max_chars=config["memory"]["retrieval"]["max_chars"],
-                        repository_root=config["memory"]["repository"]["root"],
+                        retrieval_limit=config["skills"]["memory"]["retrieval"]["limit"],
+                        max_chars=config["skills"]["memory"]["retrieval"]["max_chars"],
+                        repository_root=config["skills"]["memory"]["root"],
                     ),
                 ),
             ]
@@ -366,20 +370,33 @@ def install(
             rendered_targets.append(
                 (_target(root, PI_SKILLS / CODE_INDEX_SKILL), code_index_skill_content)
             )
-    if config["memory"]["enabled"]:
+    if config["skills"]["memory"]["enabled"]:
         rendered_targets.append(
             (
                 _target(root, Path(".gitignore")),
-                _memory_ignore(root, config["memory"]["repository"]),
+                _memory_ignore(root),
             )
         )
     if harness in ("opencode", "all"):
         opencode_path = _target(root, OPENCODE_CONFIG)
+        previous_opencode = provenance["opencode"]
+        recognized_opencode = _merge_recognized_mcp_definitions(
+            _recognized_mcp_definitions(recognized_intents, render_opencode_mcp),
+            previous_opencode,
+        )
         opencode_content = _merge_opencode_json(
             opencode_path,
             intents,
-            recognized=_recognized_mcp_definitions(recognized_intents, render_opencode_mcp),
+            recognized=recognized_opencode,
+            generated=previous_opencode,
             force=force,
+        )
+        next_provenance["opencode"] = _next_generic_mcp_provenance(
+            opencode_path,
+            "mcp",
+            intents,
+            render_opencode_mcp,
+            previous_opencode,
         )
         if opencode_content is not None:
             rendered_targets.append((opencode_path, opencode_content))
@@ -388,14 +405,26 @@ def install(
     pi_executable: str | None = None
     required_pi_packages: tuple[str, ...] = ()
     if harness in ("pi", "all"):
-        recognized_pi = _recognized_mcp_definitions(recognized_intents, render_pi_mcp)
+        previous_pi = provenance["pi"]
+        recognized_pi = _merge_recognized_mcp_definitions(
+            _recognized_mcp_definitions(recognized_intents, render_pi_mcp),
+            previous_pi,
+        )
         if intents or recognized_pi:
             pi_mcp_path = _target(root, PI_MCP_CONFIG)
             pi_content = _merge_pi_json(
                 pi_mcp_path,
                 intents,
                 recognized=recognized_pi,
+                generated=previous_pi,
                 force=force,
+            )
+            next_provenance["pi"] = _next_generic_mcp_provenance(
+                pi_mcp_path,
+                "mcpServers",
+                intents,
+                render_pi_mcp,
+                previous_pi,
             )
             if pi_content is not None:
                 rendered_targets.append((pi_mcp_path, pi_content))
@@ -412,11 +441,17 @@ def install(
         if any(source not in pi_state.configured for source in required_pi_packages):
             pi_executable = _preflight_pi_launcher()
 
+    if provenance_original is not None or any(next_provenance.values()):
+        provenance_content = _render_mcp_provenance(next_provenance)
+        if provenance_original != provenance_content.encode("utf-8"):
+            rendered_targets.append((provenance_path, provenance_content))
+
     mergeable_targets = {
         _target(root, Path(".gitignore")),
         _target(root, OPENCODE_CONFIG),
         _target(root, PI_MCP_CONFIG),
         _target(root, PI_SETTINGS),
+        provenance_path,
     }
     _validate_plan(root, rendered_targets, config, harness, retired_targets)
     legacy_skill_roots = _detect_legacy_skill_roots(root, harnesses)
@@ -557,15 +592,20 @@ def install(
                 mutation_started = True
                 _target(root, directory.relative_to(root))
                 directory.rmdir()
-        if config["memory"]["enabled"]:
+        if config["skills"]["memory"]["enabled"]:
             mutation_started = True
-            _initialize_memory_paths(root, config["memory"]["repository"], created_directories)
+            _initialize_memory_paths(
+                root,
+                config["skills"]["memory"],
+                created_directories,
+            )
         if harness in ("opencode", "all"):
             _smoke_check(
                 root,
-                check_memory=config["memory"]["enabled"],
+                check_memory=config["skills"]["memory"]["enabled"],
                 check_tdd=tdd_enabled,
                 check_code_index=code_index_enabled,
+                documents_root=config["skills"]["documents"]["root"],
             )
         if harness in ("pi", "all"):
             _smoke_check_pi(root, required_pi_packages, rendered_targets)
@@ -664,7 +704,9 @@ def _available_server_intents(intents: list[ServerIntent]) -> list[ServerIntent]
     return [
         intent
         for intent in intents
-        if intent.command is None or availability.get(intent.command, False)
+        if intent.provider == "generic"
+        or intent.command is None
+        or availability.get(intent.command, False)
     ]
 
 
@@ -686,13 +728,10 @@ def _append_skill_tree(
 
 
 def _mcp_id(intents: list[ServerIntent], route: str, provider: str) -> str | None:
-    """Return the projected MCP server ID for one configured route and provider."""
+    """Return the projected MCP server ID referenced by one configured route."""
+    del provider  # Provider metadata selects guidance; it never defines MCP transport intent.
     return next(
-        (
-            intent.server_id
-            for intent in intents
-            if intent.provider == provider and route in intent.requesting_routes
-        ),
+        (intent.server_id for intent in intents if route in intent.requesting_routes),
         None,
     )
 
@@ -720,24 +759,6 @@ def _json_values_equal(left: Any, right: Any) -> bool:
             for left_item, right_item in zip(left, right, strict=True)
         )
     return left == right
-
-
-def _matches_historical_local_server_signature(current: Any, historical: Mapping[str, Any]) -> bool:
-    """Recognize an edited historical local server by its old executable."""
-    if not isinstance(current, dict):
-        return False
-    historical_command = historical.get("command")
-    current_command = current.get("command")
-    if isinstance(historical_command, list):
-        return (
-            historical.get("type") == "local"
-            and current.get("type") == "local"
-            and bool(historical_command)
-            and isinstance(current_command, list)
-            and bool(current_command)
-            and current_command[0] == historical_command[0]
-        )
-    return isinstance(historical_command, str) and current_command == historical_command
 
 
 def _load_json_object(path: Path, label: str) -> tuple[dict[str, Any], bytes | None]:
@@ -864,6 +885,7 @@ def _merge_host_json(
     required: Mapping[str, Mapping[str, Any]],
     *,
     recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
+    generated: Mapping[str, Mapping[str, Any]] | None = None,
     force: bool,
 ) -> str | None:
     """Merge only fixed IDs, preserving unrelated top-level and sibling values."""
@@ -884,6 +906,8 @@ def _merge_host_json(
         container,
         required,
         recognized,
+        generated or {},
+        provenance_ids=set(),
         path=path,
         force=force,
     )
@@ -897,6 +921,7 @@ def _merge_opencode_json(
     intents: list[ServerIntent],
     *,
     recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
+    generated: Mapping[str, Mapping[str, Any]] | None = None,
     force: bool,
 ) -> str | None:
     """Register harnessctl tools and merge owned MCP IDs into OpenCode config."""
@@ -944,6 +969,10 @@ def _merge_opencode_json(
                 container,
                 required,
                 recognized,
+                generated or {},
+                provenance_ids={
+                    intent.server_id for intent in intents if intent.provider == "generic"
+                },
                 path=path,
                 force=force,
             )
@@ -958,6 +987,7 @@ def _merge_pi_json(
     intents: list[ServerIntent],
     *,
     recognized: Mapping[str, tuple[Mapping[str, Any], ...]] | None = None,
+    generated: Mapping[str, Mapping[str, Any]] | None = None,
     force: bool,
 ) -> str | None:
     """Merge Pi servers and the sole harnessctl-owned adapter setting."""
@@ -985,6 +1015,8 @@ def _merge_pi_json(
             servers,
             required,
             recognized,
+            generated or {},
+            provenance_ids={intent.server_id for intent in intents if intent.provider == "generic"},
             path=path,
             force=force,
         )
@@ -1014,108 +1046,136 @@ def _recognized_mcp_definitions(
     return {server_id: tuple(values) for server_id, values in definitions.items()}
 
 
+def _load_mcp_provenance(
+    path: Path,
+) -> tuple[dict[str, dict[str, Mapping[str, Any]]], bytes | None]:
+    """Load exact generic host definitions previously generated by harnessctl."""
+    document, original = _load_json_object(path, "MCP provenance")
+    if original is None:
+        return {"opencode": {}, "pi": {}}, None
+    if document.keys() != {"version", "hosts"} or document.get("version") != 1:
+        raise ValueError(f"invalid MCP provenance contract in {path}")
+    hosts = document.get("hosts")
+    if not isinstance(hosts, dict) or hosts.keys() != {"opencode", "pi"}:
+        raise ValueError(f"invalid MCP provenance hosts in {path}")
+    result: dict[str, dict[str, Mapping[str, Any]]] = {}
+    for host in ("opencode", "pi"):
+        definitions = hosts[host]
+        if not isinstance(definitions, dict) or not all(
+            isinstance(server_id, str) and isinstance(definition, dict)
+            for server_id, definition in definitions.items()
+        ):
+            raise ValueError(f"invalid {host} MCP provenance definitions in {path}")
+        result[host] = dict(definitions)
+    return result, original
+
+
+def _render_mcp_provenance(
+    hosts: Mapping[str, Mapping[str, Mapping[str, Any]]],
+) -> str:
+    """Render deterministic, credential-reference-only generic MCP provenance."""
+    document = {
+        "version": 1,
+        "hosts": {
+            host: {server_id: definition for server_id, definition in sorted(hosts[host].items())}
+            for host in ("opencode", "pi")
+        },
+    }
+    return json.dumps(document, indent=2, ensure_ascii=False) + "\n"
+
+
+def _merge_recognized_mcp_definitions(
+    historical: Mapping[str, tuple[Mapping[str, Any], ...]],
+    generated: Mapping[str, Mapping[str, Any]],
+) -> dict[str, tuple[Mapping[str, Any], ...]]:
+    """Combine fixed historical values with exact prior generic projections."""
+    merged = {server_id: list(definitions) for server_id, definitions in historical.items()}
+    for server_id, definition in generated.items():
+        definitions = merged.setdefault(server_id, [])
+        if not any(_json_values_equal(definition, current) for current in definitions):
+            definitions.append(definition)
+    return {server_id: tuple(definitions) for server_id, definitions in merged.items()}
+
+
+def _next_generic_mcp_provenance(
+    path: Path,
+    container_name: str,
+    intents: list[ServerIntent],
+    renderer: Callable[[ServerIntent], Mapping[str, Any]],
+    previous: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Mapping[str, Any]]:
+    """Retain provenance only where generation or exact prior ownership is proven."""
+    document, _ = _load_json_object(path, "host MCP configuration")
+    current = document.get(container_name, {})
+    if not isinstance(current, dict):
+        raise ValueError(f"{container_name} must be a JSON object in {path}")
+    next_definitions: dict[str, Mapping[str, Any]] = {}
+    for intent in intents:
+        if intent.provider != "generic":
+            continue
+        desired = renderer(intent)
+        server_id = intent.server_id
+        if server_id not in current:
+            next_definitions[server_id] = desired
+            continue
+        historical = previous.get(server_id)
+        if historical is not None and _json_values_equal(current[server_id], historical):
+            next_definitions[server_id] = desired
+    return next_definitions
+
+
 def _reconcile_owned_mcp_entries(
     container: dict[str, Any],
     required: Mapping[str, Mapping[str, Any]],
     recognized: Mapping[str, tuple[Mapping[str, Any], ...]],
+    generated: Mapping[str, Mapping[str, Any]],
     *,
+    provenance_ids: set[str],
     path: Path,
     force: bool,
 ) -> bool:
-    _reject_modified_historical_replacement_conflicts(
-        container,
-        required,
-        recognized,
-        path=path,
-    )
+    del force  # MCP ownership cannot be reclaimed by a force path.
     changed = False
     for server_id, expected in required.items():
         current = container.get(server_id)
         if _json_values_equal(current, expected):
+            previous = generated.get(server_id)
+            if server_id in provenance_ids and (
+                previous is None or not _json_values_equal(current, previous)
+            ):
+                _warn_operator_owned_mcp(server_id, path)
             continue
         historical = recognized.get(server_id, ())
-        if server_id in SAME_ID_MCP_MIGRATIONS and any(
-            _json_values_equal(current, definition) for definition in historical
-        ):
+        if any(_json_values_equal(current, definition) for definition in historical):
             container[server_id] = dict(expected)
             changed = True
             continue
-        if server_id in SAME_ID_MCP_MIGRATIONS and any(
-            _matches_historical_local_server_signature(current, definition)
-            for definition in historical
-        ):
-            warnings.warn(
-                f"preserving modified historical MCP ID {server_id} in {path}",
-                UserWarning,
-                stacklevel=3,
-            )
-            raise FileExistsError(
-                f"modified historical harnessctl-owned MCP ID {server_id} "
-                f"blocks canonical replacement in {path}"
-            )
-        if server_id in container and not force:
-            raise FileExistsError(f"conflicting harnessctl-owned MCP ID {server_id} in {path}")
+        if server_id in container:
+            _warn_operator_owned_mcp(server_id, path)
+            continue
         container[server_id] = dict(expected)
         changed = True
     for server_id, definitions in recognized.items():
         if server_id in required or server_id not in container:
             continue
         current = container[server_id]
-        replacement_id = _HISTORICAL_GITEA_REPLACEMENTS.get(server_id)
-        if replacement_id is not None and replacement_id not in required:
-            warnings.warn(
-                f"preserving historical MCP ID {server_id} in {path}; "
-                f"canonical replacement {replacement_id} is not planned",
-                UserWarning,
-                stacklevel=3,
-            )
-            continue
         if any(_json_values_equal(current, definition) for definition in definitions):
             del container[server_id]
             changed = True
             continue
-        warnings.warn(
-            f"preserving modified MCP ID {server_id} in {path}",
-            UserWarning,
-            stacklevel=3,
-        )
+        _warn_operator_owned_mcp(server_id, path)
     return changed
 
 
-def _reject_modified_historical_replacement_conflicts(
-    container: Mapping[str, Any],
-    required: Mapping[str, Mapping[str, Any]],
-    recognized: Mapping[str, tuple[Mapping[str, Any], ...]],
-    *,
-    path: Path,
-) -> None:
-    """Reject edited legacy entries before planning their canonical replacement."""
-    for server_id, replacement_id in _HISTORICAL_GITEA_REPLACEMENTS.items():
-        if (
-            server_id == replacement_id
-            or replacement_id not in required
-            or server_id not in container
-        ):
-            continue
-        current = container[server_id]
-        if any(
-            _json_values_equal(current, definition) for definition in recognized.get(server_id, ())
-        ):
-            continue
-        if not any(
-            _matches_historical_local_server_signature(current, definition)
-            for definition in recognized.get(replacement_id, ())
-        ):
-            continue
-        warnings.warn(
-            f"preserving modified historical MCP ID {server_id} in {path}",
-            UserWarning,
-            stacklevel=4,
-        )
-        raise FileExistsError(
-            f"modified historical harnessctl-owned MCP ID {server_id} blocks "
-            f"canonical replacement {replacement_id} in {path}"
-        )
+def _warn_operator_owned_mcp(server_id: str, path: Path) -> None:
+    """Report a collision without including declaration or credential values."""
+    warnings.warn(
+        f"preserving modified MCP ID {server_id} in host target {path}; the entry is "
+        "operator-owned and unchanged. Remove or rename that host entry manually to let "
+        "harnessctl manage this ID",
+        UserWarning,
+        stacklevel=4,
+    )
 
 
 def _merge_pi_settings(path: Path) -> str | None:
@@ -1346,16 +1406,12 @@ def _smoke_check_mcp(root: Path, harness: str, intents: list[ServerIntent]) -> N
             _target(root, OPENCODE_CONFIG), "OpenCode MCP configuration"
         )
         for intent in intents:
-            if not _json_values_equal(
-                document.get("mcp", {}).get(intent.server_id), render_opencode_mcp(intent)
-            ):
+            if intent.server_id not in document.get("mcp", {}):
                 raise RuntimeError(f"OpenCode MCP smoke check failed for {intent.server_id}")
     if harness in ("pi", "all") and intents:
         document, _ = _load_json_object(_target(root, PI_MCP_CONFIG), "Pi MCP configuration")
         for intent in intents:
-            if not _json_values_equal(
-                document.get("mcpServers", {}).get(intent.server_id), render_pi_mcp(intent)
-            ):
+            if intent.server_id not in document.get("mcpServers", {}):
                 raise RuntimeError(f"Pi MCP smoke check failed for {intent.server_id}")
         if document.get("settings", {}).get("outputGuard") != OUTPUT_GUARD:
             raise RuntimeError("Pi settings.outputGuard smoke check failed")
@@ -1480,8 +1536,8 @@ def _validate_plan(
     for target in retired_targets:
         if target.exists() and not target.is_file():
             raise IsADirectoryError(f"retired target is not a regular file: {target}")
-    if config["memory"]["enabled"]:
-        memory_root = _target(root, Path(str(config["memory"]["repository"]["root"])))
+    if config["skills"]["memory"]["enabled"]:
+        memory_root = _target(root, Path(str(config["skills"]["memory"]["root"])))
         directories.update(
             memory_root / folder
             for folder in ("facts", "decisions", "events", "lessons", "tombstones")
@@ -1818,8 +1874,7 @@ def _rollback(
     return errors
 
 
-def _memory_ignore(root: Path, repository: dict[str, object]) -> str:
-    del repository
+def _memory_ignore(root: Path) -> str:
     cache = _target(root, LOCAL_CACHE)
     ignore = root / ".gitignore"
     entry = f"/{cache.parent.relative_to(root).as_posix()}/"
@@ -1835,6 +1890,7 @@ def _smoke_check(
     check_memory: bool,
     check_tdd: bool,
     check_code_index: bool,
+    documents_root: str,
 ) -> None:
     issue_skill = root / OPENCODE_SKILLS / "sdlc-issue-tracking/SKILL.md"
     if not issue_skill.is_file():
@@ -1850,6 +1906,7 @@ def _smoke_check(
         retrieval_max_chars=1,
         tdd_enabled=check_tdd,
         code_index_enabled=check_code_index,
+        documents_root=documents_root,
     ):
         if not (root / OPENCODE_SKILLS / "sdlc" / relative).is_file():
             raise RuntimeError(f"OpenCode SDLC resource smoke check failed: {relative}")

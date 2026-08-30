@@ -1,0 +1,27 @@
+"version": 1
+"id": "hrn-00161"
+"type": "story"
+"title": "Define and generate the Config v1 contract"
+"status": "done"
+"created_at": "2026-08-29T22:20:20.582Z"
+"updated_at": "2026-08-29T23:01:48.466Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00160"
+"metadata":
+  "estimate": "M"
+  "order": 1
+"body": "# Define and generate the Config v1 contract\n\n## Objective\n\nEstablish TypeScript Zod as the sole hand-maintained Config v1 shape/default authority and produce deterministic portable artifacts for all runtimes.\n\n## Scope\n\n- Rename the paused v3 contract slice to the first stable v1 model without losing validated behavior.\n- Define the capability-oriented Config v1 model and canonical defaults.\n- Generate `config-v1.schema.json` and `config-v1.defaults.json`.\n- Ship generated artifacts in npm and Python package layouts.\n- Add deterministic generation, fingerprints, and stale-artifact checks.\n- Retire Config v2/v3 config schemas and artifacts while preserving unrelated `memory-record-v1.schema.json`.\n- Fail generation when required Zod semantics cannot be represented portably.\n\n## Acceptance Criteria\n\n- Every Config v1 field, default, enum, safety constraint, and cross-field rule has one hand-maintained authority.\n- `configV1Schema` and `CONFIG_V1_DEFAULTS` are the canonical Config symbols; no Config v2/v3 config authority remains.\n- Generation deterministically produces the approved Config v1 schema/default artifacts with matching package fingerprints.\n- A stale generated artifact fails an automated check without rewriting under check mode.\n- Source, npm, and Python distribution tests resolve the Config v1 artifacts distinctly from memory-record v1 artifacts.\n- No runtime consumer migration is required for this Story to complete.\n\n## Dependencies\n\nNone.\n\n## Artifacts\n\n- `doc-00015` Config v1 Architecture and Ownership.\n- `doc-00016` Config v1 Contract, Generation, and Host Projection.\n\n## Estimate\n\nM. Existing tested v3 work is reusable, but every symbol, artifact path, package assertion, and contract identifier must be checked for stale version references.\n\n## Non-Goals\n\nRuntime consumer migration, MCP projection changes, documentation release, Config v2/v3 compatibility or migration code."
+"comments":
+  - "id": "hrn-00161-C0001"
+    "created_at": "2026-08-29T22:36:11.155Z"
+    "created_by": "OpenCode"
+    "body": "Build paused after initial Config v3 contract slice passed focused local checks. User changed required public contract version to Config v1 because the SDLC has not been released, invalidating approved v3 issue/design/artifact naming and migration assumptions. Work moved to `feat/hrn-00160-config-v1`, branched from local `main` at `14ac2e1`; pre-existing hrn-00157 dirty work is preserved separately. Return to Plan to revise hrn-00160, hrn-00161..hrn-00164, doc-00015, and doc-00016 before implementation resumes. No Verify, Release, remote, destructive, closure, or commit action performed."
+  - "id": "hrn-00161-C0002"
+    "created_at": "2026-08-29T22:51:21.378Z"
+    "created_by": "OpenCode"
+    "body": "YOLO Build blocked before edits by approved dependency contradiction. `hrn-00161` requires all Config v2 authority/artifacts retired but excludes runtime migration; current `extensions/generic-tools/config.ts` imports `configV2Schema`, and existing schema/install tests require `config-v2.schema.json`. `hrn-00162` owns runtime migration but is blocked by `hrn-00161`. Minimal Plan correction: 00161 generates canonical v1 while temporarily retaining internal v2 runtime authority/artifact; 00162 migrates consumers, then removes v2. No source edits, Verify, Release, remote, destructive, closure, or commit performed in this resumed Build."
+  - "id": "hrn-00161-C0003"
+    "created_at": "2026-08-29T23:00:37.301Z"
+    "created_by": "OpenCode"
+    "body": "Config v1 contract slice implemented per clarified break-first sequence. Removed Config v2 schema/artifact and paused Config v3 authority; canonical symbols are `configV1Schema`, `CONFIG_V1_DEFAULTS`, and `ConfigV1`; generated npm/Python `config-v1.schema.json`, `config-v1.defaults.json`, and SHA-256 fingerprint manifest; preserved independent `memory-record-v1.schema.json`. Focused Build checks passed: contract generation/check, 12 focused Vitest tests, focused ESLint/Prettier, Python wheel/sdist artifact test, npm pack artifact check, and `git diff --check`. Generic runtime remains intentionally broken at removed `configV2Schema` import until `hrn-00162`; no Verify/Release/remote/commit performed."

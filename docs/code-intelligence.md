@@ -11,15 +11,16 @@ provider-neutral contract.
 The feature is explicitly opt-in:
 
 ```yaml
+version: 1
 skills:
-  sdlc-code-index:
+  codeIndex:
     enabled: true
-    mcp_server: sdlc-code-index
+    mcpName: sdlc-code-index
 ```
 
-`mcp_server` must be 1 through 64 lowercase ASCII characters, start and end with an
-alphanumeric character, contain only alphanumeric characters, `_`, or `-`, and not use
-the reserved `cvs_` prefix. The name must match a server that the user separately
+`mcpName` must be 1 through 64 lowercase ASCII characters, start and end with an
+alphanumeric character, and contain only alphanumeric characters, `_`, or `-`; `cvs_` is
+permitted. The name must match a server that the user separately
 configures in the selected host. Harnessctl treats the value only as guidance: it does
 not create, recognize, remove, install, configure, start, watch, or manage the server or
 its processes, packages, models, credentials, storage, or data.
@@ -63,8 +64,8 @@ a disabled install preserves its exact bytes and emits one warning per selected 
 warning identifies the discoverable, active-capable file and its manual removal path;
 harnessctl never deletes it automatically.
 
-The old top-level `code_index` key and all `mcp.servers` mappings are rejected. Migrate
-only the desired `enabled` state and external server name to `skills.sdlc-code-index`.
+Use the `skills.codeIndex` mapping for the desired `enabled` state and external `mcpName`.
+Generic host-neutral declarations belong in the independent top-level `mcpServers` registry.
 Then audit `.opencode/opencode.json` and `.pi/mcp.json` manually, retaining or removing
 external entries according to current user intent. Stop any old processes separately.
 An old provider package may be uninstalled only after confirming no other project or

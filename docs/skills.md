@@ -9,16 +9,16 @@ boundary. Tool availability comes from separately loaded host adapters.
 [`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers eight
 skill templates.
 
-| Skill ID              | Configuration                                           | Installation                                             | Purpose                                                              |
-| --------------------- | ------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
-| `sdlc-caveman`        | `communication.caveman.enabled` and `mode`              | OpenCode when enabled; Pi always                         | Concise communication without losing exact technical substance       |
-| `sdlc-code-index`     | `skills.sdlc-code-index`                                | Each selected harness only when enabled                  | Relationship-aware retrieval with source verification and fallback   |
-| `sdlc-code`           | None                                                    | Always under each selected harness's `skills/` directory | Build-only clean-code policy plus conditional ecosystem references   |
-| `sdlc-memory`         | `memory.enabled`, retrieval bounds, and repository root | OpenCode when enabled; Pi always                         | Safe retrieval and persistence of curated repository knowledge       |
-| `sdlc-issue-tracking` | `issues.type`, `tools`, `root`, and `prefix`            | Always under each selected harness's `skills/` directory | Provider-exclusive local or remote issue workflow guidance           |
-| `sdlc-cvs`            | `cvs.local` and validated remote provider               | Always under each selected harness's `skills/` directory | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
-| `sdlc`                | Memory availability, retrieval bounds, and TDD setting  | Always under each selected harness's `skills/` directory | Epic-first core policy plus progressively disclosed phase references |
-| `sdlc-develop-tdd`    | `workflow.tdd.enabled`                                  | Each selected harness only when enabled                  | Red-Green-Refactor development guidance                              |
+| Skill ID              | Configuration                                          | Installation                                             | Purpose                                                              |
+| --------------------- | ------------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------------- |
+| `sdlc-caveman`        | `skills.caveman.enabled` and `mode`                    | OpenCode when enabled; Pi always                         | Concise communication without losing exact technical substance       |
+| `sdlc-code-index`     | `skills.codeIndex`                                     | Each selected harness only when enabled                  | Relationship-aware retrieval with source verification and fallback   |
+| `sdlc-code`           | None                                                   | Always under each selected harness's `skills/` directory | Build-only clean-code policy plus conditional ecosystem references   |
+| `sdlc-memory`         | `skills.memory`, retrieval bounds, and repository root | OpenCode when enabled; Pi always                         | Safe retrieval and persistence of curated repository knowledge       |
+| `sdlc-issue-tracking` | `skills.issues.provider`, root, and prefix             | Always under each selected harness's `skills/` directory | Provider-exclusive local or remote issue workflow guidance           |
+| `sdlc-cvs`            | `skills.cvs.local` and validated remote provider       | Always under each selected harness's `skills/` directory | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
+| `sdlc`                | Memory availability, retrieval bounds, and TDD setting | Always under each selected harness's `skills/` directory | Epic-first core policy plus progressively disclosed phase references |
+| `sdlc-develop-tdd`    | `skills.tdd.enabled`                                   | Each selected harness only when enabled                  | Red-Green-Refactor development guidance                              |
 
 Generated support-skill ownership is explicit in each renamed ID. The breaking rename
 map contains only five support skills:
@@ -41,7 +41,7 @@ manually or pass `--replace-sdlc-skill-set` to delete the selected harnesses' le
 support trees transactionally. The flag discloses every affected root before mutation,
 rejects symlinks and special entries, and restores file bytes, file existence, and
 directory topology if installation fails. It never changes the functional
-`skills.sdlc-code-index` configuration key, MCP IDs, commands, global skills, or an
+`skills.codeIndex` configuration key, MCP IDs, commands, global skills, or an
 unselected host.
 
 The retired `sdlc-documents` ID is not generated and is not part of the rename set. On
@@ -135,37 +135,42 @@ entries to the packaged tools version, and installs
 the `ask_user_question` option picker in interactive Pi sessions.
 
 The issue-tracking skill is self-contained and provider-specific. Filesystem mode
-documents normalized harnessctl tools and revision handling. Remote modes document
-the configured provider's valid CLI and MCP capabilities. The skill does not install a CLI, perform login,
+documents normalized harnessctl tools and revision handling. Remote modes always document
+the configured provider's valid CLI capabilities and add MCP capabilities only when
+`mcpName` yields an available projection. The skill does not install a CLI, perform login,
 store credentials, invoke commands itself, or add a remote adapter.
 
 The CVS skill receives only validated local authority, provider, CLI, URL,
-environment-variable name, fixed MCP ID, and the valid capabilities exposed by each
-route. It keeps Git or Jujutsu local and lets the agent choose CLI or MCP for each remote
-operation after checking repository context and live capability. The choice must be made
-before mutation and cannot change after mutation begins. It requires fresh consent
-immediately before merge and never receives an environment value or the complete
-configuration. CVS and remote Issues remain independent policy owners.
+environment-variable name, optional configured MCP ID, and the valid capabilities exposed
+by each route. It keeps Git or Jujutsu local and lets the agent choose CLI or an available
+MCP projection for each remote operation after checking repository context and live
+capability. The choice must be made before mutation and cannot change after mutation
+begins. It requires fresh consent immediately before merge and never receives an
+environment value or the complete configuration. CVS and remote Issues remain independent
+policy owners.
 
 A complete example generating strict caveman and GitHub issue guidance is:
 
 ```yaml
-communication:
+version: 1
+skills:
   caveman:
     enabled: true
     mode: strict
-memory:
-  enabled: false
-issues:
-  type: github
-  tools: gh
-  remote:
-    url: https://github.com
-    token_env: GH_TOKEN
+  memory:
+    enabled: false
+  issues:
+    provider:
+      type: github
+      tools: gh
+      mcpName: sdlc_cvs_github
+      url: https://github.com
+      token_env: GH_TOKEN
 ```
 
-Remote `issues.remote` is required; filesystem rejects it. The token value belongs
-only in the named environment variable, never YAML. `issues.root` and `issues.prefix`
+The complete remote `skills.issues.provider` mapping is required; filesystem rejects Git
+connection fields. The token value belongs
+only in the named environment variable, never YAML. `skills.issues.root` and `skills.issues.prefix`
 are filesystem-only and ignored remotely.
 
 OpenCode host MCP entries are merged into `.opencode/opencode.json`. Pi host entries and

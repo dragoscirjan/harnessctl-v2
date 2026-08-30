@@ -188,12 +188,12 @@ def _render_context(
 ) -> dict[str, object]:
     metadata = COMMAND_METADATA[command]
     memory_hooks_enabled = bool(
-        harness in {"opencode", "pi"} and config and config["memory"]["enabled"]
+        harness in {"opencode", "pi"} and config and config["skills"]["memory"]["enabled"]
     )
     if not memory_hooks_enabled:
         return {"memory_hooks_enabled": False, **metadata}
 
-    memory = config["memory"]
+    memory = config["skills"]["memory"]
     retrieval = memory["retrieval"]
     return {
         "memory_hooks_enabled": True,

@@ -1,567 +1,86 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ConfigError, createConfig, getConfigValue, parseConfig, readConfig } from './index.js';
+import {
+  CONFIG_V1_REWRITE_GUIDANCE,
+  ConfigError,
+  createConfig,
+  getConfigValue,
+  parseConfig,
+  readConfig,
+} from './config.js';
+import { CONFIG_V1_DEFAULTS } from './schemas.js';
 
-function temporaryDirectory(): string {
-  return mkdtempSync(join(tmpdir(), 'harnessctl-config-'));
+interface ConformanceCase {
+  readonly id: string;
+  readonly valid: boolean;
+  readonly input: Record<string, unknown>;
+  readonly expected?: Record<string, unknown>;
+  readonly error_paths?: string[];
 }
 
-const PROVIDERS = [
-  ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
-  ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
-  ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
-  ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
-] as const;
+const fixture = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, '../../tests/fixtures/config-v1-conformance.json'), 'utf8'),
+) as { cases: ConformanceCase[] };
+const validCases = fixture.cases.filter((testCase) => testCase.valid);
+const invalidCases = fixture.cases.filter((testCase) => !testCase.valid);
 
-describe('configuration tools', () => {
-  it('creates the neutral default configuration', () => {
-    const cwd = temporaryDirectory();
-    try {
-      const path = createConfig(cwd);
-
-      expect(path).toBe(join(cwd, '.harnessctl', 'config.yaml'));
-      expect(readConfig(cwd)).toEqual({
-        version: 2,
-        issues: {
-          root: '.harnessctl/issues',
-          prefix: 'hrn-',
-          type: 'filesystem',
-          tools:
-            'issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive',
-        },
-        documents: {
-          root: '.harnessctl/documents',
-          prefix: 'doc-',
-          type: 'filesystem',
-          tools:
-            'document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore',
-        },
-        cvs: {
-          local: 'git',
-          remote: {
-            provider: 'github',
-            tools: 'gh',
-            url: 'https://github.com',
-            token_env: 'GH_TOKEN',
-          },
-        },
-        mcp: {
-          output_limit_mode: 'bounded-guidance',
-        },
-        skills: {
-          'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
-        },
-        paths: {
-          root: '.harnessctl',
-          tasks: '.harnessctl/tasks',
-          reports: '.harnessctl/reports',
-        },
-        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
-        communication: { caveman: { enabled: true, mode: 'strict' } },
-        memory: {
-          enabled: false,
-          backend: 'repository',
-          namespace: { organization_id: 'local', project_id: 'project', default_topic: 'general' },
-          retrieval: { limit: 8, max_chars: 12_000, include_superseded: false },
-          repository: { root: '.harnessctl/memory' },
-        },
-      });
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
+describe('Config v1 loader', () => {
+  it('returns canonical defaults when no config file exists', () => {
+    expect(readConfig(mkdtempSync(join(tmpdir(), 'harnessctl-config-')))).toEqual(CONFIG_V1_DEFAULTS);
   });
 
-  it('does not overwrite an existing configuration', () => {
-    const cwd = temporaryDirectory();
-    try {
-      const path = join(cwd, '.harnessctl', 'config.yaml');
-      createConfig(cwd);
-      writeFileSync(path, 'version: 9\n', 'utf8');
-
-      createConfig(cwd);
-
-      expect(readFileSync(path, 'utf8')).toBe('version: 9\n');
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
+  it('creates an explicit Config v1 document without replacing an existing file', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-config-'));
+    const path = createConfig(cwd);
+    expect(parseConfig(readFileSync(path, 'utf8'))).toEqual(CONFIG_V1_DEFAULTS);
+    writeFileSync(path, 'version: 1\n', 'utf8');
+    expect(createConfig(cwd)).toBe(path);
+    expect(readFileSync(path, 'utf8')).toBe('version: 1\n');
   });
 
-  it('resolves nested, scalar, mapping, and null values', () => {
-    const cwd = temporaryDirectory();
-    try {
-      createConfig(cwd);
-      const path = join(cwd, '.harnessctl', 'config.yaml');
-      writeFileSync(path, 'version: 1\npaths:\n  tasks: .tasks\nempty: null\n', 'utf8');
-
-      expect(getConfigValue(cwd, 'paths.tasks')).toBe('.tasks');
-      expect(getConfigValue(cwd, 'paths')).toEqual({
-        root: '.harnessctl',
-        tasks: '.tasks',
-        reports: '.harnessctl/reports',
-      });
-      expect(getConfigValue(cwd, 'empty')).toBeNull();
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
-  it('serves fresh defaults when the configuration file is absent', () => {
-    const cwd = temporaryDirectory();
-    try {
-      expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
-      expect(getConfigValue(cwd, 'issues.root')).toBe('.harnessctl/issues');
-      expect(getConfigValue(cwd, 'issues.prefix')).toBe('hrn-');
-      expect(getConfigValue(cwd, 'skills.sdlc-code-index.enabled')).toBe(false);
-      expect(getConfigValue(cwd, 'skills.sdlc-code-index.mcp_server')).toBe('sdlc-code-index');
-      const first = readConfig(cwd);
-      if (first instanceof ConfigError) throw first;
-      (first.paths as Record<string, unknown>).tasks = 'mutated';
-      expect(getConfigValue(cwd, 'paths.tasks')).toBe('.harnessctl/tasks');
-      expect(existsSync(join(cwd, '.harnessctl', 'config.yaml'))).toBe(false);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
-  it('deep-merges partial version 2 configuration over defaults', () => {
-    const cwd = temporaryDirectory();
-    try {
-      createConfig(cwd);
-      writeFileSync(
-        join(cwd, '.harnessctl', 'config.yaml'),
-        'version: 2\nmemory:\n  enabled: true\n  retrieval:\n    limit: 3\n',
-        'utf8',
-      );
-
-      expect(readConfig(cwd)).toMatchObject({
-        version: 2,
-        issues: { root: '.harnessctl/issues', prefix: 'hrn-' },
-        paths: { tasks: '.harnessctl/tasks' },
-        mcp: { output_limit_mode: 'bounded-guidance' },
-        skills: { 'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' } },
-        workflow: { default_task_type: 'bug', tdd: { enabled: false } },
-        communication: { caveman: { enabled: true, mode: 'strict' } },
-        memory: {
-          enabled: true,
-          backend: 'repository',
-          retrieval: { limit: 3, max_chars: 12_000, include_superseded: false },
-          repository: { root: '.harnessctl/memory' },
-        },
-      });
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
-  it.each([true, false])('accepts workflow.tdd.enabled=%s and preserves unknown workflow fields', (enabled) => {
-    expect(
-      readConfigFromText(
-        `version: 2\nworkflow:\n  custom_policy: retained\n  tdd:\n    enabled: ${String(enabled)}\n    custom_policy: retained\n`,
-      ),
-    ).toMatchObject({
-      workflow: {
-        default_task_type: 'bug',
-        custom_policy: 'retained',
-        tdd: { enabled, custom_policy: 'retained' },
-      },
-    });
-  });
-
-  it('rejects a non-boolean workflow.tdd.enabled value', () => {
-    expect(() => readConfigFromText('version: 2\nworkflow:\n  tdd:\n    enabled: 1\n')).toThrow(
-      /workflow\.tdd\.enabled/u,
-    );
-  });
-
-  it.each([
-    'credential: root-secret-value\ncredential: replacement-value\n',
-    'mcp:\n  credential: nested-secret-value\n  credential: replacement-value\n',
-  ])('rejects duplicate YAML mapping keys without exposing submitted values', (yaml) => {
-    let error: unknown;
-    try {
-      readConfigFromText(yaml);
-    } catch (caught) {
-      error = caught;
-    }
-
-    expect(error).toBeInstanceOf(ConfigError);
-    expect(String(error)).toMatch(/DUPLICATE_KEY.*line \d+, column \d+/u);
-    expect(String(error)).not.toContain('root-secret-value');
-    expect(String(error)).not.toContain('nested-secret-value');
-    expect(String(error)).not.toContain('replacement-value');
-  });
-
-  it.each(['1: root-value\n', 'mcp:\n  1: nested-value\n'])('rejects non-string YAML mapping keys', (yaml) => {
-    expect(() => readConfigFromText(yaml)).toThrow(ConfigError);
-  });
-
-  it('rejects the unreleased top-level code_index key with migration guidance', () => {
-    expect(() => readConfigFromText('version: 2\ncode_index:\n  provider: graphify\n')).toThrow(
-      /code_index.*skills\.sdlc-code-index/u,
-    );
-  });
-
-  it('defaults to a disabled provider-neutral code-index skill', () => {
-    const config = readConfigFromText('version: 2\n');
-
-    expect(config.mcp).toEqual({ output_limit_mode: 'bounded-guidance' });
-    expect(config.skills).toEqual({
-      'sdlc-code-index': { enabled: false, mcp_server: 'sdlc-code-index' },
-    });
-  });
-
-  it.each(['sdlc-code-index', 'sdlc_cvs_custom', 'sdlc_documents_custom', 'index_2', 'a', 'a-b_c-9'])(
-    'accepts portable external MCP server name %s',
-    (mcpServer) => {
-      expect(
-        readConfigFromText(
-          `version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`,
-        ),
-      ).toMatchObject({
-        skills: { 'sdlc-code-index': { enabled: true, mcp_server: mcpServer } },
-      });
+  it.each([{}, { version: 2 }, { version: 3 }, { version: '1' }])(
+    'rejects missing and non-v1 versions with manual rewrite guidance',
+    (input) => {
+      expect(() => parseConfig(JSON.stringify(input))).toThrow(CONFIG_V1_REWRITE_GUIDANCE);
     },
   );
 
-  it.each([
-    'A',
-    '-index',
-    'index-',
-    '_index',
-    'index_',
-    'index.server',
-    'index server',
-    'cvs_github',
-    'sdlc_cvs_github',
-    'a'.repeat(65),
-  ])('rejects invalid external MCP server name %s', (mcpServer) => {
-    expect(() =>
-      readConfigFromText(`version: 2\nskills:\n  sdlc-code-index:\n    enabled: true\n    mcp_server: ${mcpServer}\n`),
-    ).toThrow(/skills\["sdlc-code-index"\]\.mcp_server/u);
+  it('preserves safe YAML parsing protections', () => {
+    expect(() => parseConfig('version: 1\nversion: 1\n')).toThrow(/DUPLICATE_KEY/u);
+    expect(() => parseConfig('version: 1\n1: invalid\n')).toThrow(/mapping keys must be strings/u);
+    expect(() => parseConfig('[')).toThrow(/Malformed YAML/u);
   });
 
-  it('rejects legacy mcp.servers before default merge', () => {
-    expect(() =>
-      readConfigFromText('version: 2\nmcp:\n  servers:\n    sdlc-code-index:\n      enabled: false\n'),
-    ).toThrow(/mcp\.servers.*skills\.sdlc-code-index/u);
+  it('deep-merges partial nested capability settings and rejects unknown keys', () => {
+    expect(parseConfig('version: 1\nskills:\n  memory:\n    retrieval:\n      limit: 5\n')).toMatchObject({
+      skills: { memory: { enabled: false, retrieval: { limit: 5, max_chars: 12_000 } } },
+    });
+    expect(() => parseConfig('version: 1\ncommunication: {}\n')).toThrow(/Unrecognized key/u);
   });
 
-  it.each([
-    ['github', ' gh ', 'gh', 'https://github.com', 'GH_TOKEN'],
-    ['gitlab', ' glab ', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
-    ['gitea', ' tea ', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
-    ['forgejo', ' forgejo-cli ', 'forgejo-cli', 'https://forgejo.example.test:3000', 'FORGEJO_TOKEN'],
-  ])(
-    'normalizes explicit %s tooling and retains filesystem-only overlay defaults',
-    (type, tools, normalized, url, tokenEnv) => {
-      const config = readConfigFromText(
-        `version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-      );
-      expect(config).toMatchObject({
-        issues: {
-          root: '.harnessctl/issues',
-          prefix: 'hrn-',
-          type,
-          tools: normalized,
-          remote: { url, token_env: tokenEnv },
-        },
-      });
-    },
-  );
+  it('reads normalized capability values by Config v1 path', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-config-'));
+    createConfig(cwd);
+    expect(getConfigValue(cwd, 'skills.issues.root')).toBe('.harnessctl/issues');
+    expect(getConfigValue(cwd, 'skills.codeIndex.enabled')).toBe(false);
+    expect(getConfigValue(cwd, 'skills.issues.provider.type')).toBe('filesystem');
+    expect(getConfigValue(cwd, 'issues.root')).toBeInstanceOf(ConfigError);
+  });
 
-  it('keeps create and get tools operational for remote configuration', () => {
-    const cwd = temporaryDirectory();
+  it.each(validCases)('accepts shared conformance case $id', ({ input, expected }) => {
+    expect(parseConfig(JSON.stringify(input))).toEqual(expected);
+  });
+
+  it.each(invalidCases)('rejects shared conformance case $id with exact full paths', ({ input, error_paths }) => {
+    let thrown: unknown;
     try {
-      const path = createConfig(cwd);
-      writeFileSync(
-        path,
-        'version: 2\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n',
-        'utf8',
-      );
-      expect(getConfigValue(cwd, 'issues.type')).toBe('github');
-      expect(getConfigValue(cwd, 'issues.tools')).toBe('gh');
-      createConfig(cwd);
-      expect(readFileSync(path, 'utf8')).toContain('type: github');
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
+      parseConfig(JSON.stringify(input));
+    } catch (error: unknown) {
+      thrown = error;
     }
-  });
-
-  it('normalizes the complete filesystem tool set to canonical order', () => {
-    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
-    const reordered = canonical.split(',').reverse().join(' , ');
-    expect(readConfigFromText(`version: 2\nissues:\n  tools: "${reordered}"\n`)).toMatchObject({
-      issues: { type: 'filesystem', tools: canonical },
-    });
-  });
-
-  it('normalizes and strictly validates the fixed filesystem document configuration', () => {
-    const canonical =
-      'document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore';
-    expect(
-      parseConfig(
-        `version: 2\ndocuments:\n  root: .harnessctl/documents\n  prefix: doc-\n  type: filesystem\n  tools: ${canonical.split(',').reverse().join(',')}\n`,
-      ).documents,
-    ).toEqual({ root: '.harnessctl/documents', prefix: 'doc-', type: 'filesystem', tools: canonical });
-    for (const source of [
-      'documents:\n  root: ../docs',
-      'documents:\n  root: docs',
-      'documents:\n  prefix: d-',
-      'documents:\n  unknown: true',
-      'documents:\n  tools: document_create',
-    ])
-      expect(() => parseConfig(`version: 2\n${source}\n`)).toThrow(ConfigError);
-  });
-
-  it.each(['github', 'gitlab', 'gitea', 'forgejo'])(
-    'rejects removed remote Documents configuration for %s with migration guidance',
-    (type) => {
-      expect(() =>
-        readConfigFromText(`version: 2\ndocuments:\n  type: ${type}\n  remote:\n    repository: owner/repo\n`),
-      ).toThrow(/remote Documents providers were removed.*\.harnessctl\/documents/u);
-    },
-  );
-
-  it.each([
-    { type: 'filesystem', remote: {} },
-    { type: 'filesystem', root: 'docs', prefix: 'doc-', tools: 'document_id' },
-    {
-      type: 'gitea',
-      tools: 'gitea-mcp',
-      remote: {
-        repository: 'owner/repo',
-        url: 'https://gitea.example.test',
-        token_env: 'GITEA_TOKEN',
-        extra: true,
-      },
-    },
-  ])('rejects unknown fields within Documents branches', (documents) => {
-    expect(() => readConfigFromText(JSON.stringify({ version: 2, documents }))).toThrow(ConfigError);
-  });
-
-  it.each(['github', 'gitlab', 'gitea', 'forgejo'])('requires explicit tools for remote type %s', (type) => {
-    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n`)).toThrow(
-      new RegExp(`issues\\.type=${type} requires issues\\.tools`, 'u'),
-    );
-  });
-
-  it.each([
-    ['github', 'gh', 'https://github.com', 'GH_TOKEN'],
-    ['gitlab', 'glab', 'https://gitlab.com', 'GITLAB_TOKEN'],
-    ['gitea', 'tea', 'https://gitea.example.test', 'GITEA_TOKEN'],
-    ['forgejo', 'forgejo-cli', 'https://forgejo.example.test', 'FORGEJO_TOKEN'],
-  ])('requires remote connection configuration for %s', (type, tools, url, tokenEnv) => {
-    expect(() => readConfigFromText(`version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n`)).toThrow(/remote/u);
-    expect(() =>
-      readConfigFromText(
-        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-      ),
-    ).not.toThrow();
-  });
-
-  it('rejects remote configuration for filesystem issues', () => {
-    expect(() =>
-      readConfigFromText('version: 2\nissues:\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n'),
-    ).toThrow(/remote/u);
-  });
-
-  it.each([
-    ['github', 'gh', 'https://github.example.test', 'GH_TOKEN'],
-    ['gitlab', 'glab', 'https://gitlab.com/', 'GITLAB_TOKEN'],
-    ['gitea', 'tea', 'gitea.example.test', 'GITEA_TOKEN'],
-    ['gitea', 'tea', 'https://user:secret@gitea.example.test', 'GITEA_TOKEN'],
-    ['gitea', 'tea', 'https://gitea.example.test/`injected`', 'GITEA_TOKEN'],
-    ['gitea', 'tea', 'https://gitea.example.test/${TOKEN}', 'GITEA_TOKEN'],
-    ['gitea', 'tea', 'https://gitea.example.test?owner=project', 'GITEA_TOKEN'],
-    ['gitea', 'tea', 'https://gitea.example.test#project', 'GITEA_TOKEN'],
-    ['forgejo', 'forgejo-cli', 'ssh://forgejo.example.test', 'FORGEJO_TOKEN'],
-    ['github', 'gh', 'https://github.com', 'secret-value'],
-  ])('rejects invalid %s remote connection %s %s', (type, tools, url, tokenEnv) => {
-    expect(() =>
-      readConfigFromText(
-        `version: 2\nissues:\n  type: ${type}\n  tools: ${tools}\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-      ),
-    ).toThrow(/remote/u);
-  });
-
-  it.each(['git', 'jj'])('accepts %s with every CVS provider for CLI and MCP capabilities', (local) => {
-    for (const [provider, tools, url, tokenEnv] of PROVIDERS) {
-      expect(
-        readConfigFromText(
-          `version: 2\ncvs:\n  local: ${local}\n  remote:\n    provider: ${provider}\n    tools: ${tools}\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-        ),
-      ).toMatchObject({ cvs: { local, remote: { provider, tools, url, token_env: tokenEnv } } });
-    }
-  });
-
-  it('preserves provider CLI and MCP connection data for CVS and Issues', () => {
-    const config = readConfigFromText(
-      'version: 1\nissues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: ISSUE_TOKEN\n',
-    );
-    expect(config).toMatchObject({
-      cvs: { remote: { provider: 'github', tools: 'gh', url: 'https://github.com', token_env: 'GH_TOKEN' } },
-      issues: {
-        type: 'github',
-        tools: 'gh',
-        remote: { url: 'https://github.com', token_env: 'ISSUE_TOKEN' },
-      },
-      mcp: { output_limit_mode: 'bounded-guidance' },
-    });
-  });
-
-  it.each(PROVIDERS.slice(1))('requires a complete explicit CVS override for %s', (provider) => {
-    expect(() => readConfigFromText(`version: 2\ncvs:\n  remote:\n    provider: ${provider}\n`)).toThrow(
-      /cvs\.remote\.(tools|url|token_env)/u,
-    );
-  });
-
-  it.each([
-    ['cvs.local', 'cvs:\n  local: svn'],
-    ['cvs.remote.transport', 'cvs:\n  remote:\n    transport: auto'],
-    [
-      'issues.remote.transport',
-      'issues:\n  type: github\n  tools: gh\n  remote:\n    transport: auto\n    url: https://github.com\n    token_env: GH_TOKEN',
-    ],
-    ['cvs.remote.tools', 'cvs:\n  remote:\n    tools: glab'],
-    ['cvs.remote.url', 'cvs:\n  remote:\n    url: https://github.example.test'],
-    ['cvs.remote.token_env', 'cvs:\n  remote:\n    token_env: ghp_secret'],
-    ['mcp.output_limit_mode', 'mcp:\n  output_limit_mode: unlimited'],
-  ])('rejects unsafe or unsupported %s', (_field, yaml) => {
-    expect(() => readConfigFromText(`version: 2\n${yaml}\n`)).toThrow(ConfigError);
-  });
-
-  it.each([
-    'issues:\n  unexpected: true',
-    'issues:\n  type: github\n  tools: gh\n  remote:\n    url: https://github.com\n    token_env: GH_TOKEN\n    unexpected: true',
-    'cvs:\n  unexpected: true',
-    'cvs:\n  remote:\n    mcp_id: cvs_github',
-    'mcp:\n  servers:\n    id: cvs_github',
-  ])('rejects unknown nested configuration without making fixed MCP IDs configurable', (yaml) => {
-    expect(() => readConfigFromText(`version: 2\n${yaml}\n`)).toThrow(ConfigError);
-  });
-
-  it('accepts hard output limiting as a host-neutral configuration policy', () => {
-    expect(readConfigFromText('version: 2\nmcp:\n  output_limit_mode: hard\n')).toMatchObject({
-      mcp: { output_limit_mode: 'hard' },
-    });
-  });
-
-  it.each([
-    ['github', 'glab'],
-    ['gitlab', 'gh'],
-    ['gitea', 'gh'],
-    ['forgejo', 'tea,gh'],
-  ])('rejects provider/tool mismatch %s with %s', (type, tools) => {
-    const connection = PROVIDERS.find(([provider]) => provider === type);
-    expect(connection).toBeDefined();
-    const [, , url, tokenEnv] = connection!;
-    expect(() =>
-      readConfigFromText(
-        `version: 2\nissues:\n  type: ${type}\n  tools: "${tools}"\n  remote:\n    url: ${url}\n    token_env: ${tokenEnv}\n`,
-      ),
-    ).toThrow(/issues\.tools/u);
-  });
-
-  it.each(['gh --token secret', '../gh', 'TOKEN=value', 'gh;rm', 'gh,', ''])('rejects unsafe tool text %j', (tools) => {
-    expect(() =>
-      readConfigFromText(
-        `version: 2\nissues:\n  type: forgejo\n  tools: "${tools}"\n  remote:\n    url: https://forgejo.example.test\n    token_env: FORGEJO_TOKEN\n`,
-      ),
-    ).toThrow(/issues\.tools/u);
-  });
-
-  it('rejects incomplete, extended, and duplicate filesystem tool sets', () => {
-    const canonical = (readConfigFromText('version: 2\n').issues as Record<string, unknown>).tools as string;
-    for (const tools of [canonical.split(',').slice(1).join(','), `${canonical},extra`, `${canonical},issue_id`])
-      expect(() => readConfigFromText(`version: 2\nissues:\n  tools: "${tools}"\n`)).toThrow(/must be exactly/u);
-  });
-
-  it('requires caveman communication when memory is enabled', () => {
-    expect(() =>
-      readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: true\n'),
-    ).toThrow(/memory\.enabled requires communication\.caveman\.enabled/u);
-
-    expect(
-      readConfigFromText('version: 2\ncommunication:\n  caveman:\n    enabled: false\nmemory:\n  enabled: false\n'),
-    ).toMatchObject({
-      communication: { caveman: { enabled: false, mode: 'strict' } },
-      memory: { enabled: false },
-    });
-    expect(readConfigFromText('version: 1\nmemory:\n  enabled: true\n')).toMatchObject({
-      version: 2,
-      communication: { caveman: { enabled: true, mode: 'strict' } },
-      memory: { enabled: true },
-    });
-  });
-
-  it('reports missing keys, empty paths, and malformed YAML', () => {
-    const cwd = temporaryDirectory();
-    try {
-      expect(getConfigValue(cwd, '')).toBeInstanceOf(ConfigError);
-      expect(getConfigValue(cwd, 'missing.key')).toBeInstanceOf(ConfigError);
-
-      createConfig(cwd);
-      writeFileSync(join(cwd, '.harnessctl', 'config.yaml'), 'version: [unterminated\n', 'utf8');
-      expect(readConfig(cwd)).toBeInstanceOf(ConfigError);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
-  it('rejects unsupported memory backends and unsafe repository paths', () => {
-    const base = readConfigFromText('version: 1\n');
-    const memory = base.memory as Record<string, unknown>;
-    memory.backend = 'graphiti';
-    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
-    memory.backend = 'repository';
-    (memory.repository as Record<string, unknown>).root = '../memory';
-    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
-  });
-
-  it('tolerates but does not operationally require the retired memory cache key', () => {
-    const config = readConfigFromText(
-      'version: 2\nmemory:\n  repository:\n    root: .harnessctl/memory\n    cache: legacy/cache.json\n',
-    );
-    expect(config).toMatchObject({ memory: { repository: { root: '.harnessctl/memory' } } });
-  });
-
-  it('rejects unsafe issue roots and prefixes', () => {
-    const base = readConfigFromText('version: 2\n');
-    const issues = base.issues as Record<string, unknown>;
-    for (const root of [
-      '../issues',
-      '.',
-      'nested//issues',
-      '.harnessctl/issues/',
-      '.harnessctl/`issues',
-      '.harnessctl/\0issues',
-      '.harnessctl/\nissues',
-    ]) {
-      issues.root = root;
-      expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
-    }
-    issues.root = '.harnessctl/issues';
-    issues.prefix = 'hrn/';
-    expect(() => readConfigFromText(stringifyConfig(base))).toThrow(ConfigError);
+    expect(thrown).toBeInstanceOf(ConfigError);
+    expect((thrown as ConfigError).validationPaths).toEqual(error_paths);
   });
 });
-
-function readConfigFromText(content: string): Record<string, unknown> {
-  const cwd = temporaryDirectory();
-  try {
-    const path = join(cwd, '.harnessctl', 'config.yaml');
-    createConfig(cwd);
-    writeFileSync(path, content, 'utf8');
-    const result = readConfig(cwd);
-    if (result instanceof ConfigError) throw result;
-    return result;
-  } finally {
-    rmSync(cwd, { recursive: true, force: true });
-  }
-}
-
-function stringifyConfig(value: Record<string, unknown>): string {
-  return JSON.stringify(value);
-}

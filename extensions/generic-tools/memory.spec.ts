@@ -56,7 +56,7 @@ function fixture(): string {
   createConfig(cwd);
   const path = join(cwd, '.harnessctl', 'config.yaml');
   const config = parseDocument(readFileSync(path, 'utf8'));
-  config.setIn(['memory', 'enabled'], true);
+  config.setIn(['skills', 'memory', 'enabled'], true);
   writeFileSync(path, config.toString(), 'utf8');
   return cwd;
 }
@@ -73,6 +73,39 @@ function fact(summary: string): StoreMemoryInput {
 }
 
 describe('repository memory', () => {
+  it('rejects disabled local operations before touching repository or cache state', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-memory-disabled-'));
+    try {
+      createConfig(cwd);
+      rmSync(join(cwd, '.harnessctl/memory'), { recursive: true, force: true });
+      rmSync(join(cwd, '.harnessctl/cache'), { recursive: true, force: true });
+
+      for (const operation of [
+        () => storeMemory(cwd, fact('Blocked memory write.')),
+        () => listMemory(cwd),
+        () => searchMemory(cwd, { query: 'blocked' }),
+        () => exportMemory(cwd),
+      ])
+        expect(operation).toThrow(/skills\.memory\.enabled=true.*disabled/u);
+      expect(validateMemory(cwd)).toEqual(
+        expect.objectContaining({
+          valid: false,
+          errors: [expect.stringMatching(/skills\.memory\.enabled=true.*disabled/u)],
+        }),
+      );
+      expect(importMemory(cwd, '', true)).toEqual(
+        expect.objectContaining({
+          valid: false,
+          errors: [expect.stringMatching(/skills\.memory\.enabled=true.*disabled/u)],
+        }),
+      );
+      expect(existsSync(join(cwd, '.harnessctl/memory'))).toBe(false);
+      expect(existsSync(join(cwd, '.harnessctl/cache'))).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
   it('stores canonical records and retrieves them by ID', () => {
     const cwd = fixture();
     try {
@@ -225,14 +258,19 @@ describe('repository memory', () => {
     }
   });
 
-  it('previews imports without creating project, memory, cache, or lock directories', () => {
+  it('rejects a disabled preview without creating project, memory, cache, or lock directories', () => {
     const source = fixture();
     const destination = mkdtempSync(join(tmpdir(), 'harnessctl-memory-preview-'));
     try {
       storeMemory(source, fact('Side-effect-free preview'));
       const exported = exportMemory(source);
       expect(existsSync(join(destination, '.harnessctl'))).toBe(false);
-      expect(importMemory(destination, exported, true)).toMatchObject({ valid: true, records: 1, tombstones: 0 });
+      expect(importMemory(destination, exported, true)).toMatchObject({
+        valid: false,
+        records: 0,
+        tombstones: 0,
+        errors: [expect.stringMatching(/skills\.memory\.enabled=true.*disabled/u)],
+      });
       expect(existsSync(join(destination, '.harnessctl'))).toBe(false);
     } finally {
       rmSync(source, { recursive: true, force: true });

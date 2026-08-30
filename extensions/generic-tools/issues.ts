@@ -198,8 +198,9 @@ function buildFilesystemIssueProvider(
 ): FilesystemIssueProvider {
   const { prefix, issueRoot } = getIssueStorageConfig(cwd);
   const clock = options.clock ?? (() => new Date());
-  const locked = <T>(operation: (lease: BarrierLease) => T, mutation = false): T =>
-    withIssueBarrier(
+  const locked = <T>(name: string, operation: (lease: BarrierLease) => T, mutation = false): T => {
+    assertLocalIssueProvider(cwd, name);
+    return withIssueBarrier(
       cwd,
       (lease) => {
         assertValidForMutation(cwd, prefix, issueRoot, options.documentReadOptions);
@@ -211,52 +212,59 @@ function buildFilesystemIssueProvider(
       },
       options.lockWaitMs,
     );
+  };
   const token = options.transactionId ?? (() => randomBytes(16).toString('hex'));
   return {
     parseIds: (prompt) => parseIdsWithPrefix(prompt, prefix),
     parseId: (prompt) => parseIdsWithPrefix(prompt, prefix)[0] ?? '',
-    create: (input) => locked((lease) => createUnlocked(cwd, prefix, issueRoot, clock, lease, input), true),
-    get: (id) => locked(() => getUnlocked(cwd, prefix, issueRoot, id)),
-    list: (input = {}) => locked(() => listUnlocked(cwd, prefix, issueRoot, input)),
-    update: (id, changes) => locked((lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, changes), true),
+    create: (input) =>
+      locked('createIssueRecord', (lease) => createUnlocked(cwd, prefix, issueRoot, clock, lease, input), true),
+    get: (id) => locked('getIssue', () => getUnlocked(cwd, prefix, issueRoot, id)),
+    list: (input = {}) => locked('listIssueSummaries', () => listUnlocked(cwd, prefix, issueRoot, input)),
+    update: (id, changes) =>
+      locked('updateIssue', (lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, changes), true),
     transition: (id, status, expectedRevision) =>
-      locked((lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, { status, expectedRevision }), true),
+      locked(
+        'transitionIssue',
+        (lease) => updateUnlocked(cwd, prefix, issueRoot, clock, lease, id, { status, expectedRevision }),
+        true,
+      ),
     appendComment: (id, body, author) =>
-      locked((lease) => commentUnlocked(cwd, prefix, issueRoot, clock, lease, id, body, author), true),
+      locked('commentIssue', (lease) => commentUnlocked(cwd, prefix, issueRoot, clock, lease, id, body, author), true),
     relate: (id, relationship, targetId) =>
       locked(
+        'relateIssue',
         (lease) => relationshipUnlocked(cwd, prefix, issueRoot, clock, lease, id, relationship, targetId, true),
         true,
       ),
     unrelate: (id, relationship, targetId) =>
       locked(
+        'unrelateIssue',
         (lease) => relationshipUnlocked(cwd, prefix, issueRoot, clock, lease, id, relationship, targetId, false),
         true,
       ),
     linkDocument: (id, path, kind) =>
       locked(
+        'linkDocument',
         (lease) => linkUnlocked(cwd, prefix, issueRoot, clock, lease, id, path, kind, options.documentReadOptions),
         true,
       ),
     validate: (id) =>
-      withIssueBarrier(
-        cwd,
-        (lease) => {
-          const report = validateUnlocked(cwd, prefix, issueRoot, id, options.documentReadOptions);
-          if (!report.valid) return report;
-          let snapshot;
-          try {
-            snapshot = loadLocalSnapshot(lease);
-          } catch {
-            return report;
-          }
-          ensureLocalCache(lease, snapshot);
+      locked('validateIssues', (lease) => {
+        const report = validateUnlocked(cwd, prefix, issueRoot, id, options.documentReadOptions);
+        if (!report.valid) return report;
+        let snapshot;
+        try {
+          snapshot = loadLocalSnapshot(lease);
+        } catch {
           return report;
-        },
-        options.lockWaitMs,
-      ),
-    archiveTree: (id) => locked((lease) => archiveUnlocked(cwd, prefix, issueRoot, lease, id, token()), true),
-    discover: () => locked(() => discoverCanonical(cwd, prefix, issueRoot)),
+        }
+        ensureLocalCache(lease, snapshot);
+        return report;
+      }),
+    archiveTree: (id) =>
+      locked('archiveIssueReport', (lease) => archiveUnlocked(cwd, prefix, issueRoot, lease, id, token()), true),
+    discover: () => locked('discoverIssues', () => discoverCanonical(cwd, prefix, issueRoot)),
     decode: (source, decodeOptions = {}) => decodeIssueDocument(source, { ...decodeOptions, issuePrefix: prefix }),
   };
 }
@@ -333,10 +341,10 @@ export function validateCanonicalIssueGraph(cwd: string, documentOverlay?: Docum
     const config = readConfig(cwd);
     if (config instanceof ConfigError) throw config;
     if (
-      config.issues === null ||
-      typeof config.issues !== 'object' ||
-      Array.isArray(config.issues) ||
-      (config.issues as Record<string, unknown>).type !== 'filesystem'
+      config.skills.issues === null ||
+      typeof config.skills.issues !== 'object' ||
+      Array.isArray(config.skills.issues) ||
+      !isFilesystemIssueConfig(config.skills.issues)
     )
       return { valid: true, findings: [] };
     const { prefix, issueRoot } = getIssueStorageConfig(cwd);
@@ -350,7 +358,7 @@ export function validateCanonicalIssueGraph(cwd: string, documentOverlay?: Docum
 export function assertNoCanonicalIssueDocumentReferences(cwd: string, blockedPaths: readonly string[]): void {
   const config = readConfig(cwd);
   if (config instanceof ConfigError) throw config;
-  if (!isFilesystemIssueConfig(config.issues)) return;
+  if (!isFilesystemIssueConfig(config.skills.issues)) return;
   const { prefix, issueRoot } = getIssueStorageConfig(cwd);
   const report = validateUnlocked(cwd, prefix, issueRoot);
   if (!report.valid)
@@ -1010,22 +1018,29 @@ function validateDocumentPath(
 }
 
 function isFilesystemIssueConfig(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const provider = (value as Record<string, unknown>).provider;
   return (
-    value !== null &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    (value as Record<string, unknown>).type === 'filesystem'
+    (value as Record<string, unknown>).enabled === true &&
+    provider !== null &&
+    typeof provider === 'object' &&
+    !Array.isArray(provider) &&
+    (provider as Record<string, unknown>).type === 'filesystem'
   );
 }
 
 function configuredDocumentRoot(cwd: string): { root: string; prefix: string } | undefined {
   const config = readConfig(cwd);
   if (config instanceof ConfigError) throw new IssueError('configuration', config.message);
-  const documents = config.documents;
+  const documents = config.skills.documents;
   if (documents === null || typeof documents !== 'object' || Array.isArray(documents))
     throw new IssueError('configuration', 'documents configuration must be a mapping');
   const record = documents as Record<string, unknown>;
-  if (record.type !== 'filesystem') return undefined;
+  if (record.enabled !== true) return undefined;
+  const provider = record.provider;
+  if (provider === null || typeof provider !== 'object' || Array.isArray(provider))
+    throw new IssueError('configuration', 'documents provider must be a mapping');
+  if ((provider as Record<string, unknown>).type !== 'filesystem') return undefined;
   if (typeof record.root !== 'string' || typeof record.prefix !== 'string')
     throw new IssueError('configuration', 'filesystem Documents root and prefix are required');
   return { root: record.root, prefix: record.prefix };
@@ -1067,7 +1082,7 @@ function getIssueStorageConfig(cwd: string): { prefix: string; issueRoot: string
   const config = readConfig(cwd);
   if (config instanceof ConfigError)
     throw new IssueError('configuration', `unable to read issue configuration: ${config.message}`);
-  const issues = config.issues;
+  const issues = config.skills.issues;
   if (issues === null || typeof issues !== 'object' || Array.isArray(issues))
     throw new IssueError('configuration', 'issue configuration must be a mapping');
   const { prefix, root } = issues as Record<string, unknown>;
@@ -1081,19 +1096,27 @@ function assertLocalIssueProvider(cwd: string, operation: string): void {
   const config = readConfig(cwd);
   if (config instanceof ConfigError)
     throw new IssueError('configuration', `unable to read issue configuration: ${config.message}`);
-  const issues = config.issues;
+  const issues = config.skills.issues;
   if (issues === null || typeof issues !== 'object' || Array.isArray(issues))
     throw new IssueError('configuration', 'issue configuration must be a mapping');
-  const { type, tools } = issues as Record<string, unknown>;
+  if ((issues as Record<string, unknown>).enabled !== true)
+    throw new IssueError(
+      'configuration',
+      `${operation} requires skills.issues.enabled=true; the local Issues capability is disabled.`,
+    );
+  const provider = (issues as Record<string, unknown>).provider;
+  if (provider === null || typeof provider !== 'object' || Array.isArray(provider))
+    throw new IssueError('configuration', 'issue provider must be a mapping');
+  const { type, tools } = provider as Record<string, unknown>;
   if (type === 'filesystem') return;
   throw new IssueError(
     'configuration',
-    `${operation} cannot use harnessctl local issue tools with issues.type=${String(type)} and configured executable ${String(tools)}; harnessctl local issue tools are available only for issues.type=filesystem.`,
+    `${operation} cannot use harnessctl local issue tools with issues.provider.type=${String(type)} and configured executable ${String(tools)}; harnessctl local issue tools are available only for issues.provider.type=filesystem.`,
   );
 }
 
 function readIssuePrefix(cwd: string): string | undefined {
-  const value = getConfigValue(cwd, 'issues.prefix');
+  const value = getConfigValue(cwd, 'skills.issues.prefix');
   return typeof value === 'string' && /^[A-Za-z0-9_-]*$/u.test(value) ? value : undefined;
 }
 
