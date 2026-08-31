@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00176"
+"type": "epic"
+"title": "Publish harness support documentation"
+"status": "open"
+"created_at": "2026-08-31T16:47:49.866Z"
+"updated_at": "2026-08-31T16:53:38.973Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 4
+  "scope": "harness-support"
+"body": "# Publish harness support documentation\n\n## Objective\n\nExplain what a coding harness is and provide evidence-backed current and planned support for OpenCode, Pi, Claude, and Codex.\n\n## Scope\n\n- Define a harness in reader-facing terms and explain its role in installing and operating harnessctl.\n- Document OpenCode and Pi support with setup path, generated artifacts, capability boundaries, known limitations, and evidence.\n- Document Claude and Codex as planned or unsupported according to current authority, without implying delivery dates.\n- Provide a compact comparison matrix and link installation steps to Installation.\n- Explain support-status semantics and provenance dates.\n\n## Acceptance Criteria\n\n- OpenCode, Pi, Claude, and Codex each have one explicit current status backed by authoritative evidence.\n- Readers can compare installation support, skills, commands, tools, configuration, and known limitations.\n- Planned support is distinct from partial implementation and verified operation.\n- The page never infers support from configuration or design intent alone.\n- Installation, tool catalogs, and references are linked rather than duplicated.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`; independent of other content Epics.\n\nDo not implement or operate a harness, promise delivery dates, or change support behavior."
+"comments": []

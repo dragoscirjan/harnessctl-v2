@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1AAS9FSHMQ5Q6JA56WA5CPQ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00167 | Build YOLO | Mermaid + user-only foundation complete; focused checks pass
+details: |-
+  Epic: hrn-00167
+  Phase: Build YOLO
+  Done: hrn-00172 site adds Material-compatible Mermaid custom fence + pinned 11.16.1 browser module; nav starts SDLC, Configuration, Skills. Public Home/status guide now user-only; contributor/development/internal-architecture prose removed. hrn-00174 checks enforce these boundaries; docs 27/27, Ruff, Prettier, ESLint, strict MkDocs build, Mermaid source validation, diff check pass. Browser SVG smoke remains Verify-only because Playwright Chrome absent. hrn-00172/00173/00174 remain in_progress pending Verify/closure consent.
+  Editorial authority: hrn-00168 through hrn-00171 valid with user-only/no-Python-prose contracts; only user-required install command exception. hrn-00168 additionally requires object-first nested schema tables; dotted paths only cross-reference/error/disambiguation.
+  Blocker: full quality still has pre-existing unrelated Prettier failures in `.opencode/opencode.json` and `.pi/settings.json`; untouched.
+  Next: work-verify hrn-00167. No closure, commit, remote, Verify, Release, deployment, or destructive work performed.
+source:
+  kind: tool-observation
+  ref: null
+  revision: null
+created_at: 2026-08-30T21:56:35.961Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1A9WYZV04QAX0YQBR7RHQJ6
+tags:
+  - build
+  - checkpoint
+  - documentation
+  - mermaid
+  - sdlc

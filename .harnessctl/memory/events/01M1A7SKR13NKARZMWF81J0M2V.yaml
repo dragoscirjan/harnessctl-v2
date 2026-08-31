@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M1A7SKR13NKARZMWF81J0M2V
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00167 | Plan | Initiative decomposition | approved hrn-00166 + Epics hrn-00167 through hrn-00171 created, linked, valid
+details: |-
+  Epic: hrn-00167
+  Command/phase: work-plan / Plan
+  Item: docs website Initiative decomposition
+  Done: hrn-00166 parent has hrn-00167, hrn-00168, hrn-00169, hrn-00170, hrn-00171; all issue_validate valid. Dependencies: hrn-00168/hrn-00169/hrn-00170 depend on hrn-00167; hrn-00171 depends on hrn-00167/hrn-00168/hrn-00169. Decisions: reuse existing docs; evidence statuses working, working but untested, partially implemented, not implemented, unknown/stale. Inspiration: dragoscirjan/mcp-searchable structure/tool-centric patterns; no framework preselection.
+  Next: work-plan hrn-00167.
+source:
+  kind: tool-observation
+  ref: null
+  revision: null
+created_at: 2026-08-30T21:04:20.737Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - documentation
+  - plan
+  - sdlc
+  - website

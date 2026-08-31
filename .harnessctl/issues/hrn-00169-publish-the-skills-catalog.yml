@@ -1,0 +1,17 @@
+"version": 1
+"id": "hrn-00169"
+"type": "epic"
+"title": "Publish the Skills catalog"
+"status": "open"
+"created_at": "2026-08-30T21:01:07.034Z"
+"updated_at": "2026-08-31T16:51:14.214Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 3
+"body": "# Publish the Skills catalog\n\n## Objective\n\nHelp users discover and choose each shipped harnessctl skill by purpose, usage context, support, limitations, and evidence-backed status.\n\n## Scope\n\n- Introduce skills as reusable guidance that shapes LLM work without granting permissions or proving provider availability.\n- Catalog every shipped skill with purpose, when to use it, expected behavior, supported harnesses, prerequisites, limitations, and status.\n- Organize discovery by user goals such as concise communication, TDD, code intelligence, memory, issue tracking, version control, and SDLC delivery.\n- Link exact settings to Skill Configuration references.\n- Link external capability details to MCP Servers and module details to Node Modules.\n\n## Acceptance Criteria\n\n- Every shipped skill is discoverable by name and user goal.\n- Every entry explains purpose, use conditions, expected result, support matrix, dependencies, limitations, status, and provenance.\n- Readers can distinguish a skill, a node module, an MCP server, a configured declaration, and an available tool.\n- Relevant choices link to exact reference entries without duplicating field contracts.\n- Unsupported, optional, host-dependent, provider-dependent, stale, and untested paths are explicit.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`. Cross-links to references, modules, and MCP catalogs are non-blocking.\n\nDo not add, rename, configure, install, or operate skills or providers."
+"comments": []

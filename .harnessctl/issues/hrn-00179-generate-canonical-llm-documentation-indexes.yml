@@ -1,0 +1,25 @@
+"version": 1
+"id": "hrn-00179"
+"type": "story"
+"title": "Generate canonical LLM documentation indexes"
+"status": "done"
+"created_at": "2026-08-31T17:11:41.307Z"
+"updated_at": "2026-08-31T18:17:18.177Z"
+"created_by": "OpenCode"
+"parent": "hrn-00167"
+"depends_on":
+  - "hrn-00172"
+"metadata":
+  "estimate": "S"
+  "order": 3
+  "scope": "llm-documentation-indexes"
+"body": "# Generate canonical LLM documentation indexes\n\n## Objective\n\nGenerate compact and full machine-readable documentation indexes from the same canonical public navigation and Markdown used by the website.\n\n## Scope\n\n- Generate `llms.txt` with stable ordered page links and concise page descriptions.\n- Generate `llms-full.txt` with the same ordered public corpus and explicit page boundaries.\n- Derive both outputs deterministically from canonical public navigation and Markdown.\n- Exclude generated site output, repository planning authority, private implementation artifacts, and pages outside the approved route inventory.\n- Keep generation local, network-free, and integrated with the documentation build.\n- Provide one canonical generator and prevent manual output drift.\n\n## Acceptance Criteria\n\n- Repeated generation from unchanged canonical sources produces byte-identical outputs.\n- Both outputs follow the approved public route order and contain only approved public routes.\n- `llms.txt` remains compact and navigational; `llms-full.txt` contains clearly separated canonical page content.\n- Generated output excludes `.harnessctl`, `.issues`, task plans, implementation-only files, `site/`, and private source utilities.\n- Manual edits or stale generated output fail deterministic tests.\n- Strict documentation builds produce or validate both outputs without network access.\n\n## Dependencies And Order\n\nOrder 3. Depends on `hrn-00172` because the stable route and navigation contract is its source order. `hrn-00174` follows this Story.\n\n## Design Input\n\nApproved `.harnessctl/documents/doc-00017-documentation-website-foundation-and-information-architecture-v2.md` governs this Story.\n\n## Estimate\n\nS. Main uncertainty is choosing compact descriptions and full-output boundaries that remain useful without creating a second editable content authority.\n\n## Non-Goals\n\n- Inventing domain content or support claims.\n- Indexing private project authority or generated website assets.\n- Requiring hosted documentation, external crawling, or network access.\n- Maintaining either output manually."
+"comments":
+  - "id": "hrn-00179-C0001"
+    "created_at": "2026-08-31T17:36:21.448Z"
+    "created_by": "OpenCode"
+    "body": "Build implementation complete for canonical LLM indexes. Added local deterministic `scripts/generate_llms.py`, checked-in ordered `docs/llms.txt` and `docs/llms-full.txt`, and `mise` generation/freshness gates. Index order derives from public MkDocs navigation; internal authority and generated site content are excluded. Evidence: `uv run python scripts/generate_llms.py --check` passes and byte-equivalence/order tests pass. Formal Verify and status transition pending."
+  - "id": "hrn-00179-C0002"
+    "created_at": "2026-08-31T18:16:54.985Z"
+    "created_by": "OpenCode"
+    "body": "Verify passed. `scripts/generate_llms.py --check` and strict docs build confirm checked-in `docs/llms.txt` and `docs/llms-full.txt` are byte-current, deterministic, ordered from the 23-page public MkDocs nav, local/network-free, and exclude internal authority paths. Source review found no correctness, security, privacy, or compatibility defect."

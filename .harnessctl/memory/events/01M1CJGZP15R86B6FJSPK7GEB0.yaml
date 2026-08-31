@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1CJGZP15R86B6FJSPK7GEB0
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00167
+summary: hrn-00167 | build | release-blocker repair | stub and generated-corpus whitespace clean; focused gates pass.
+details: 10 structural stubs cleaned; docs/llms-full.txt regenerated; tests/test_docs.py rejects trailing whitespace. 32 docs tests, deterministic index check, strict MkDocs, Ruff, focused Prettier, git diff checks pass. Verify, Release, remote, closure not performed. Unrelated .opencode/opencode.json and .pi/settings.json untouched.
+source:
+  kind: artifact
+  ref: hrn-00167
+  revision: v1:f84e70a10f20e103f9a93ea785e0f5595da3451edc856e744f8821065df4831c
+created_at: 2026-08-31T18:50:21.249Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1CEPMXAX29XGRG1FN7WJBW6
+tags:
+  - build
+  - documentation
+  - sdlc
+  - whitespace

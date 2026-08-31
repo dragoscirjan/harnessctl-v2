@@ -1,0 +1,28 @@
+schema_version: 1
+id: 01M1A8MSCZKE9EZ3SBM4AFME67
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00167 | Plan | website foundation | approved executable plan, design, Stories, dependencies valid
+details: |-
+  Epic: hrn-00167
+  Command/phase: work-plan / Plan
+  Done: approved MkDocs Material foundation + evidence status contract recorded. Stories: hrn-00172 site, hrn-00173 status contract, hrn-00174 quality gates. hrn-00174 depends_on hrn-00172/hrn-00173. Design: approved+linked doc-00017, .harnessctl/documents/doc-00017-documentation-website-foundation-and-evidence-model-v1.md. Validation: doc-00017 and hrn-00167/hrn-00172/hrn-00173/hrn-00174 valid. Decisions: docs Markdown canonical; rendered out-of-doc links rewritten to repository source; strict offline build; no deployment/domain rewrite/runtime change.
+source:
+  kind: tool-observation
+  ref: null
+  revision: null
+created_at: 2026-08-30T21:19:11.263Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1A7SKR13NKARZMWF81J0M2V
+tags:
+  - checkpoint
+  - documentation
+  - plan
+  - sdlc
+  - website

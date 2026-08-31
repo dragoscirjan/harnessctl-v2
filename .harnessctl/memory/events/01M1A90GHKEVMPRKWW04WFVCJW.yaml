@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M1A90GHKEVMPRKWW04WFVCJW
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00167 | Build | hrn-00172 site slice | implementation and focused checks pass
+details: |-
+  Epic: hrn-00167
+  Command/phase: work-build / Build YOLO
+  Item: hrn-00172
+  Done: MkDocs Material 9.7.7 uv-locked; mkdocs.yml nav/search/copy/light-dark; docs-build/docs-serve tasks; native hook rewrites rendered out-of-doc links while source Markdown stays canonical; site output ignored.
+  Verification: strict docs build pass; Ruff check/format pass; generated external evidence links confirmed; no stale relative evidence href found.
+  Artifacts: mkdocs.yml, scripts/mkdocs_hooks.py, pyproject.toml, uv.lock, mise.toml
+  Next: hrn-00173 status/evidence contract
+  Blockers: none
+source:
+  kind: tool-observation
+  ref: null
+  revision: null
+created_at: 2026-08-30T21:25:35.411Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1A8MSCZKE9EZ3SBM4AFME67
+tags:
+  - build
+  - checkpoint
+  - documentation
+  - sdlc
+  - website

@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00177"
+"type": "epic"
+"title": "Publish the Node Modules catalog"
+"status": "open"
+"created_at": "2026-08-31T16:47:50.281Z"
+"updated_at": "2026-08-31T16:53:44.034Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 6
+  "scope": "node-modules"
+"body": "# Publish the Node Modules catalog\n\n## Objective\n\nExplain every distributed Node module, the user capability it provides, its supported environments, constraints, relationships, and evidence-backed status.\n\n## Scope\n\n- Define what Node modules mean within harnessctl and how they differ from skills and MCP servers.\n- Inventory every distributed module from authoritative package and generated artifacts.\n- Document purpose, exported user-facing capability, supported harnesses/runtimes, inputs and outputs at a conceptual level, prerequisites, limitations, related skills or MCP servers, and status.\n- Group modules by reader capability rather than repository layout where useful.\n- Link exact configuration contracts to Reference.\n\n## Acceptance Criteria\n\n- Every shipped Node module is represented exactly once and traceable to a current distributed artifact.\n- Each entry states purpose, supported capability, applicability, constraints, related components, status, and evidence.\n- Readers can distinguish modules from skills, MCP servers, provider processes, and internal source-only utilities.\n- Internal implementation detail appears only when necessary to explain a supported public behavior.\n- Catalog claims do not imply provider availability or harness support without evidence.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`; Skills, MCP Servers, and Reference cross-links are non-blocking.\n\nDo not redesign modules, document private implementation as public API, or change distributed behavior."
+"comments": []

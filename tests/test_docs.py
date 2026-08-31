@@ -2,7 +2,11 @@
 
 import hashlib
 import re
+import runpy
+import tomllib
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
@@ -12,7 +16,7 @@ CONTEXT_PROVIDER_RESEARCH = ROOT / ".harnessctl" / "tasks" / "hrn-00112" / "rese
 PROVIDER_GUIDE = DOCS / "code-intelligence-providers.md"
 SDLC_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "sdlc"
 SDLC_SKILL_TEMPLATES = ROOT / "src" / "harnessctl" / "templates" / "skills" / "sdlc"
-AUTHORITATIVE_TITLE = "Authoritative template-derived command transitions"
+AUTHORITATIVE_TITLE = "Harnessctl command transitions"
 PUBLIC_COMMANDS = {
     "work-build",
     "work-continue",
@@ -61,6 +65,102 @@ CITATION_FIELDS = (
     "Qualification",
 )
 EVIDENCE_STATUSES = {"Supported", "Unsupported", "Ambiguous", "Unknown", "Stale"}
+PUBLIC_MARKDOWN = {
+    "README.md",
+    "changelog.md",
+    "code-intelligence-providers.md",
+    "code-intelligence.md",
+    "command-reference.md",
+    "config-schema.md",
+    "configuration.md",
+    "cvs.md",
+    "docs-overview.md",
+    "documents.md",
+    "faq.md",
+    "getting-started.md",
+    "harnesses.md",
+    "installation.md",
+    "issues.md",
+    "mcp-servers.md",
+    "memory.md",
+    "node-modules.md",
+    "sdlc-introduction.md",
+    "sdlc.md",
+    "skills.md",
+    "status-and-evidence.md",
+    "troubleshooting.md",
+}
+EXPECTED_NAV = [
+    {"Home": "README.md"},
+    {
+        "SDLC": [
+            {"Introduction to SDLC": "sdlc-introduction.md"},
+            {"Harnessctl SDLC": "sdlc.md"},
+        ]
+    },
+    {"Harnesses": "harnesses.md"},
+    {
+        "Tools": [
+            {"Skills": "skills.md"},
+            {"Node Modules": "node-modules.md"},
+            {"MCP Servers": "mcp-servers.md"},
+        ]
+    },
+    {
+        "Docs": [
+            {"Overview": "docs-overview.md"},
+            {"Installation": "installation.md"},
+            {"Getting Started": "getting-started.md"},
+            {
+                "Reference": [
+                    {"Config File": "configuration.md"},
+                    {"Config Schema": "config-schema.md"},
+                    {"Command Reference": "command-reference.md"},
+                    {
+                        "Skill Configuration": [
+                            {"Issues": "issues.md"},
+                            {"Documents": "documents.md"},
+                            {"Memory": "memory.md"},
+                            {
+                                "Code Index": [
+                                    {"Overview": "code-intelligence.md"},
+                                    {"Providers": "code-intelligence-providers.md"},
+                                ]
+                            },
+                            {"CVS": "cvs.md"},
+                        ]
+                    },
+                    {"Status and Evidence": "status-and-evidence.md"},
+                ]
+            },
+            {"Troubleshooting": "troubleshooting.md"},
+            {"FAQ": "faq.md"},
+            {"Changelog": "changelog.md"},
+        ]
+    },
+]
+STRUCTURAL_STUBS = {
+    "changelog.md": ("Changelog", "hrn-00178"),
+    "command-reference.md": ("Command Reference", "hrn-00168"),
+    "config-schema.md": ("Config Schema", "hrn-00168"),
+    "docs-overview.md": ("Docs", "hrn-00175"),
+    "faq.md": ("FAQ", "hrn-00178"),
+    "installation.md": ("Installation", "hrn-00175"),
+    "mcp-servers.md": ("MCP Servers", "hrn-00171"),
+    "node-modules.md": ("Node Modules", "hrn-00177"),
+    "sdlc-introduction.md": ("Introduction to SDLC", "hrn-00170"),
+    "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
+}
+
+
+class _MkDocsConfigLoader(yaml.SafeLoader):
+    """Load trusted MkDocs callable references as inspectable names."""
+
+
+_MkDocsConfigLoader.add_multi_constructor(
+    "tag:yaml.org,2002:python/name:",
+    lambda _loader, suffix, _node: suffix,
+)
 
 
 def _provider_section(document: str, provider: str) -> str:
@@ -86,20 +186,216 @@ def _assert_provider_structure(document: str, providers: tuple[str, ...]) -> Non
 
 
 def test_documentation_set_and_root_index_exist() -> None:
-    expected = {
-        "README.md",
-        "sdlc.md",
-        "skills.md",
-        "configuration.md",
-        "memory.md",
-        "issues.md",
-        "documents.md",
-        "cvs.md",
-        "code-intelligence.md",
-        "code-intelligence-providers.md",
-    }
-    assert {path.name for path in DOCS.glob("*.md")} == expected
+    assert {path.name for path in DOCS.glob("*.md")} == PUBLIC_MARKDOWN
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def _navigation_pages(items: list[object]) -> set[str]:
+    pages: set[str] = set()
+    for item in items:
+        if isinstance(item, str):
+            pages.add(item)
+        elif isinstance(item, dict):
+            for value in item.values():
+                if isinstance(value, str):
+                    pages.add(value)
+                elif isinstance(value, list):
+                    pages.update(_navigation_pages(value))
+    return pages
+
+
+def test_documentation_site_configuration_covers_canonical_guides() -> None:
+    config = yaml.load(
+        (ROOT / "mkdocs.yml").read_text(encoding="utf-8"),
+        Loader=_MkDocsConfigLoader,
+    )
+    assert config["strict"] is True
+    assert config["docs_dir"] == "docs"
+    assert config["site_dir"] == "site"
+    assert config["theme"]["name"] == "material"
+    assert {
+        "content.code.copy",
+        "navigation.footer",
+        "navigation.indexes",
+        "navigation.sections",
+        "navigation.tabs",
+        "navigation.tabs.sticky",
+        "navigation.top",
+        "search.highlight",
+        "search.suggest",
+    } <= set(config["theme"]["features"])
+    assert len(config["theme"]["palette"]) == 2
+    assert config["hooks"] == ["scripts/mkdocs_hooks.py"]
+    assert config["extra_css"] == ["stylesheets/extra.css"]
+    assert config["extra_javascript"] == ["javascripts/mermaid.mjs"]
+    superfences = config["markdown_extensions"][-1]["pymdownx.superfences"]
+    assert superfences["custom_fences"] == [
+        {
+            "name": "mermaid",
+            "class": "mermaid",
+            "format": "pymdownx.superfences.fence_code_format",
+        }
+    ]
+    assert config["nav"] == EXPECTED_NAV
+    assert _navigation_pages(config["nav"]) == PUBLIC_MARKDOWN
+    serialized_nav = repr(config["nav"])
+    for legacy_group in ("Use harnessctl", "Project authority", "MCP and integrations"):
+        assert legacy_group not in serialized_nav
+
+    mermaid_module = (DOCS / "javascripts" / "mermaid.mjs").read_text(encoding="utf-8")
+    assert "mermaid@11.16.1/dist/mermaid.esm.min.mjs" in mermaid_module
+    assert "startOnLoad: false" in mermaid_module
+    assert "globalThis.mermaid = mermaid" in mermaid_module
+
+
+def test_documentation_tasks_include_strict_build_in_quality() -> None:
+    config = tomllib.loads((ROOT / "mise.toml").read_text(encoding="utf-8"))
+    assert config["tasks"]["docs-generate"]["run"] == ("uv run python scripts/generate_llms.py")
+    assert config["tasks"]["docs-build"]["run"] == [
+        "uv run python scripts/generate_llms.py --check",
+        "uv run mkdocs build --strict",
+    ]
+    assert config["tasks"]["docs-serve"]["depends"] == ["docs-generate"]
+    assert config["tasks"]["docs-serve"]["run"] == "uv run mkdocs serve"
+    parallel_quality_tasks = config["tasks"]["quality"]["run"][1]["tasks"]
+    assert "docs-build" in parallel_quality_tasks
+    eslint_config = (ROOT / "eslint.config.mjs").read_text(encoding="utf-8")
+    assert "'.venv/**'" in eslint_config
+    assert "'site/**'" in eslint_config
+
+
+def test_structural_stubs_declare_only_page_state_and_owner() -> None:
+    for filename, (title, owner) in STRUCTURAL_STUBS.items():
+        stub = (DOCS / filename).read_text(encoding="utf-8")
+        assert stub.startswith(
+            f"# {title}\n\n> **Page status:** Planned content\n> **Content owner:** `{owner}`\n\n"
+        )
+        assert all(line == line.rstrip() for line in stub.splitlines())
+        assert stub.count("\n#") == 0
+        assert "**Status:**" not in stub
+        assert len(stub.splitlines()) <= 10
+
+
+def test_visual_shell_has_accessible_maintainable_extensions() -> None:
+    stylesheet = (DOCS / "stylesheets" / "extra.css").read_text(encoding="utf-8")
+    package = (ROOT / "package.json").read_text(encoding="utf-8")
+    prettier_config = (ROOT / "prettier.config.mjs").read_text(encoding="utf-8")
+    assert ":focus-visible" in stylesheet
+    assert "prefers-reduced-motion" in stylesheet
+    assert "max-width: 82rem" in stylesheet
+    assert "table:not([class])" in stylesheet
+    assert "color-mix" in stylesheet
+    assert '"prettier": "./prettier.config.mjs"' in package
+    assert "...baseConfig" in prettier_config
+    assert "parser: 'css'" in prettier_config
+
+
+def test_llm_indexes_are_current_and_follow_public_navigation() -> None:
+    generator = runpy.run_path(str(ROOT / "scripts" / "generate_llms.py"))
+    rendered = generator["render_outputs"]()
+    for path, expected in rendered.items():
+        assert path.read_text(encoding="utf-8") == expected
+
+    compact = (DOCS / "llms.txt").read_text(encoding="utf-8")
+    full = (DOCS / "llms-full.txt").read_text(encoding="utf-8")
+    compact_routes = re.findall(r"^- \[[^]]+\]\(([^)]+)\):", compact, re.MULTILINE)
+    full_routes = re.findall(r"^Source: (.+)$", full, re.MULTILINE)
+    assert compact_routes == full_routes
+    assert len(compact_routes) == len(PUBLIC_MARKDOWN)
+    assert compact_routes[0] == "./"
+    assert full.count("\n## Page: ") == len(PUBLIC_MARKDOWN)
+    assert ".harnessctl/documents/" not in "\n".join(full_routes)
+
+
+def test_feature_status_contract_is_complete_and_textual() -> None:
+    guide = (DOCS / "status-and-evidence.md").read_text(encoding="utf-8")
+    normalized_guide = " ".join(guide.lower().split())
+    for status in (
+        "working",
+        "working but untested",
+        "partially implemented",
+        "not implemented",
+        "unknown/stale",
+    ):
+        assert re.search(rf"^\|\s*`{re.escape(status)}`\s*\|", guide, re.MULTILINE)
+    for evidence_class in (
+        "Source",
+        "Generated contract",
+        "Automated test",
+        "Approved design",
+        "Active configuration",
+        "Dated provider observation",
+    ):
+        assert re.search(rf"^\|\s*{evidence_class}\s*\|", guide, re.MULTILINE)
+    assert "**Status:**" in guide
+    assert "**Evidence:**" in guide
+    assert "observation date" in guide
+    assert "intent is not implementation" in normalized_guide
+    assert "configuration does not prove successful provider operation" in normalized_guide
+    assert "## How to use the evidence" in guide
+    assert "## Page conventions" in guide
+    assert "## Accessible presentation" in guide
+    assert "Do not skip heading levels" in guide
+    assert "Styling may decorate" not in guide
+    assert "## Writing a feature entry" not in guide
+    assert "## Repository example" not in guide
+
+
+def test_documentation_home_is_for_users_not_site_contributors() -> None:
+    home = (DOCS / "README.md").read_text(encoding="utf-8")
+    assert "helps people use LLMs" in home
+    assert "Getting started" in home
+    assert "## Work on this website" not in home
+    assert "mise run docs-build" not in home
+    assert "mise run docs-serve" not in home
+    assert "Formal Verify" not in home
+
+
+def test_public_documentation_avoids_implementation_runtime_details() -> None:
+    prohibited = re.compile(
+        r"(?i)\bpython\b|\bpytest\b|pyproject\.toml|requirements\.txt|pypi\.org|"
+        r"\buv run\b|(?:^|[/`])[^\s`/]+\.py(?:[)#`\s]|$)"
+    )
+    for path in DOCS.glob("*.md"):
+        match = prohibited.search(path.read_text(encoding="utf-8"))
+        assert match is None, (
+            f"{path.name} exposes implementation runtime detail: {match.group(0)!r}"
+        )
+
+
+def test_harness_guide_states_current_support() -> None:
+    guide = (DOCS / "harnesses.md").read_text(encoding="utf-8")
+    for harness, status in (
+        ("OpenCode", "working"),
+        ("Pi", "working"),
+        ("Claude", "not implemented"),
+        ("Codex", "not implemented"),
+    ):
+        assert re.search(rf"^\| {harness}\s+\| `{status}`", guide, re.MULTILINE)
+    assert "coding harness is the application in which you work with an LLM" in guide
+
+
+def test_rendered_evidence_links_leave_docs_without_mutating_examples() -> None:
+    rewrite_links = runpy.run_path(str(ROOT / "scripts" / "mkdocs_hooks.py"))[
+        "rewrite_out_of_docs_links"
+    ]
+    markdown = """\
+[Configuration](configuration.md)
+[Root](../README.md#getting-started)
+[Design](<../.harnessctl/documents/doc-00017.md>)
+[flow]: ../FLOWS.md#build "Build flow"
+
+```markdown
+[Example](../README.md)
+```
+"""
+    rendered = rewrite_links(markdown, "status-and-evidence.md")
+    repository = "https://github.com/dragoscirjan/harnessctl-v2/blob/main"
+    assert "[Configuration](configuration.md)" in rendered
+    assert f"[Root]({repository}/README.md#getting-started)" in rendered
+    assert f"[Design](<{repository}/.harnessctl/documents/doc-00017.md>)" in rendered
+    assert f'[flow]: {repository}/FLOWS.md#build "Build flow"' in rendered
+    assert "```markdown\n[Example](../README.md)\n```" in rendered
 
 
 def test_document_docs_cover_fixed_authority_and_removed_legacy_links() -> None:
@@ -356,14 +652,12 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
         assert path in skills
     assert "does not delete" in skills
     assert "existing skill untouched and dormant" in configuration
-    assert "remains dormant" in normalized_sdlc
+    assert "leaves any previously installed TDD skill dormant" in normalized_sdlc
     assert "`skills.tdd.enabled`" in sdlc
-    assert "loads `sdlc-develop-tdd` before implementation" in normalized_sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
-    assert "`work-continue` resumes Build" in normalized_sdlc
 
 
-def test_config_v1_reference_and_release_evidence_are_complete() -> None:
+def test_config_v1_reference_is_complete() -> None:
     configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
     normalized = " ".join(configuration.split())
 
@@ -432,13 +726,6 @@ def test_config_v1_reference_and_release_evidence_are_complete() -> None:
         "remove or rename the operator-owned host key manually",
         "Unreleased development Config v2 and Config v3 files are not supported inputs",
         "there is no compatibility reader, fallback, automatic migration, or in-place converter",
-        "Python behavior",
-        "Generic-tools behavior",
-        "Workspace behavior",
-        "Generation drift",
-        "Package artifacts",
-        "Fingerprints",
-        "Shared fixture comparison",
     ):
         assert phrase in normalized
     assert "DOCS_MCP_TOKEN" in configuration
@@ -459,7 +746,7 @@ def test_current_config_examples_use_v1_paths_and_document_root_semantics() -> N
     assert "another safe repository-local root" in documents
 
 
-def test_docs_describe_sdlc_code_installation_and_build_boundaries() -> None:
+def test_docs_describe_sdlc_code_guidance_and_installation() -> None:
     skills = (DOCS / "skills.md").read_text(encoding="utf-8")
     sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
     root = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -471,8 +758,7 @@ def test_docs_describe_sdlc_code_installation_and_build_boundaries() -> None:
         "Named tools are alternatives, not cumulative installation requirements",
         "Ambiguous `.h` and `.sh` files require repository evidence",
         "TSX combines TypeScript with React guidance only when React is established",
-        "GDScript as distinct from Python",
-        "Plan, Verify, Release, and non-Build Continue do not activate `sdlc-code`",
+        "GDScript dispatch uses `.gd` files plus Godot project evidence",
         "byte-equivalent OpenCode and Pi trees",
         "global skills under `~/.config/opencode`",
     ):
@@ -890,21 +1176,20 @@ def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> N
     ):
         assert removed not in current_docs
     assert "Git provider mappings use the same strict provider contract" in configuration
-    assert "currently registers eight" in skills
+    assert "currently provides eight generated skills" in skills
     assert "No Documents agent or skill is generated" in skills
 
 
 def test_current_design_links_use_canonical_documents_paths() -> None:
-    docs_index = (DOCS / "README.md").read_text(encoding="utf-8")
+    current_docs = "\n".join(path.read_text(encoding="utf-8") for path in sorted(DOCS.glob("*.md")))
+    documents = (DOCS / "documents.md").read_text(encoding="utf-8")
     root = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "../.specs/" not in docs_index
+    assert "../.specs/" not in current_docs
     assert "--migrate-specs" not in root
     assert "migration runner" not in root
     for path in (
-        "doc-00015-config-v1-architecture-and-ownership-v2.md",
-        "doc-00016-config-v1-contract-generation-and-host-projection-v2.md",
         "doc-00013-repository-local-sdlc-design-document-management-v4.md",
         "doc-00014-repository-local-sdlc-design-document-management-v4.md",
     ):
-        assert f"../.harnessctl/documents/{path}" in docs_index
+        assert f"../.harnessctl/documents/{path}" in documents

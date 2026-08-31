@@ -6,8 +6,7 @@ boundary. Tool availability comes from separately loaded host adapters.
 
 ## Current implementation
 
-[`src/harnessctl/templates.py`](../src/harnessctl/templates.py) currently registers eight
-skill templates.
+Harnessctl currently provides eight generated skills.
 
 | Skill ID              | Configuration                                          | Installation                                             | Purpose                                                              |
 | --------------------- | ------------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -75,9 +74,8 @@ relevant guidance, not class-oriented rules by default. Harnessctl neither depen
 modifies global skills under `~/.config/opencode`.
 
 GDScript dispatch uses `.gd` files plus Godot project evidence such as `project.godot` and
-the supported engine version. Its overlay treats GDScript as distinct from Python, preserves
-Godot lifecycle and resource ownership semantics, and follows existing diagnostics and test
-tooling rather than installing a new Godot toolchain.
+the supported engine version. Its overlay preserves Godot lifecycle and resource ownership
+semantics and follows existing diagnostics rather than installing a new Godot toolchain.
 
 TDD is disabled by default. When enabled, OpenCode and Pi receive byte-equivalent
 canonical skills at `.opencode/skills/sdlc-develop-tdd/SKILL.md` and
