@@ -1,5 +1,26 @@
 # Project memory
 
+## Configure project memory
+
+Harnessctl controls shared project memory with `skills.memory`. It is disabled by default.
+Enable it when the project should preserve curated facts, decisions, events, and lessons in
+repository-owned YAML. Caveman guidance must remain enabled because stored records use its
+compact, exact style.
+
+```yaml
+version: 1
+skills:
+  caveman:
+    enabled: true
+    mode: strict
+  memory:
+    enabled: true
+```
+
+Unspecified memory fields retain their generated defaults. See the
+[Memory schema](config-schema.md#memory) for the repository root, namespace, retrieval
+bounds, defaults, and constraints.
+
 ## Current implementation
 
 Repository memory is advisory. Source, tests, specifications, issues, approvals, and

@@ -1,5 +1,27 @@
 # Issue tracking
 
+## Configure issue tracking
+
+Harnessctl uses `skills.issues` to choose one issue authority. The default is repository
+filesystem storage under `.harnessctl/issues` with the `hrn-` ID prefix. Keep that default
+for local, Git-trackable issues, or replace the complete provider mapping to use a supported
+remote forge.
+
+```yaml
+version: 1
+skills:
+  issues:
+    enabled: true
+    root: .harnessctl/issues
+    prefix: hrn-
+    provider:
+      type: filesystem
+      tools: issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive
+```
+
+See the [Issues schema](config-schema.md#issues) for every field, default, provider shape,
+and constraint. Credential fields contain environment-variable names, never token values.
+
 ## Current implementation
 
 Harnessctl accepts `filesystem`, `github`, `gitlab`, `gitea`, `forgejo`, and `bitbucket`

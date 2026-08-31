@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1CKY01EDKTG3CBXB3KW2V1Z
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00167
+summary: "hrn-00167 | release | ready PR #64 | commit 991f89e pushed; PR open; CI running."
+details: Epic closed after final-theme validation deferral. Ready PR https://github.com/dragoscirjan/harnessctl-v2/pull/64 targets main from feat/hrn-00167-documentation-website. Head 991f89e; one commit; push hooks passed. Ubuntu, macOS, Windows quality jobs running. No merge or deployment. Unrelated .opencode/opencode.json and .pi/settings.json remain local only.
+source:
+  kind: artifact
+  ref: hrn-00167
+  revision: v1:b8ddf6de614577eed4c5a875021fd2c783ea03dfde8aea7ea33c8b20513ea089
+created_at: 2026-08-31T19:14:56.174Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - pr
+  - release
+  - sdlc

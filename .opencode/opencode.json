@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["../extensions/opencode-tools/dist/index.js", "@harnessctl/opencode-tools@0.1.10"],
+  "plugin": ["../extensions/opencode-tools/dist/index.js"],
   "mcp": {
     "sdlc_cvs_github": {
       "type": "remote",

@@ -1,0 +1,25 @@
+"version": 1
+"id": "hrn-00184"
+"type": "story"
+"title": "Enforce reference provenance and drift gates"
+"status": "done"
+"created_at": "2026-08-31T19:27:35.280Z"
+"updated_at": "2026-08-31T20:53:43.352Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00168"
+"depends_on":
+  - "hrn-00180"
+  - "hrn-00181"
+  - "hrn-00182"
+  - "hrn-00183"
+"metadata":
+  "estimate": "M"
+  "order": 5
+  "scope": "reference-quality-gates"
+"body": "# Enforce reference provenance and drift gates\n\n## Objective\n\nMake the complete configuration, command, and skill reference set fail closed when source contracts drift or unsafe claims appear.\n\n## Scope\n\n- Enforce exact reference navigation and public-page inventory.\n- Check Config schema/property/default/description coverage and deterministic output.\n- Check exact six-command and eight-skill parity against source authority.\n- Validate source/provenance links and separation of declared config, generated output, harness registration, provider state, and verified operation.\n- Screen examples for secret values while allowing placeholders and environment-variable names.\n- Enforce strict MkDocs, deterministic LLM-index freshness, focused formatting, and links.\n- Exercise intentional source mutations proving each drift gate fails.\n\n## Acceptance Criteria\n\n- Current focused checks pass from an Epic-owned snapshot.\n- Intentional schema/default, description, command, skill-key, and inventory mutations fail the intended gate.\n- Public docs contain no private values or internal authority paths.\n- Strict site build and deterministic reference/LLM generation pass without network access.\n- Any unrelated repository-wide blocker is reported separately and is not repaired under this Story.\n\n## Dependencies And Order\n\nOrder 5. Depends on `hrn-00180`, `hrn-00181`, `hrn-00182`, and `hrn-00183`.\n\n## Artifacts\n\n`tests/test_docs.py`; reference generation/check tasks; `mkdocs.yml`; generated documentation and LLM indexes.\n\n## Estimate And Uncertainty\n\nM. Main uncertainty is proving drift detection without brittle full-prose snapshots.\n\n## Non-Goals\n\nUnrelated quality cleanup; deployment; provider operations; Config, command, or skill behavior changes."
+"comments":
+  - "id": "hrn-00184-C0001"
+    "created_at": "2026-08-31T20:49:22.859Z"
+    "created_by": "OpenCode"
+    "body": "Build evidence: integrated reference gates implemented. Exact public inventory/navigation, Config schema/property/default/description coverage, six-command and eight-skill parity, literal credential screening, provenance distinctions, deterministic Config/LLM generation, and intentional mutation failures are enforced. Fresh checks: `tests/test_docs.py` 38 passed; full Python 713 passed; Node 215+2+3 passed; packages, ESLint, Ruff, contracts, Mermaid (6), actionlint, shellcheck, vulture, duplication threshold, strict MkDocs, focused Prettier, and diff checks passed. Repository-wide `mise run quality` stops only on untouched unrelated dirty `.opencode/opencode.json` and `.pi/settings.json` Prettier findings. No Verify, Release, remote action, closure, or unrelated-file mutation."

@@ -8,7 +8,8 @@ provider-neutral contract.
 
 ## Configuration
 
-The feature is explicitly opt-in:
+Harnessctl controls relationship-aware retrieval with `skills.codeIndex`. The feature is
+disabled by default and is explicitly opt-in:
 
 ```yaml
 version: 1
@@ -17,6 +18,10 @@ skills:
     enabled: true
     mcpName: sdlc-code-index
 ```
+
+See the [Code Index schema](config-schema.md#code-index) for both fields, their defaults,
+and the MCP-name constraint. Enabling the feature also requires the named entry to exist in
+the effective top-level `mcpServers` registry.
 
 `mcpName` must be 1 through 64 lowercase ASCII characters, start and end with an
 alphanumeric character, and contain only alphanumeric characters, `_`, or `-`; `cvs_` is

@@ -1,492 +1,91 @@
-# Configuration
+# Config File
 
-Project configuration is `.harnessctl/config.yaml`. Every supported harness uses the
-same defaults and validation rules.
+Use `.harnessctl/config.yaml` to choose how Harnessctl runs the SDLC in this
+repository: where authority is stored, which workflow defaults apply, which
+capabilities are enabled, and which local or remote providers they use.
 
-## Current implementation
+You only need to include settings that differ from the defaults. Every file starts
+with `version: 1`.
 
-Configuration version 1 is current. If the file is absent, readers return a fresh
-in-memory copy of defaults and do not create the file. `config_create` creates the
-full default file only when absent and never rewrites an existing file. `config_get`
-performs a read-only dotted mapping lookup, such as `paths.tasks`.
+## Start with the change you need
 
-Every existing file must declare `version: 1`. Missing and non-1 versions fail with
-manual stable-v1 rewrite guidance; no compatibility reader or automatic migration exists.
-Overlay is recursive for mappings; scalar and array values replace their defaults.
-Malformed YAML, unsafe project paths, invalid bounds, and incompatible settings fail
-validation. All configuration readers use the generated defaults and JSON Schema.
+| I want to...                             | Configure                    | Details                            |
+| ---------------------------------------- | ---------------------------- | ---------------------------------- |
+| Change the default work item type        | `workflow.default_task_type` | This page                          |
+| Enable test-driven development           | `skills.tdd`                 | [TDD](tdd.md)                      |
+| Enable shared project memory             | `skills.memory`              | [Memory](memory.md)                |
+| Enable relationship-aware code retrieval | `skills.codeIndex`           | [Code Index](code-intelligence.md) |
+| Enable researched web retrieval          | `skills.webRetrieval`        | [Web Retrieval](web-retrieval.md)  |
+| Change issue storage or provider         | `skills.issues`              | [Issues](issues.md)                |
+| Change document storage                  | `skills.documents`           | [Documents](documents.md)          |
+| Change version control or forge          | `skills.cvs`                 | [CVS](cvs.md)                      |
+| Change concise-response behavior         | `skills.caveman`             | [Caveman](caveman.md)              |
+| Add or replace an MCP declaration        | `mcpServers`                 | [Config Schema](config-schema.md)  |
 
-## Config v1 reference
+The [Config Schema](config-schema.md) is the complete field and default reference.
+Use this page when deciding what to put in a project file.
 
-The generated
-[`config-v1.defaults.json`](../extensions/generic-tools/contracts/config-v1.defaults.json)
-is the authority for defaults. The generated
-[`config-v1.schema.json`](../extensions/generic-tools/contracts/config-v1.schema.json)
-is the complete portable validation contract. Every canonical defaulted leaf is listed
-below; “none” means that the field is optional and absent from the generated defaults.
+## Common recipes
 
-| Key                                          | Default                     | Meaning                                                              |
-| -------------------------------------------- | --------------------------- | -------------------------------------------------------------------- |
-| `version`                                    | `1`                         | Required contract version.                                           |
-| `paths.root`                                 | `.harnessctl`               | Safe project-relative general artifact root.                         |
-| `paths.tasks`                                | `.harnessctl/tasks`         | Safe project-relative task artifact root.                            |
-| `paths.reports`                              | `.harnessctl/reports`       | Safe project-relative report root.                                   |
-| `workflow.default_task_type`                 | `bug`                       | `initiative`, `epic`, `story`, `task`, or `bug`.                     |
-| `mcp.output_limit_mode`                      | `bounded-guidance`          | `bounded-guidance` or `hard`; `hard` is Pi-only at installation.     |
-| `mcpServers`                                 | Three explicit declarations | Host-neutral URL or command declarations listed below.               |
-| `skills.issues.enabled`                      | `true`                      | Enable the configured Issues capability.                             |
-| `skills.issues.root`                         | `.harnessctl/issues`        | Safe project-relative filesystem issue root; ignored remotely.       |
-| `skills.issues.prefix`                       | `hrn-`                      | Filesystem issue ID prefix; ignored remotely.                        |
-| `skills.issues.provider.type`                | `filesystem`                | Issues authority type.                                               |
-| `skills.issues.provider.tools`               | Complete 12-tool local list | Exact filesystem tool set listed below.                              |
-| `skills.issues.provider.mcpName`             | none                        | Optional provider MCP association.                                   |
-| `skills.documents.enabled`                   | `true`                      | Enable the configured Documents capability.                          |
-| `skills.documents.root`                      | `.harnessctl/documents`     | Safe canonical Documents root; custom safe roots are supported.      |
-| `skills.documents.prefix`                    | `doc-`                      | Fixed Documents ID prefix.                                           |
-| `skills.documents.provider.type`             | `filesystem`                | Documents authority type.                                            |
-| `skills.documents.provider.tools`            | Complete 9-tool local list  | Exact filesystem tool set listed below.                              |
-| `skills.documents.provider.mcpName`          | none                        | Optional association; local Documents tools do not route through it. |
-| `skills.cvs.enabled`                         | `true`                      | Enable CVS guidance and its optional MCP reference.                  |
-| `skills.cvs.local`                           | `git`                       | Direct local authority: `git` or `jj`.                               |
-| `skills.cvs.provider.type`                   | `github`                    | Remote collaboration provider.                                       |
-| `skills.cvs.provider.tools`                  | `gh`                        | Exact provider CLI identifier.                                       |
-| `skills.cvs.provider.mcpName`                | `sdlc_cvs_github`           | Optional reference to an explicit `mcpServers` key.                  |
-| `skills.cvs.provider.url`                    | `https://github.com`        | Validated collaboration URL.                                         |
-| `skills.cvs.provider.token_env`              | `GH_TOKEN`                  | Environment-variable name, never a credential value.                 |
-| `skills.caveman.enabled`                     | `true`                      | Enable concise generated guidance.                                   |
-| `skills.caveman.mode`                        | `strict`                    | `strict` or `balanced`.                                              |
-| `skills.tdd.enabled`                         | `false`                     | Opt in to TDD skill and Build guidance.                              |
-| `skills.codeIndex.enabled`                   | `false`                     | Opt in to external code-index retrieval guidance.                    |
-| `skills.codeIndex.mcpName`                   | `sdlc_code_index`           | External server name compiled into guidance only.                    |
-| `skills.webRetrieval.enabled`                | `false`                     | Opt in to MCP-first web retrieval guidance.                          |
-| `skills.webRetrieval.mcpName`                | `sdlc_web_crawl`            | Fixed reference to the explicit web MCP declaration.                 |
-| `skills.memory.enabled`                      | `false`                     | Enable repository memory guidance and installation.                  |
-| `skills.memory.root`                         | `.harnessctl/memory`        | Safe project-relative canonical memory root.                         |
-| `skills.memory.backend`                      | `repository`                | Current and only accepted backend.                                   |
-| `skills.memory.namespace.organization_id`    | `local`                     | Scope identifier, not authorization.                                 |
-| `skills.memory.namespace.project_id`         | `project`                   | Scope identifier, not authorization.                                 |
-| `skills.memory.namespace.default_topic`      | `general`                   | Default retrieval topic.                                             |
-| `skills.memory.retrieval.limit`              | `8`                         | Result limit from 1 through 100.                                     |
-| `skills.memory.retrieval.max_chars`          | `12000`                     | Serialized result bound from 256 through 100000 characters.          |
-| `skills.memory.retrieval.include_superseded` | `false`                     | Include inactive history by default.                                 |
+### Change the default work item
 
-The provider fields `type`, `tools`, `url`, `token_env`, and optional `mcpName` are also
-canonical under `skills.issues.provider`, `skills.documents.provider`, and
-`skills.cvs.provider`. A provider-type change replaces that complete mapping instead of
-inheriting fields from the default provider:
-
-| Provider    | `tools`       | `url`                            | `token_env`                                      | `mcpName` |
-| ----------- | ------------- | -------------------------------- | ------------------------------------------------ | --------- |
-| `github`    | `gh`          | `https://github.com`             | Uppercase name; conventionally `GH_TOKEN`        | Optional  |
-| `gitlab`    | `glab`        | `https://gitlab.com`             | Uppercase name; conventionally `GITLAB_TOKEN`    | Optional  |
-| `gitea`     | `tea`         | Explicit safe HTTPS instance URL | Uppercase name; conventionally `GITEA_TOKEN`     | Optional  |
-| `forgejo`   | `forgejo-cli` | Explicit safe HTTPS instance URL | Uppercase name; conventionally `FORGEJO_TOKEN`   | Optional  |
-| `bitbucket` | `git`         | `https://bitbucket.org`          | Uppercase name; conventionally `BITBUCKET_TOKEN` | Optional  |
-
-Every `mcpName` uses the shared server-name grammar: 1 through 64 lowercase ASCII letters,
-digits, underscores, or hyphens; the first and last characters must be alphanumeric.
-Provider `mcpName` values are optional references for every remote provider. When an enabled
-CVS or remote Issues/Documents skill carries one, that exact key must exist in `mcpServers`.
-The provider type, URL, and token environment never synthesize MCP transport intent. Omitting
-`mcpName` produces CLI-only guidance. Filesystem providers may carry an optional name for
-future/local semantics, but it is not required to resolve while the filesystem route is used.
-
-`filesystem` is available to Issues and Documents only and requires the exact tool string
-shown in the generated defaults. Provider `type` selects an authority; it is not an MCP
-transport discriminator.
-
-### Issue and workflow settings
-
-| Key                                | Default                     | Current meaning                                                              |
-| ---------------------------------- | --------------------------- | ---------------------------------------------------------------------------- |
-| `version`                          | `1`                         | Configuration contract version                                               |
-| `skills.issues.root`               | `.harnessctl/issues`        | Filesystem-only safe project-relative canonical issue root; ignored remotely |
-| `skills.issues.prefix`             | `hrn-`                      | Filesystem-only local ID prefix; ignored remotely                            |
-| `skills.issues.provider.type`      | `filesystem`                | `filesystem`, `github`, `gitlab`, `gitea`, `forgejo`, or `bitbucket`         |
-| `skills.issues.provider.tools`     | Complete 12-tool local list | Exact provider tooling                                                       |
-| `skills.issues.provider.url`       | None                        | Required for Git providers; rejected for filesystem                          |
-| `skills.issues.provider.token_env` | None                        | Required provider token environment-variable name                            |
-| `skills.documents.root`            | `.harnessctl/documents`     | Safe project-relative canonical Markdown root for filesystem authority       |
-| `skills.documents.prefix`          | `doc-`                      | Fixed document ID prefix                                                     |
-| `skills.documents.provider.type`   | `filesystem`                | Default local authority; Git providers are also accepted                     |
-| `skills.documents.provider.tools`  | Complete 9-tool local list  | Exact provider tooling                                                       |
-| `paths.root`                       | `.harnessctl`               | General harnessctl artifact root                                             |
-| `paths.tasks`                      | `.harnessctl/tasks`         | Task artifact path                                                           |
-| `paths.reports`                    | `.harnessctl/reports`       | Report artifact path                                                         |
-| `workflow.default_task_type`       | `bug`                       | Default task classification                                                  |
-| `skills.tdd.enabled`               | `false`                     | Opt in to generated TDD skill and Build guidance                             |
-| `skills.codeIndex.enabled`         | `false`                     | Opt in to the selected-host SDLC code-index retrieval skill                  |
-| `skills.codeIndex.mcpName`         | `sdlc_code_index`           | External MCP server name compiled into the skill as guidance only            |
-| `skills.webRetrieval.enabled`      | `false`                     | Opt in to MCP-first web search/fetch guidance                                |
-| `skills.webRetrieval.mcpName`      | `sdlc_web_crawl`            | Fixed reference to the explicit web MCP declaration                          |
-
-The default local issue tools are `issue_id`, `issue_create`, `issue_list`,
-`issue_get`, `issue_update`, `issue_transition`, `issue_comment`, `issue_relate`,
-`issue_unrelate`, `issue_link_document`, `issue_validate`, and `issue_archive`.
-
-A complete default configuration is:
+Plan-created work defaults to a Bug. Choose another supported issue type when your
+repository usually starts elsewhere:
 
 ```yaml
 version: 1
-paths:
-  root: .harnessctl
-  tasks: .harnessctl/tasks
-  reports: .harnessctl/reports
 workflow:
-  default_task_type: bug
-mcp:
-  output_limit_mode: bounded-guidance
-mcpServers:
-  sdlc_cvs_github:
-    url: https://api.githubcopilot.com/mcp/
-    headers:
-      Authorization: Bearer {env:GH_TOKEN}
-      X-MCP-Toolsets: repos,issues,pull_requests,actions,git
-  sdlc_code_index:
-    command: cgc
-    args: [mcp, start]
-  sdlc_web_crawl:
-    command: npx
-    args:
-      - -y
-      - >-
-        @dragoscirjan/mcp-searchable@latest
+  default_task_type: story
+```
+
+Valid values are `initiative`, `epic`, `story`, `task`, and `bug`.
+
+### Enable TDD
+
+```yaml
+version: 1
 skills:
-  issues:
-    enabled: true
-    root: .harnessctl/issues
-    prefix: hrn-
-    provider:
-      type: filesystem
-      tools: issue_id,issue_create,issue_list,issue_get,issue_update,issue_transition,issue_comment,issue_relate,issue_unrelate,issue_link_document,issue_validate,issue_archive
-  documents:
-    enabled: true
-    root: .harnessctl/documents
-    prefix: doc-
-    provider:
-      type: filesystem
-      tools: document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore
-  cvs:
-    enabled: true
-    local: git
-    provider:
-      type: github
-      tools: gh
-      mcpName: sdlc_cvs_github
-      url: https://github.com
-      token_env: GH_TOKEN
-  caveman:
-    enabled: true
-    mode: strict
   tdd:
-    enabled: false
-  codeIndex:
-    enabled: false
-    mcpName: sdlc_code_index
-  webRetrieval:
-    enabled: false
-    mcpName: sdlc_web_crawl
+    enabled: true
+```
+
+This makes the TDD guidance available during Build. It does not run tests or choose
+TDD for work that did not request it. See [TDD](tdd.md).
+
+### Enable project memory
+
+```yaml
+version: 1
+skills:
   memory:
-    enabled: false
-    root: .harnessctl/memory
-    backend: repository
+    enabled: true
     namespace:
-      organization_id: local
-      project_id: project
-      default_topic: general
-    retrieval:
-      limit: 8
-      max_chars: 12000
-      include_superseded: false
+      project_id: payments-api
 ```
 
-Filesystem configuration rejects Git-provider connection fields.
+Memory requires Caveman mode so reusable records remain concise. The default Caveman
+configuration already satisfies that requirement. See [Memory](memory.md).
 
-### Generic MCP declarations
-
-Each `mcpServers.<name>` value has exactly one of these shapes. The following are mandatory
-compiler invariants, not defaults:
-
-1. The `mcpServers` map key is the required server name and stable projection identity.
-2. Every declaration contains exactly one portable connection core: `url` or `command`.
-3. Host overrides may extend a compiled definition but may not replace its portable core or
-   adapter-owned translation fields.
-
-`mcpServers.<name>` uses the same 1–64-character server-name grammar as `mcpName`. There are
-no provider-reserved IDs: names such as `sdlc_cvs_github` are ordinary explicit declarations.
-
-| Field                       | Default | Contract                                                                        |
-| --------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `url`                       | none    | Required for a URL declaration; safe absolute HTTPS service URL.                |
-| `headers.<header-name>`     | none    | Optional static/template value using explicit `{env:NAME}` references.          |
-| `command`                   | none    | Required for a command declaration; nonblank printable executable name or path. |
-| `args`                      | none    | Optional array of printable arguments.                                          |
-| `environment.<target-name>` | none    | Optional map from process variable name to a source environment-variable name.  |
-| `cwd`                       | none    | Optional safe project-relative working directory.                               |
-| `opencode`                  | none    | Optional JSON-compatible OpenCode-native extension map.                         |
-| `pi`                        | none    | Optional JSON-compatible Pi-native extension map.                               |
-
-Declarations deliberately omit `type` and `transport`. OpenCode and Pi infer host-native
-remote or local transport from the presence of `url` or `command` during compilation.
-Environment values name source variables. Header values preserve static text and translate
-each explicit `{env:NAME}` reference to OpenCode `{env:NAME}` or Pi `${NAME}`. Malformed
-placeholders, braces, and control characters are rejected. Harnessctl never reads or writes
-credential values.
-
-Portable optional fields remain editable. Host override maps preserve nested JSON strings,
-finite numbers, booleans, nulls, arrays, and objects exactly and are copied before rendering.
-YAML timestamps and other non-JSON objects, undefined values, non-finite numbers, and control
-characters in setting names are rejected. Only the override matching the selected host is
-merged into that host's native definition.
-
-Adapter-owned fields are protected even if a caller bypasses normal compilation; the portable
-core remains authoritative. OpenCode overrides cannot define `type`, `url`, `command`,
-`headers`, `environment`, `cwd`, `auth`, or `oauth`. Pi overrides cannot define `url`,
-`command`, `args`, `headers`, `env`, `cwd`, `lifecycle`, `auth`, or `oauth`. Validation reports
-the exact protected field path, such as `mcpServers.remote-docs.opencode.url`.
-
-The default registry contains `sdlc_cvs_github`, `sdlc_code_index`, and
-`sdlc_web_crawl`. The GitHub declaration uses the hosted endpoint, a
-`Bearer {env:GH_TOKEN}` Authorization template, and the static toolsets
-`repos,issues,pull_requests,actions,git`. An explicit
-`mcpServers` mapping replaces that registry rather than merging with it, so `mcpServers: {}`
-disables all defaults and a custom mapping contains only the entries the operator declares.
-Any enabled skill reference must still resolve after replacement.
-
-Credential-safe custom examples:
+### Enable code and web retrieval
 
 ```yaml
-version: 1
-mcpServers:
-  remote-docs:
-    url: https://mcp.example.com/api
-    headers:
-      Authorization: Bearer {env:DOCS_MCP_TOKEN}
-      X-Mode: static
-    opencode:
-      enabled: false
-      native:
-        labels:
-          - docs
-          - internal
-    pi:
-      timeout: 5000
-  local-index:
-    command: npx
-    args:
-      - -y
-      - example-index-mcp
-    environment:
-      API_TOKEN: INDEX_MCP_TOKEN
-    cwd: tools/mcp
-    opencode:
-      enabled: true
-    pi:
-      timeout: 7000
-```
-
-The host-specific keys above are illustrative and must be supported by the installed host or
-adapter version. Harnessctl validates their JSON portability and ownership boundary; it does
-not claim that arbitrary future native keys are implemented by a particular host release.
-
-Provider mappings select CLI and generated guidance only. Every projected host definition
-comes exclusively from `mcpServers`, which may use URL or command form independently of the
-provider. Harnessctl does not install, authenticate, start, stop, monitor, upgrade, or remove
-the service, CLI, package, process, or credential.
-
-Exact generic entries first generated by harnessctl remain managed while their host value
-still exactly matches recorded provenance. They may be updated or removed when declared
-intent changes. A same-ID entry without matching provenance is permanently operator-owned,
-including a pre-existing or otherwise unproven entry byte-equivalent to the desired value.
-A generated entry whose current host value diverges from its recorded provenance also
-becomes permanently operator-owned. Harnessctl byte-preserves every such collision under
-normal and `--force` installs, emits an operator-owned warning without declaration or
-credential values, and leaves the declaration unapplied; therefore the Config v1 intent and
-active host behavior may differ.
-
-To remediate safely, inspect and back up `.opencode/opencode.json` or `.pi/mcp.json`, decide
-whether the operator entry or Config v1 declaration is authoritative, and remove or rename
-the operator-owned host key manually. Then rerun installation. Do not copy credentials into
-YAML or delete a process, package, index, or data store as part of host-key cleanup.
-
-### Documents settings
-
-Documents is independent from Issues and CVS. Its provider defaults to the local filesystem;
-Git provider mappings use the same strict provider contract as Issues and CVS. Roots and
-prefixes remain safe project-relative identity settings.
-
-```yaml
-# Filesystem
 version: 1
 skills:
-  documents:
+  codeIndex:
     enabled: true
-    root: .harnessctl/documents
-    prefix: doc-
-    provider:
-      type: filesystem
-      tools: document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore
-```
-
-The exact tools are `document_id`, `document_create`, `document_list`, `document_get`,
-`document_update`, `document_version`, `document_validate`, `document_archive`, and
-`document_restore`. See [Documents](documents.md) for lifecycle, legacy compatibility,
-cache, and retired-skill cleanup boundaries.
-
-Installation compiles the configured `skills.documents.root` into the OpenCode and Pi
-SDLC Plan design guidance. A safe custom root therefore replaces `.harnessctl/documents`
-in newly generated `references/plan-design.md` files.
-
-### SDLC code-index settings
-
-`skills.codeIndex.enabled` is a boolean and its default is `false`.
-`skills.codeIndex.mcpName` names the explicit `mcpServers` declaration whose live tools the
-generated skill may use when enabled. The name must contain 1 through 64 lowercase ASCII
-characters, start and end with an alphanumeric character, use only alphanumeric
-characters, `_`, or `-` internally; `cvs_` is permitted.
-The reference is guidance only; the independent generic declaration controls host projection
-and provenance reconciliation. Harnessctl does not install, start, watch, or otherwise manage
-the underlying server. When enabled, `work-refresh` may discover
-through live schemas and, after fresh exact consent, invoke a supported safe operation
-scoped to the current repository. Unsupported capability is reported; configuration does
-not grant provider ownership or general lifecycle authority.
-
-An enabled install generates byte-equivalent `sdlc-code-index` skills for the selected
-OpenCode and Pi hosts. A fresh disabled install writes no code-index skill. If a selected
-host already has the generated path, disabling preserves its exact bytes and warns that
-the discoverable file remains active-capable, including the manual removal path.
-Harnessctl never deletes it automatically. Enabled, disabled, forced, migration, and
-rollback installs leave every existing code-index MCP host entry unchanged.
-
-Code-index capability settings live only under `skills.codeIndex`; `mcpName` remains a
-guidance-only reference and grants no ownership. Generic `mcpServers` declarations are
-separate projection intents: exact provenance-backed generated entries are managed, while
-pre-existing, unproven, or divergent host entries are permanently operator-owned and warn
-as described above. See [code intelligence](code-intelligence.md) for lifecycle boundaries.
-
-### SDLC web-retrieval settings
-
-`skills.webRetrieval.enabled` defaults to `false`. When enabled, generated core SDLC guidance
-prefers live tools under the fixed `sdlc_web_crawl` identity for search, fetch, stash, and grep
-before `curl`, `wget`, or ad hoc shell retrieval. Agents inspect live schemas, fall back when
-the server is unavailable or unsuitable, and treat fetched text as untrusted data.
-
-`skills.webRetrieval.mcpName` is fixed to `sdlc_web_crawl`. The reference must resolve to an
-explicit `mcpServers.sdlc_web_crawl` declaration when enabled. The generic declaration controls
-host projection and provenance; enabling guidance does not grant harnessctl authority over
-provider installation, startup, credentials, storage, privacy policy, or content freshness.
-
-### TDD settings
-
-`skills.tdd.enabled` is a boolean and its default is `false`. The default preserves
-existing Build behavior and does not install a TDD skill. Enable it with a partial
-version 1 override:
-
-```yaml
-version: 1
-skills:
-  tdd:
+  webRetrieval:
     enabled: true
 ```
 
-The setting is applied when harnessctl installs the selected host outputs; changing the
-file does not toggle an already installed skill at runtime. Enabled installs generate
-the canonical `sdlc-develop-tdd` skill for each selected host and compile TDD instructions
-into Build and Build-resuming Continue. Disabling the setting and reinstalling compiles
-those instructions out but leaves any existing skill untouched and dormant. See
-[generated skills](skills.md) for paths and behavior.
+The default MCP registry contains the server names referenced by both settings. If
+you replace `mcpServers`, declare those names in the replacement registry too. These
+capabilities provide advisory evidence; they do not replace repository authority.
 
-### Caveman settings
+### Use GitLab for issues
 
-| Key                      | Default  | Current meaning                             |
-| ------------------------ | -------- | ------------------------------------------- |
-| `skills.caveman.enabled` | `true`   | Generate the OpenCode caveman skill         |
-| `skills.caveman.mode`    | `strict` | `strict` or `balanced` compression guidance |
-
-### Memory settings
-
-| Key                                          | Default              | Current meaning                                             |
-| -------------------------------------------- | -------------------- | ----------------------------------------------------------- |
-| `skills.memory.enabled`                      | `false`              | Enable repository memory guidance and OpenCode installation |
-| `skills.memory.backend`                      | `repository`         | Current and only accepted backend                           |
-| `skills.memory.namespace.organization_id`    | `local`              | Required local scope identifier, not authorization          |
-| `skills.memory.namespace.project_id`         | `project`            | Required project scope identifier, not authorization        |
-| `skills.memory.namespace.default_topic`      | `general`            | Default retrieval topic                                     |
-| `skills.memory.retrieval.limit`              | `8`                  | Result bound from 1 through 100                             |
-| `skills.memory.retrieval.max_chars`          | `12000`              | Serialized result bound from 256 through 100000 characters  |
-| `skills.memory.retrieval.include_superseded` | `false`              | Include inactive history by default                         |
-| `skills.memory.root`                         | `.harnessctl/memory` | Safe project-relative canonical YAML root                   |
-
-`skills.memory.enabled=true` requires `skills.caveman.enabled=true`.
-
-### CVS and MCP settings
-
-| Key                             | Default              | Current meaning                                                        |
-| ------------------------------- | -------------------- | ---------------------------------------------------------------------- |
-| `skills.cvs.local`              | `git`                | Direct local authority: `git` or `jj`; never routed through MCP        |
-| `skills.cvs.provider.type`      | `github`             | Independent Git authority                                              |
-| `skills.cvs.provider.tools`     | `gh`                 | Exact provider CLI identifier; no arguments or paths                   |
-| `skills.cvs.provider.mcpName`   | `sdlc_cvs_github`    | Optional MCP association                                               |
-| `skills.cvs.provider.url`       | `https://github.com` | Validated collaboration URL                                            |
-| `skills.cvs.provider.token_env` | `GH_TOKEN`           | Environment-variable name only, never a value                          |
-| `mcp.output_limit_mode`         | `bounded-guidance`   | `bounded-guidance` or Pi-only `hard`; OpenCode and `all` reject `hard` |
-
-GitHub requires `gh` and `https://github.com`; GitLab requires `glab` and
-`https://gitlab.com`; Gitea requires `tea` and an explicit HTTPS URL; Forgejo requires
-`forgejo-cli` and an explicit HTTPS URL. Every `token_env` must be an uppercase
-environment-variable name. The examples use conventional provider-specific names, but the
-schema does not require those exact names. A non-GitHub provider override must specify the
-complete provider mapping rather than inherit GitHub fields. The complete provider and
-host-format examples are in [CVS and MCP providers](cvs.md).
-
-CVS and Issues are validated independently. Their optional `mcpName` values may reference
-the same explicit declaration, but neither domain inherits the other's provider, CLI, URL,
-token environment name, authority, or MCP definition.
-
-## Remote issue routing
-
-Provider-aware issue configuration, CLI/MCP capability guidance, MCP projection, and OpenCode
-skill generation are implemented. Remote selections require explicit tools instead of
-inheriting filesystem defaults:
-GitHub uses `gh`, GitLab uses `glab`, Gitea uses `tea`, and Forgejo uses
-`forgejo-cli`. Known provider/tool mismatches fail validation.
-
-Every remote selection requires a complete `skills.issues.provider` mapping. The valid
-provider CLI capabilities are always enumerated; MCP capabilities are added only when the
-optional `mcpName` references an explicit declaration. The agent chooses per
-operation before mutation and never switches routes after mutation begins. No
-configuration selector or MCP-first precedence applies.
-GitHub requires `https://github.com`; GitLab requires `https://gitlab.com`. Gitea and
-Forgejo require an explicit operator-selected instance URL. The uppercase token
-environment-variable name belongs in YAML; the examples use `GH_TOKEN`, `GITLAB_TOKEN`,
-`GITEA_TOKEN`, and `FORGEJO_TOKEN`, but the token value exists only in the process
-environment and must never be written to configuration, generated skills, issues, or logs.
-`skills.issues.root` and `skills.issues.prefix` are filesystem-only and ignored in remote
-mode.
-
-Complete remote provider examples:
+Changing a provider type requires the complete provider mapping:
 
 ```yaml
-# GitHub
-version: 1
-mcpServers:
-  sdlc_cvs_github:
-    url: https://api.githubcopilot.com/mcp/
-    headers:
-      Authorization: Bearer {env:GH_TOKEN}
-      X-MCP-Toolsets: repos,issues,pull_requests,actions,git
-skills:
-  issues:
-    provider:
-      type: github
-      tools: gh
-      mcpName: sdlc_cvs_github
-      url: https://github.com
-      token_env: GH_TOKEN
-```
-
-```yaml
-# GitLab
 version: 1
 skills:
   issues:
@@ -497,47 +96,92 @@ skills:
       token_env: GITLAB_TOKEN
 ```
 
-```yaml
-# Gitea
-version: 1
-skills:
-  issues:
-    provider:
-      type: gitea
-      tools: tea
-      url: https://gitea.example.com
-      token_env: GITEA_TOKEN
-```
+The YAML stores only the environment-variable name. Put the credential value in the
+operator-managed process environment. See [Issues](issues.md) for every provider and
+its routing boundaries.
+
+### Move repository authority
 
 ```yaml
-# Forgejo
 version: 1
+paths:
+  tasks: project/tasks
+  reports: project/reports
 skills:
   issues:
-    provider:
-      type: forgejo
-      tools: forgejo-cli
-      url: https://forgejo.example.com
-      token_env: FORGEJO_TOKEN
+    root: project/issues
+  documents:
+    root: project/documents
 ```
 
-Replace only the Gitea or Forgejo example host with the real instance URL. These tool
-values are executable identifiers, not commands. harnessctl does not install,
-authenticate, or invoke a configured CLI. The generated issue-tracking skill instructs the
-host agent to use the configured provider's valid CLI and any explicitly referenced MCP
-capability. Generic local issue tools fail closed in remote mode instead of mutating YAML.
-CLI capability independently depends on the configured provider tool. See
-[CVS and MCP providers](cvs.md) for host files, consent, and
-security boundaries.
-See [issues](issues.md) and [memory](memory.md).
+Paths must be safe, project-relative paths. Moving a configured root does not migrate
+existing files.
 
-## Version compatibility
+## Create and inspect the file
 
-Config v1 is the first stable public configuration contract. Unreleased development Config
-v2 and Config v3 files are not supported inputs. Manually rewrite them to the schema above,
-including explicit `version: 1`; there is no compatibility reader, fallback, automatic
-migration, or in-place converter.
+When no file exists, Harnessctl uses a fresh in-memory copy of the generated defaults
+without writing anything. The `config_create` tool writes the complete default file only
+when it is absent and never overwrites an existing file. The read-only `config_get` tool
+looks up a dotted path such as `skills.tdd.enabled`.
 
-If you have an unreleased Config v2 or Config v3 file, rewrite it manually as Config v1
-before installation. Harnessctl does not fall back to an older reader, migrate the file
-automatically, or modify it in place.
+You can also create `.harnessctl/config.yaml` directly with a minimal overlay:
+
+```yaml
+version: 1
+skills:
+  tdd:
+    enabled: true
+```
+
+## How overrides work
+
+Mappings merge recursively with the defaults. Scalars and arrays replace their default
+values. Two boundaries deliberately replace more:
+
+- Supplying `mcpServers` replaces the complete default registry. `mcpServers: {}`
+  disables all default declarations.
+- Changing a skill provider's `type` replaces the complete provider mapping. Include
+  every required field for the new provider.
+
+Config v1 is the only supported contract. Existing files require a numeric `version: 1`;
+Harnessctl does not migrate or repair another version.
+
+## When configuration is rejected
+
+Harnessctl rejects malformed YAML, duplicate keys, unknown settings, unsafe paths,
+invalid limits, credential values where names are expected, and enabled capabilities
+whose MCP names are missing from the effective registry. Errors identify the deepest
+available dotted path without printing the complete configuration.
+
+Check the [Config Schema](config-schema.md) for the accepted type, default, and constraint,
+then check the relevant Skill Configuration page for operational meaning. Configuration
+declares intent; generated host output and successful external-provider operation are
+separate evidence.
+
+## Credentials
+
+Keep credential values out of YAML. Store an environment-variable name such as
+`GH_TOKEN`, or an explicit placeholder such as `{env:GH_TOKEN}` where the field accepts
+one. Harnessctl does not read, render, log, snapshot, or persist the credential value.
+
+## Know what each layer proves
+
+Configuration and operation are separate evidence:
+
+| Layer                    | What it proves                                                         |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Declared Config          | The intent recorded in `.harnessctl/config.yaml`.                      |
+| Generated reference      | The accepted Config v1 shape and defaults at generation time.          |
+| Generated harness output | The settings Harnessctl projected into a supported coding harness.     |
+| Harness registration     | The harness has a command, skill, or MCP declaration available.        |
+| External provider state  | The provider or MCP server is installed, reachable, and authenticated. |
+| Verified operation       | A current check exercised the configured route successfully.           |
+
+One layer does not imply the next. In particular, a valid declaration or generated
+harness entry does not prove that an external provider is available or working.
+
+## Source authority
+
+The current Config v1 contract and generated defaults are linked from the
+[Config Schema](config-schema.md). Documentation explains how to use those contracts but
+does not replace them.

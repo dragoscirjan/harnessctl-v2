@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00180"
+"type": "story"
+"title": "Publish the Config File reference"
+"status": "done"
+"created_at": "2026-08-31T19:27:33.622Z"
+"updated_at": "2026-08-31T20:13:35.880Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00168"
+"metadata":
+  "estimate": "S-M"
+  "order": 1
+  "scope": "config-file-reference"
+"body": "# Publish the Config File reference\n\n## Objective\n\nGive operators the exact contract for locating, loading, overriding, validating, and safely maintaining `.harnessctl/config.yaml` without duplicating the field catalog.\n\n## Scope\n\n- Reconcile and narrow `docs/configuration.md` to Config File concerns.\n- Document explicit `version: 1`, absent-file defaults, project/default precedence, recursive merge behavior, `mcpServers` replacement, provider-type replacement, validation paths, and no-migration policy.\n- Document credential references, safe examples, generated contract links, and compatibility boundaries.\n- Cross-link Config Schema and owning Skill Configuration pages.\n\n## Acceptance Criteria\n\n- Operational claims trace to TypeScript/Python loaders, approved Config designs, generated contracts, or conformance tests.\n- Config File explains loading and validation without reproducing every schema property.\n- Examples use placeholders or environment-variable names only.\n- Existing useful operator guidance is preserved under one canonical owner and stable links.\n\n## Dependencies And Order\n\nOrder 1. No Story dependency.\n\n## Artifacts\n\n`docs/configuration.md`; approved `doc-00015` v2 and `doc-00016` v2; Config v1 loaders, contracts, and tests.\n\n## Estimate And Uncertainty\n\nS-M. Main uncertainty is how much monolithic existing prose can move unchanged while preserving links.\n\n## Non-Goals\n\nSchema property catalog; Skills or MCP catalog content; provider tutorials; Config behavior, default, validation, or migration changes."
+"comments":
+  - "id": "hrn-00180-C0001"
+    "created_at": "2026-08-31T19:50:19.824Z"
+    "created_by": "OpenCode"
+    "body": "Build slice complete. Narrowed `docs/configuration.md` to Config File lifecycle, merge/replacement, validation, credential, domain-link, and source-authority contracts; moved schema/domain assertions out of the monolith; regenerated `docs/llms.txt` and `docs/llms-full.txt`. Evidence: `uv run pytest tests/test_docs.py` 32 passed; deterministic index check and strict MkDocs build passed; Ruff, focused Prettier, and Git diff checks passed. Story remains `in_progress`; no Verify, Release, closure, remote action, or runtime/schema/default change."

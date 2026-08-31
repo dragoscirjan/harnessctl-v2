@@ -29,6 +29,15 @@ extension, and MCP host configuration through verified project-local discovery p
 
 ## Configuration
 
+Harnessctl uses `skills.cvs` to select local version control independently from the remote
+collaboration provider. The generated defaults select Git locally and GitHub through `gh`;
+the optional MCP name adds another available remote capability but does not replace the CLI
+or authorize a mutation.
+
+See the [CVS schema](config-schema.md#cvs) for every field, default, provider shape, and
+constraint. `token_env` names an environment variable; never place the credential itself in
+the configuration file.
+
 The default CVS mapping is complete and valid:
 
 ```yaml

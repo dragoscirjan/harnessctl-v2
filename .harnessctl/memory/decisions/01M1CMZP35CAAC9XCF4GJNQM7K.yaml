@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1CMZP35CAAC9XCF4GJNQM7K
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00168
+summary: hrn-00168 | plan | five-Story reference decomposition | approved plan persisted and validated
+details: |-
+  Epic: hrn-00168
+  Phase: plan
+  Done: executable reference plan persisted; issue/document validation passed.
+  Stories: hrn-00180 Config File; hrn-00181 object-first Config Schema; hrn-00182 six-command reference; hrn-00183 eight-domain Skill Configuration; hrn-00184 provenance/drift gates.
+  Design: reuse approved doc-00015 v2 and doc-00016 v2; no new HLD/LLD. Config schema object-first; nested property tables; dotted paths only cross-references/errors.
+  Dependencies: 181->180; 183->180,181; 184->180,181,182,183.
+  Boundary: no Config/command/skill behavior changes; no Build, Verify, Release.
+source:
+  kind: artifact
+  ref: hrn-00168
+  revision: v1:f2be6a02eed6920bcff7bbc7904403912badf384948d4714db96d2d3dd0bb007
+created_at: 2026-08-31T19:33:20.101Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - commands
+  - config
+  - documentation
+  - plan
+  - skills

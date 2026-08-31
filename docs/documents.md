@@ -1,5 +1,27 @@
 # Documents
 
+## Configure document authority
+
+Harnessctl uses `skills.documents` to locate canonical design documents. The default keeps
+them in `.harnessctl/documents`, enables the document tools, and fixes IDs to the `doc-`
+prefix.
+
+```yaml
+version: 1
+skills:
+  documents:
+    enabled: true
+    root: .harnessctl/documents
+    prefix: doc-
+    provider:
+      type: filesystem
+      tools: document_id,document_create,document_list,document_get,document_update,document_version,document_validate,document_archive,document_restore
+```
+
+See the [Documents schema](config-schema.md#documents) for every field, default, provider
+shape, and constraint. Selecting a remote provider changes generated guidance; it does not
+turn local document tools into a remote API client.
+
 ## Repository Authority
 
 Canonical active design Markdown lives directly under the safe project-relative
