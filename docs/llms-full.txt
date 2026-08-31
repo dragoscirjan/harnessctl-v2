@@ -342,191 +342,301 @@ ownership and provider boundaries, see [CVS and MCP providers](cvs.md).
 
 Source: ./skills/
 
-# Generated skills
+# Skills
 
-Skills are generated Markdown instructions. They influence agent behavior but do not
-grant permissions, register tools, install provider CLIs, or create an authorization
-boundary. Tool availability comes from separately loaded host adapters.
+Harnessctl skills are generated Markdown guidance for coding agents. A skill can shape
+how an agent works, but its presence does not grant permission, register a tool or MCP
+server, provide credentials, or prove that an external provider is working.
 
-## Current implementation
+Use this catalog to choose guidance by outcome. Use [Skill Configuration](configuration.md)
+for exact settings, [Harnesses](harnesses.md) for host support, [MCP Servers](mcp-servers.md)
+for external capabilities, and [Node Modules](node-modules.md) for implementation packages.
 
-Harnessctl currently provides eight generated skills.
+## Choose by goal
 
-| Skill ID              | Configuration                                          | Installation                                             | Purpose                                                              |
-| --------------------- | ------------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------------- |
-| `sdlc-caveman`        | `skills.caveman.enabled` and `mode`                    | OpenCode when enabled; Pi always                         | Concise communication without losing exact technical substance       |
-| `sdlc-code-index`     | `skills.codeIndex`                                     | Each selected harness only when enabled                  | Relationship-aware retrieval with source verification and fallback   |
-| `sdlc-code`           | None                                                   | Always under each selected harness's `skills/` directory | Build-only clean-code policy plus conditional ecosystem references   |
-| `sdlc-memory`         | `skills.memory`, retrieval bounds, and repository root | OpenCode when enabled; Pi always                         | Safe retrieval and persistence of curated repository knowledge       |
-| `sdlc-issue-tracking` | `skills.issues.provider`, root, and prefix             | Always under each selected harness's `skills/` directory | Provider-exclusive local or remote issue workflow guidance           |
-| `sdlc-cvs`            | `skills.cvs.local` and validated remote provider       | Always under each selected harness's `skills/` directory | Direct Git/Jujutsu and provider-exclusive CLI/MCP guidance           |
-| `sdlc`                | Memory availability, retrieval bounds, and TDD setting | Always under each selected harness's `skills/` directory | Epic-first core policy plus progressively disclosed phase references |
-| `sdlc-develop-tdd`    | `skills.tdd.enabled`                                   | Each selected harness only when enabled                  | Red-Green-Refactor development guidance                              |
+| Goal                        | Skill                                         | Choose it when                                                                               |
+| --------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Run controlled SDLC phases  | [`sdlc`](#sdlc)                               | Work must stay inside explicit Plan, Build, Verify, Release, Continue, or Refresh boundaries |
+| Apply code guidance         | [`sdlc-code`](#sdlc-code)                     | Build work needs repository-aware language, framework, or artifact guidance                  |
+| Communicate concisely       | [`sdlc-caveman`](#sdlc-caveman)               | Responses should be compact without dropping technical substance                             |
+| Develop with tests first    | [`sdlc-develop-tdd`](#sdlc-develop-tdd)       | Implementation should follow Red-Green-Refactor                                              |
+| Retrieve code relationships | [`sdlc-code-index`](#sdlc-code-index)         | A configured code-index service can improve relationship and impact discovery                |
+| Reuse project knowledge     | [`sdlc-memory`](#sdlc-memory)                 | Confirmed decisions, events, facts, or lessons should survive sessions                       |
+| Manage work items           | [`sdlc-issue-tracking`](#sdlc-issue-tracking) | Issues must follow one configured local or remote authority                                  |
+| Work with version control   | [`sdlc-cvs`](#sdlc-cvs)                       | Local and remote version-control actions need provider-specific safety rules                 |
 
-Generated support-skill ownership is explicit in each renamed ID. The breaking rename
-map contains only five support skills:
+## Read availability precisely
 
-| Legacy ID        | Current ID            |
-| ---------------- | --------------------- |
-| `caveman`        | `sdlc-caveman`        |
-| `cvs`            | `sdlc-cvs`            |
-| `develop-tdd`    | `sdlc-develop-tdd`    |
-| `issue-tracking` | `sdlc-issue-tracking` |
-| `memory`         | `sdlc-memory`         |
+Harnessctl currently ships exactly eight skill templates for OpenCode and Pi. "Always"
+below means the skill is generated for each selected supported harness. "When enabled"
+means Config v1 controls generation. A retained file can remain discoverable after a
+feature is disabled; that does not mean the compiled SDLC policy will load it.
 
-The existing `sdlc`, `sdlc-code`, and `sdlc-code-index` IDs are retained unchanged and
-are never legacy migration targets.
+OpenCode and Pi support is currently `working`. Claude and Codex generation is `not
+implemented`; see [Harnesses](harnesses.md) for the shared support evidence and scope.
+All catalog statuses use the [status and evidence contract](status-and-evidence.md).
 
-Fresh installs generate only current IDs. A normal upgrade, including one using
-`--force`, detects the five legacy support roots without traversing them, preserves every
-entry byte-for-byte, and warns with their exact paths. Remove disclosed directories
-manually or pass `--replace-sdlc-skill-set` to delete the selected harnesses' legacy
-support trees transactionally. The flag discloses every affected root before mutation,
-rejects symlinks and special entries, and restores file bytes, file existence, and
-directory topology if installation fails. It never changes the functional
-`skills.codeIndex` configuration key, MCP IDs, commands, global skills, or an
-unselected host.
+## `sdlc`
 
-The retired `sdlc-documents` ID is not generated and is not part of the rename set. On
-each selected host, installation removes it transactionally only when the complete tree
-is the exact historical managed one-file output with the expected byte size and SHA-256.
-Modified, additional, special, unreadable, or symlink entries preserve the complete tree
-and produce an exact-path warning. This fingerprint rule also applies under `--force`.
+**Purpose:** Keep delivery Epic-first and separate Plan, Build, Verify, Release, Continue,
+and standalone Refresh work.
 
-Memory requires caveman. Every OpenCode installation registers
-`@harnessctl/opencode-tools@0.1.10` in `.opencode/opencode.json`; stale managed
-`@harnessctl/opencode-tools@...` entries are bumped to the packaged tools version. Config
-and issue tools therefore remain available even when memory is disabled. Older local
-plugin shims are retired. The memory skill receives only compiled retrieval limits and
-repository root, not the whole configuration.
+**Use when:** A repository change needs explicit scope, consent boundaries, authoritative
+evidence, phase separation, and a compact result.
 
-`sdlc-code` is always installed as byte-equivalent OpenCode and Pi trees containing one
-generic policy and 26 bundled references. Build loads the root once, then reads only
-references relevant to the confirmed files and repository context. Explicit repository
-policy and approved scope take precedence, followed by detected runtime, compiler,
-framework, version, and existing-tool constraints; ecosystem references and generic
-defaults apply only when higher-priority evidence is silent. Named tools are alternatives,
-not cumulative installation requirements, and no dependency or configuration is added
-unless the approved task requires it.
+**Expected result:** The agent loads one phase reference, performs only the confirmed
+phase, records bounded evidence, and stops before crossing into another phase.
 
-Dispatch uses file content, manifests, lockfiles, tool configuration, shebangs, and
-embedded-language declarations rather than extension alone. Ambiguous `.h` and `.sh`
-files require repository evidence. TSX combines TypeScript with React guidance only when
-React is established; Vue and Svelte select JavaScript or TypeScript from their script
-declarations. Documentation, data, configuration, markup, styles, and IaC receive only
-relevant guidance, not class-oriented rules by default. Harnessctl neither depends on nor
-modifies global skills under `~/.config/opencode`.
+**Availability:** Always generated for selected OpenCode and Pi hosts.
 
-GDScript dispatch uses `.gd` files plus Godot project evidence such as `project.godot` and
-the supported engine version. Its overlay preserves Godot lifecycle and resource ownership
-semantics and follows existing diagnostics rather than installing a new Godot toolchain.
+**Activation:** Core guidance is always available. Config compiles optional Memory, TDD,
+Code Index, Web Retrieval, and Documents context into the generated tree.
 
-TDD is disabled by default. When enabled, OpenCode and Pi receive byte-equivalent
-canonical skills at `.opencode/skills/sdlc-develop-tdd/SKILL.md` and
-`.pi/skills/sdlc-develop-tdd/SKILL.md`. Build guidance then loads
-`sdlc-develop-tdd` before
-implementation and requires observable Red, Green, and Refactor steps. No TDD skill or
-instruction is generated on a fresh disabled install. Disabling TDD does not delete,
-modify, warn about, or track ownership of an existing skill. A skill left by an earlier
-enabled install remains available for manual use but is dormant: the Build reference
-still loads `sdlc-code`, but its compiled policy does not load or enforce
-`sdlc-develop-tdd`.
+**Prerequisites:** An authoritative Epic for lifecycle phases. Refresh is standalone and
+does not require or mutate an Epic. See [Harnessctl SDLC](sdlc.md) and the
+[command reference](command-reference.md).
 
-SDLC code indexing is disabled by default. Enabled OpenCode and Pi selections receive
-byte-equivalent canonical skills at
-`.opencode/skills/sdlc-code-index/SKILL.md` and
-`.pi/skills/sdlc-code-index/SKILL.md`. The skill receives only the validated external MCP
-server name. It treats results as advisory retrieval evidence, verifies findings against
-repository sources, and uses Glob/Grep when the service is unavailable, stale,
-incomplete, or unsuitable. Ordinary Plan, Build, Verify, Release, and Continue use it
-for retrieval only. The sole `work-refresh` exception may invoke an exact supported
-repository-scoped refresh operation after live-schema inspection and fresh consent. It
-grants no installation, setup, startup, configuration, watching, clearing, deletion,
-reset, model, credential, database, remote, destructive, or general lifecycle authority.
-When code indexing is enabled, the always-installed SDLC core loads
-`sdlc-code-index` when
-the skill is available and relationship-aware codebase retrieval or impact analysis is
-relevant. When disabled, the compiled core explicitly refuses to load a discoverable
-retained copy and continues with direct source discovery, Glob, Grep, and file reads.
-The compiled Refresh reference also loads `sdlc-code-index` before code-index discovery,
-uses only its configured server and boundaries, and refuses alternate providers or routes.
+**Limits:** The skill does not approve work, create permissions, merge, deploy, operate a
+provider, or make retrieved instructions authoritative.
 
-A fresh disabled install creates no code-index skill. Code-index configuration does not
-inspect or change code-index MCP entries; unrelated generic CVS and issue MCP projection
-remains active and unchanged. Disabling after an enabled install does not delete or
-modify the existing skill. Instead, harnessctl emits one warning for each selected host
-whose discoverable file remains active-capable, naming
-`.opencode/skills/sdlc-code-index/SKILL.md` or
-`.pi/skills/sdlc-code-index/SKILL.md` for manual removal. Harnessctl never deletes it
-automatically. Every external MCP registration, process, package, index, credential, and
-data store remains user-owned.
+**Status:** `working` for OpenCode and Pi; Claude and Codex are `not implemented`.
 
-All six compact SDLC command shells are rendered under `.opencode/commands/` or the
-official Pi `.pi/prompts/` path. Each shell loads the SDLC skill and exactly one normal
-command reference. The SDLC tree contains 14 references. Conditional references are
-loaded only when their named condition occurs. Memory policy is compiled once into
-`sdlc/references/checkpoint.md`, not repeated inside every command.
+**Evidence:** Source: the canonical
+[`sdlc` template and phase references](../src/harnessctl/templates/skills/sdlc/SKILL.md.j2).
+Automated test: template, installation, command, and release-artifact contract suites.
 
-OpenCode and Pi adapter packages expose generic configuration, filesystem issue,
-repository-local Documents, and repository-memory tools. Documents lifecycle guidance is
-part of the existing SDLC Plan reference, not a separate skill. Pi installs
-`npm:@harnessctl/pi-tools@0.1.10`, bumping stale managed `npm:@harnessctl/pi-tools@...`
-entries to the packaged tools version, and installs
-`npm:@juicesharp/rpiv-ask-user-question@2.7.1` project-locally. The former's
-`pi.extensions` manifest loads the harnessctl tool registrations; the latter provides
-the `ask_user_question` option picker in interactive Pi sessions.
+## `sdlc-code`
 
-The issue-tracking skill is self-contained and provider-specific. Filesystem mode
-documents normalized harnessctl tools and revision handling. Remote modes always document
-the configured provider's valid CLI capabilities and add MCP capabilities only when
-`mcpName` yields an available projection. The skill does not install a CLI, perform login,
-store credentials, invoke commands itself, or add a remote adapter.
+**Purpose:** Apply portable clean-code policy and only the ecosystem guidance relevant to
+the confirmed Build slice.
 
-The CVS skill receives only validated local authority, provider, CLI, URL,
-environment-variable name, optional configured MCP ID, and the valid capabilities exposed
-by each route. It keeps Git or Jujutsu local and lets the agent choose CLI or an available
-MCP projection for each remote operation after checking repository context and live
-capability. The choice must be made before mutation and cannot change after mutation
-begins. It requires fresh consent immediately before merge and never receives an
-environment value or the complete configuration. CVS and remote Issues remain independent
-policy owners.
+**Use when:** Build changes touch a detected language, framework, shell, documentation
+format, or infrastructure artifact.
 
-A complete example generating strict caveman and GitHub issue guidance is:
+**Expected result:** Repository policy and approved scope remain primary; applicable
+guidance is selected from 26 bundled subjects without installing a toolchain or imposing
+irrelevant patterns.
 
-```yaml
-version: 1
-skills:
-  caveman:
-    enabled: true
-    mode: strict
-  memory:
-    enabled: false
-  issues:
-    provider:
-      type: github
-      tools: gh
-      mcpName: sdlc_cvs_github
-      url: https://github.com
-      token_env: GH_TOKEN
-```
+**Availability:** Always generated as byte-equivalent trees for selected OpenCode and Pi
+hosts.
 
-The complete remote `skills.issues.provider` mapping is required; filesystem rejects Git
-connection fields. The token value belongs
-only in the named environment variable, never YAML. `skills.issues.root` and `skills.issues.prefix`
-are filesystem-only and ignored remotely.
+**Activation:** Build loads the root once and reads only references justified by current
+files and repository evidence. There is no Config v1 enable switch; see
+[Harnessctl SDLC](sdlc.md) for the phase that applies this guidance.
 
-OpenCode host MCP entries are merged into `.opencode/opencode.json`. Pi host entries and
-the verified per-call output guard are merged into `.pi/mcp.json` when the exact external
-MIT `npm:pi-mcp-adapter@2.26.0` prerequisite is present or separately consented to.
-These host files register routes; they do not grant authentication, prove capability,
-or install provider CLIs, official MIT `gitea-mcp` 1.6.0, or external GPL
-`forgejo-mcp` 2.33.0.
+**Prerequisites:** A confirmed Build slice and enough repository evidence to identify the
+actual ecosystem. Ambiguous files require further discovery rather than a guess.
 
-Pi uses the official `.pi/skills/<name>/SKILL.md` discovery path for generated skills.
-Issue guidance is written to `.opencode/skills/sdlc-issue-tracking/SKILL.md` or
-.pi/skills/sdlc-issue-tracking/SKILL.md`. No Documents agent or skill is generated.
-See [issues](issues.md), [documents](documents.md), [CVS and MCP providers](cvs.md), and
-[code intelligence](code-intelligence.md).
+**Limits:** Named tools are alternatives, not cumulative requirements. The skill does not
+add dependencies, replace project tooling, broaden scope, or own global skills.
+
+**Status:** `working` for OpenCode and Pi; Claude and Codex are `not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-code` template](../src/harnessctl/templates/skills/sdlc-code/SKILL.md.j2) and its 26
+bundled references. Automated test: template-resource, installation, and release-artifact
+contract suites.
+
+## `sdlc-caveman`
+
+**Purpose:** Make communication concise while preserving exact technical substance.
+
+**Use when:** Responses should remove filler and repetition without losing names, code,
+commands, errors, constraints, evidence, or uncertainty.
+
+**Expected result:** Strict mode uses terse technical fragments; balanced mode uses concise
+professional sentences. Safety warnings and ordered instructions expand when compression
+could cause mistakes.
+
+**Availability:** Generated for OpenCode when `skills.caveman.enabled` is true. Generated
+for Pi regardless of that switch, using the configured mode.
+
+**Activation:** Configure mode and OpenCode generation through
+[Caveman configuration](caveman.md). The default is enabled, strict mode.
+
+**Prerequisites:** None for communication alone. Repository Memory requires Caveman to be
+enabled because stored summaries use its compression rules.
+
+**Limits:** Concision never weakens consent, safety, evidence, or authority rules and never
+imposes a hard word or token limit.
+
+**Status:** `working` for the documented OpenCode and Pi conditions; Claude and Codex are
+`not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-caveman` template](../src/harnessctl/templates/skills/sdlc-caveman/SKILL.md.j2).
+Automated test: strict/balanced rendering and host-installation contract suites.
+
+## `sdlc-develop-tdd`
+
+**Purpose:** Enforce Red-Green-Refactor for each implementation behavior slice.
+
+**Use when:** The user requests test-driven development or `skills.tdd.enabled` activates
+it for Build.
+
+**Expected result:** Tests fail first for the right reason, minimum implementation makes
+them pass, and behavior-preserving refactoring keeps them green.
+
+**Availability:** Generated for selected OpenCode and Pi hosts only when TDD is enabled.
+
+**Activation:** Enable it through [TDD configuration](tdd.md). Disabling TDD does not delete
+a previously generated file; the compiled Build guidance leaves that retained copy dormant.
+
+**Prerequisites:** A confirmed Build slice with an observable behavior that can be tested.
+
+**Limits:** The skill does not choose or install a test framework, change runtime policy,
+mock internal logic, or authorize implementation outside the confirmed slice.
+
+**Status:** `working` when enabled for OpenCode or Pi; Claude and Codex are `not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-develop-tdd` template](../src/harnessctl/templates/skills/sdlc-develop-tdd/SKILL.md.j2).
+Automated test: enabled, disabled, retained-file, Build-guidance, and host-installation
+contract suites.
+
+## `sdlc-code-index`
+
+**Purpose:** Use a configured code-index MCP service for advisory relationship and impact
+retrieval while keeping repository source authoritative.
+
+**Use when:** Relationship-aware symbol, caller, dependency, execution-flow, or impact
+evidence would improve discovery.
+
+**Expected result:** The agent inspects live schemas, queries the configured service
+narrowly, verifies material findings against source, and falls back to direct search when
+the service is unavailable, stale, incomplete, or unsuitable.
+
+**Availability:** Generated for selected OpenCode and Pi hosts only when Code Index is
+enabled.
+
+**Activation:** Configure the switch and MCP declaration through
+[Code Index configuration](code-intelligence.md). A retained disabled copy can remain
+discoverable, but compiled SDLC guidance refuses to load it and Harnessctl warns instead of
+deleting it.
+
+**Prerequisites:** The configured MCP name must resolve in the effective registry. The
+operator owns service installation, startup, credentials, index data, and availability.
+
+**Limits:** Ordinary lifecycle phases use retrieval only. A repository-scoped refresh is
+allowed only through the explicit Refresh exception, live capability evidence, and fresh
+consent. Skill presence does not register or operate the server.
+
+**Status:** `working` when enabled for OpenCode or Pi; external provider operation remains
+separate evidence. Claude and Codex are `not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-code-index` template](../src/harnessctl/templates/skills/sdlc-code-index/SKILL.md.j2).
+Automated test: enabled, disabled, dormant-warning, fallback, projection, and host-installation
+contract suites.
+
+## `sdlc-memory`
+
+**Purpose:** Retrieve and preserve concise, curated project knowledge without replacing
+current repository authority.
+
+**Use when:** Confirmed decisions, events, reusable facts, or repeatable lessons should be
+available across sessions or lifecycle phases.
+
+**Expected result:** Retrieval stays narrow and bounded; persistence stores one confirmed
+item with provenance; corrections preserve history through supersession.
+
+**Availability:** Generated for OpenCode when `skills.memory.enabled` is true. Generated for
+Pi regardless of that switch, with configured retrieval bounds and repository root.
+
+**Activation:** Enable and bound project memory through
+[Memory configuration](memory.md). Core SDLC checkpoint hooks follow the configured Memory
+switch even when a Pi skill file is discoverable.
+
+**Prerequisites:** Caveman must be enabled. The repository backend is the only implemented
+canonical backend; its local cache remains disposable.
+
+**Limits:** Memory is advisory. It cannot prove current state, store secrets or transcripts,
+override source, or broaden scope and consent.
+
+**Status:** `working` for repository memory under the documented OpenCode and Pi conditions;
+other backends remain `not implemented`. Claude and Codex are `not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-memory` template](../src/harnessctl/templates/skills/sdlc-memory/SKILL.md.j2).
+Automated test: configuration dependency, bounded rendering, persistence-tool, and
+host-installation contract suites.
+
+## `sdlc-issue-tracking`
+
+**Purpose:** Keep issue reads and mutations inside one configured filesystem or remote
+provider authority.
+
+**Use when:** Work needs initiatives, Epics, Stories, Tasks, Bugs, comments, relationships,
+status transitions, or provider issue operations.
+
+**Expected result:** The generated skill exposes only configured routes, requires exact
+revision evidence where applicable, verifies provider context and capabilities, and stops
+on ambiguity or terminal mutation results.
+
+**Availability:** Always generated for selected OpenCode and Pi hosts.
+
+**Activation:** Select filesystem or remote behavior through
+[Issues configuration](issues.md). Provider-specific CLI and optional MCP context are
+compiled into the skill.
+
+**Prerequisites:** A valid configured provider and its declared tools. Remote work also
+requires explicit repository context and authentication outside the skill.
+
+**Limits:** The skill does not install a CLI, log in, store credentials, switch providers,
+retry ambiguous mutations through another route, or make issue content authoritative.
+
+**Status:** `working` for configured filesystem and supported remote routes on OpenCode and
+Pi; live provider capability still requires current evidence. Claude and Codex are `not
+implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-issue-tracking` template](../src/harnessctl/templates/skills/sdlc-issue-tracking/SKILL.md.j2).
+Automated test: provider rendering, revision safety, remote routing, migration, and
+host-installation contract suites.
+
+## `sdlc-cvs`
+
+**Purpose:** Apply safe local and remote version-control rules using only configured tools.
+
+**Use when:** Work needs status or diff inspection, branching, commits, pushes, pull or merge
+requests, reviews, or another provider-backed version-control operation.
+
+**Expected result:** Local operations use the configured VCS; remote operations choose one
+verified CLI or MCP route before mutation; merge always requires fresh explicit consent.
+
+**Availability:** Always generated for selected OpenCode and Pi hosts.
+
+**Activation:** Select local VCS and remote provider routes through
+[CVS configuration](cvs.md). Optional MCP context is compiled only when its configured
+declaration is available.
+
+**Prerequisites:** Valid local repository context. Remote operations require the configured
+provider, repository, authentication, and live capability evidence.
+
+**Limits:** The skill does not configure remotes, install or authenticate provider tools,
+expose credential values, infer commands, retry a mutation through another route, publish
+without request, or merge without fresh consent.
+
+**Status:** `working` for configured OpenCode and Pi routes; remote provider operation
+remains separate evidence. Claude and Codex are `not implemented`.
+
+**Evidence:** Source: the canonical
+[`sdlc-cvs` template](../src/harnessctl/templates/skills/sdlc-cvs/SKILL.md.j2).
+Automated test: provider rendering, credential boundaries, remote routing, merge consent,
+and host-installation contract suites.
+
+## Compatibility notes
+
+Fresh installs generate only canonical IDs. Five legacy support IDs map to current names:
+`caveman` to `sdlc-caveman`, `cvs` to `sdlc-cvs`, `develop-tdd` to
+`sdlc-develop-tdd`, `issue-tracking` to `sdlc-issue-tracking`, and `memory` to
+`sdlc-memory`. Existing `sdlc`, `sdlc-code`, and `sdlc-code-index` IDs are unchanged.
+
+Legacy trees are preserved unless the operator explicitly requests the bounded replacement
+workflow. The retired `sdlc-documents` output is not a current skill: Documents and Web
+Retrieval are configuration domains compiled into SDLC behavior. See
+[Documents configuration](documents.md) and
+[Web Retrieval configuration](web-retrieval.md).
 
 ---
 

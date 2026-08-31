@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-00186"
+"type": "story"
+"title": "Enforce Skills catalog inventory and evidence gates"
+"status": "done"
+"created_at": "2026-08-31T21:37:55.109Z"
+"updated_at": "2026-08-31T21:58:22.714Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00169"
+"depends_on":
+  - "hrn-00185"
+"metadata":
+  "estimate": "S-M"
+  "order": 2
+  "scope": "skills-catalog-gates"
+"body": "# Enforce Skills catalog inventory and evidence gates\n\n## Objective\n\nPrevent the public Skills catalog from drifting away from the shipped skill registry, templates, host behavior, status semantics, or owned cross-references.\n\n## Scope\n\n- Replace brittle implementation-prose assertions with focused catalog-contract tests.\n- Enforce exact parity among canonical skill IDs, root skill templates, and catalog entry headings.\n- Require every entry's purpose, use condition, expected result, host availability, activation, prerequisites, limits, status, and evidence fields.\n- Protect OpenCode and Pi support differences and optional or dormant behavior against current installer authority.\n- Enforce shared status vocabulary, adjacent evidence, configuration and catalog ownership boundaries, and required cross-links.\n- Regenerate and check deterministic `llms.txt` and `llms-full.txt` outputs after catalog changes.\n- Keep strict MkDocs, formatting, links, and focused documentation checks green.\n\n## Acceptance Criteria\n\n- Adding, removing, or renaming a registered root skill without updating the catalog fails.\n- Removing a required entry field or using an unsupported status fails.\n- Stale OpenCode or Pi availability and activation claims fail focused checks.\n- Catalog text cannot imply that a generated skill grants permission, registers a server or tool, authenticates, or proves provider operation.\n- Exact configuration contracts remain owned by Skill Configuration pages; module and MCP details remain linked to their catalogs.\n- Broken ownership links, stale LLM indexes, malformed navigation, formatting defects, or strict MkDocs failures block completion.\n- Existing supported facts remain protected through behavioral contracts rather than incidental prose snapshots.\n\n## Dependencies And Order\n\nParent: `hrn-00169`. Order 2. Depends on `hrn-00185` because gates enforce the completed catalog contract.\n\n## Artifacts\n\nExpected artifacts: focused documentation tests and regenerated deterministic LLM indexes. The public catalog remains owned by `hrn-00185`.\n\n## Estimate And Uncertainty\n\nEstimate S-M. Main uncertainty is expressing host support checks without duplicating installer implementation logic in tests.\n\n## Non-Goals\n\nDo not change skill behavior, installation, configuration, providers, status vocabulary, or unrelated documentation gates. Do not add a new generator unless exact source parity cannot be enforced clearly with existing test infrastructure."
+"comments":
+  - "id": "hrn-00186-C0001"
+    "created_at": "2026-08-31T21:57:17.191Z"
+    "created_by": "OpenCode"
+    "body": "Build evidence: replaced legacy prose-coupled Skills assertions with source-derived gates. `docs/skills.md` must match the exact eight IDs in `SKILL_IDS`, root templates, nine-field entry contract, OpenCode/Pi activation differences, ownership links, status/evidence fields, resource counts, legacy mappings, and skill/config/module/MCP/tool/permission distinctions. Regenerated `docs/llms.txt` and `docs/llms-full.txt`. Fresh checks passed: 39 docs tests; full `mise run quality`; 714 Python tests; Node, package, ESLint, Ruff, contracts, Mermaid, actionlint, shellcheck, vulture, duplication threshold, deterministic generators, strict MkDocs, Prettier, release artifacts, and Git diff checks. No Verify, Release, remote action, commit, deployment, Epic closure, runtime/config/skill behavior change."

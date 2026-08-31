@@ -11,6 +11,13 @@ from pathlib import Path
 import pytest
 import yaml
 
+from harnessctl.templates import (
+    SKILL_ID_MIGRATIONS,
+    SKILL_IDS,
+    SKILL_RESOURCE_TEMPLATES,
+    SKILL_TEMPLATES,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 PROVIDER_EVIDENCE_POLICY = ROOT / ".harnessctl" / "tasks" / "hrn-00110" / "evidence-policy.md"
@@ -158,6 +165,27 @@ STRUCTURAL_STUBS = {
     "sdlc-introduction.md": ("Introduction to SDLC", "hrn-00170"),
     "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
 }
+SKILL_ENTRY_FIELDS = (
+    "Purpose",
+    "Use when",
+    "Expected result",
+    "Availability",
+    "Activation",
+    "Prerequisites",
+    "Limits",
+    "Status",
+    "Evidence",
+)
+SKILL_CONFIGURATION_LINKS = {
+    "sdlc": "command-reference.md",
+    "sdlc-code": "sdlc.md",
+    "sdlc-caveman": "caveman.md",
+    "sdlc-develop-tdd": "tdd.md",
+    "sdlc-code-index": "code-intelligence.md",
+    "sdlc-memory": "memory.md",
+    "sdlc-issue-tracking": "issues.md",
+    "sdlc-cvs": "cvs.md",
+}
 
 
 class _MkDocsConfigLoader(yaml.SafeLoader):
@@ -173,6 +201,16 @@ _MkDocsConfigLoader.add_multi_constructor(
 def _provider_section(document: str, provider: str) -> str:
     match = re.search(
         rf"^## {re.escape(provider)}\n(?P<section>.*?)(?=^## |\Z)",
+        document,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert match is not None
+    return match.group("section")
+
+
+def _skill_section(document: str, skill_id: str) -> str:
+    match = re.search(
+        rf"^## `{re.escape(skill_id)}`\n(?P<section>.*?)(?=^## |\Z)",
         document,
         re.MULTILINE | re.DOTALL,
     )
@@ -726,11 +764,9 @@ def test_docs_describe_standalone_refresh_contract() -> None:
 
 
 def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
-    skills = (DOCS / "skills.md").read_text(encoding="utf-8")
     issues = (DOCS / "issues.md").read_text(encoding="utf-8")
     memory = (DOCS / "memory.md").read_text(encoding="utf-8")
 
-    assert ".opencode/skills/sdlc-issue-tracking/SKILL.md" in skills
     for provider in ("filesystem", "github", "gitlab", "gitea", "forgejo"):
         assert provider in issues.lower()
     for backend in ("libsql", "mem0", "graphiti", "custom"):
@@ -758,12 +794,9 @@ def test_docs_describe_configurable_tdd_behavior() -> None:
     sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
     normalized_sdlc = " ".join(sdlc.split())
 
-    for path in (
-        ".opencode/skills/sdlc-develop-tdd/SKILL.md",
-        ".pi/skills/sdlc-develop-tdd/SKILL.md",
-    ):
-        assert path in skills
-    assert "does not delete" in skills
+    tdd_entry = _skill_section(skills, "sdlc-develop-tdd")
+    assert "Generated for selected OpenCode and Pi hosts only when TDD is enabled" in tdd_entry
+    assert "does not delete" in tdd_entry
     assert "leaves any previously installed TDD skill dormant" in normalized_sdlc
     assert "`skills.tdd.enabled`" in sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
@@ -870,6 +903,66 @@ def test_skill_configuration_routes_match_config_v1_domains() -> None:
     assert set(domain_pages.values()).issubset(nav_pages)
 
 
+def test_skills_catalog_matches_registry_templates_and_entry_contract() -> None:
+    catalog = (DOCS / "skills.md").read_text(encoding="utf-8")
+    template_root = ROOT / "src" / "harnessctl" / "templates" / "skills"
+    registered = set(SKILL_IDS)
+    template_ids = {path.parent.name for path in template_root.glob("*/SKILL.md.j2")}
+    headings = re.findall(r"^## `([^`]+)`$", catalog, re.MULTILINE)
+
+    _assert_exact_set(set(headings), registered, "Skills catalog")
+    _assert_exact_set(template_ids, registered, "skill templates")
+    _assert_exact_set(set(SKILL_TEMPLATES), registered, "skill registry")
+    assert len(headings) == len(registered) == 8
+
+    availability_contracts = {
+        "sdlc": "Always generated for selected OpenCode and Pi hosts",
+        "sdlc-code": "Always generated as byte-equivalent trees for selected OpenCode and Pi hosts",
+        "sdlc-caveman": (
+            "Generated for OpenCode when `skills.caveman.enabled` is true. "
+            "Generated for Pi regardless"
+        ),
+        "sdlc-develop-tdd": "Generated for selected OpenCode and Pi hosts only when TDD is enabled",
+        "sdlc-code-index": (
+            "Generated for selected OpenCode and Pi hosts only when Code Index is enabled"
+        ),
+        "sdlc-memory": (
+            "Generated for OpenCode when `skills.memory.enabled` is true. "
+            "Generated for Pi regardless"
+        ),
+        "sdlc-issue-tracking": "Always generated for selected OpenCode and Pi hosts",
+        "sdlc-cvs": "Always generated for selected OpenCode and Pi hosts",
+    }
+    for skill_id in registered:
+        section = _skill_section(catalog, skill_id)
+        labels = re.findall(r"^\*\*([^:]+):\*\*", section, re.MULTILINE)
+        assert labels == list(SKILL_ENTRY_FIELDS)
+        assert availability_contracts[skill_id] in " ".join(section.split())
+        assert f"skills/{skill_id}/SKILL.md.j2" in section
+        assert SKILL_CONFIGURATION_LINKS[skill_id] in section
+        assert "**Status:**" in section
+        assert "**Evidence:** Source:" in section
+        assert "Automated test:" in section
+        assert f"](#{skill_id})" in catalog
+
+    assert len(SKILL_RESOURCE_TEMPLATES["sdlc-code"]) == 26
+    assert len(SKILL_RESOURCE_TEMPLATES["sdlc"]) == 14
+    assert "26 bundled subjects" in catalog
+    for legacy_id, canonical_id in SKILL_ID_MIGRATIONS.items():
+        assert f"`{legacy_id}` to `{canonical_id}`" in " ".join(catalog.split())
+
+    for distinction in (
+        "does not grant permission",
+        "register a tool or MCP server",
+        "provide credentials",
+        "prove that an external provider is working",
+        "OpenCode and Pi support is currently `working`",
+        "Claude and Codex generation is `not implemented`",
+        "Documents and Web Retrieval are configuration domains",
+    ):
+        assert distinction in " ".join(catalog.split())
+
+
 def test_current_config_examples_use_v1_paths_and_document_root_semantics() -> None:
     memory = (DOCS / "memory.md").read_text(encoding="utf-8")
     code_index = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
@@ -890,13 +983,9 @@ def test_docs_describe_sdlc_code_guidance_and_installation() -> None:
     normalized = " ".join((skills + sdlc + root).split())
 
     for phrase in (
-        "26 bundled references",
-        "Explicit repository policy and approved scope take precedence",
-        "Named tools are alternatives, not cumulative installation requirements",
-        "Ambiguous `.h` and `.sh` files require repository evidence",
-        "TSX combines TypeScript with React guidance only when React is established",
-        "GDScript dispatch uses `.gd` files plus Godot project evidence",
-        "byte-equivalent OpenCode and Pi trees",
+        "26 bundled subjects",
+        "byte-equivalent trees for selected OpenCode and Pi hosts",
+        "Named tools are alternatives, not cumulative requirements",
         "global skills under `~/.config/opencode`",
     ):
         assert phrase in normalized
@@ -911,23 +1000,14 @@ def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
     guide = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
     root = (ROOT / "README.md").read_text(encoding="utf-8")
     normalized = " ".join(guide.split())
-    normalized_skills = " ".join(skills.split())
+    code_index_entry = " ".join(_skill_section(skills, "sdlc-code-index").split())
 
     assert "`skills.codeIndex` mapping" in guide
     assert "`mcpName`" in guide
     assert "`cvs_` is permitted" in normalized
-    for path in (
-        ".opencode/skills/sdlc-code-index/SKILL.md",
-        ".pi/skills/sdlc-code-index/SKILL.md",
-    ):
-        assert path in skills
-    assert "byte-equivalent" in skills
-    assert "loads `sdlc-code-index`" in " ".join(skills.split())
-    assert "never deletes it automatically" in " ".join(skills.lower().split())
-    assert "remains active-capable" in skills
-    assert "does not inspect or change host MCP entries" not in normalized_skills
-    assert "does not inspect or change code-index MCP entries" in normalized_skills
-    assert "generic CVS and issue MCP projection remains active" in normalized_skills
+    assert "retained disabled copy can remain discoverable" in code_index_entry
+    assert "compiled SDLC guidance refuses to load it" in code_index_entry
+    assert "does not register or operate the server" in code_index_entry
     assert "does not register or run that server" in normalized
     assert "user-owned under normal, forced, migration, and rollback paths" in normalized
     assert "advisory retrieval evidence, never source authority" in normalized
@@ -1309,8 +1389,8 @@ def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> N
     ):
         assert removed not in current_docs
     assert "Git provider mappings are accepted configuration" in normalized_documents
-    assert "currently provides eight generated skills" in skills
-    assert "No Documents agent or skill is generated" in skills
+    assert "exactly eight skill templates" in skills
+    assert "Documents and Web Retrieval are configuration domains" in " ".join(skills.split())
 
 
 def test_current_design_links_use_canonical_documents_paths() -> None:
