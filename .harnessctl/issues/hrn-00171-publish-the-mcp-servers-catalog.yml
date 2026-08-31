@@ -1,0 +1,17 @@
+"version": 1
+"id": "hrn-00171"
+"type": "epic"
+"title": "Publish the MCP Servers catalog"
+"status": "open"
+"created_at": "2026-08-30T21:01:07.822Z"
+"updated_at": "2026-08-31T16:53:26.016Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 5
+"body": "# Publish the MCP Servers catalog\n\n## Objective\n\nExplain each additional MCP server harnessctl supports, what capabilities it provides, what users must supply or operate, and its evidence-backed status.\n\n## Scope\n\n- Introduce MCP and its role in harnessctl-supported workflows.\n- Catalog every added MCP server with purpose, capability inventory, supported tools/resources, prerequisites, authentication ownership, lifecycle ownership, limitations, fallbacks, provenance, and status.\n- Provide one copyable end-to-end declaration-to-use path without duplicating Config or Skill Configuration references.\n- Explain relationships among declarations, selected harness registration, skills, modules, tools, resources, provider processes, and returned data.\n- Use compact capability and parameter tables where they improve comparison.\n\n## Acceptance Criteria\n\n- Every configured or distributed MCP server is represented once with evidence-backed support status.\n- Users can determine what harnessctl configures versus what they must install, authenticate, start, maintain, or trust.\n- Entries distinguish configured declarations, registered tools, authenticated providers, successful operation, and stale/unavailable results.\n- Examples use verified Config v1 syntax and contain no credentials.\n- Exact configuration and skill details are linked rather than copied.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`; Config, Skills, and Node Modules cross-links are non-blocking.\n\nDo not install, start, watch, refresh, delete, authenticate to, or otherwise operate external MCP providers."
+"comments": []

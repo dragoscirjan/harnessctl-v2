@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M1ABJQHWNC71A9BBCQ7GB1PF
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc
+summary: hrn-00167 | Build YOLO | human-first site + replan complete; focused checks pass
+details: |-
+  Epic: hrn-00167
+  Phase: Build YOLO
+  Done: Home targets people using LLMs; Getting Started + Harnesses added; nav exposes SDLC, Configuration, Skills in order. Harness statuses: OpenCode/Pi working; Claude/Codex not implemented. Public docs contain no Python-specific terms/paths/commands or contributor/SDLC-development guidance. Mermaid custom fence + pinned 11.16.1 browser module retained; built SDLC HTML contains mermaid fence + module script.
+  Verification: docs 29/29; Ruff; Prettier; strict MkDocs build; Mermaid 6/6; diff check pass. Browser SVG smoke remains Verify-only because Playwright Chrome absent.
+  Authority: hrn-00167-00171 replanned around human outcomes; hrn-00168 object-first Config reference; no install-command exception. hrn-00167-00174 + doc-00017 valid. hrn-00172/00173/00174 remain in_progress pending formal Verify/closure consent.
+  Blocker: full quality retains pre-existing unrelated Prettier failures in `.opencode/opencode.json` and `.pi/settings.json`; untouched.
+  No closure, commit, remote mutation, Verify, Release, deployment, or destructive work performed.
+source:
+  kind: tool-observation
+  ref: null
+  revision: null
+created_at: 2026-08-30T22:10:29.564Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1AAS9FSHMQ5Q6JA56WA5CPQ
+tags:
+  - build
+  - checkpoint
+  - documentation
+  - human-first
+  - mermaid
+  - sdlc

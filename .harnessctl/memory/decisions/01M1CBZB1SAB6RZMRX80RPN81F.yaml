@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1CBZB1SAB6RZMRX80RPN81F
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00166
+summary: hrn-00166 | plan | Initiative decomposition | Approved website IA persisted as 9 Epics; canonical issue validation passed.
+details: "Order: hrn-00167 foundation; hrn-00175 home/onboarding; hrn-00170 SDLC guides; hrn-00176 harnesses; hrn-00169 Skills; hrn-00177 Node Modules; hrn-00171 MCP Servers; hrn-00168 config/command/skill references; hrn-00178 troubleshooting/FAQ/changelog. All content Epics depend only on hrn-00167; cross-links non-blocking. No Build/Verify/Release. Legacy metadata.order values on older Epics remain non-unique because configured issue API lacks arbitrary metadata update; Initiative body owns order."
+source:
+  kind: artifact
+  ref: hrn-00166
+  revision: v1:dbb859c8c0b551c8f7261faa6eb1131d6d8caa73881a220b1ce4636c6d1ddc7e
+created_at: 2026-08-31T16:55:51.609Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - initiative
+  - plan
+  - sdlc

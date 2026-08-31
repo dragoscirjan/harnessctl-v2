@@ -73,7 +73,7 @@ live handshake or first-party Pi support.
 
 ### 1. Status and version
 
-**Ambiguous.** PyPI and source identify `codegraphcontext` `0.6.5`, while the matching
+**Ambiguous.** The package registry and source identify `codegraphcontext` `0.6.5`, while the matching
 GitHub release identity was not found and the checked release is `v0.5.7`. [CGC-01]-[CGC-03]
 
 ### 2. License
@@ -84,9 +84,8 @@ Licenses for dependencies, optional databases, bundles, and hosted services are
 
 ### 3. Install and update
 
-The registry documents Python 3.10+ and package `codegraphcontext==0.6.5`; installation
-or upgrade remains a user-owned package-manager action and was not tested. [CGC-01],
-[CGC-20]
+The registry documents package `codegraphcontext==0.6.5`; installation or upgrade remains
+a user-owned package-manager action and was not tested. [CGC-01], [CGC-20]
 
 ### 4. MCP applicability
 
@@ -147,7 +146,6 @@ user's responsibility. [CGC-19], [CGC-U11]
 
 Full records: [CGC-01 through CGC-20 and CGC-U01 through CGC-U13](../.harnessctl/tasks/hrn-00111/research.md#codegraphcontext).
 Key official evidence includes the
-[0.6.5 registry record](https://pypi.org/pypi/codegraphcontext/0.6.5/json) and
 [versioned MCP setup](https://github.com/CodeGraphContext/CodeGraphContext/blob/39557ada8ea88dfe23ff54cef1df1bedfa542b9a/docs/docs/getting-started/mcp-setup.md).
 
 ## GitNexus
@@ -233,7 +231,7 @@ and [storage source](https://github.com/abhigyanpatwari/GitNexus/blob/4227194ad7
 
 ### 1. Status and version
 
-**Ambiguous:** PyPI/source identify `graphifyy` `0.9.48`, but its security policy's
+**Ambiguous:** the package registry and source identify `graphifyy` `0.9.48`, but its security policy's
 supported-version table names `0.3.x`. [GF-01]-[GF-03]
 
 ### 2. License
@@ -244,27 +242,26 @@ services/models are **Unknown**. [GF-04]-[GF-06], [GF-U01]
 
 ### 3. Install and update
 
-The MCP dependency is the `graphifyy[mcp]` extra. Provider docs describe uv-managed
-installation/update, but no command was run and package lifecycle remains user-owned.
+The MCP dependency is the `graphifyy[mcp]` extra. Provider docs describe installation and
+update, but no command was run and package lifecycle remains user-owned.
 [GF-07]
 
 ### 4. MCP applicability
 
-**Supported:** with the MCP extra and an existing graph, the documented stdio command is
-`python -m graphify.serve graphify-out/graph.json`; a `graphify-mcp` script also exists.
+**Supported:** with the MCP extra and an existing graph, the documented stdio launcher is
+`graphify-mcp`.
 [GF-07], [GF-08], [GF-28]
 
 ### 5. OpenCode
 
-**Supported**, untested user-owned composition: command array
-`["python", "-m", "graphify.serve", "graphify-out/graph.json"]` under a selected local
-key such as `graphify`. [GF-08], [GF-09]
+**Supported**, untested user-owned composition: command array `["graphify-mcp"]` under a
+selected local key such as `graphify`. [GF-08], [GF-09]
 
 ### 6. Pi
 
 Pi core is **Unsupported**; a Graphify Pi skill is not native MCP. Adapter 2.26.0
-composition is **Supported**, untested, using command `python` and args
-`["-m", "graphify.serve", "graphify-out/graph.json"]` in user-owned `.pi/mcp.json`.
+composition is **Supported**, untested, using the `graphify-mcp` launcher in user-owned
+`.pi/mcp.json`.
 [GF-10]-[GF-12]
 
 ### 7. Server mapping
@@ -310,7 +307,7 @@ and user-owned. [GF-27], [GF-U09]
 
 Full records: [GF-01 through GF-29 and GF-U01 through GF-U13](../.harnessctl/tasks/hrn-00111/research.md#graphify).
 Key official evidence includes the
-[v0.9.48 project metadata](https://github.com/Graphify-Labs/graphify/blob/b2cd36267456c166788c95be6e68574064a92a42/pyproject.toml)
+[v0.9.48 release](https://github.com/Graphify-Labs/graphify/releases/tag/v0.9.48)
 and [README](https://github.com/Graphify-Labs/graphify/blob/b2cd36267456c166788c95be6e68574064a92a42/README.md).
 
 ## Repomix
@@ -411,26 +408,25 @@ subcomponent license does not resolve the root license or redistribution obligat
 
 ### 3. Install and update
 
-Source documents Python 3.12 and unpinned `requirements.txt` installation. Package
-artifact integrity and an official update procedure are **Unknown**. Lifecycle remains
-user-owned. [F9], [F19], [F23]
+Source documents an unpinned dependency installation. Package artifact integrity and an
+official update procedure are **Unknown**. Lifecycle remains user-owned. [F9], [F19],
+[F23]
 
 ### 4. MCP applicability
 
-**Supported:** `v1.0.1` includes first-party `mcp_server.py`, six tools, stdio by default,
+**Supported:** `v1.0.1` includes a first-party MCP server with six tools, stdio by default,
 and optional SSE. Unrelated wrappers are not this integration. [F3], [F16]
 
 ### 5. OpenCode
 
-**Supported**, untested user-owned composition: command array with the user's absolute
-virtual-environment Python path and `/path/to/FastCode/mcp_server.py`, under a selected
-local key such as `fastcode`. Required provider environment remains process-owned. [F3],
-[F10], [H1]
+**Supported**, untested user-owned composition: command array with the user's local
+FastCode server launcher under a selected key such as `fastcode`. Required provider
+environment remains process-owned. [F3], [F10], [H1]
 
 ### 6. Pi
 
 Pi core is **Unsupported**. Adapter 2.26.0 composition is **Supported**, untested, using
-those user-owned Python/script paths in `.pi/mcp.json`; provider variables are inherited
+the user-owned FastCode server launcher in `.pi/mcp.json`; provider variables are inherited
 from the process environment. [F3], [H2]-[H5]
 
 ### 7. Server mapping
@@ -475,8 +471,8 @@ caches, logs, environment, Redis, credentials, processes, adapter, and host entr
 ### 13. Sources
 
 Full records: [F1-F27 and shared H1-H5](../.harnessctl/tasks/hrn-00112/research.md#fastcode).
-Key official evidence includes the [v1.0.1 release](https://github.com/HKUDS/FastCode/releases/tag/v1.0.1)
-and [MCP source](https://github.com/HKUDS/FastCode/blob/f11da38916aa87d886b7469adf3d5316deaa88fa/mcp_server.py).
+Key official evidence includes the
+[v1.0.1 release](https://github.com/HKUDS/FastCode/releases/tag/v1.0.1).
 
 ## CocoIndex
 
@@ -494,10 +490,9 @@ components, and services have separate **Unknown** terms. [C3], [C13], [C18], [C
 
 ### 3. Install and update
 
-Provider docs describe pipx/uv install and upgrade paths. PyPI/release digests and OIDC
-publishing are **Supported**; actions are tag-pinned rather than commit-pinned. Full/local
-embedding mode downloads model dependencies; lifecycle remains user-owned. [C5], [C7],
-[C11], [C25]
+Provider docs describe install and upgrade paths. Release digests and OIDC publishing are
+**Supported**; actions are tag-pinned rather than commit-pinned. Full/local embedding mode
+downloads model dependencies; lifecycle remains user-owned. [C5], [C7], [C11], [C25]
 
 ### 4. MCP applicability
 
@@ -561,8 +556,7 @@ adapter, and host entries require separately reviewed user-owned cleanup. [C20],
 
 Full records: [C1-C29 and shared H1-H5](../.harnessctl/tasks/hrn-00112/research.md#cocoindex).
 Key official evidence includes the
-[cocoindex-code v0.2.41 release](https://github.com/cocoindex-io/cocoindex-code/releases/tag/v0.2.41),
-[MCP source](https://github.com/cocoindex-io/cocoindex-code/blob/9fd2e7470a8b042a338dc3cc47fb9940ac5ebb59/src/cocoindex_code/server.py),
+[cocoindex-code v0.2.41 release](https://github.com/cocoindex-io/cocoindex-code/releases/tag/v0.2.41)
 and [telemetry disclosure](https://github.com/cocoindex-io/cocoindex-code/blob/9fd2e7470a8b042a338dc3cc47fb9940ac5ebb59/README.md#telemetry).
 
 ## Migration and manual cleanup

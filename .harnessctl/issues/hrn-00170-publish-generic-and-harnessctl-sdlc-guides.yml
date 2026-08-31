@@ -1,0 +1,17 @@
+"version": 1
+"id": "hrn-00170"
+"type": "epic"
+"title": "Publish generic and Harnessctl SDLC guides"
+"status": "open"
+"created_at": "2026-08-30T21:01:07.418Z"
+"updated_at": "2026-08-31T16:51:14.633Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 4
+"body": "# Publish generic and Harnessctl SDLC guides\n\n## Objective\n\nTeach SDLC fundamentals first, then explain how harnessctl moves one Epic through controlled Plan, Build, Verify, Release, Continue, and standalone Refresh workflows.\n\n## Scope\n\n- Publish a generic Introduction to SDLC covering purpose, lifecycle, feedback, evidence, and common delivery boundaries without assuming harnessctl knowledge.\n- Publish a Harnessctl SDLC guide centered on one authoritative Epic, bounded action sets, approvals, checkpoints, YOLO limits, TDD, verification feedback, release consent, recovery, and human merge control.\n- Use practical reader decisions and outcomes rather than implementation internals.\n- Provide accessible lifecycle diagrams and equivalent transition tables.\n- Link exact command syntax and contracts to Command Reference.\n\n## Acceptance Criteria\n\n- A new reader understands what an SDLC is before encountering harnessctl-specific policy.\n- Readers can choose the next Harnessctl command and understand its outcome and stopping boundary.\n- Plan, Build, Verify, Release, Continue, and Refresh remain distinct; Refresh is not shown as a delivery phase.\n- Approval, remote/destructive consent, checkpoint, stop, and human-merge boundaries are explicit.\n- Diagrams agree with accessible text and transition tables.\n- Conceptual guidance does not duplicate exact Command Reference entries.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`; independent of other content Epics.\n\nDo not modify SDLC commands, policy, lifecycle, or implementation."
+"comments": []

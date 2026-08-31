@@ -1,0 +1,27 @@
+"version": 1
+"id": "hrn-00173"
+"type": "story"
+"title": "Define shared page, status, and evidence presentation conventions"
+"status": "done"
+"created_at": "2026-08-30T21:14:15.451Z"
+"updated_at": "2026-08-31T18:17:17.760Z"
+"created_by": "OpenCode"
+"parent": "hrn-00167"
+"metadata":
+  "epic": "hrn-00167"
+  "estimate": "S"
+  "order": 1
+"body": "# Define shared page, status, and evidence presentation conventions\n\n## Objective\n\nGive every documentation author consistent, accessible page and evidence semantics without taking ownership of domain claims.\n\n## Scope\n\n- Define reusable page anatomy, heading and deep-link rules, compact table and code treatment, and contextual evidence-reference placement.\n- Preserve the five statuses: `working`, `working but untested`, `partially implemented`, `not implemented`, and `unknown/stale`.\n- Preserve the six evidence classes: source, generated contract, automated test, approved design, active configuration, and dated provider observation.\n- Define freshness and conflict handling, including why design proves intent and configuration does not prove successful provider operation.\n- Use explicit plain-text `Status:` and `Evidence:` fields; styling may decorate but never carry meaning.\n- Ensure conventions support guides, catalogs, references, help pages, the site theme, and plain repository Markdown viewers.\n\n## Acceptance Criteria\n\n- All five status labels have distinguishable evidence requirements and limitations.\n- `working` requires implementation plus current relevant verification evidence.\n- Claims can link to the narrowest authoritative evidence and identify its class.\n- Provider observations include dates and become `unknown/stale` when freshness cannot be established.\n- Page, table, code, heading, deep-link, status, and evidence conventions remain understandable without color, icons, or browser-only behavior.\n- Downstream content Epics can apply the conventions without changing their semantics.\n- This Story assigns no product-specific status, capability, support, or completeness claim.\n\n## Dependencies And Order\n\nOrder 2. Begins after approved `doc-00017` v2 is linked to `hrn-00167`. May proceed in parallel with `hrn-00172`.\n\n## Design Input\n\nApproved `.harnessctl/documents/doc-00017-documentation-website-foundation-and-information-architecture-v2.md` governs this Story.\n\n## Estimate\n\nS. Main uncertainty is retaining concise evidence-freshness language that works for both local artifacts and external provider observations without weakening status meaning.\n\n## Existing Evidence\n\n`docs/status-and-evidence.md` already contains useful status, evidence-class, freshness, conflict, and plain-text conventions. Its navigation placement and presentation must conform to v2 rather than compete as a top-level domain.\n\n## Non-Goals\n\n- Auditing domain features or assigning their statuses.\n- Implementing, testing, or operating product features or providers.\n- Replacing more precise provider-specific evidence vocabulary where compatible with this shared contract."
+"comments":
+  - "id": "hrn-00173-C0001"
+    "created_at": "2026-08-30T21:26:59.726Z"
+    "created_by": "OpenCode"
+    "body": "Build implementation complete: added `docs/status-and-evidence.md`, linked it from Home and site navigation, and defined all five statuses, six evidence classes, freshness/conflict handling, explicit `Status:`/`Evidence:` syntax, repository-grounded examples, and downstream author guidance. Focused Prettier and strict site-build checks pass. Formal Verify and issue closure remain pending."
+  - "id": "hrn-00173-C0002"
+    "created_at": "2026-08-31T17:36:21.032Z"
+    "created_by": "OpenCode"
+    "body": "Build implementation complete for shared presentation conventions. Extended `docs/status-and-evidence.md` with stable page structure, guide/reference boundaries, responsive tables, labeled code, visible focus, textual status/evidence semantics, and accessible diagram requirements; preserved five statuses and six evidence classes. Evidence: documentation tests and strict MkDocs build pass. Formal Verify and issue closure pending."
+  - "id": "hrn-00173-C0003"
+    "created_at": "2026-08-31T18:16:54.145Z"
+    "created_by": "OpenCode"
+    "body": "Verify passed. `docs/status-and-evidence.md` preserves all five statuses and six evidence classes, textual semantics, freshness/conflict guidance, page structure, guide/reference boundary, responsive table and labeled-code guidance, focus requirements, and diagram text parity. Automated and rendered checks passed; no domain claim leakage or product defect found."

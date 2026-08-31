@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1CD3BW7VRJRTWGZ2M03JQVH
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00167
+summary: "hrn-00167 Plan approved: doc-00017 v2 approved; four-Story executable decomposition persisted; validation passed."
+details: "Order: hrn-00172 shell/IA; hrn-00173 page/status/evidence conventions parallel; hrn-00179 LLM indexes depends on hrn-00172; hrn-00174 quality gates depends on hrn-00172, hrn-00173, hrn-00179. Foundation excludes domain content. document_validate and issue_validate valid, no findings. No Build, Verify, Release."
+source:
+  kind: artifact
+  ref: hrn-00167
+  revision: v1:b3a90631eb430fda91b28dfb70e4cf67d2fb9dbb62eab9f27f63289d774371d0
+created_at: 2026-08-31T17:15:32.103Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - information-architecture
+  - plan
+  - sdlc

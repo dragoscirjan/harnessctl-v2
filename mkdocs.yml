@@ -1,0 +1,85 @@
+site_name: harnessctl documentation
+site_description: Evidence-backed guides and references for controlled software delivery
+repo_url: https://github.com/dragoscirjan/harnessctl-v2
+repo_name: dragoscirjan/harnessctl-v2
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+hooks:
+  - scripts/mkdocs_hooks.py
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mermaid.mjs
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format ''
+
+nav:
+  - Home: README.md
+  - SDLC:
+      - Introduction to SDLC: sdlc-introduction.md
+      - Harnessctl SDLC: sdlc.md
+  - Harnesses: harnesses.md
+  - Tools:
+      - Skills: skills.md
+      - Node Modules: node-modules.md
+      - MCP Servers: mcp-servers.md
+  - Docs:
+      - Overview: docs-overview.md
+      - Installation: installation.md
+      - Getting Started: getting-started.md
+      - Reference:
+          - Config File: configuration.md
+          - Config Schema: config-schema.md
+          - Command Reference: command-reference.md
+          - Skill Configuration:
+              - Issues: issues.md
+              - Documents: documents.md
+              - Memory: memory.md
+              - Code Index:
+                  - Overview: code-intelligence.md
+                  - Providers: code-intelligence-providers.md
+              - CVS: cvs.md
+          - Status and Evidence: status-and-evidence.md
+      - Troubleshooting: troubleshooting.md
+      - FAQ: faq.md
+      - Changelog: changelog.md

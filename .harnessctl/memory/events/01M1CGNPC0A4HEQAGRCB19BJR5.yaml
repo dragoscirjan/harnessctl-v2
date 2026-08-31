@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1CGNPC0A4HEQAGRCB19BJR5
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00167
+summary: hrn-00167 | verify | documentation foundation | acceptance passed; four Stories done; no product defect.
+details: doc-00017 v2 mapped acceptance passed. Fresh automated checks and Chromium desktop/mobile rendering, drawer, route, focus evidence passed. hrn-00172, hrn-00173, hrn-00174, hrn-00179 transitioned done; Epic stays open. Aggregate mise run quality blocked only by untouched unrelated dirty .opencode/opencode.json and .pi/settings.json Prettier findings. Release not run.
+source:
+  kind: artifact
+  ref: hrn-00167
+  revision: v1:77c921495f029ad4232f70217efeaf9ea4610effa9e6af0dcc9250b308f9b7c4
+created_at: 2026-08-31T18:17:58.400Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - accessibility
+  - documentation
+  - llm-indexes
+  - sdlc
+  - verify

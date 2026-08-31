@@ -1,10 +1,7 @@
 # Configuration
 
-Project configuration is `.harnessctl/config.yaml`. The Python installer owns
-installer-time loading in [`src/harnessctl/config.py`](../src/harnessctl/config.py).
-Generic tools own runtime loading and the portable schema in
-[`extensions/generic-tools/config.ts`](../extensions/generic-tools/config.ts) and
-[`schemas.ts`](../extensions/generic-tools/schemas.ts).
+Project configuration is `.harnessctl/config.yaml`. Every supported harness uses the
+same defaults and validation rules.
 
 ## Current implementation
 
@@ -17,8 +14,7 @@ Every existing file must declare `version: 1`. Missing and non-1 versions fail w
 manual stable-v1 rewrite guidance; no compatibility reader or automatic migration exists.
 Overlay is recursive for mappings; scalar and array values replace their defaults.
 Malformed YAML, unsafe project paths, invalid bounds, and incompatible settings fail
-validation. Python loads the generated defaults and JSON Schema produced by the canonical
-TypeScript contract.
+validation. All configuration readers use the generated defaults and JSON Schema.
 
 ## Config v1 reference
 
@@ -535,22 +531,13 @@ CLI capability independently depends on the configured provider tool. See
 security boundaries.
 See [issues](issues.md) and [memory](memory.md).
 
-## Initial stable release and evidence
+## Version compatibility
 
 Config v1 is the first stable public configuration contract. Unreleased development Config
 v2 and Config v3 files are not supported inputs. Manually rewrite them to the schema above,
 including explicit `version: 1`; there is no compatibility reader, fallback, automatic
 migration, or in-place converter.
 
-Before the initial stable release, formal Verify must record this evidence matrix. These are
-release requirements, not proof that Verify ran during documentation Build:
-
-| Evidence                  | Required check                                                                                                                                                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Python behavior           | `uv run pytest tests/test_config_v1.py tests/test_install.py tests/test_mcp_projection.py tests/test_release_artifacts.py tests/test_docs.py`.                                                |
-| Generic-tools behavior    | `npm run test --workspace @harnessctl/generic-tools`, its `typecheck`, and its `build`.                                                                                                       |
-| Workspace behavior        | `npm test`, `npm run typecheck:strict`, and `npm run packages:check`.                                                                                                                         |
-| Generation drift          | `npm run contracts:check` against both generated contract destinations.                                                                                                                       |
-| Package artifacts         | `uv run pytest tests/test_release_artifacts.py` plus `npm run packages:check`; wheel/sdist and npm tarballs must contain matching Config v1 schema, defaults, and fingerprint manifest.       |
-| Fingerprints              | Python fingerprint tests and generic-tools Config v1 contract tests recompute SHA-256 and compare `config-v1.fingerprints.json` in source and packaged layouts.                               |
-| Shared fixture comparison | Python `tests/test_config_v1.py` and generic-tools `config.spec.ts` execute `tests/fixtures/config-v1-conformance.json` and agree on validity, normalized values, and exact validation paths. |
+If you have an unreleased Config v2 or Config v3 file, rewrite it manually as Config v1
+before installation. Harnessctl does not fall back to an older reader, migrate the file
+automatically, or modify it in place.

@@ -2,8 +2,8 @@
 
 ## Current implementation
 
-Python and TypeScript validators accept `filesystem`, `github`, `gitlab`, `gitea`,
-`forgejo`, and `bitbucket`. The provider selection compiles the issue-tracking skill; it
+Harnessctl accepts `filesystem`, `github`, `gitlab`, `gitea`, `forgejo`, and `bitbucket`
+issue providers. The provider selection compiles the issue-tracking skill; it
 does not add a remote adapter. Generic local issue tools operate only when
 `skills.issues.provider.type=filesystem` and fail before filesystem, barrier, or cache access in remote
 mode.

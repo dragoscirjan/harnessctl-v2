@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00175"
+"type": "epic"
+"title": "Publish home and onboarding documentation"
+"status": "open"
+"created_at": "2026-08-31T16:47:49.467Z"
+"updated_at": "2026-08-31T16:53:33.328Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 2
+  "scope": "home-onboarding"
+"body": "# Publish home and onboarding documentation\n\n## Objective\n\nGive a new reader a clear project introduction and the shortest reliable path from installation to one successful, controlled harnessctl workflow.\n\n## Scope\n\n- Publish Home with a concise value proposition, project purpose, key capabilities, supported context, and direct Installation and Getting Started actions.\n- Publish a Docs landing page that explains the difference among guides, catalogs, references, and help content.\n- Publish Installation for supported harnesses and prerequisites.\n- Publish a linear Getting Started tutorial that reaches one useful result before branching into broader documentation.\n- End each onboarding page with a clear next step.\n\n## Acceptance Criteria\n\n- Home answers what harnessctl is, what it does, why it exists, and who it is for without requiring prior SDLC knowledge.\n- Installation provides evidence-backed supported paths and identifies unsupported or planned harnesses honestly.\n- Getting Started begins from a clean supported setup and reaches one successful controlled workflow.\n- Commands, expected prompts, approvals, outputs, and recovery links are explicit.\n- Readers can continue to SDLC, Harnesses, Tools, or Reference without duplicated domain content.\n- Desktop and mobile paths require no hidden navigation knowledge.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`. Domain guides and references are linked but not blocking dependencies.\n\nDo not own exhaustive command, config, skill, module, MCP server, or harness reference content."
+"comments": []

@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00178"
+"type": "epic"
+"title": "Publish troubleshooting, FAQ, and changelog documentation"
+"status": "open"
+"created_at": "2026-08-31T16:47:50.700Z"
+"updated_at": "2026-08-31T16:53:50.354Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00166"
+"depends_on":
+  - "hrn-00167"
+"metadata":
+  "estimate": "M"
+  "order": 9
+  "scope": "help-changelog"
+"body": "# Publish troubleshooting, FAQ, and changelog documentation\n\n## Objective\n\nHelp users recover from common failures, answer recurring conceptual questions, and understand product and documentation changes without overloading guides or references.\n\n## Scope\n\n- Publish Troubleshooting organized by observable symptom, likely cause, safe diagnostic evidence, recovery steps, and escalation path.\n- Publish FAQ for recurring conceptual, support, compatibility, and lifecycle questions.\n- Publish Changelog content derived from authoritative releases and documentation changes, with links to detailed release evidence.\n- Add contextual links from onboarding, guides, catalogs, and references to relevant recovery entries.\n\n## Acceptance Criteria\n\n- Common installation, configuration, harness, skill, command, module, and MCP failure modes have evidence-backed recovery guidance.\n- Troubleshooting never asks readers to expose credentials or perform destructive actions without explicit warnings and safer alternatives.\n- FAQ answers do not duplicate long guide or reference sections; they link to authority.\n- Changelog entries are dated, versioned where applicable, source-linked, and never invented from unreleased plans.\n- Search terms include the user-visible symptoms and error wording readers are likely to encounter.\n\n## Dependencies And Boundaries\n\nDepends only on `hrn-00167`; other content can supply links without blocking this Epic.\n\nDo not operate providers, promise ETAs, publish internal incident details, or replace release notes as authority."
+"comments": []

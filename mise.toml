@@ -53,11 +53,11 @@ run = "npm run format:fix"
 
 [tasks.python-format]
 description = "Format Python sources"
-run = "uv run ruff format src tests"
+run = "uv run ruff format src tests scripts"
 
 [tasks.python-format-check]
 description = "Check Python formatting"
-run = "uv run ruff format --check src tests"
+run = "uv run ruff format --check src tests scripts"
 
 [tasks.node-lint]
 description = "Lint Node workspace sources"
@@ -69,11 +69,11 @@ run = "npm run lint:fix"
 
 [tasks.python-lint]
 description = "Lint Python sources"
-run = "uv run ruff check src tests"
+run = "uv run ruff check src tests scripts"
 
 [tasks.python-lint-fix]
 description = "Fix Python lint findings"
-run = "uv run ruff check src tests --fix"
+run = "uv run ruff check src tests scripts --fix"
 
 [tasks.shell-lint]
 description = "Lint repository shell scripts"
@@ -113,6 +113,19 @@ run = "actionlint"
 [tasks.mermaid-check]
 description = "Validate Mermaid syntax and accessibility metadata"
 run = "npm run mermaid:check"
+
+[tasks.docs-generate]
+description = "Generate LLM-friendly documentation indexes"
+run = "uv run python scripts/generate_llms.py"
+
+[tasks.docs-build]
+description = "Build the documentation website with strict validation"
+run = ["uv run python scripts/generate_llms.py --check", "uv run mkdocs build --strict"]
+
+[tasks.docs-serve]
+description = "Serve the documentation website for local authoring"
+depends = ["docs-generate"]
+run = "uv run mkdocs serve"
 
 [tasks.python-test]
 description = "Run Python tests"
@@ -171,6 +184,7 @@ run = [
     "python-deadcode",
     "actions-lint",
     "mermaid-check",
+    "docs-build",
     "contracts-check",
   ] },
 ]

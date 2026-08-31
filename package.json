@@ -55,5 +55,5 @@
     "tsx": "^4.23.12",
     "typescript": "^5.8.2"
   },
-  "prettier": "@templ-project/prettier"
+  "prettier": "./prettier.config.mjs"
 }

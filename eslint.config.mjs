@@ -5,8 +5,10 @@ export default [
   {
     ignores: [
       '**/node_modules/**',
+      '.venv/**',
       '**/dist/**',
       '**/coverage/**',
+      'site/**',
       '**/*.d.ts',
       'extensions/**/out/**',
       '.external-docs/**',
