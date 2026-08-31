@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1CY5ABAHBCKR8A6SCYP1D8Z
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00169
+summary: hrn-00169 | verify | Skills catalog acceptance | exact inventory, entries, activation, evidence, and rendered desktop/mobile behavior passed; full quality green; no product defect; Epic open; no Release.
+details: 39 docs tests and full repository quality passed, including 714 Python tests. Deterministic reference/LLM checks and strict MkDocs passed. Installed system Chromium verified readable desktop/mobile catalog, mobile drawer routes, and no document overflow. Playwright managed browser absent; environment gap resolved by approved installed-browser route.
+source:
+  kind: artifact
+  ref: hrn-00169
+  revision: v1:7b6cb93033c8820f0bd656bf0aa47ca6791535eb83d9fb9df44d4cf03a882ea7
+created_at: 2026-08-31T22:13:41.866Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - documentation
+  - quality
+  - skills
+  - verify

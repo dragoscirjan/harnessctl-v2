@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00185"
+"type": "story"
+"title": "Publish the reader-first eight-skill catalog"
+"status": "done"
+"created_at": "2026-08-31T21:37:48.833Z"
+"updated_at": "2026-08-31T21:49:31.838Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00169"
+"metadata":
+  "estimate": "M"
+  "order": 1
+  "scope": "skills-catalog"
+"body": "# Publish the reader-first eight-skill catalog\n\n## Objective\n\nMake every shipped harnessctl skill understandable and selectable by user goal without requiring readers to understand installer internals.\n\n## Scope\n\n- Rewrite `docs/skills.md` with a concise skills-versus-capabilities introduction and a Choose by goal matrix.\n- Document exactly the eight canonical skill IDs from the current registry.\n- Use one entry contract for every skill: purpose, use when, expected result, OpenCode and Pi availability, activation or configuration, prerequisites, limits, textual status, and adjacent provenance.\n- Reconcile host differences and optional or dormant behavior against current installer source and tests.\n- Retain a short legacy ID and retired Documents-skill compatibility note.\n- Link exact configuration, harness support, MCP capabilities, and Node module ownership rather than duplicating those references.\n\n## Acceptance Criteria\n\n- Readers can find every skill by canonical ID and by SDLC delivery, code quality, concise communication, TDD, code intelligence, memory, issue tracking, or version-control goal.\n- The catalog contains exactly `sdlc`, `sdlc-code`, `sdlc-caveman`, `sdlc-develop-tdd`, `sdlc-code-index`, `sdlc-memory`, `sdlc-issue-tracking`, and `sdlc-cvs`.\n- Every skill entry contains the complete approved entry contract.\n- OpenCode and Pi availability and activation conditions match current installer behavior.\n- Skill presence is not presented as permission, configuration, tool availability, authentication, provider health, or verified operation.\n- Working and unsupported claims use the shared textual status vocabulary and identify current evidence.\n- Documents and Web Retrieval are identified as configuration domains rather than generated skills.\n- Existing useful migration, dormant-skill, and fallback facts remain available without leading the page or repeating full configuration contracts.\n\n## Dependencies And Order\n\nParent: `hrn-00169`. Order 1. No child dependency.\n\n## Artifacts\n\nPrimary artifact: `docs/skills.md`. Generated LLM indexes may change after the public page changes.\n\n## Estimate And Uncertainty\n\nEstimate M. Main uncertainty is reconciling host-specific install and dormant-skill behavior without turning the catalog back into implementation documentation.\n\n## Non-Goals\n\nDo not change the skill registry, templates, installer behavior, configuration, host support, providers, or navigation ownership. Do not create separate pages for each skill."
+"comments":
+  - "id": "hrn-00185-C0001"
+    "created_at": "2026-08-31T21:49:24.512Z"
+    "created_by": "OpenCode"
+    "body": "Build completed for reader-first Skills catalog. `docs/skills.md` now covers exactly eight canonical IDs, eight goal routes, nine required fields per entry, current OpenCode/Pi activation differences, textual status/evidence, compatibility notes, and owned cross-links. Deterministic LLM generation, strict MkDocs, focused Markdown formatting, and Git diff checks pass. No Verify, Release, remote action, or Epic closure performed."

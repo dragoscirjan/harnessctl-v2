@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1CXCAR4NJAZKKVNVV27FJ1R
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00169
+summary: hrn-00169 | build | Skills catalog and drift gates | exact eight-skill reader catalog published; both Stories done; full quality green; Epic open; no Verify/Release/commit/push/PR/deploy.
+details: "`docs/skills.md` now matches eight registered root templates and nine-field entry contract. `tests/test_docs.py` enforces inventory, activation, ownership, status/evidence, compatibility, and generated-index freshness. `mise run quality` passed with 714 Python tests; docs tests 39 passed."
+source:
+  kind: artifact
+  ref: hrn-00169
+  revision: v1:d8cea98435d9ce506ad19003311e3d33136b217cf6f902f5f4b17a7be5e162a6
+created_at: 2026-08-31T22:00:03.076Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - documentation
+  - quality
+  - skills

@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1CW8T0XYB7P795Q6HNF5HBJ
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00169
+summary: hrn-00169 | plan | two-Story Skills catalog decomposition | reader-first catalog and exact drift gates persisted; issue validation passed.
+details: "Stories: hrn-00185 catalog; hrn-00186 gates depends on hrn-00185. No HLD/LLD. No Build/Verify/Release."
+source:
+  kind: artifact
+  ref: hrn-00169
+  revision: v1:11de53b4b2f36f80ba7fb946722e1a3c0855f9caf4f5da88089a84230370837e
+created_at: 2026-08-31T21:40:39.069Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - plan
+  - sdlc
+  - skills-catalog
