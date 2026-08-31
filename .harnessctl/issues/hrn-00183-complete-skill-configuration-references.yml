@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00183"
+"type": "story"
+"title": "Complete Skill Configuration references"
+"status": "done"
+"created_at": "2026-08-31T19:27:34.853Z"
+"updated_at": "2026-08-31T20:40:28.921Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00168"
+"depends_on":
+  - "hrn-00180"
+  - "hrn-00181"
+"metadata":
+  "estimate": "M"
+  "order": 4
+  "scope": "skill-configuration"
+"body": "# Complete Skill Configuration references\n\n## Objective\n\nMake Skill Configuration cover every current configurable Config v1 skill domain exactly once.\n\n## Scope\n\n- Reconcile the existing Issues, Documents, Memory, Code Index, and CVS routes as exact configuration references.\n- Add Caveman, TDD, and Web Retrieval routes under Skill Configuration.\n- For each domain, document controls, defaults, dependencies, provider or MCP references, credential handling, safety boundaries, unsupported behavior, and source provenance.\n- Link Skills, MCP Servers, Node Modules, and conceptual guides instead of duplicating catalogs or tutorials.\n\n## Acceptance Criteria\n\n- Reference routes have exact parity with `issues`, `documents`, `cvs`, `caveman`, `tdd`, `codeIndex`, `webRetrieval`, and `memory` in Config v1.\n- Every configurable field/default links to Config Schema authority and appears under one canonical domain owner.\n- Credentials use environment-variable names or placeholders only.\n- Existing guide prose is preserved where useful but exact configuration, guide, and catalog intents are visibly distinct.\n- Navigation, deep links, and cross-links remain stable and accessible.\n\n## Dependencies And Order\n\nOrder 4. Depends on `hrn-00180` and `hrn-00181` for Config File and Schema conventions.\n\n## Artifacts\n\nExisting Skill Configuration pages; new Caveman, TDD, and Web Retrieval pages; `mkdocs.yml`; Config v1 schema/defaults; focused docs tests.\n\n## Estimate And Uncertainty\n\nM. Main uncertainty is separating mixed existing guide/reference prose without breaking useful links.\n\n## Non-Goals\n\nSkills or MCP catalog content; provider setup tutorials; capability behavior or configuration changes."
+"comments":
+  - "id": "hrn-00183-C0001"
+    "created_at": "2026-08-31T20:40:07.556Z"
+    "created_by": "OpenCode"
+    "body": "Build complete. Published practical configuration routes for all eight Config v1 skill domains; added Caveman, TDD, and Web Retrieval pages; reconciled Issues, Documents, Memory, Code Index, and CVS; enforced exact config-key/navigation parity. Fresh evidence: `tests/test_docs.py` 35 passed; deterministic reference/LLM checks and strict MkDocs passed; Ruff, focused Prettier, and diff checks passed. No Verify, Release, remote action, or Epic closure."

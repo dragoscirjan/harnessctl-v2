@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1CTVDEPB12DPN3PF0VBW8MA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00168
+summary: hrn-00168 | verify | reference acceptance passed | automated gates green; browser rendering deferred
+details: Stories hrn-00180..hrn-00184 done; Epic open. 38 docs, 713 Python, 220 Node tests pass. Complete quality, deterministic reference/LLM generation, strict MkDocs, contracts, lint, format, packages, duplication/dead-code, diff, issue/document/memory validation pass. Playwright unsupported on NixOS; user explicitly deferred rendered checks. No product defect, Bug, Release, commit, push, PR, deployment, or closure.
+source:
+  kind: artifact
+  ref: hrn-00168
+  revision: v1:5552d29696a7ee30e73d12968cecd30eb8c9d4fb9cfb9a0c353f14f9478e7997
+created_at: 2026-08-31T21:15:51.638Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - commands
+  - config-v1
+  - documentation
+  - skills
+  - verify

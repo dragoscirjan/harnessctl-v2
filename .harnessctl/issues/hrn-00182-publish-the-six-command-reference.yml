@@ -1,0 +1,16 @@
+"version": 1
+"id": "hrn-00182"
+"type": "story"
+"title": "Publish the six-command reference"
+"status": "done"
+"created_at": "2026-08-31T19:27:34.442Z"
+"updated_at": "2026-08-31T20:13:36.308Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00168"
+"metadata":
+  "estimate": "S-M"
+  "order": 3
+  "scope": "command-reference"
+"body": "# Publish the six-command reference\n\n## Objective\n\nReplace the Command Reference stub with exact current contracts for all installed harnessctl prompt commands.\n\n## Scope\n\n- Document `work-plan`, `work-build`, `work-verify`, `work-release`, `work-continue`, and `work-refresh`.\n- Use one entry contract: purpose, Epic requirement, inputs, classified action/approval rules, outputs, conditional references, stopping boundary, checkpoint behavior, and prohibited phase crossing.\n- Explain harness projection and link current registry, templates, canonical phase references, and generated commands.\n- Add exact command inventory and source-drift checks.\n\n## Acceptance Criteria\n\n- Registry, templates, installed command names, and documentation entries match exactly.\n- Every phase boundary, fresh-consent requirement, conditional reference, and checkpoint rule is explicit and source-traceable.\n- Refresh is clearly standalone and Continue is clearly one resolved phase and one step.\n- No conventional shell CLI syntax or stale five-command model is invented.\n- Conceptual SDLC material remains owned by `hrn-00170` and is linked rather than duplicated.\n\n## Dependencies And Order\n\nOrder 3. Independent of Config content and may run in parallel with `hrn-00180` and `hrn-00181`.\n\n## Artifacts\n\n`docs/command-reference.md`; `src/harnessctl/templates.py`; six command templates; canonical SDLC references; generated commands; installer/template tests.\n\n## Estimate And Uncertainty\n\nS-M. Main uncertainty is staying concise without omitting exact safety and stopping contracts.\n\n## Non-Goals\n\nCommand implementation changes; lifecycle tutorials; shell CLI documentation; redesigning checkpoint behavior."
+"comments": []

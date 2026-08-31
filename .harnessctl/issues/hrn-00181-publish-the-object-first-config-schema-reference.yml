@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-00181"
+"type": "story"
+"title": "Publish the object-first Config Schema reference"
+"status": "done"
+"created_at": "2026-08-31T19:27:34.035Z"
+"updated_at": "2026-08-31T20:29:28.583Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00168"
+"depends_on":
+  - "hrn-00180"
+"metadata":
+  "estimate": "M"
+  "order": 2
+  "scope": "config-schema-reference"
+"body": "# Publish the object-first Config Schema reference\n\n## Objective\n\nReplace the Config Schema stub with a complete, object-first Config v1 reference whose structure and defaults cannot drift from generated authority.\n\n## Scope\n\n- Organize the page as nested object sections with property tables, inspired by Taskfile's schema reference.\n- Use dotted paths only for cross-references and error examples.\n- Render or reconcile types, requiredness, defaults, enums, constants, patterns, ranges, unions, refinements, and compact examples from generated Config v1 schema/defaults.\n- Add a bounded documentation-only description source with exact missing/extra coverage checks.\n- Add deterministic generation/check behavior and source links.\n\n## Acceptance Criteria\n\n- Every Config v1 object and property appears exactly once.\n- Structural, requiredness, constraint, and default changes make check mode fail.\n- Every documented property has exactly one operator description; missing and stale descriptions fail.\n- Provider unions, MCP connection shapes, memory constraints, and cross-field refinements are represented accurately.\n- The page cross-links Config File and Skill Configuration without duplicating their intent.\n\n## Dependencies And Order\n\nOrder 2. Depends on `hrn-00180` so the Config File/Schema boundary is stable.\n\n## Artifacts\n\n`docs/config-schema.md`; generated Config v1 schema/defaults/fingerprints; documentation generator/check; focused tests.\n\n## Estimate And Uncertainty\n\nM. Main uncertainty is concise, accurate rendering of unions and conditional refinements.\n\n## Non-Goals\n\nChanging Zod, generated schema semantics, defaults, runtime validation, or migration policy."
+"comments":
+  - "id": "hrn-00181-C0001"
+    "created_at": "2026-08-31T20:29:09.767Z"
+    "created_by": "OpenCode"
+    "body": "Build completed: generated object-first Config Schema reference from checked-in Config v1 schema/defaults. Generator enforces exact source-property, rendered-property, and prose-description coverage; provider unions aggregate all variants. Focused generation, docs tests, and Ruff checks pass. Full docs link check remains expectedly blocked by Skill Configuration pages owned by `hrn-00183`. No Verify, Release, or runtime contract changes."

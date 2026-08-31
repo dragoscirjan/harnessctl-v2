@@ -1,11 +1,14 @@
 """Documentation consistency checks."""
 
+import copy
 import hashlib
+import json
 import re
 import runpy
 import tomllib
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,6 +70,7 @@ CITATION_FIELDS = (
 EVIDENCE_STATUSES = {"Supported", "Unsupported", "Ambiguous", "Unknown", "Stale"}
 PUBLIC_MARKDOWN = {
     "README.md",
+    "caveman.md",
     "changelog.md",
     "code-intelligence-providers.md",
     "code-intelligence.md",
@@ -89,6 +93,8 @@ PUBLIC_MARKDOWN = {
     "skills.md",
     "status-and-evidence.md",
     "troubleshooting.md",
+    "tdd.md",
+    "web-retrieval.md",
 }
 EXPECTED_NAV = [
     {"Home": "README.md"},
@@ -121,12 +127,15 @@ EXPECTED_NAV = [
                             {"Issues": "issues.md"},
                             {"Documents": "documents.md"},
                             {"Memory": "memory.md"},
+                            {"Caveman": "caveman.md"},
+                            {"TDD": "tdd.md"},
                             {
                                 "Code Index": [
                                     {"Overview": "code-intelligence.md"},
                                     {"Providers": "code-intelligence-providers.md"},
                                 ]
                             },
+                            {"Web Retrieval": "web-retrieval.md"},
                             {"CVS": "cvs.md"},
                         ]
                     },
@@ -141,8 +150,6 @@ EXPECTED_NAV = [
 ]
 STRUCTURAL_STUBS = {
     "changelog.md": ("Changelog", "hrn-00178"),
-    "command-reference.md": ("Command Reference", "hrn-00168"),
-    "config-schema.md": ("Config Schema", "hrn-00168"),
     "docs-overview.md": ("Docs", "hrn-00175"),
     "faq.md": ("FAQ", "hrn-00178"),
     "installation.md": ("Installation", "hrn-00175"),
@@ -185,9 +192,29 @@ def _assert_provider_structure(document: str, providers: tuple[str, ...]) -> Non
         assert '"mcpServers"' in section
 
 
+def _assert_exact_set(actual: set[str], expected: set[str], label: str) -> None:
+    assert actual == expected, (
+        f"{label} mismatch: missing={sorted(expected - actual)}, extra={sorted(actual - expected)}"
+    )
+
+
 def test_documentation_set_and_root_index_exist() -> None:
-    assert {path.name for path in DOCS.glob("*.md")} == PUBLIC_MARKDOWN
+    _assert_exact_set({path.name for path in DOCS.glob("*.md")}, PUBLIC_MARKDOWN, "public docs")
     assert "docs/README.md" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def test_exact_inventory_gates_reject_added_members() -> None:
+    for current, added, label in (
+        (PUBLIC_MARKDOWN, "unexpected.md", "public docs"),
+        (PUBLIC_COMMANDS, "work-unplanned", "prompt commands"),
+        (
+            {"issues", "documents", "memory", "caveman", "tdd", "codeIndex", "webRetrieval", "cvs"},
+            "unconfiguredSkill",
+            "skill configuration",
+        ),
+    ):
+        with pytest.raises(AssertionError, match=label):
+            _assert_exact_set(current | {added}, current, label)
 
 
 def _navigation_pages(items: list[object]) -> set[str]:
@@ -250,8 +277,12 @@ def test_documentation_site_configuration_covers_canonical_guides() -> None:
 
 def test_documentation_tasks_include_strict_build_in_quality() -> None:
     config = tomllib.loads((ROOT / "mise.toml").read_text(encoding="utf-8"))
-    assert config["tasks"]["docs-generate"]["run"] == ("uv run python scripts/generate_llms.py")
+    assert config["tasks"]["docs-generate"]["run"] == [
+        "uv run python scripts/generate_reference_docs.py",
+        "uv run python scripts/generate_llms.py",
+    ]
     assert config["tasks"]["docs-build"]["run"] == [
+        "uv run python scripts/generate_reference_docs.py --check",
         "uv run python scripts/generate_llms.py --check",
         "uv run mkdocs build --strict",
     ]
@@ -307,6 +338,70 @@ def test_llm_indexes_are_current_and_follow_public_navigation() -> None:
     assert ".harnessctl/documents/" not in "\n".join(full_routes)
 
 
+def test_config_schema_reference_is_generated_with_exact_property_coverage() -> None:
+    generator = runpy.run_path(str(ROOT / "scripts" / "generate_reference_docs.py"))
+    rendered = generator["render_config_schema"]()
+    schema = json.loads(
+        (ROOT / "extensions" / "generic-tools" / "contracts" / "config-v1.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (DOCS / "config-schema.md").read_text(encoding="utf-8") == rendered
+    schema_paths = generator["_schema_property_paths"](schema)
+    assert generator["_rendered_property_paths"](schema) == schema_paths
+    assert set(generator["DESCRIPTIONS"]) == schema_paths
+    assert "Start with the change you need" not in rendered
+    assert "[Config File guide](configuration.md)" in rendered
+    assert "## Config\n" in rendered
+    assert "## MCP servers\n" in rendered
+    assert "## Skills\n" in rendered
+    for skill in (
+        "Issues",
+        "Documents",
+        "CVS",
+        "Caveman",
+        "TDD",
+        "Code Index",
+        "Web Retrieval",
+        "Memory",
+    ):
+        assert f"### {skill}\n" in rendered
+    assert "One of `filesystem`, `github`, `gitlab`, `gitea`, `forgejo`, `bitbucket`." in rendered
+    assert "This page is generated from the schema and defaults" in rendered
+
+
+def test_config_reference_drift_gates_reject_contract_mutations() -> None:
+    generator = runpy.run_path(str(ROOT / "scripts" / "generate_reference_docs.py"))
+    schema = json.loads(
+        (ROOT / "extensions/generic-tools/contracts/config-v1.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    defaults = json.loads(
+        (ROOT / "extensions/generic-tools/contracts/config-v1.defaults.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    descriptions = generator["DESCRIPTIONS"]
+
+    changed_schema = copy.deepcopy(schema)
+    changed_schema["properties"]["undocumented"] = {"type": "string"}
+    with pytest.raises(ValueError, match="omitted=.*undocumented"):
+        generator["_validate_property_coverage"](changed_schema, descriptions)
+
+    incomplete_descriptions = dict(descriptions)
+    incomplete_descriptions.pop("workflow.default_task_type")
+    with pytest.raises(ValueError, match="missing_descriptions"):
+        generator["_validate_property_coverage"](schema, incomplete_descriptions)
+
+    changed_defaults = copy.deepcopy(defaults)
+    changed_defaults["workflow"]["default_task_type"] = "story"
+    assert generator["render_config_schema"](schema, changed_defaults) != (
+        DOCS / "config-schema.md"
+    ).read_text(encoding="utf-8")
+
+
 def test_feature_status_contract_is_complete_and_textual() -> None:
     guide = (DOCS / "status-and-evidence.md").read_text(encoding="utf-8")
     normalized_guide = " ".join(guide.lower().split())
@@ -360,6 +455,28 @@ def test_public_documentation_avoids_implementation_runtime_details() -> None:
         match = prohibited.search(path.read_text(encoding="utf-8"))
         assert match is None, (
             f"{path.name} exposes implementation runtime detail: {match.group(0)!r}"
+        )
+
+
+def test_public_documentation_contains_no_literal_credentials() -> None:
+    secret_patterns = {
+        "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+        "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+        "OpenAI-style key": re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
+        "AWS access key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    }
+    credential_assignment = re.compile(
+        r"^\s*(?:token|api[_-]?key|password|secret)\s*:\s*"
+        r"(?!\{env:[A-Z][A-Z0-9_]*\}\s*$|[A-Z][A-Z0-9_]*\s*$|<[^>]+>\s*$)\S+",
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+    for path in DOCS.glob("*.md"):
+        content = path.read_text(encoding="utf-8")
+        for label, pattern in secret_patterns.items():
+            assert pattern.search(content) is None, f"{path.name} contains a possible {label}"
+        assert credential_assignment.search(content) is None, (
+            f"{path.name} contains a possible literal credential assignment"
         )
 
 
@@ -637,100 +754,120 @@ def test_docs_describe_current_issue_skill_and_future_memory_backends() -> None:
 
 
 def test_docs_describe_configurable_tdd_behavior() -> None:
-    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
     skills = (DOCS / "skills.md").read_text(encoding="utf-8")
     sdlc = (DOCS / "sdlc.md").read_text(encoding="utf-8")
     normalized_sdlc = " ".join(sdlc.split())
 
-    assert "`skills.tdd.enabled`" in configuration
-    assert "default is `false`" in configuration
-    assert "skills:\n  tdd:\n    enabled: true" in configuration
     for path in (
         ".opencode/skills/sdlc-develop-tdd/SKILL.md",
         ".pi/skills/sdlc-develop-tdd/SKILL.md",
     ):
         assert path in skills
     assert "does not delete" in skills
-    assert "existing skill untouched and dormant" in configuration
     assert "leaves any previously installed TDD skill dormant" in normalized_sdlc
     assert "`skills.tdd.enabled`" in sdlc
     assert "Red, Green, and Refactor" in normalized_sdlc
 
 
-def test_config_v1_reference_is_complete() -> None:
+def test_config_file_reference_owns_file_mechanics_not_schema_catalog() -> None:
     configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
     normalized = " ".join(configuration.split())
 
-    defaulted_fields = (
-        "version",
-        "paths.root",
-        "paths.tasks",
-        "paths.reports",
-        "workflow.default_task_type",
-        "mcp.output_limit_mode",
-        "mcpServers",
-        "skills.issues.enabled",
-        "skills.issues.root",
-        "skills.issues.prefix",
-        "skills.documents.enabled",
-        "skills.documents.root",
-        "skills.documents.prefix",
-        "skills.cvs.enabled",
-        "skills.cvs.local",
-        "skills.caveman.enabled",
-        "skills.caveman.mode",
-        "skills.tdd.enabled",
-        "skills.codeIndex.enabled",
-        "skills.codeIndex.mcpName",
-        "skills.memory.enabled",
-        "skills.memory.root",
-        "skills.memory.backend",
-        "skills.memory.namespace.organization_id",
-        "skills.memory.namespace.project_id",
-        "skills.memory.namespace.default_topic",
-        "skills.memory.retrieval.limit",
-        "skills.memory.retrieval.max_chars",
-        "skills.memory.retrieval.include_superseded",
-    )
-    for field in defaulted_fields:
-        assert f"`{field}`" in configuration
-    for field in (
-        "url",
-        "headers.<header-name>",
-        "command",
-        "args",
-        "environment.<target-name>",
-        "cwd",
-        "opencode",
-        "pi",
-    ):
-        assert f"`{field}`" in configuration
     for phrase in (
-        "Declarations deliberately omit `type` and `transport`",
-        "OpenCode and Pi infer host-native",
-        "There are no provider-reserved IDs",
-        "Every projected host definition comes exclusively from `mcpServers`",
-        "Any enabled skill reference must still resolve after replacement",
-        "translate each explicit `{env:NAME}` reference",
-        "map key is the required server name and stable projection identity",
-        "exactly one portable connection core",
-        "Host override maps preserve nested JSON",
-        "Only the override matching the selected host",
-        "Adapter-owned fields are protected",
-        "permanently operator-owned",
-        "unproven entry byte-equivalent to the desired value",
-        "byte-preserves every such collision under normal and `--force` installs",
-        "emits an operator-owned warning without declaration or credential values",
-        "exact provenance-backed generated entries are managed",
-        "intent and active host behavior may differ",
-        "remove or rename the operator-owned host key manually",
-        "Unreleased development Config v2 and Config v3 files are not supported inputs",
-        "there is no compatibility reader, fallback, automatic migration, or in-place converter",
+        "Start with the change you need",
+        "Common recipes",
+        "Change the default work item",
+        "Enable TDD",
+        "Enable project memory",
+        "Enable code and web retrieval",
+        "Use GitLab for issues",
+        "Move repository authority",
+        "`.harnessctl/config.yaml`",
+        "numeric `version: 1`",
+        "fresh in-memory copy of the generated defaults",
+        "`config_create` tool writes the complete default file only when it is absent",
+        "read-only `config_get` tool",
+        "Mappings merge recursively",
+        "Scalars and arrays replace their default values",
+        "`mcpServers: {}` disables all default declarations",
+        "Changing a skill provider's `type` replaces the complete provider mapping",
+        "duplicate keys",
+        "deepest available dotted path",
+        "does not migrate or repair another version",
+        "does not read, render, log, snapshot, or persist the credential value",
+        "Documentation explains how to use those contracts but does not replace them",
+        "Know what each layer proves",
+        "Declared Config",
+        "Generated harness output",
+        "Harness registration",
+        "External provider state",
+        "Verified operation",
+        "does not prove that an external provider is available or working",
     ):
         assert phrase in normalized
-    assert "DOCS_MCP_TOKEN" in configuration
-    assert "INDEX_MCP_TOKEN" in configuration
-    assert "transport:" not in configuration
+    for target in (
+        "config-schema.md",
+        "issues.md",
+        "documents.md",
+        "memory.md",
+        "code-intelligence.md",
+        "cvs.md",
+        "caveman.md",
+        "tdd.md",
+        "web-retrieval.md",
+    ):
+        assert f"]({target})" in configuration
+    assert "## Config v1 reference" not in configuration
+    assert "### Generic MCP declarations" not in configuration
+    assert "### TDD settings" not in configuration
+    assert "## Remote issue routing" not in configuration
+    assert "| Key" not in configuration
+
+
+def test_command_reference_exactly_covers_installed_prompt_commands() -> None:
+    reference = (DOCS / "command-reference.md").read_text(encoding="utf-8")
+    entries = set(re.findall(r"^## `(work-[a-z-]+)`$", reference, re.MULTILINE))
+    templates = {path.name.removesuffix(".md.j2") for path in SDLC_TEMPLATES.glob("work-*.md.j2")}
+
+    _assert_exact_set(entries, PUBLIC_COMMANDS, "documented prompt commands")
+    _assert_exact_set(templates, PUBLIC_COMMANDS, "installed prompt commands")
+    assert "not terminal or shell commands" in reference
+    assert "exactly one authoritative, non-archived Epic" in reference
+    assert "Refresh is" in reference and "standalone" in reference
+    assert "never combines phases or auto-selects workflow" in reference
+    assert "ready pull request by default" in reference
+    assert "It never merges automatically" in reference
+    assert "defect guidance loads only after a failure exists" in reference
+    assert "YOLO guidance loads only when YOLO is explicitly offered or" in reference
+    assert "deployment guidance loads only after an explicit deployment" in reference
+    assert reference.count("**Checkpoint:**") == len(PUBLIC_COMMANDS)
+
+
+def test_skill_configuration_routes_match_config_v1_domains() -> None:
+    defaults = json.loads(
+        (ROOT / "extensions/generic-tools/contracts/config-v1.defaults.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    domain_pages = {
+        "issues": "issues.md",
+        "documents": "documents.md",
+        "memory": "memory.md",
+        "caveman": "caveman.md",
+        "tdd": "tdd.md",
+        "codeIndex": "code-intelligence.md",
+        "webRetrieval": "web-retrieval.md",
+        "cvs": "cvs.md",
+    }
+
+    _assert_exact_set(set(defaults["skills"]), set(domain_pages), "skill configuration")
+    for domain, page_name in domain_pages.items():
+        page = (DOCS / page_name).read_text(encoding="utf-8")
+        assert f"`skills.{domain}`" in page
+        assert "config-schema.md#" in page
+
+    nav_pages = _navigation_pages(EXPECTED_NAV)
+    assert set(domain_pages.values()).issubset(nav_pages)
 
 
 def test_current_config_examples_use_v1_paths_and_document_root_semantics() -> None:
@@ -770,18 +907,15 @@ def test_docs_describe_sdlc_code_guidance_and_installation() -> None:
 
 
 def test_docs_describe_sdlc_code_index_opt_in_and_operator_boundaries() -> None:
-    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
     skills = (DOCS / "skills.md").read_text(encoding="utf-8")
     guide = (DOCS / "code-intelligence.md").read_text(encoding="utf-8")
     root = (ROOT / "README.md").read_text(encoding="utf-8")
     normalized = " ".join(guide.split())
     normalized_skills = " ".join(skills.split())
 
-    assert "`skills.codeIndex.enabled`" in configuration
-    assert "default is `false`" in configuration
-    assert "`skills.codeIndex.mcpName`" in configuration
-    assert "reserved `cvs_` prefix" not in configuration
-    assert "`cvs_` is permitted" in configuration
+    assert "`skills.codeIndex` mapping" in guide
+    assert "`mcpName`" in guide
+    assert "`cvs_` is permitted" in normalized
     for path in (
         ".opencode/skills/sdlc-code-index/SKILL.md",
         ".pi/skills/sdlc-code-index/SKILL.md",
@@ -1145,7 +1279,6 @@ def test_cvs_docs_cover_supported_routes_and_host_boundaries() -> None:
 def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> None:
     documents = (DOCS / "documents.md").read_text(encoding="utf-8")
     normalized_documents = " ".join(documents.split())
-    configuration = (DOCS / "configuration.md").read_text(encoding="utf-8")
     skills = (DOCS / "skills.md").read_text(encoding="utf-8")
     current_docs = "\n".join(path.read_text(encoding="utf-8") for path in DOCS.glob("*.md"))
 
@@ -1175,7 +1308,7 @@ def test_documents_docs_cover_local_lifecycle_and_removed_remote_surfaces() -> N
         "Forgejo Wiki",
     ):
         assert removed not in current_docs
-    assert "Git provider mappings use the same strict provider contract" in configuration
+    assert "Git provider mappings are accepted configuration" in normalized_documents
     assert "currently provides eight generated skills" in skills
     assert "No Documents agent or skill is generated" in skills
 

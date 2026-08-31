@@ -75,9 +75,12 @@ nav:
               - Issues: issues.md
               - Documents: documents.md
               - Memory: memory.md
+              - Caveman: caveman.md
+              - TDD: tdd.md
               - Code Index:
                   - Overview: code-intelligence.md
                   - Providers: code-intelligence-providers.md
+              - Web Retrieval: web-retrieval.md
               - CVS: cvs.md
           - Status and Evidence: status-and-evidence.md
       - Troubleshooting: troubleshooting.md

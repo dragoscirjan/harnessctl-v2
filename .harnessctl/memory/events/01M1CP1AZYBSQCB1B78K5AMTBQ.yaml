@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1CP1AZYBSQCB1B78K5AMTBQ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00168
+summary: hrn-00168 | build | hrn-00180 Config File slice | monolith narrowed; focused gates pass; Story remains in_progress.
+details: "`docs/configuration.md` now owns Config File lifecycle, merge/replacement, validation, credentials, links, provenance; schema/domain catalogs deferred to hrn-00181/hrn-00183. `tests/test_docs.py` boundary updated; LLM indexes regenerated. 32 docs tests, strict MkDocs, deterministic index, Ruff, focused Prettier, diff checks passed. No Verify, Release, closure, remote, runtime/schema/default change."
+source:
+  kind: artifact
+  ref: hrn-00168
+  revision: v1:7d64e3e78fecf644ec6b77ac2a69b28184d1e91544149eee5cec3a8a1b60431f
+created_at: 2026-08-31T19:51:42.846Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - config-v1
+  - documentation
+  - hrn-00180
+  - sdlc
