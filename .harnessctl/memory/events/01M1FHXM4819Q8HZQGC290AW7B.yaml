@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FHXM4819Q8HZQGC290AW7B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: "hrn-00175 | Release | ready PR | Epic and six children done; PR #72 ready."
+details: "Branch feat/hrn-00175-home-onboarding; commit be97f61 pushed to origin; ready PR https://github.com/dragoscirjan/harnessctl-v2/pull/72 targets main. Evidence: focused docs tests 44 passed; deterministic generators and strict MkDocs passed; Ruff, Python format, Markdown Prettier, diff checks passed; pre-push suites 719 Python and 220 Node tests passed. No merge or deployment."
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: v1:47f3f69d2425eddc5bc9d5f32668fc3d237b279e363c5501b7d1e42fe48696cd
+created_at: 2026-09-01T22:37:30.120Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - docs
+  - onboarding
+  - pr-ready
+  - release
