@@ -1,30 +1,34 @@
-# Software development lifecycle
+# Harnessctl SDLC
 
-A software development lifecycle (SDLC) is a repeatable way to move work from an idea to
-a delivered change. Harnessctl organizes that journey into Plan, Build, Verify, and
-Release, with explicit evidence and approval boundaries between phases.
+Harnessctl applies the [general SDLC principles](sdlc-introduction.md) through four
+delivery phases: Plan, Build, Verify, and Release. It adds Continue for bounded resumption
+and Refresh for standalone repository reconciliation. Explicit evidence and approval
+boundaries separate every activity.
 
 The workflow keeps one Epic as the authority for each change. You can see what will happen
 before an action runs, revise the proposed scope, resume interrupted work, and stop before
 local, remote, or destructive mutations. Harnessctl guides the work; you remain in control
 of every consequential decision.
 
-## Commands
+## Choose a command
 
 Harnessctl provides six commands:
 
-| Installed name  | Canonical alias  | Responsibility                                                                 |
-| --------------- | ---------------- | ------------------------------------------------------------------------------ |
-| `work-plan`     | `/work plan`     | Resolve or create the owning Epic and obtain approval for one executable plan. |
-| `work-build`    | `/work build`    | Select or resume ready Epic work and implement bounded slices.                 |
-| `work-verify`   | `/work verify`   | Verify the Epic and route passes or confirmed defects.                         |
-| `work-release`  | `/work release`  | Complete verified branch, commit, push, and pull-request delivery.             |
-| `work-continue` | `/work continue` | Resume exactly one authoritative step in one current phase.                    |
-| `work-refresh`  | `/work refresh`  | Reconcile repository context, memory, and supported local projections.         |
+| Current need                                  | Installed name and canonical alias | Expected stopping outcome                                 |
+| --------------------------------------------- | ---------------------------------- | --------------------------------------------------------- |
+| Turn an outcome into approved Epic work       | `work-plan` / `/work plan`         | Approved executable plan, or a planning blocker           |
+| Implement ready work from that plan           | `work-build` / `/work build`       | Local Build evidence at the Verify boundary, or a blocker |
+| Evaluate current acceptance and evidence      | `work-verify` / `/work verify`     | Verified pass, classified failure, or evidence gap        |
+| Deliver a currently verified Epic             | `work-release` / `/work release`   | Ready pull request by default, or a delivery blocker      |
+| Resume one known unfinished lifecycle step    | `work-continue` / `/work continue` | One completed same-phase step, or a reconciliation stop   |
+| Reconcile repository context outside delivery | `work-refresh` / `/work refresh`   | Refresh report without entering an Epic phase             |
 
 The `/work *` forms are harness-neutral aliases. See [Harnesses](harnesses.md) for host
 support and installation locations. Refresh is separate from the four delivery phases;
 it updates repository context without starting or advancing delivery work.
+
+For exact inputs, conditional references, outputs, and stopping contracts, use the
+[Command Reference](command-reference.md).
 
 ## Before you start
 
@@ -39,6 +43,24 @@ be revised. Remote and destructive operations always need fresh, action-specific
 When repository memory is enabled, checkpoints can help resume work. Checkpoints are
 advisory: current issues, approved documents, repository state, and current evidence win
 when they disagree.
+
+## Control and recovery boundaries
+
+Approval is always bounded. Before an SDLC command reads, changes, or operates on project
+state, it presents the proposed action set as Required, Recommended, Optional, or Not
+needed. You can revise that set. Approval covers only the confirmed set and never becomes
+blanket permission for later work.
+
+Checkpoints record compact, confirmed progress when project memory is configured. They
+support recovery after an interruption, but they do not prove that work succeeded. A
+resumed command reconciles the checkpoint with current issues, documents, source, Git,
+tests, and provider evidence. Contradictory or ambiguous state causes a stop for a human
+decision instead of automatic recovery.
+
+Local approval never implies remote or destructive consent. Push, pull-request changes,
+merge, deployment, remote issue changes, and destructive operations use their own current
+consent boundaries. A failed or ambiguous operation stops; the workflow inspects current
+state before retrying so that already satisfied work is not repeated.
 
 ## Phase behavior
 

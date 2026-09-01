@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1EYS5MZKG0GJ4RVD29A7S4B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: "hrn-00170 | Release | ready PR #70 | created"
+details: "Commit a5afe2f pushed to origin/feat/hrn-00170-sdlc-guides. Ready PR #70 targets main: https://github.com/dragoscirjan/harnessctl-v2/pull/70. Verified open, draft=false, head/base exact, 1 commit, 14 files. GitHub quality jobs for Ubuntu, macOS, Windows running. AGENTS.md unrelated; Release checkpoint lineage uncommitted. No merge, deployment, destructive action, issue mutation, or closure."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: a5afe2f
+created_at: 2026-09-01T17:03:01.279Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1EYPTAFGW5DWA7H156KH9P6
+tags:
+  - hrn-00170
+  - pr-70
+  - ready
+  - release

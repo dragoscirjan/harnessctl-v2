@@ -162,7 +162,6 @@ STRUCTURAL_STUBS = {
     "installation.md": ("Installation", "hrn-00175"),
     "mcp-servers.md": ("MCP Servers", "hrn-00171"),
     "node-modules.md": ("Node Modules", "hrn-00177"),
-    "sdlc-introduction.md": ("Introduction to SDLC", "hrn-00170"),
     "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
 }
 SKILL_ENTRY_FIELDS = (
@@ -343,6 +342,55 @@ def test_structural_stubs_declare_only_page_state_and_owner() -> None:
         assert stub.count("\n#") == 0
         assert "**Status:**" not in stub
         assert len(stub.splitlines()) <= 10
+
+
+def test_sdlc_introduction_teaches_harness_neutral_fundamentals() -> None:
+    introduction = (DOCS / "sdlc-introduction.md").read_text(encoding="utf-8")
+    headings = set(re.findall(r"^## (.+)$", introduction, re.MULTILINE))
+
+    assert introduction.startswith("# Introduction to SDLC\n")
+    assert "Planned content" not in introduction
+    assert {
+        "Why use a lifecycle",
+        "Core lifecycle activities",
+        "Feedback is part of the process",
+        "Evidence supports decisions",
+        "Roles and decision boundaries",
+        "Common failure modes",
+        "Choose the next activity",
+        "How Harnessctl applies these ideas",
+    }.issubset(headings)
+    for activity in ("Discover", "Plan", "Build", "Verify", "Deliver", "Learn"):
+        assert re.search(rf"^\|\s*{activity}\s*\|", introduction, re.MULTILINE)
+    assert "](sdlc.md)" in introduction
+    assert "](command-reference.md)" in introduction
+    assert re.search(r"\bwork-[a-z-]+\b", introduction) is None
+
+
+def test_harnessctl_sdlc_owns_controlled_epic_lifecycle_guidance() -> None:
+    guide = (DOCS / "sdlc.md").read_text(encoding="utf-8")
+    normalized = " ".join(guide.split())
+
+    assert guide.startswith("# Harnessctl SDLC\n")
+    assert "](sdlc-introduction.md)" in guide
+    assert "](command-reference.md)" in guide
+    for command in PUBLIC_COMMANDS:
+        alias = command.removeprefix("work-")
+        assert f"`{command}` / `/work {alias}`" in guide
+    for phase in ("Plan", "Build", "Verify", "Release"):
+        assert f"### {phase}\n" in guide
+    assert "### Continue\n" in guide
+    assert "### Refresh\n" in guide
+    for boundary in (
+        "Approval is always bounded",
+        "Checkpoints record compact, confirmed progress",
+        "Contradictory or ambiguous state causes a stop",
+        "Local approval never implies remote or destructive consent",
+        "YOLO is one-time, Epic-scoped, bounded consent",
+        "Red, Green, and Refactor",
+        "Merge remains a human action by default",
+    ):
+        assert boundary in normalized
 
 
 def test_visual_shell_has_accessible_maintainable_extensions() -> None:

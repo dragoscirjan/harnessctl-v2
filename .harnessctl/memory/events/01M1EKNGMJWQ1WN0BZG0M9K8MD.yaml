@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1EKNGMJWQ1WN0BZG0M9K8MD
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Build | all 3 Story slices implemented | checks pass
+details: "Implemented hrn-00187, hrn-00188, hrn-00189 locally in dependency order. Changed only docs/sdlc-introduction.md, docs/sdlc.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. Generic SDLC guide replaces stub; Harnessctl guide clarifies command choice, stopping outcomes, control/recovery boundaries; docs tests enforce guide roles and reuse existing link/Mermaid/graph/index/policy gates. Evidence: tests/test_docs.py 41 passed; Ruff format/lint passed; owned Markdown Prettier passed; generator --check passed; strict MkDocs passed; 6 Mermaid diagrams validated; git diff --check passed. No issue transitions: configured issue capabilities read/create only. Epic and Stories remain open. No Verify, Release, remote, destructive, commit, PR, merge, or deployment. Next: work-verify hrn-00170."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T13:48:47.122Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - docs
+  - hrn-00170
+  - sdlc
