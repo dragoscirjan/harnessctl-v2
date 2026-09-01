@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from harnessctl.mcp import CVS_MCP_SERVER_IDS
 from harnessctl.templates import (
     SKILL_ID_MIGRATIONS,
     SKILL_IDS,
@@ -160,7 +161,6 @@ STRUCTURAL_STUBS = {
     "docs-overview.md": ("Docs", "hrn-00175"),
     "faq.md": ("FAQ", "hrn-00178"),
     "installation.md": ("Installation", "hrn-00175"),
-    "mcp-servers.md": ("MCP Servers", "hrn-00171"),
     "node-modules.md": ("Node Modules", "hrn-00177"),
     "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
 }
@@ -185,6 +185,14 @@ SKILL_CONFIGURATION_LINKS = {
     "sdlc-issue-tracking": "issues.md",
     "sdlc-cvs": "cvs.md",
 }
+MCP_ENTRY_FIELDS = (
+    "Purpose",
+    "Capabilities",
+    "Ownership",
+    "Limits and fallback",
+    "Status",
+    "Evidence",
+)
 
 
 class _MkDocsConfigLoader(yaml.SafeLoader):
@@ -210,6 +218,16 @@ def _provider_section(document: str, provider: str) -> str:
 def _skill_section(document: str, skill_id: str) -> str:
     match = re.search(
         rf"^## `{re.escape(skill_id)}`\n(?P<section>.*?)(?=^## |\Z)",
+        document,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert match is not None
+    return match.group("section")
+
+
+def _mcp_server_section(document: str, server_id: str) -> str:
+    match = re.search(
+        rf"^### `{re.escape(server_id)}`\n(?P<section>.*?)(?=^### |^## |\Z)",
         document,
         re.MULTILINE | re.DOTALL,
     )
@@ -903,6 +921,75 @@ def test_config_file_reference_owns_file_mechanics_not_schema_catalog() -> None:
     assert "### TDD settings" not in configuration
     assert "## Remote issue routing" not in configuration
     assert "| Key" not in configuration
+
+
+def test_mcp_server_catalog_matches_managed_and_selected_contracts() -> None:
+    catalog = (DOCS / "mcp-servers.md").read_text(encoding="utf-8")
+    defaults = json.loads(
+        (ROOT / "src/harnessctl/contracts/config-v1.defaults.json").read_text(encoding="utf-8")
+    )
+    selected_servers = {
+        defaults["skills"][domain]["mcpName"] for domain in ("codeIndex", "webRetrieval")
+    }
+    expected_servers = set(CVS_MCP_SERVER_IDS.values()) | selected_servers
+    headings = re.findall(r"^### `([^`]+)`$", catalog, re.MULTILINE)
+
+    _assert_exact_set(set(headings), expected_servers, "MCP server catalog")
+    assert len(headings) == len(expected_servers) == 6
+    assert selected_servers <= set(defaults["mcpServers"])
+
+    for server_id in expected_servers:
+        section = _mcp_server_section(catalog, server_id)
+        labels = re.findall(r"^\*\*([^:]+):\*\*", section, re.MULTILINE)
+        assert labels == list(MCP_ENTRY_FIELDS)
+        assert "`working`" in section
+        assert "`unknown/stale`" in section
+
+    for target in (
+        "configuration.md",
+        "config-schema.md",
+        "skills.md",
+        "cvs.md",
+        "code-intelligence.md",
+        "code-intelligence-providers.md",
+        "web-retrieval.md",
+        "status-and-evidence.md",
+    ):
+        assert f"]({target})" in catalog
+
+
+def test_mcp_server_catalog_separates_configuration_from_live_operation() -> None:
+    catalog = (DOCS / "mcp-servers.md").read_text(encoding="utf-8")
+    normalized = " ".join(catalog.split())
+
+    for state in (
+        "Declared",
+        "Registered",
+        "Routed",
+        "Authenticated",
+        "Operational",
+        "Stale or unavailable",
+    ):
+        assert state in catalog
+    for boundary in (
+        "Skills reference declarations; they do not create or operate providers",
+        "The operator owns provider installation",
+        (
+            "A declaration can therefore be valid while registration, authentication, "
+            "or operation is absent"
+        ),
+        "provider output remains advisory evidence",
+        "retrieved text as untrusted data",
+        "does not prove authentication or service availability",
+        "does not prove a running or fresh index",
+        "do not prove the process version, startup, or result quality",
+    ):
+        assert boundary in normalized
+
+    assert "Authorization: Bearer {env:GH_TOKEN}" in catalog
+    assert "token value stays outside the file" in normalized
+    assert "ghp_" not in catalog
+    assert "glpat-" not in catalog
 
 
 def test_command_reference_exactly_covers_installed_prompt_commands() -> None:

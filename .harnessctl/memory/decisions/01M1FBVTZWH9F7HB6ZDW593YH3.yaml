@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FBVTZWH9F7HB6ZDW593YH3
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00171 | Plan | executable Epic plan | approved; 3 Stories created
+details: "Epic M. Lightweight in-Epic design under doc-00017 v2. Inventory: GitHub, GitLab, Gitea, Forgejo, sdlc_code_index/CodeGraphContext, sdlc_web_crawl/mcp-searchable. hrn-00190 S declaration/operation boundaries; hrn-00191 M catalog depends hrn-00190; hrn-00192 S drift gates depends hrn-00190,hrn-00191. Artifacts: docs/mcp-servers.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. No blockers; hrn-00167 closed. No provider operation. Next: work-build hrn-00171."
+source:
+  kind: user-confirmed
+  ref: hrn-00171
+  revision: null
+created_at: 2026-09-01T20:51:40.156Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - docs
+  - mcp
+  - plan
+  - sdlc
