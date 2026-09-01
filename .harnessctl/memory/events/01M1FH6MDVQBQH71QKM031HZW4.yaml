@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1FH6MDVQBQH71QKM031HZW4
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00175 | Verify | onboarding acceptance | passed; six children done.
+details: "Fresh evidence: focused onboarding test passed; tests/test_docs.py 44 passed; mise run docs-build generation, deterministic indexes, strict MkDocs passed; Ruff, Python format, Markdown Prettier, git diff --check passed. Built Home flow readable at 1440x1000 and 390x844; direct Installation, Getting Started, Command Reference links and responsive viewport present. Public runtime-detail, credential, link, support checks passed. User approved hrn-00193..hrn-00198 transitions open->done; Epic remains open. Release ready. No Plan, Build, Release, remote, destructive, branch, commit, or PR action."
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: v1:f28d2ee670f4553ceaa672154d917e311d13f6a7d65f82e648153e91926c491e
+created_at: 2026-09-01T22:24:56.763Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes:
+  - 01M1FG5XS3CWQWQ81VZRW8PYJ8
+tags:
+  - docs
+  - onboarding
+  - release-ready
+  - verify

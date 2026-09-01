@@ -11,15 +11,22 @@ Source: ./
 # harnessctl documentation
 
 Harnessctl helps people use LLMs through a deliberate software development lifecycle.
-It turns a goal into bounded, reviewable work while keeping approvals, repository
-authority, remote actions, and destructive operations under human control.
+It turns a software goal into bounded, reviewable work while keeping approvals,
+repository authority, remote actions, and destructive operations under human control.
+Use it when you want an LLM coding session to follow explicit Plan, Build, Verify, and
+Release boundaries instead of making an open-ended change.
 
-Start with [Getting started](getting-started.md). You will install the supported harness
-commands, plan one real outcome, and follow it through Build, Verify, and Release.
+## Start here
 
-## Guides
+1. [Install harnessctl](installation.md) into a project for OpenCode or Pi.
+2. [Getting started](getting-started.md) plans your first outcome and stops with an
+   approved Epic plan.
+3. Use the [command reference](command-reference.md) when you are ready for another
+   lifecycle phase.
 
-- [Getting started](getting-started.md): install harnessctl and run your first workflow.
+## Guides and reference
+
+- [Docs overview](docs-overview.md): choose the shortest route for your current task.
 - [SDLC](sdlc.md): understand and use the four Epic lifecycle phases.
 - [Configuration](configuration.md): defaults, overlay behavior, and every current
   setting.
@@ -1049,11 +1056,59 @@ Source: ./docs-overview/
 
 # Docs
 
-> **Page status:** Planned content
-> **Content owner:** `hrn-00175`
+Choose a route based on what you need to accomplish. New users can reach a controlled
+first result through Installation and Getting Started; the remaining guides explain one
+area without duplicating its canonical reference.
 
-This route is reserved by the approved information architecture. The owning Epic will
-replace this structural stub with the documentation landing page.
+## Start a workflow
+
+1. [Installation](installation.md) prepares a supported coding harness in a project.
+2. [Getting Started](getting-started.md) runs Plan and ends at the first approved Epic
+   plan.
+3. [Command Reference](command-reference.md) explains the installed commands and their
+   stopping points.
+
+Read [Introduction to SDLC](sdlc-introduction.md) for lifecycle fundamentals or
+[Harnessctl SDLC](sdlc.md) for Harnessctl's approval, checkpoint, and phase boundaries.
+
+## Choose a content type
+
+- **Tutorials** lead through a complete outcome in order. Start with
+  [Getting Started](getting-started.md).
+- **Explanatory guides** build understanding and support decisions. Use
+  [Introduction to SDLC](sdlc-introduction.md) for the lifecycle model and
+  [Harnessctl SDLC](sdlc.md) for its controlled execution rules.
+- **Catalogs** inventory available integrations and capabilities. Browse
+  [Harnesses](harnesses.md), [Skills](skills.md), or [MCP Servers](mcp-servers.md).
+- **Exact references** provide precise command and field details. Use the
+  [Command Reference](command-reference.md) or [Config Schema](config-schema.md).
+- **Troubleshooting and help** answer failures and common questions. Go to
+  [Troubleshooting](troubleshooting.md) or the [FAQ](faq.md).
+
+## Configure the system
+
+- [Configuration](configuration.md) explains overlays and current settings.
+- [Config Schema](config-schema.md) is the field-level reference.
+- [Harnesses](harnesses.md) records host support and installed locations.
+- [Skills](skills.md) catalogs the guidance available to each workflow.
+- [MCP Servers](mcp-servers.md) describes external tool connections.
+
+## Work with project authority
+
+- [Issues](issues.md), [Documents](documents.md), and [Memory](memory.md) explain the
+  repository-backed records used by lifecycle commands.
+- [CVS and MCP Providers](cvs.md) covers local version control, remote providers, and
+  consent boundaries.
+- [Code Intelligence](code-intelligence.md) and
+  [External Providers](code-intelligence-providers.md) cover optional retrieval evidence.
+
+## Diagnose or confirm behavior
+
+- [Troubleshooting](troubleshooting.md) and [FAQ](faq.md) address known problems and
+  common questions.
+- [Feature Status and Evidence](status-and-evidence.md) explains how support claims are
+  qualified.
+- [Changelog](changelog.md) records user-visible changes.
 
 ---
 
@@ -1063,11 +1118,66 @@ Source: ./installation/
 
 # Installation
 
-> **Page status:** Planned content
-> **Content owner:** `hrn-00175`
+Harnessctl currently installs from a source checkout. OpenCode and Pi are supported;
+Claude and Codex integration is not implemented. Install only into a project whose
+generated harness files you are prepared to review.
 
-This route is reserved by the approved information architecture. The owning Epic will
-replace this structural stub with installation guidance.
+## Prerequisites
+
+- Git and [mise](https://mise.jdx.dev/) are available.
+- `uv` is required, but no separate `uv` installation is needed for this path. The
+  repository's `mise` toolchain declares and provisions it for the setup task.
+- You have a harnessctl source checkout at the revision you intend to install.
+- You can review changes under `.opencode/` and `.pi/` in the target project.
+
+## Install into the current checkout
+
+From the harnessctl checkout, prepare its tools and install both supported harnesses:
+
+```bash
+mise run setup
+mise run install-prompts
+```
+
+The installation task targets the current checkout. For an explicit target directory or
+a single host, use the source installer's options documented under
+[Installing prompts](../README.md#installing-prompts).
+
+OpenCode receives commands under `.opencode/commands/`, skills under
+`.opencode/skills/`, and project tool registration in `.opencode/opencode.json`. Pi
+receives prompts under `.pi/prompts/`, skills under `.pi/skills/`, and project-owned
+configuration under `.pi/`.
+
+Reload or restart the selected host after installation so it discovers the generated
+commands and skills.
+
+## Pi consent
+
+Pi package installation asks for per-package consent in an interactive session. In
+noninteractive automation, review the disclosed package and filesystem effects before
+passing `--allow-pi-package-install`. Without that explicit flag, noninteractive Pi
+package installation stops instead of assuming consent.
+
+## Existing generated files
+
+Installation stops on conflicting generated files by default. Review the conflict before
+using `--force`, which authorizes replacement of generated files but does not authorize
+deleting legacy support-skill directories.
+
+Normal upgrades preserve those legacy directories and report their paths. After reviewing
+the migration disclosure, `--replace-sdlc-skill-set` separately authorizes removal of the
+selected host's legacy support-skill trees. Symlinks and special entries abort that
+migration before mutation.
+
+## Roll back
+
+Install the prior harnessctl revision with `--force`, then reload or restart the host.
+Remove renamed support-skill directories only when the prior revision does not manage
+them and you have reviewed each path. Harnessctl does not read, modify, or own global
+OpenCode skills under `~/.config/opencode`.
+
+Continue with [Getting Started](getting-started.md) to confirm the installed `/work-plan`
+command through a bounded first workflow.
 
 ---
 
@@ -1077,55 +1187,83 @@ Source: ./getting-started/
 
 # Getting started
 
-Harnessctl adds a guided software development lifecycle to the coding harness you already
-use. It helps you turn a goal into approved work, make bounded changes, check the result,
-and prepare delivery without giving up control of consequential actions.
+This tutorial uses the installed `/work-plan` prompt command to turn one safe software
+goal into an approved, executable Epic plan. It intentionally stops before Build. You
+remain in control of every proposed read, issue mutation, remote action, and destructive
+operation.
 
-## 1. Install the project tools
+## 1. Confirm installation
 
-From the harnessctl repository, prepare the project and install the generated commands:
+Complete [Installation](installation.md), reload or restart OpenCode or Pi, and open the
+project you want to plan. Confirm that the harness exposes `/work-plan`.
 
-```bash
-mise run setup
-mise run install-prompts
-```
+Harnessctl installs six separate prompt commands. Conceptual `/work plan` wording may
+appear in lifecycle explanations, but grouped `/work` dispatch is not an installed
+command.
 
-The default installation prepares both currently supported harnesses. See
-[Harnesses](harnesses.md) for their installed command locations and support status.
+## 2. Choose a bounded outcome
 
-## 2. Start with Plan
-
-Open your coding harness in the project you want to work on, then describe the outcome:
-
-```text
-/work plan Add a searchable customer activity history
-```
-
-Plan first shows the bounded actions it wants to take. You can change that action set,
-clarify the outcome, reject optional work, or stop. The command does not begin Build on
-its own.
-
-## 3. Follow the lifecycle
-
-After approving an executable Epic plan, run each phase deliberately:
+Use a small, reversible outcome that can be accepted from repository evidence. For
+example:
 
 ```text
-/work build hrn-00001
-/work verify hrn-00001
-/work release hrn-00001
+Add a health endpoint with a focused automated check and usage documentation.
 ```
 
-Use `/work continue hrn-00001` to resume one interrupted step. Use `/work refresh` when
-you only want to reconcile repository context without entering the delivery lifecycle.
+Avoid credentials, production mutations, deployments, or broad cleanup in a first run.
+
+## 3. Run Plan
+
+Enter the outcome after the installed command:
+
+```text
+/work-plan Add a health endpoint with a focused automated check and usage documentation
+```
+
+Plan first presents a bounded action set classified as Required, Recommended, Optional,
+or Not needed. Review the proposed reads and local operations, narrow them if needed, and
+approve only that set. Declining optional work does not authorize a broader alternative.
+
+Plan then resolves one existing Epic or proposes the issue hierarchy needed for the
+outcome. Review objectives, scope, acceptance criteria, dependencies, estimates, risks,
+and non-goals. Issue, relationship, and document mutations require exact approval before
+they occur.
+
+## 4. Check the result
+
+A successful run stops with an approved executable plan. Its compact result identifies:
+
+- **Epic:** the authoritative Epic ID.
+- **Phase:** `Plan`.
+- **Done and Evidence:** what was confirmed and where the plan is recorded.
+- **Next:** normally the installed `/work-build` command for that Epic.
+- **Blockers:** unresolved authority, dependencies, or ambiguity, if any.
+- **Checkpoint:** whether compact confirmed progress was stored.
+
+No source implementation, formal verification, release, push, or deployment belongs to
+this first success.
+
+## Resume or recover
+
+If Plan stops on ambiguity, answer the stated blocker and run `/work-plan` again with the
+Epic ID or clarified outcome. If a known Plan step was interrupted after a checkpoint,
+use `/work-continue <epic-id>` and approve its newly bounded action set. Treat current
+issues, documents, source, Git state, and tests as authority when they disagree with a
+checkpoint.
+
+When you deliberately continue later, use the exact Epic ID with the separate
+`/work-build`, `/work-verify`, and `/work-release` commands. Each phase asks for its own
+bounded approval and stops at its own boundary.
 
 ## What stays under your control
 
-Harnessctl asks before reading or changing the bounded areas it identifies. Remote and
-destructive operations require fresh, action-specific consent. A plan, checkpoint, or
-provider response never overrides current repository authority or your decision.
+Remote and destructive operations require fresh, action-specific consent. Approval for
+Plan does not authorize Build, issue closure, remote work, or destructive work. A plan,
+checkpoint, memory record, or provider response never overrides current repository
+authority or your decision.
 
-Next, read the [SDLC guide](sdlc.md) for phase behavior or the
-[Configuration reference](configuration.md) to adapt harnessctl to your project.
+Read the [command reference](command-reference.md) for exact stopping points or the
+[SDLC guide](sdlc.md) for lifecycle behavior.
 
 ---
 

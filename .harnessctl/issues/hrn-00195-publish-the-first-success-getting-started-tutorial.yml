@@ -1,0 +1,30 @@
+"version": 1
+"id": "hrn-00195"
+"type": "story"
+"title": "Publish the first-success Getting Started tutorial"
+"status": "done"
+"created_at": "2026-09-01T21:31:54.666Z"
+"updated_at": "2026-09-01T22:24:03.074Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00175"
+"depends_on":
+  - "hrn-00194"
+"metadata":
+  "estimate": "M"
+  "order": 3
+  "scope": "getting-started"
+"body": "# Publish the first-success Getting Started tutorial\n\n## Objective\n\nTake a reader from a supported installed harness to one approved executable Epic plan, then hand off deliberately to the remaining lifecycle phases.\n\n## Scope\n\n- Replace `docs/getting-started.md` with one linear tutorial using a safe sample outcome in the reader's project.\n- Lead with the installed `/work-plan` command and distinguish conceptual `/work plan` semantics from installed dispatch.\n- Explain bounded-action approval, issue selection or creation, exact-plan approval, compact output, checkpoint behavior, stopping boundaries, blockers, and recovery.\n\n## Acceptance Criteria\n\n- The tutorial starts from the completed supported installation documented by `hrn-00194` and names the destination project context.\n- One safe sample outcome is carried through a single `/work-plan` invocation to an approved executable Epic plan.\n- Expected prompts and decisions include the bounded action set, relevant issue resolution or creation, scope and non-goals, decomposition when required, exact-plan approval, and mutation consent.\n- The expected compact result identifies the Epic, Plan phase, evidence, next command, blockers, and checkpoint state.\n- First success stops before Build; the page then links explicitly to Build, Verify, Release, Continue, SDLC, command reference, and recovery content owned by adjacent pages.\n- The tutorial does not claim grouped `/work plan` runtime dispatch is installed while repository authority says that dispatch is not implemented.\n- Remote and destructive consent boundaries remain explicit and no example embeds credentials.\n\n## Dependencies And Order\n\nDepends on `hrn-00194` so installation terminology and commands are stable before the tutorial is finalized.\n\n## Linked Artifacts\n\nApproved `doc-00017` v2 defines the route and ownership boundary; no new design artifact is required.\n\n## Estimate And Uncertainty\n\nEstimate `M`. Medium uncertainty from reconciling host-visible command UX with canonical command semantics and choosing concise expected-output examples that do not overpromise runtime behavior.\n\n## Non-Goals\n\n- Performing Build, Verify, Release, remote repository setup, merge, or deployment as part of first success.\n- Reproducing the complete SDLC or command reference.\n- Changing command dispatch, checkpoint behavior, issue tooling, or harness behavior.\n- Publishing or deploying generated site output."
+"comments":
+  - "id": "hrn-00195-C0001"
+    "created_at": "2026-09-01T21:54:24.774Z"
+    "created_by": "opencode"
+    "body": "Build evidence: rewrote `docs/getting-started.md` as a linear `/work-plan` first success ending at an approved executable Epic plan; documented bounded and exact approvals, compact result, checkpoint recovery, later phase handoff, and grouped-dispatch non-claim. Checks passed: `uv run pytest tests/test_docs.py` (44 passed), `mise run docs-build`, targeted Prettier, Ruff, and `git diff --check`. Left open for formal Verify."
+  - "id": "hrn-00195-C0002"
+    "created_at": "2026-09-01T22:06:24.271Z"
+    "created_by": "opencode"
+    "body": "Verify mapped all Getting Started acceptance criteria to current content and fresh checks; no defect found in this Story. Epic remains blocked by `hrn-00197` and `hrn-00198`. Left open because detailed closure was not approved."
+  - "id": "hrn-00195-C0003"
+    "created_at": "2026-09-01T22:22:10.596Z"
+    "created_by": "opencode"
+    "body": "Fresh formal Verify passed every Story criterion. Getting Started begins from supported installation, carries one safe `/work-plan` example to an approved executable Epic plan, covers bounded/exact approvals and compact checkpoint result, stops before Build, links later lifecycle/recovery authority, rejects grouped-dispatch claims, and preserves remote/destructive consent boundaries. Focused and full docs checks passed. Eligible for closure with separate exact approval."
