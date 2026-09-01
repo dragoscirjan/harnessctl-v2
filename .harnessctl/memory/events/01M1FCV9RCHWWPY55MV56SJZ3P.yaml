@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FCV9RCHWWPY55MV56SJZ3P
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00171 | Verify | content acceptance | passed
+details: "Mapped all Epic criteria to current source and fresh evidence. Six managed/selected entries represented once; declaration/registration/routing/auth/operation/stale states distinct; operator/provider ownership, fallbacks, narrow statuses, provenance, credential-free Config v1 example, and reference links confirmed. Evidence: 43 docs tests; deterministic llms check; strict docs build; 6 Mermaid diagrams; Ruff; Prettier; git diff check passed. Independent correctness/security/privacy/compatibility/maintainability review found no defect. Visual/theme checks excluded by repository policy; no live provider operation. Release ready. No issue closure or other phase entered."
+source:
+  kind: artifact
+  ref: hrn-00171
+  revision: null
+created_at: 2026-09-01T21:08:51.084Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - docs
+  - mcp
+  - sdlc
+  - verify

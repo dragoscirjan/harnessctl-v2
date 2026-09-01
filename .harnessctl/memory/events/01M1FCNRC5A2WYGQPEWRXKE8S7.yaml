@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FCNRC5A2WYGQPEWRXKE8S7
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00171 | Build | 3 Story slices implemented | checks pass
+details: "Artifacts: docs/mcp-servers.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. Six-entry source-derived catalog; declaration/registration/auth/operation boundaries; operator ownership; credential-free Config v1 path; status/evidence/fallbacks; deterministic drift gates. Evidence: 43 docs tests; Ruff; Prettier; llms check; strict docs build; 6 Mermaid diagrams; git diff check passed. No provider operation, Verify, Release, issue closure, commit, or remote mutation. Next: work-verify hrn-00171."
+source:
+  kind: artifact
+  ref: hrn-00171
+  revision: null
+created_at: 2026-09-01T21:05:49.445Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - docs
+  - mcp
+  - sdlc
