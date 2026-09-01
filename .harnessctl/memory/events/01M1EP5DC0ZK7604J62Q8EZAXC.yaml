@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1EP5DC0ZK7604J62Q8EZAXC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Verify | unit-test acceptance rerun | 41 passed; visual pending
+details: "Fresh `uv run pytest tests/test_docs.py`: 41 passed in 0.09s. Test-backed acceptance passes. User confirmed unit-test-only scope; visual/browser/responsive and rendered accessibility not run. Not-run evidence cannot pass; full Epic Verify remains incomplete; Release not recommended. No failure, Bug, issue mutation, Plan, Build, or Release action."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T14:32:25.216Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1ENDNG1RRMAQVBPT8Z2F4MK
+tags:
+  - hrn-00170
+  - unit-tests
+  - verify
+  - visual-pending

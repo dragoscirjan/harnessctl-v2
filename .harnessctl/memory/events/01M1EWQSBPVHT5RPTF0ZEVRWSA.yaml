@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1EWQSBPVHT5RPTF0ZEVRWSA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Verify | content acceptance | passed; frontend deferred
+details: "Content scope passes. Fresh evidence: tests/test_docs.py 41 passed; Ruff lint/format; owned Markdown Prettier; deterministic LLM check; strict MkDocs; 6 Mermaid diagrams; duplication threshold; dead-code; git diff check. Source review maps all Epic content criteria: generic guide, command choice/outcomes, distinct phases/Continue/Refresh, explicit control boundaries, graph/table parity, Command Reference boundary. System Chromium rendered both pages desktop/mobile. Dark-theme table-header contrast found; user explicitly deferred visual shell as future frontend work and chose content-only acceptance; no Bug. Release recommended. No issue mutation, repair, Plan, Build, Release, remote, or destructive action."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T16:27:18.774Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1EP5DC0ZK7604J62Q8EZAXC
+tags:
+  - content-pass
+  - docs
+  - frontend-deferred
+  - hrn-00170
+  - verify

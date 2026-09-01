@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1ENSSEZYZNB12V83Q4N0GBK
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: "hrn-00170 | Release | entry gate | blocked: Verify incomplete"
+details: "Current Verify checkpoint 01M1ENDNG1RRMAQVBPT8Z2F4MK: unit tests 41 passed; visual/rendered desktop/mobile accessibility not run; full Epic Verify does not pass. Fresh Git state: branch main; Epic changes uncommitted. Release stopped before branch, commit, push, PR, merge, deployment, issue mutation, or destructive action. Next: work-verify hrn-00170 with pending visual checks."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T14:26:04.383Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - blocked
+  - hrn-00170
+  - release
+  - verify-pending

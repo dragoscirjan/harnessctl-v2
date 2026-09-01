@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1EXNFT73AH1EY5F15KEH3ZF
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Release | feature branch | created
+details: Verify content acceptance current. Created local branch feat/hrn-00170-sdlc-guides from main. Commit, push, PR pending. AGENTS.md unrelated; exclude. No remote, destructive, merge, deployment, or issue mutation.
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T16:43:32.039Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1ENSSEZYZNB12V83Q4N0GBK
+tags:
+  - branch
+  - hrn-00170
+  - release

@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M1EH7WX8JX6F9XX2SEMDTE6M
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Plan | executable Epic plan | approved; Stories created
+details: |-
+  Epic: hrn-00170
+  Command/phase: work-plan / Plan
+  Item: Publish generic and Harnessctl SDLC guides
+  Done: exact plan approved; hrn-00187 -> hrn-00188 -> hrn-00189 created and validated
+  Decisions: lightweight in-issue design; M Epic; no product/policy/migration/deployment changes
+  Artifacts: docs/sdlc-introduction.md; docs/sdlc.md; tests/test_docs.py; docs/llms.txt; docs/llms-full.txt; doc-00017 v2
+  Next: work-build hrn-00170
+  Blockers: none
+source:
+  kind: user-confirmed
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T13:06:23.784Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - hrn-00170
+  - plan
+  - sdlc

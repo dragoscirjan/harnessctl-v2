@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1ENDNG1RRMAQVBPT8Z2F4MK
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Verify | unit-test acceptance | 41 passed; visual pending
+details: "Fresh `uv run pytest tests/test_docs.py`: 41 passed in 0.09s. Unit assertions map Epic criteria to generic SDLC fundamentals, Harnessctl command choice/stopping outcomes, distinct Plan/Build/Verify/Release/Continue/Refresh sections, approval/checkpoint/YOLO/TDD/remote-destructive/human-merge boundaries, local links, deterministic LLM indexes, Mermaid accessibility metadata, and graph/table edge parity. No unit-test failure; verify-defects.md not loaded; no Bug. User excluded all visual validation. Rendered desktop/mobile behavior and visual accessibility remain not run, so full Epic Verify does not pass and Release is not recommended. No issue transition available or performed. Next: later `work-verify hrn-00170` with visual checks."
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: null
+created_at: 2026-09-01T14:19:27.105Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00170
+  - unit-tests
+  - verify
+  - visual-pending

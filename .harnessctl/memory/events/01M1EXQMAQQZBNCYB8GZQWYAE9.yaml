@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1EXQMAQQZBNCYB8GZQWYAE9
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00170 | Release | commit a5afe2f | created
+details: Branch feat/hrn-00170-sdlc-guides. Commit a5afe2f publishes 14-file Epic scope; commit hooks passed Ruff, Prettier, ESLint. AGENTS.md unrelated and unstaged. Push and PR pending. No remote, destructive, merge, deployment, or issue mutation.
+source:
+  kind: artifact
+  ref: hrn-00170
+  revision: a5afe2f
+created_at: 2026-09-01T16:44:42.199Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1EXNFT73AH1EY5F15KEH3ZF
+tags:
+  - commit
+  - hrn-00170
+  - release
