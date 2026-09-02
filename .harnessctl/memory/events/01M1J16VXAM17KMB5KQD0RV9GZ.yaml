@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1J16VXAM17KMB5KQD0RV9GZ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00178
+summary: hrn-00178 | Build | content Stories done; hrn-00206 contracts implemented; final bounded checks passed.
+details: Troubleshooting, FAQ, and Changelog published; contextual links added; focused tests enforce categories, fields, stable errors, safety, canonical links, manifest-derived package versions, release-stream separation, and Unreleased boundaries. LLM indexes current. Passed 47 docs tests, mise run docs-build, Ruff, Prettier, git diff --check. Task remains in_progress pending closure consent; Epic open.
+source:
+  kind: artifact
+  ref: hrn-00206
+  revision: null
+created_at: 2026-09-02T21:43:10.506Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1J100R1PHPY7X3TZYTTRSVF
+tags:
+  - build
+  - docs-contracts
+  - sdlc

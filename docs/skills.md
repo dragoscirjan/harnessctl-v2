@@ -7,6 +7,8 @@ server, provide credentials, or prove that an external provider is working.
 Use this catalog to choose guidance by outcome. Use [Skill Configuration](configuration.md)
 for exact settings, [Harnesses](harnesses.md) for host support, [MCP Servers](mcp-servers.md)
 for external capabilities, and [Node Modules](node-modules.md) for implementation packages.
+If expected guidance is absent or appears dormant, see
+[Troubleshooting](troubleshooting.md#skill-is-missing).
 
 ## Choose by goal
 

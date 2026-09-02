@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1J100R1PHPY7X3TZYTTRSVF
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00178
+summary: hrn-00178 | Build | hrn-00203 and hrn-00204 done; hrn-00205 changelog implemented; focused checks passed.
+details: docs/changelog.md now separates project 0.2.0, three package 0.1.10 releases, Unreleased notes, and dated documentation changes with adjacent authority links and explicit non-claims. Deterministic indexes refreshed. Passed mise run docs-build, Prettier, git diff --check. Changelog Story remains in_progress pending closure consent. Epic remains open.
+source:
+  kind: artifact
+  ref: hrn-00205
+  revision: null
+created_at: 2026-09-02T21:39:26.081Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1J0V8PPRDNFCWCCM550JF48
+tags:
+  - build
+  - changelog
+  - sdlc

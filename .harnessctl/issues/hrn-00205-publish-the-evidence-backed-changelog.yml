@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00205"
+"type": "story"
+"title": "Publish the evidence-backed changelog"
+"status": "done"
+"created_at": "2026-09-02T21:25:32.630Z"
+"updated_at": "2026-09-02T21:40:16.710Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00178"
+"metadata":
+  "estimate": "S"
+  "order": 3
+  "scope": "changelog-content"
+"body": "# Publish the evidence-backed changelog\n\n## User Story\n\nAs a harnessctl user, I want a source-linked change history so that I can distinguish shipped product and package releases, documentation updates, and unreleased work.\n\n## Scope\n\n- Replace `docs/changelog.md` with an explanation of authoritative release streams and evidence.\n- Present shipped root release `0.2.0`, public package releases such as `0.1.10`, explicitly Unreleased work, and dated documentation changes as distinct sections.\n- Link checked-in root/package changelogs, current GitHub Releases, and dated merged PR or commit evidence.\n- Keep authoritative changelogs and release notes as detail owners.\n\n## Acceptance Criteria\n\n- Shipped entries are dated and versioned where applicable and have adjacent authoritative evidence.\n- Unreleased entries remain visibly Unreleased and are never described as shipped or assigned an inferred date.\n- Package release state is not inferred solely from incomplete local tags.\n- Documentation changes are labeled as documentation and source-linked to dated commits or merged PRs.\n- The page makes no publication, provider-operation, compatibility, or ETA claim beyond current evidence.\n\n## Dependencies And Order\n\nParent `hrn-00178`; order 3; no child dependency. Linked design authority: `doc-00017` v2 and `docs/status-and-evidence.md`.\n\n## Estimate And Risks\n\nEstimate S. Main risks are stale release data and mixing Unreleased, package, product, and documentation streams.\n\n## Non-Goals\n\nNo release creation, package publication, rewriting authoritative changelogs/release notes, provider operation, roadmap, deployment, or theme/browser work."
+"comments":
+  - "id": "hrn-00205-C0001"
+    "created_at": "2026-09-02T21:39:26.685Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented: evidence-backed changelog separates project `0.2.0`, public package `0.1.10` releases, explicitly Unreleased notes, and dated documentation changes. Entries link checked-in changelogs, GitHub Releases, PRs, and commits without inferring registry state, operation, compatibility, or ETA. Focused checks passed: `mise run docs-build`, Prettier, deterministic LLM indexes, and `git diff --check`. Awaiting separate closure consent."

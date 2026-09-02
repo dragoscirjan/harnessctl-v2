@@ -157,11 +157,6 @@ EXPECTED_NAV = [
         ]
     },
 ]
-STRUCTURAL_STUBS = {
-    "changelog.md": ("Changelog", "hrn-00178"),
-    "faq.md": ("FAQ", "hrn-00178"),
-    "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
-}
 NODE_MODULE_ENTRY_FIELDS = (
     "Purpose",
     "Capability",
@@ -380,18 +375,6 @@ def test_documentation_tasks_include_strict_build_in_quality() -> None:
     eslint_config = (ROOT / "eslint.config.mjs").read_text(encoding="utf-8")
     assert "'.venv/**'" in eslint_config
     assert "'site/**'" in eslint_config
-
-
-def test_structural_stubs_declare_only_page_state_and_owner() -> None:
-    for filename, (title, owner) in STRUCTURAL_STUBS.items():
-        stub = (DOCS / filename).read_text(encoding="utf-8")
-        assert stub.startswith(
-            f"# {title}\n\n> **Page status:** Planned content\n> **Content owner:** `{owner}`\n\n"
-        )
-        assert all(line == line.rstrip() for line in stub.splitlines())
-        assert stub.count("\n#") == 0
-        assert "**Status:**" not in stub
-        assert len(stub.splitlines()) <= 10
 
 
 def test_sdlc_introduction_teaches_harness_neutral_fundamentals() -> None:
@@ -667,6 +650,173 @@ def test_public_documentation_contains_no_literal_credentials() -> None:
         assert credential_assignment.search(content) is None, (
             f"{path.name} contains a possible literal credential assignment"
         )
+
+
+def test_troubleshooting_uses_searchable_safe_recovery_entries() -> None:
+    guide = (DOCS / "troubleshooting.md").read_text(encoding="utf-8")
+    normalized = " ".join(guide.split())
+    entry_headings = (
+        "Installation conflict",
+        "Incomplete install rollback",
+        "Configuration is rejected",
+        "Unsupported harness",
+        "Skill is missing",
+        "Command stopped",
+        "Pi package installation",
+        "MCP server is unavailable",
+    )
+    required_fields = (
+        "Symptom",
+        "Likely cause",
+        "Safe diagnostics",
+        "Recovery",
+        "Escalation evidence",
+        "Reference",
+    )
+
+    assert re.search(r"\*\*Evidence review date:\*\* \d{4}-\d{2}-\d{2}", guide)
+    for heading in entry_headings:
+        section = guide.split(f"## {heading}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+        for field in required_fields:
+            assert f"**{field}:**" in section
+    for area in (
+        "Installation",
+        "Configuration",
+        "Harness",
+        "Skills",
+        "Commands",
+        "Node Modules",
+        "MCP Servers",
+    ):
+        assert re.search(rf"^\| {re.escape(area)}\s+\|", guide, re.MULTILINE)
+    for stable_message in (
+        "refusing to overwrite existing files",
+        "installation failed and rollback was incomplete",
+        "Invalid Config v1",
+        "duplicate mapping key",
+        "unsupported harness",
+        "sdlc-code-index is disabled",
+        "Pi package installation was not approved",
+        "Pi package installation requires pi on PATH",
+        "OpenCode MCP smoke check failed",
+        "Pi MCP smoke check failed",
+    ):
+        assert stable_message in guide
+    for canonical_link in (
+        "installation.md",
+        "configuration.md",
+        "harnesses.md",
+        "skills.md",
+        "command-reference.md",
+        "node-modules.md",
+        "mcp-servers.md",
+    ):
+        assert f"]({canonical_link}" in guide
+    for safety_boundary in (
+        "Never share credential values",
+        "Do not delete directories or force an overwrite",
+        "bounded, sanitized log excerpt",
+        "Generated, Installed, Registered, Configured, and Operational",
+    ):
+        assert safety_boundary.lower() in normalized.lower()
+    for owner in (
+        "installation.md",
+        "configuration.md",
+        "harnesses.md",
+        "skills.md",
+        "command-reference.md",
+        "node-modules.md",
+        "mcp-servers.md",
+    ):
+        owner_content = (DOCS / owner).read_text(encoding="utf-8")
+        assert "](troubleshooting.md" in owner_content
+
+
+def test_faq_answers_questions_through_canonical_links() -> None:
+    faq = (DOCS / "faq.md").read_text(encoding="utf-8")
+    normalized = " ".join(faq.split())
+    questions = re.findall(r"^## (.+\?)$", faq, re.MULTILINE)
+
+    assert len(questions) >= 12
+    for question in questions:
+        answer = faq.split(f"## {question}\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+        assert "](" in answer
+    for canonical_link in (
+        "installation.md",
+        "configuration.md",
+        "harnesses.md",
+        "skills.md",
+        "node-modules.md",
+        "mcp-servers.md",
+        "command-reference.md",
+        "config-schema.md",
+        "status-and-evidence.md",
+        "troubleshooting.md",
+        "changelog.md",
+    ):
+        assert f"]({canonical_link}" in faq
+    for boundary in (
+        "These statuses describe harnessctl only",
+        "not proof of external operation",
+        "Keep credential values outside project configuration",
+        "does not authorize remote or destructive work",
+        "merge always needs fresh explicit consent",
+    ):
+        assert boundary.lower() in normalized.lower()
+
+
+def test_changelog_separates_release_and_documentation_streams() -> None:
+    changelog = (DOCS / "changelog.md").read_text(encoding="utf-8")
+    normalized = " ".join(changelog.split())
+    headings = set(re.findall(r"^## (.+)$", changelog, re.MULTILINE))
+    project_version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
+        "project"
+    ]["version"]
+    manifests = _public_workspace_manifests()
+    package_versions = {manifest["version"] for manifest in manifests.values()}
+
+    assert {
+        f"Project release {project_version}",
+        "Unreleased",
+        "Documentation changes",
+    }.issubset(headings)
+    assert len(package_versions) == 1
+    package_version = package_versions.pop()
+    assert f"Public Node package releases {package_version}" in headings
+    assert re.search(r"\*\*Evidence review date:\*\* \d{4}-\d{2}-\d{2}", changelog)
+    assert set(re.findall(r"^\| `(@harnessctl/[^`]+)`\s+\|", changelog, re.MULTILINE)) == (
+        set(manifests)
+    )
+    assert re.search(
+        rf"^\| `{re.escape(project_version)}` \| \d{{4}}-\d{{2}}-\d{{2}}",
+        changelog,
+        re.MULTILINE,
+    )
+    for package_name, manifest in manifests.items():
+        assert re.search(
+            rf"^\| `{re.escape(package_name)}`\s+\| `{re.escape(manifest['version'])}`",
+            changelog,
+            re.MULTILINE,
+        )
+        package_changelog = ROOT / manifest["repository"]["directory"] / "CHANGELOG.md"
+        assert f"## {manifest['version']}\n" in package_changelog.read_text(encoding="utf-8")
+    assert changelog.count("| 2026-08-28") == len(manifests)
+    for evidence_link in (
+        "../CHANGELOG.md#020",
+        "../extensions/generic-tools/CHANGELOG.md#0110",
+        "../extensions/opencode-tools/CHANGELOG.md#0110",
+        "../extensions/pi-tools/CHANGELOG.md#0110",
+        "https://github.com/dragoscirjan/harnessctl-v2/releases",
+        "https://github.com/dragoscirjan/harnessctl-v2/pull/47",
+    ):
+        assert f"]({evidence_link})" in changelog
+    for boundary in (
+        "Local tags are not the sole package-release authority",
+        "It has no inferred publication date or delivery estimate",
+        "not product or package release records",
+        "do not claim registry publication",
+    ):
+        assert boundary.lower() in normalized.lower()
 
 
 def test_harness_guide_states_current_support() -> None:

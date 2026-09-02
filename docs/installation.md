@@ -59,4 +59,5 @@ them and you have reviewed each path. Harnessctl does not read, modify, or own g
 OpenCode skills under `~/.config/opencode`.
 
 Continue with [Getting Started](getting-started.md) to confirm the installed `/work-plan`
-command through a bounded first workflow.
+command through a bounded first workflow. If installation stops, start with
+[Troubleshooting](troubleshooting.md#symptom-index).

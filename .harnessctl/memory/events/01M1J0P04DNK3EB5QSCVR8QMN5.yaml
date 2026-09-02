@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1J0P04DNK3EB5QSCVR8QMN5
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00178
+summary: hrn-00178 | Build | hrn-00203 troubleshooting implemented; focused checks passed.
+details: docs/troubleshooting.md replaced with symptom-first safe recovery guidance; contextual links added to seven owning docs; deterministic LLM indexes refreshed. Passed mise run docs-build, Prettier, git diff --check. Story remains in_progress pending closure consent. Epic remains open.
+source:
+  kind: artifact
+  ref: hrn-00203
+  revision: null
+created_at: 2026-09-02T21:33:57.773Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - sdlc
+  - troubleshooting

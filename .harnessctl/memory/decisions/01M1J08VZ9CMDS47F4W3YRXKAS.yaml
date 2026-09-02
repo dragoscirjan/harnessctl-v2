@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1J08VZ9CMDS47F4W3YRXKAS
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00178
+summary: hrn-00178 | Plan | help and changelog docs | Approved executable plan persisted; four children ordered; no blocker.
+details: "Epic open. Children: hrn-00203 Troubleshooting M order 1; hrn-00204 FAQ S order 2; hrn-00205 Changelog S order 3; hrn-00206 contracts S order 4 depends on all three. Scope: three pages, contextual links, tests, deterministic LLM indexes. No design document. Next: work-build hrn-00178."
+source:
+  kind: artifact
+  ref: hrn-00178
+  revision: v1:ff84ce1128688ef480c50eb953e42b92da7a3d335ffdd1f91c576a6f561c4c07
+created_at: 2026-09-02T21:26:47.529Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - plan
+  - sdlc
