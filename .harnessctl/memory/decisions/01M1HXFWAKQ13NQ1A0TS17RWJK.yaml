@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1HXFWAKQ13NQ1A0TS17RWJK
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00177
+summary: hrn-00177 | Plan | executable Epic | Approved plan persisted; children hrn-00201 then hrn-00202 created.
+details: "Epic: hrn-00177. Phase: Plan. Scope: docs/node-modules.md, tests/test_docs.py, generated docs/llms.txt and docs/llms-full.txt. Decisions: public workspace package is catalog unit; lightweight design; no separate design artifact. Order: hrn-00201 M, then dependent hrn-00202 S. Blockers: none; hrn-00167 closed. Next: work-build hrn-00177. No Build, Verify, Release, remote, destructive, or status transition performed."
+source:
+  kind: user-confirmed
+  ref: hrn-00177
+  revision: null
+created_at: 2026-09-02T20:38:11.539Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - node-modules
+  - plan
+  - sdlc
