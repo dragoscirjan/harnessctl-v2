@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-00206"
+"type": "task"
+"title": "Enforce help and changelog documentation contracts"
+"status": "done"
+"created_at": "2026-09-02T21:25:40.772Z"
+"updated_at": "2026-09-02T21:44:41.644Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00178"
+"depends_on":
+  - "hrn-00203"
+  - "hrn-00204"
+  - "hrn-00205"
+"metadata":
+  "estimate": "S"
+  "order": 4
+  "scope": "help-changelog-contracts"
+"body": "# Enforce help and changelog documentation contracts\n\n## Objective\n\nAdd focused drift and safety tests for the approved Troubleshooting, FAQ, and Changelog content, then regenerate deterministic LLM indexes.\n\n## Scope\n\n- Remove `troubleshooting.md`, `faq.md`, and `changelog.md` from structural stubs in `tests/test_docs.py`.\n- Enforce all seven troubleshooting categories, required entry fields, stable searchable symptoms/errors, canonical links, and credential/destructive-action safety boundaries.\n- Enforce FAQ link-first answers and support/operation boundaries without coupling tests to every prose sentence.\n- Enforce changelog stream separation, dates/versions where applicable, source links, and explicit Unreleased treatment.\n- Preserve public-doc runtime-detail and credential-pattern policies.\n- Regenerate and validate `docs/llms.txt` and `docs/llms-full.txt`.\n\n## Acceptance Criteria\n\n- Tests fail when a required route, category, field, safety boundary, canonical link, release distinction, or evidence marker drifts.\n- Tests do not encode unstable prose beyond deliberately stable user-visible error strings.\n- Deterministic indexes include current help and changelog content.\n- Later Verify passes focused docs/install/config/release-artifact tests, strict docs build, Prettier, Ruff, deterministic generator checks, and `git diff --check`.\n\n## Dependencies And Order\n\nParent `hrn-00178`; order 4. Depends on Stories `hrn-00203`, `hrn-00204`, and `hrn-00205`. Linked design authority: `doc-00017` v2.\n\n## Estimate And Risks\n\nEstimate S. Main risk is brittle prose-level testing; enforce structure, inventory, evidence, and stable boundaries instead.\n\n## Non-Goals\n\nNo product, installer, configuration, package, dependency, runtime, provider, theme/browser, deployment, or release behavior changes."
+"comments":
+  - "id": "hrn-00206-C0001"
+    "created_at": "2026-09-02T21:43:11.126Z"
+    "created_by": "OpenCode"
+    "body": "Contract slice implemented: removed all three structural stubs; added focused Troubleshooting, FAQ, and Changelog drift/safety/evidence contracts; regenerated deterministic LLM indexes. Final bounded Build checks passed: `uv run pytest tests/test_docs.py` (47 passed), `mise run docs-build`, Ruff check/format, Prettier, and `git diff --check`. Awaiting separate closure consent."

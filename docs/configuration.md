@@ -184,4 +184,5 @@ harness entry does not prove that an external provider is available or working.
 
 The current Config v1 contract and generated defaults are linked from the
 [Config Schema](config-schema.md). Documentation explains how to use those contracts but
-does not replace them.
+does not replace them. For rejected files and safe diagnostic evidence, see
+[Troubleshooting](troubleshooting.md#configuration-is-rejected).

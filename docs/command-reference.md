@@ -110,4 +110,6 @@ refresh only configured development projections that support the exact operation
 
 For the lifecycle and transition model, see [Harnessctl SDLC](sdlc.md). The installed
 command registry and command templates are the source authority for names and launch
-boundaries; canonical SDLC references own the detailed behavior.
+boundaries; canonical SDLC references own the detailed behavior. If a command stops
+earlier than expected, use [Troubleshooting](troubleshooting.md#command-stopped) before
+attempting another phase.

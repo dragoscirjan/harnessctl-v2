@@ -104,4 +104,5 @@ future delivery. Files copied from another host are not a supported harnessctl C
 installation. Evidence: current [installer target map](../src/harnessctl/install.py#L41-L44)
 and [unsupported-host coverage](../tests/test_install.py#L1716-L1718).
 
-For host-independent workflow behavior, continue with the [SDLC guide](sdlc.md).
+For host-independent workflow behavior, continue with the [SDLC guide](sdlc.md). For
+installation and host-state failures, start with [Troubleshooting](troubleshooting.md).

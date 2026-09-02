@@ -30,6 +30,9 @@ can therefore be valid while registration, authentication, or operation is absen
 a provider is unavailable, generated guidance uses the documented local or CLI fallback
 when one is suitable, or stops and reports the limitation.
 
+For a declared or registered server that remains unavailable, follow the ordered
+[MCP troubleshooting checks](troubleshooting.md#mcp-server-is-unavailable).
+
 ## Declare and route a server
 
 This credential-free Config v1 excerpt declares the conventional GitHub server ID and

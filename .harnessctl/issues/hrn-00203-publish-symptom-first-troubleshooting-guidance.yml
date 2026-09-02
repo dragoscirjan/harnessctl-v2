@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00203"
+"type": "story"
+"title": "Publish symptom-first troubleshooting guidance"
+"status": "done"
+"created_at": "2026-09-02T21:25:21.048Z"
+"updated_at": "2026-09-02T21:35:42.907Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00178"
+"metadata":
+  "estimate": "M"
+  "order": 1
+  "scope": "troubleshooting-content"
+"body": "# Publish symptom-first troubleshooting guidance\n\n## User Story\n\nAs a harnessctl user encountering a failure, I want symptom-first, safe recovery guidance so that I can diagnose the problem without exposing credentials or damaging project state.\n\n## Scope\n\n- Replace `docs/troubleshooting.md` with a searchable symptom index and recovery entries.\n- Cover installation, configuration, harness, skill, command, package/module, and MCP failures.\n- Give every entry a symptom or stable error, likely cause, safe diagnostics, recovery, escalation evidence, and canonical reference.\n- Add useful contextual Troubleshooting links to Installation, Configuration, Harnesses, Skills, Node Modules, MCP Servers, and Command Reference.\n- Include stable wording for overwrite refusal, invalid Config v1, duplicate mapping keys, unsupported harnesses, Pi consent/runtime failures, disabled code-index warnings, MCP smoke-check failures, and incomplete rollback.\n\n## Acceptance Criteria\n\n- Given a reader searches an observed error or symptom, when the guide is opened, then a matching category and recovery entry is discoverable.\n- Diagnostics ask for sanitized versions, paths, status, and bounded logs only; they never ask for credential values or secret-bearing full configurations.\n- Recovery avoids destructive operations. Where state can be replaced or removed, warnings and safer alternatives appear first.\n- Configuration, registration, authentication, and operation are not conflated.\n- Entries link canonical guides and current source or automated-test evidence without copying full contracts.\n\n## Dependencies And Order\n\nParent `hrn-00178`; order 1; no child dependency. Linked design authority: `doc-00017` v2 and `docs/status-and-evidence.md`.\n\n## Estimate And Risks\n\nEstimate M. Main risks are unsafe diagnostics, unstable error wording, and duplicated canonical guidance.\n\n## Non-Goals\n\nNo product or runtime changes, provider operation, incident disclosure, theme/browser work, destructive repair, or publication."
+"comments":
+  - "id": "hrn-00203-C0001"
+    "created_at": "2026-09-02T21:33:58.411Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented: symptom-first troubleshooting across installation, configuration, harness, skills, commands, Pi packages, and MCP states; added safe diagnostics/recovery/escalation boundaries and contextual links. Focused checks passed: `mise run docs-build`, Prettier, deterministic LLM indexes, and `git diff --check`. Awaiting separate closure consent."

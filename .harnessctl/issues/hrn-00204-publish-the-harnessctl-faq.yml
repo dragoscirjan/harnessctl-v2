@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00204"
+"type": "story"
+"title": "Publish the harnessctl FAQ"
+"status": "done"
+"created_at": "2026-09-02T21:25:26.897Z"
+"updated_at": "2026-09-02T21:37:34.400Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00178"
+"metadata":
+  "estimate": "S"
+  "order": 2
+  "scope": "faq-content"
+"body": "# Publish the harnessctl FAQ\n\n## User Story\n\nAs a prospective or current harnessctl user, I want concise answers to recurring questions so that I can find the authoritative guide or reference quickly.\n\n## Scope\n\n- Replace `docs/faq.md` with conceptual, support, compatibility, lifecycle, safety, and evidence questions.\n- Answer briefly and link Installation, Configuration, Harnesses, Skills, Node Modules, MCP Servers, Command Reference, Config Schema, and status/evidence authority where applicable.\n- Explain supported harness integration, declaration versus operation, consent boundaries, and where release state is recorded without reproducing exact contracts.\n\n## Acceptance Criteria\n\n- Every answer is concise, reader-facing, and links the canonical owner for exact behavior.\n- Answers distinguish supported harnessctl integration from third-party host capability and configuration from provider operation.\n- No answer promises compatibility, publication, operation, roadmap delivery, or support not established by current evidence.\n- Credential and destructive-action safety wording remains consistent with public documentation policy.\n- Likely reader terminology appears in headings for searchability.\n\n## Dependencies And Order\n\nParent `hrn-00178`; order 2; no child dependency. Linked design authority: `doc-00017` v2 and `docs/status-and-evidence.md`.\n\n## Estimate And Risks\n\nEstimate S. Main risks are duplicating references and broadening support claims.\n\n## Non-Goals\n\nNo product changes, exhaustive API reference, roadmap promises, provider operation, theme/browser work, or publication."
+"comments":
+  - "id": "hrn-00204-C0001"
+    "created_at": "2026-09-02T21:36:51.018Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented: concise link-first FAQ covering harness support, installation, skills/tools/MCP boundaries, configuration versus operation, credentials, lifecycle consent, evidence, changelog authority, and safe escalation. Focused checks passed: `mise run docs-build`, Prettier, deterministic LLM indexes, and `git diff --check`. Awaiting separate closure consent."

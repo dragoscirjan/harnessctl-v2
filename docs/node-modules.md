@@ -20,7 +20,9 @@ provider processes, and installer components are not separate Node Module entrie
 Packages supply programmatic capabilities. [Skills](skills.md) supply agent guidance,
 [MCP Servers](mcp-servers.md) describe provider connections, and
 [Installation](installation.md) owns how harnessctl writes and registers artifacts for
-a project. The [Harnesses](harnesses.md) page owns host support status.
+a project. The [Harnesses](harnesses.md) page owns host support status. For Pi package
+consent, path, timeout, or registration failures, see
+[Troubleshooting](troubleshooting.md#pi-package-installation).
 
 ## Package relationships
 
