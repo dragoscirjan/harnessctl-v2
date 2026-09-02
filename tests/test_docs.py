@@ -160,9 +160,20 @@ EXPECTED_NAV = [
 STRUCTURAL_STUBS = {
     "changelog.md": ("Changelog", "hrn-00178"),
     "faq.md": ("FAQ", "hrn-00178"),
-    "node-modules.md": ("Node Modules", "hrn-00177"),
     "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
 }
+NODE_MODULE_ENTRY_FIELDS = (
+    "Purpose",
+    "Capability",
+    "Consumer or environment",
+    "Conceptual inputs and outputs",
+    "Loading path",
+    "Prerequisites",
+    "Limitations",
+    "Related components",
+    "Status",
+    "Evidence",
+)
 SKILL_ENTRY_FIELDS = (
     "Purpose",
     "Use when",
@@ -232,6 +243,28 @@ def _mcp_server_section(document: str, server_id: str) -> str:
     )
     assert match is not None
     return match.group("section")
+
+
+def _node_module_section(document: str, package_name: str) -> str:
+    match = re.search(
+        rf"^## `{re.escape(package_name)}`\n(?P<section>.*?)(?=^## |\Z)",
+        document,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert match is not None
+    return match.group("section")
+
+
+def _public_workspace_manifests() -> dict[str, dict[str, object]]:
+    root_manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+    manifests: dict[str, dict[str, object]] = {}
+    for workspace_pattern in root_manifest["workspaces"]:
+        for workspace in ROOT.glob(workspace_pattern):
+            manifest_path = workspace / "package.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("publishConfig", {}).get("access") == "public":
+                manifests[manifest["name"]] = manifest
+    return manifests
 
 
 def _assert_provider_structure(document: str, providers: tuple[str, ...]) -> None:
@@ -682,6 +715,67 @@ def test_harness_guide_states_current_support() -> None:
     assert guide.count("makes no claim about") == 2
     assert guide.count("has no Claude installation target") == 2
     assert guide.count("has no Codex installation target") == 2
+
+
+def test_node_modules_catalog_tracks_public_workspace_packages() -> None:
+    catalog = (DOCS / "node-modules.md").read_text(encoding="utf-8")
+    normalized_catalog = " ".join(catalog.split())
+    manifests = _public_workspace_manifests()
+    entry_headings = re.findall(r"^## `([^`]+)`$", catalog, re.MULTILINE)
+    relationship_matrix = catalog.split("## Package relationships", maxsplit=1)[1].split(
+        "\n## ", maxsplit=1
+    )[0]
+    matrix_packages = set(re.findall(r"^\| `([^`]+)`\s+\|", relationship_matrix, re.MULTILINE))
+
+    _assert_exact_set(set(entry_headings), set(manifests), "Node Module catalog entries")
+    assert len(entry_headings) == len(manifests)
+    _assert_exact_set(matrix_packages, set(manifests), "Node Module relationship matrix")
+
+    for package_name, manifest in manifests.items():
+        section = _node_module_section(catalog, package_name)
+        for field in NODE_MODULE_ENTRY_FIELDS:
+            assert f"**{field}:**" in section
+        assert "**Status:** `working`" in section
+        assert manifest["version"] in catalog
+        assert manifest["engines"]["node"] in catalog
+        assert f"](../{manifest['repository']['directory']}/package.json)" in section
+
+    generic_name = "@harnessctl/generic-tools"
+    opencode_manifest = manifests["@harnessctl/opencode-tools"]
+    pi_manifest = manifests["@harnessctl/pi-tools"]
+    assert opencode_manifest["dependencies"][generic_name] in _node_module_section(
+        catalog, opencode_manifest["name"]
+    )
+    pi_section = _node_module_section(catalog, pi_manifest["name"])
+    assert pi_manifest["dependencies"][generic_name] in pi_section
+    assert pi_manifest["peerDependencies"]["@earendil-works/pi-coding-agent"] in pi_section
+    assert pi_manifest["pi"]["extensions"][0] in pi_section
+
+    assert re.search(r"\*\*Evidence review date:\*\* \d{4}-\d{2}-\d{2}", catalog)
+    assert "Source:" in catalog
+    assert "Automated test:" in catalog
+    for boundary in (
+        "private root workspace",
+        "individual source files",
+        "generated skills",
+        "MCP servers",
+        "provider processes",
+        "installer components",
+        "does not claim that a package is currently available from the npm registry",
+        "does not prove that Pi loaded the extension",
+        "does not prove that OpenCode loaded the plugin",
+    ):
+        assert boundary in normalized_catalog
+    for link in (
+        "installation.md",
+        "harnesses.md",
+        "skills.md",
+        "mcp-servers.md",
+        "configuration.md",
+        "command-reference.md",
+        "status-and-evidence.md",
+    ):
+        assert f"]({link}" in catalog
 
 
 def test_rendered_evidence_links_leave_docs_without_mutating_examples() -> None:

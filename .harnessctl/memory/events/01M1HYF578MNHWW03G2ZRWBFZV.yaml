@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1HYF578MNHWW03G2ZRWBFZV
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl-v2
+summary: hrn-00177 | Verify | acceptance | all criteria passed; no defect
+details: "Epic hrn-00177 open; children hrn-00201 and hrn-00202 done; dependency hrn-00167 closed. Verified docs/node-modules.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. Fresh: 50 Python docs/release-artifact tests; Node typecheck; 220 package unit tests; all 3 packages built and packed; strict docs build and deterministic generators; Prettier; Ruff lint/format; git diff check. Review: correctness, maintainability, security, privacy, compatibility passed. No runtime/config/dependency change. Next: work-release hrn-00177."
+source:
+  kind: tool-observation
+  ref: hrn-00177
+  revision: null
+created_at: 2026-09-02T20:55:16.456Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - node-modules
+  - sdlc
+  - verify

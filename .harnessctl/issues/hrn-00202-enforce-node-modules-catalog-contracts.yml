@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-00202"
+"type": "task"
+"title": "Enforce Node Modules catalog contracts"
+"status": "done"
+"created_at": "2026-09-02T20:37:23.056Z"
+"updated_at": "2026-09-02T20:49:14.834Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00177"
+"depends_on":
+  - "hrn-00201"
+"metadata":
+  "estimate": "S"
+  "order": 2
+  "scope": "node-modules-contracts"
+"body": "# Enforce Node Modules catalog contracts\n\n## Objective\n\nAdd focused deterministic checks that prevent the Node Modules catalog from drifting away from the repository's public workspace packages and evidence boundaries.\n\n## Scope\n\n- Update `tests/test_docs.py` for the completed `docs/node-modules.md` page.\n- Derive the expected public package inventory from root workspaces and package manifests rather than maintaining an independent package-name list.\n- Enforce exact package headings, required entry fields, evidence review date/classes, current runtime and dependency relationships, conceptual boundaries, and canonical cross-links.\n- Remove `node-modules.md` from the structural-stub contract.\n- Protect regenerated `docs/llms.txt` and `docs/llms-full.txt` through the existing deterministic index checks.\n\n## Acceptance Criteria\n\n- Given a public workspace is added, removed, renamed, made private, or changes a documented runtime/dependency relationship, when focused docs tests run, then stale catalog coverage fails.\n- Exactly one catalog entry exists for each current public package and no entry exists for the private root or source-only modules.\n- Every entry includes purpose, capability, consumer or environment, conceptual inputs and outputs, loading path, prerequisites, limitations, related components, status, and evidence.\n- Tests require the approved distinctions between packages, skills, MCP servers, provider processes, installer behavior, and private implementation.\n- Tests require narrow status/evidence language and canonical links without duplicating exact reference contracts.\n- Existing deterministic LLM generation and strict docs build include the completed catalog.\n\n## Dependencies And Order\n\nParent `hrn-00177`. Order 2. Depends on Story `hrn-00201` because contracts target the completed catalog structure.\n\n## Verification Boundary\n\nBuild uses the smallest focused docs and formatting checks first. Formal Verify later runs `uv run pytest tests/test_docs.py tests/test_release_artifacts.py`, package build/tests/typecheck, `mise run docs-build`, focused Prettier/Ruff, generated-index checks, and `git diff --check`.\n\n## Estimate And Uncertainty\n\nEstimate S. Main risk is making tests overfit prose instead of enforcing stable inventory, metadata, and evidence contracts.\n\n## Non-Goals\n\nNo package, application, installer, dependency, configuration, publication, provider, browser, theme, deployment, or unrelated test change."
+"comments":
+  - "id": "hrn-00202-C0001"
+    "created_at": "2026-09-02T20:48:08.659Z"
+    "created_by": "OpenCode"
+    "body": "Build contracts implemented in `tests/test_docs.py`: public inventory derives from root workspaces and public manifests; exact headings, required fields, versions, Node engines, adapter relationships, Pi peer/entrypoint, evidence boundaries, and canonical links are enforced. `node-modules.md` removed from structural stubs; LLM indexes regenerated. Passed: 45 docs tests, deterministic strict docs build, Prettier, Ruff lint/format, and `git diff --check`. Closure requires separate consent."

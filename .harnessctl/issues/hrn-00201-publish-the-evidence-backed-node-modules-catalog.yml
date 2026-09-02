@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00201"
+"type": "story"
+"title": "Publish the evidence-backed Node Modules catalog"
+"status": "done"
+"created_at": "2026-09-02T20:36:39.620Z"
+"updated_at": "2026-09-02T20:46:21.584Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00177"
+"metadata":
+  "estimate": "M"
+  "order": 1
+  "scope": "node-modules-content"
+"body": "# Publish the evidence-backed Node Modules catalog\n\n## User Story\n\nAs a harnessctl user or integrator, I want a complete package-level Node Modules catalog so that I can choose the correct public package without confusing host adapters, generated skills, MCP servers, or internal source files.\n\n## Scope\n\n- Replace `docs/node-modules.md` structural stub with the approved package-level catalog.\n- Define the public-workspace inventory boundary and evidence review date.\n- Add the exact inventory and package relationship matrix.\n- Document `@harnessctl/generic-tools`, `@harnessctl/opencode-tools`, and `@harnessctl/pi-tools` once each with the approved catalog fields and adjacent evidence.\n- Explain harness-neutral versus host-specific responsibilities and link existing canonical references.\n- Regenerate `docs/llms.txt` and `docs/llms-full.txt`.\n\n## Acceptance Criteria\n\n- Given current root workspaces and public package manifests, when the catalog is read, then exactly those three public packages appear as entries once each.\n- Each entry states purpose, user capability, consumer or environment, conceptual inputs and outputs, loading path, prerequisites, limitations, related components, status, and evidence.\n- Inventory, Node engine constraints, host applicability, and adapter dependency relationships agree with current manifests and adapter evidence.\n- Readers can distinguish packages from skills, MCP servers, provider processes, installer behavior, the private root package, and source-only utilities.\n- Claims do not imply npm registry availability, provider operation, unsupported host support, or private API guarantees.\n- Installation, Harnesses, Skills, MCP Servers, Configuration, and exact reference contracts are linked rather than duplicated.\n- Deterministic LLM indexes contain the completed catalog.\n\n## Dependencies And Order\n\nParent `hrn-00177`. Order 1. No child dependency; the closed foundation `hrn-00167` satisfies the Epic dependency.\n\n## Estimate And Uncertainty\n\nEstimate M. Main uncertainty is keeping conceptual package capability useful without presenting internal exports or adapter implementation as a separately supported public API.\n\n## Non-Goals\n\nNo source, package, dependency, installer, configuration, runtime, publication, provider, theme, deployment, or browser change."
+"comments":
+  - "id": "hrn-00201-C0001"
+    "created_at": "2026-09-02T20:45:34.778Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented in `docs/node-modules.md` and generated LLM indexes. Manifest-backed package inventory, relationships, boundaries, evidence, and canonical links added. Focused Node Modules docs test, Prettier, and `git diff --check` pass. Closure requires separate consent before dependent `hrn-00202` can start."
