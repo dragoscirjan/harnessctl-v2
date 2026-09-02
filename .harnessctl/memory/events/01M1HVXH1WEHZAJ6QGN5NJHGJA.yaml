@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1HVXH1WEHZAJ6QGN5NJHGJA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176 Build
+summary: Build Story hrn-00199 implemented, checked, user-authorized closure complete.
+details: docs/harnesses.md now provides exact four-host matrix, state boundaries, dated adjacent evidence, prerequisites, limitations, and canonical links. Focused Prettier and diff checks passed. hrn-00199 status done. No Verify, Release, remote, or destructive work.
+source:
+  kind: user-confirmed
+  ref: hrn-00199
+  revision: null
+created_at: 2026-09-02T20:10:41.596Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1HECR32RDBSZP70ZEGP5RSV
+tags:
+  - build
+  - done
+  - hrn-00176
+  - hrn-00199

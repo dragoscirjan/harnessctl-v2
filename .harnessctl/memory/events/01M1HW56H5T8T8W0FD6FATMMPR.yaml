@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1HW56H5T8T8W0FD6FATMMPR
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176 Verify
+summary: hrn-00176 | Verify | acceptance and evidence | passed
+details: "All 8 Epic acceptance criteria mapped to current page and focused contracts. 557 tests passed across docs, installer, templates, release artifacts. Strict docs build, deterministic generators, focused Ruff, Prettier, diff hygiene passed. Independent correctness, maintainability, security, privacy, compatibility review found no defect. Runtime integration, types, dependencies, duplication, dead code not needed: documentation/test-only scope, no product/config/dependency change. Upstream Material MkDocs 2.0 notice non-blocking. Release not performed."
+source:
+  kind: artifact
+  ref: hrn-00176
+  revision: null
+created_at: 2026-09-02T20:14:52.965Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - documentation
+  - hrn-00176
+  - passed
+  - verify

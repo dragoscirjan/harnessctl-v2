@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1HECR32RDBSZP70ZEGP5RSV
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176 Build
+summary: Build Story hrn-00199 implemented on docs/hrn-00176-harness-support; closure not authorized.
+details: "Rewrote docs/harnesses.md: exact four-host support matrix, dimensions, state boundaries, 2026-09-02 review date, adjacent installer/test evidence, canonical docs links. Focused checks passed: npx prettier --check docs/harnesses.md; git diff --check -- docs/harnesses.md. Task hrn-00200 remains blocked by open Story pending explicit closure consent. No Verify/Release/remote/destructive work."
+source:
+  kind: artifact
+  ref: docs/harnesses.md
+  revision: null
+created_at: 2026-09-02T16:14:20.258Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - hrn-00176
+  - hrn-00199
