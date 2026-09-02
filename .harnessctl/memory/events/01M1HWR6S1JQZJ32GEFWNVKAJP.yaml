@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1HWR6S1JQZJ32GEFWNVKAJP
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176
+summary: "hrn-00176 | Release | ready PR | Commit pushed; PR #73 created."
+details: "Branch docs/hrn-00176-harness-support. Commit 208c28594a835d02827f98373780673d18790a22. Delivery: https://github.com/dragoscirjan/harnessctl-v2/pull/73. Verification passed before release. No merge, deployment, or Epic closure."
+source:
+  kind: artifact
+  ref: "PR #73"
+  revision: null
+created_at: 2026-09-02T20:25:15.809Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - harnesses
+  - release
+  - sdlc
