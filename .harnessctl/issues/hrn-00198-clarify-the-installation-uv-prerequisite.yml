@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00198"
+"type": "bug"
+"title": "Clarify the Installation uv prerequisite"
+"status": "done"
+"created_at": "2026-09-01T22:05:13.053Z"
+"updated_at": "2026-09-01T22:24:04.450Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00175"
+"metadata":
+  "estimate": "S"
+  "scope": "installation-prerequisites"
+"body": "# Clarify the Installation uv prerequisite\n\n## Summary\n\nFormal Verify found that `docs/installation.md` names `mise` but does not distinguish the required `uv` prerequisite or explain how the repository's `mise` configuration provisions it, as required by `hrn-00194`.\n\n## Evidence\n\n- `docs/installation.md` lists Git and `mise`, then runs setup, but contains no `uv` prerequisite guidance.\n- `mise.toml` declares `uv` as a mandatory managed tool and `mise run setup` uses it.\n- `tests/test_docs.py::test_onboarding_docs_lead_to_a_supported_plan_only_first_success` passes without asserting this prerequisite boundary.\n\n## Impact\n\n`hrn-00194`, `hrn-00196`, and Epic `hrn-00175` do not meet mapped acceptance. A reader cannot tell whether a separate `uv` installation is required. Release remains blocked.\n\n## Acceptance Criteria\n\n- `docs/installation.md` distinguishes Git, `mise`, and `uv` requirements accurately.\n- Guidance explains whether project `mise` provisioning supplies `uv`, without exposing prohibited implementation-runtime commands.\n- Focused onboarding contracts fail if the required prerequisite distinction is removed.\n- `uv run pytest tests/test_docs.py`, focused formatting/lint checks, and `mise run docs-build` pass.\n\n## Boundaries\n\nDo not change tool versions, dependencies, installer behavior, distribution paths, or unrelated documentation."
+"comments":
+  - "id": "hrn-00198-C0001"
+    "created_at": "2026-09-01T22:14:41.652Z"
+    "created_by": "opencode"
+    "body": "Build repaired mapped acceptance: `docs/installation.md` now states that `uv` is required but separately installing it is unnecessary for the supported source-checkout path because the repository `mise` toolchain declares and provisions it. Focused contract asserts both claims. Fresh checks passed: 44 docs tests, strict docs build and deterministic generators, Ruff, Prettier, and `git diff --check`. Left open; closure requires separate confirmation after formal Verify."
+  - "id": "hrn-00198-C0002"
+    "created_at": "2026-09-01T22:22:11.906Z"
+    "created_by": "opencode"
+    "body": "Fresh formal Verify confirms the defect is repaired. Installation states `uv` is required and accurately explains repository `mise` provisioning without exposing prohibited implementation-runtime commands; the focused contract asserts both claims. Focused/full tests, generators, strict docs build, lint/format, and diff checks passed. Eligible for closure with separate exact approval."

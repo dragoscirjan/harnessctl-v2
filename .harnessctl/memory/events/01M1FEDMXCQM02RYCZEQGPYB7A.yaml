@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1FEDMXCQM02RYCZEQGPYB7A
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00175 | Plan | executable Epic plan | stored and issue-validated
+details: |-
+  Epic: hrn-00175
+  Command/phase: work-plan / Plan
+  Item: Home and onboarding documentation
+  Done: approved Epic plan persisted; children hrn-00193, hrn-00194, hrn-00195, hrn-00196 created; parent/dependency graph and all five issue records validated
+  Decisions: lightweight design; doc-00017 v2 remains authority; first success ends after /work-plan; grouped /work plan dispatch not claimed
+  Blockers: none
+  Artifacts: hrn-00175 plus child issue records
+  Verification: issue_validate valid, no findings
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: v1:bc512000b61f3c2290458b2c02785e62798d525d44df91a9cf11ef18aef3c2ff
+created_at: 2026-09-01T21:36:20.908Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - checkpoint
+  - hrn-00175
+  - plan
+  - sdlc

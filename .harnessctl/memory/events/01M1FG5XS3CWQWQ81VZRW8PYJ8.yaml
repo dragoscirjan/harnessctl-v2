@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FG5XS3CWQWQ81VZRW8PYJ8
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00175 | Verify | onboarding acceptance | failed; hrn-00197 and hrn-00198 open.
+details: "Fresh checks passed: tests/test_docs.py 44 passed; mise run docs-build strict generation/build passed; focused Ruff, Prettier, git diff --check passed; built Home flow readable at 1440x1000 and 390x844. Acceptance failed: docs/docs-overview.md lacks required content-type distinctions; docs/installation.md lacks uv prerequisite/provisioning distinction; focused onboarding contract permits both omissions. Canonical Bugs hrn-00197 and hrn-00198 created under Epic. Epic and children remain open. Next confirmed route: Build. No repair, closure, Release, remote, destructive, branch, commit, or PR action."
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: null
+created_at: 2026-09-01T22:07:04.995Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - defects
+  - docs
+  - onboarding
+  - verify

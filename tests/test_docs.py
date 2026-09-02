@@ -158,9 +158,7 @@ EXPECTED_NAV = [
 ]
 STRUCTURAL_STUBS = {
     "changelog.md": ("Changelog", "hrn-00178"),
-    "docs-overview.md": ("Docs", "hrn-00175"),
     "faq.md": ("FAQ", "hrn-00178"),
-    "installation.md": ("Installation", "hrn-00175"),
     "node-modules.md": ("Node Modules", "hrn-00177"),
     "troubleshooting.md": ("Troubleshooting", "hrn-00178"),
 }
@@ -548,6 +546,57 @@ def test_documentation_home_is_for_users_not_site_contributors() -> None:
     assert "mise run docs-build" not in home
     assert "mise run docs-serve" not in home
     assert "Formal Verify" not in home
+
+
+def test_onboarding_docs_lead_to_a_supported_plan_only_first_success() -> None:
+    home = (DOCS / "README.md").read_text(encoding="utf-8")
+    overview = (DOCS / "docs-overview.md").read_text(encoding="utf-8")
+    installation = (DOCS / "installation.md").read_text(encoding="utf-8")
+    getting_started = (DOCS / "getting-started.md").read_text(encoding="utf-8")
+    normalized_getting_started = " ".join(getting_started.split())
+
+    assert "](installation.md)" in home
+    assert "](getting-started.md)" in home
+    assert "Planned content" not in overview + installation
+    for content_type in (
+        "**Tutorials**",
+        "**Explanatory guides**",
+        "**Catalogs**",
+        "**Exact references**",
+        "**Troubleshooting and help**",
+    ):
+        assert content_type in overview
+    for canonical_route in (
+        "getting-started.md",
+        "sdlc-introduction.md",
+        "harnesses.md",
+        "command-reference.md",
+        "troubleshooting.md",
+    ):
+        assert f"]({canonical_route})" in overview
+    assert "`uv` is required" in installation
+    assert "`mise` toolchain declares and provisions it" in installation
+    for host, status in (
+        ("OpenCode", "supported"),
+        ("Pi", "supported"),
+        ("Claude", "not implemented"),
+        ("Codex", "not implemented"),
+    ):
+        assert re.search(rf"{host}.*{status}|{status}.*{host}", installation)
+    for boundary in (
+        "--allow-pi-package-install",
+        "--force",
+        "--replace-sdlc-skill-set",
+        "Reload or restart",
+        "Roll back",
+    ):
+        assert boundary in installation
+    assert "/work-plan Add a health endpoint" in getting_started
+    assert "grouped `/work` dispatch is not an installed command" in normalized_getting_started
+    assert "stops with an approved executable plan" in normalized_getting_started
+    assert "No source implementation, formal verification, release, push, or deployment" in (
+        normalized_getting_started
+    )
 
 
 def test_public_documentation_avoids_implementation_runtime_details() -> None:

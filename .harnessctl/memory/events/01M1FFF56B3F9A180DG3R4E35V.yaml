@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1FFF56B3F9A180DG3R4E35V
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00175 Build complete; all four onboarding children implemented locally; formal Verify pending.
+details: "Changed docs/README.md, docs/docs-overview.md, docs/installation.md, docs/getting-started.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. Evidence: uv run pytest tests/test_docs.py = 44 passed; mise run docs-build passed strict generation/build; targeted Prettier and Ruff passed; git diff --check passed. Children hrn-00193..hrn-00196 and Epic remain open. No Verify, Release, remote, destructive, branch, commit, or PR action."
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: null
+created_at: 2026-09-01T21:54:38.923Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - docs
+  - onboarding
+  - sdlc

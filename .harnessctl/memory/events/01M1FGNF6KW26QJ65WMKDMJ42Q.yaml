@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1FGNF6KW26QJ65WMKDMJ42Q
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: general
+summary: hrn-00175 | Build | Verify defects | hrn-00197 and hrn-00198 repaired locally; Verify pending.
+details: "Corrective Build changed docs/docs-overview.md, docs/installation.md, tests/test_docs.py, docs/llms.txt, docs/llms-full.txt. Taxonomy and canonical routes explicit; uv requirement and mise provisioning explicit; focused contract covers both. Evidence: uv run pytest tests/test_docs.py = 44 passed; mise run docs-build strict generation/build passed; focused Ruff, Prettier, git diff --check passed. Epic and six children remain open. No closure, Verify, Release, remote, destructive, branch, commit, or PR action."
+source:
+  kind: artifact
+  ref: hrn-00175
+  revision: v1:9b3fed680887c12b2330aacea14869e32f88800fbeb88bc96df5ba1a36ae255c
+created_at: 2026-09-01T22:15:34.355Z
+created_by: opencode
+confidence: verified
+status: active
+supersedes:
+  - 01M1FFF56B3F9A180DG3R4E35V
+tags:
+  - build
+  - defects
+  - docs
+  - onboarding

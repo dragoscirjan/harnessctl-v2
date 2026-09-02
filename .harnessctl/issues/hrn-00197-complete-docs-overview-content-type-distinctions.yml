@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-00197"
+"type": "bug"
+"title": "Complete Docs overview content-type distinctions"
+"status": "done"
+"created_at": "2026-09-01T22:05:12.619Z"
+"updated_at": "2026-09-01T22:24:03.984Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00175"
+"metadata":
+  "estimate": "S"
+  "scope": "docs-overview-taxonomy"
+"body": "# Complete Docs overview content-type distinctions\n\n## Summary\n\nFormal Verify found that `docs/docs-overview.md` routes readers to the correct pages but does not explicitly distinguish tutorials, explanatory guides, catalogs, exact references, and troubleshooting/help content as required by `hrn-00193`.\n\n## Evidence\n\n- `docs/docs-overview.md` names routes and owning pages but lacks the required content-type taxonomy.\n- `tests/test_docs.py::test_onboarding_docs_lead_to_a_supported_plan_only_first_success` passes without asserting the taxonomy.\n- Fresh Verify checks passed, so this is a requirement/docs finding and evidence gap rather than a test or tool failure.\n\n## Impact\n\n`hrn-00193`, `hrn-00196`, and Epic `hrn-00175` do not meet mapped acceptance. Release remains blocked.\n\n## Acceptance Criteria\n\n- `docs/docs-overview.md` clearly distinguishes tutorials, explanatory guides, catalogs, exact references, and troubleshooting/help content.\n- Each content type links to its canonical owning page without duplicating domain detail.\n- Focused onboarding contracts fail if any required distinction is removed.\n- `uv run pytest tests/test_docs.py`, focused formatting/lint checks, and `mise run docs-build` pass.\n\n## Boundaries\n\nDo not change navigation, theme, product behavior, installer behavior, or unrelated documentation."
+"comments":
+  - "id": "hrn-00197-C0001"
+    "created_at": "2026-09-01T22:14:41.211Z"
+    "created_by": "opencode"
+    "body": "Build repaired mapped acceptance: added explicit tutorial, explanatory-guide, catalog, exact-reference, and troubleshooting/help distinctions to `docs/docs-overview.md`, each routed to canonical owners. Focused contract asserts all distinctions and representative routes. Fresh checks passed: 44 docs tests, strict docs build and deterministic generators, Ruff, Prettier, and `git diff --check`. Left open; closure requires separate confirmation after formal Verify."
+  - "id": "hrn-00197-C0002"
+    "created_at": "2026-09-01T22:22:11.463Z"
+    "created_by": "opencode"
+    "body": "Fresh formal Verify confirms the defect is repaired. Docs overview contains all five required content-type distinctions with canonical owning links, and the focused contract would fail if a distinction or representative route were removed. Focused/full tests, generators, strict docs build, lint/format, and diff checks passed. Eligible for closure with separate exact approval."

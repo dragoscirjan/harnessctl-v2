@@ -1,15 +1,22 @@
 # harnessctl documentation
 
 Harnessctl helps people use LLMs through a deliberate software development lifecycle.
-It turns a goal into bounded, reviewable work while keeping approvals, repository
-authority, remote actions, and destructive operations under human control.
+It turns a software goal into bounded, reviewable work while keeping approvals,
+repository authority, remote actions, and destructive operations under human control.
+Use it when you want an LLM coding session to follow explicit Plan, Build, Verify, and
+Release boundaries instead of making an open-ended change.
 
-Start with [Getting started](getting-started.md). You will install the supported harness
-commands, plan one real outcome, and follow it through Build, Verify, and Release.
+## Start here
 
-## Guides
+1. [Install harnessctl](installation.md) into a project for OpenCode or Pi.
+2. [Getting started](getting-started.md) plans your first outcome and stops with an
+   approved Epic plan.
+3. Use the [command reference](command-reference.md) when you are ready for another
+   lifecycle phase.
 
-- [Getting started](getting-started.md): install harnessctl and run your first workflow.
+## Guides and reference
+
+- [Docs overview](docs-overview.md): choose the shortest route for your current task.
 - [SDLC](sdlc.md): understand and use the four Epic lifecycle phases.
 - [Configuration](configuration.md): defaults, overlay behavior, and every current
   setting.

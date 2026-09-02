@@ -1,51 +1,79 @@
 # Getting started
 
-Harnessctl adds a guided software development lifecycle to the coding harness you already
-use. It helps you turn a goal into approved work, make bounded changes, check the result,
-and prepare delivery without giving up control of consequential actions.
+This tutorial uses the installed `/work-plan` prompt command to turn one safe software
+goal into an approved, executable Epic plan. It intentionally stops before Build. You
+remain in control of every proposed read, issue mutation, remote action, and destructive
+operation.
 
-## 1. Install the project tools
+## 1. Confirm installation
 
-From the harnessctl repository, prepare the project and install the generated commands:
+Complete [Installation](installation.md), reload or restart OpenCode or Pi, and open the
+project you want to plan. Confirm that the harness exposes `/work-plan`.
 
-```bash
-mise run setup
-mise run install-prompts
-```
+Harnessctl installs six separate prompt commands. Conceptual `/work plan` wording may
+appear in lifecycle explanations, but grouped `/work` dispatch is not an installed
+command.
 
-The default installation prepares both currently supported harnesses. See
-[Harnesses](harnesses.md) for their installed command locations and support status.
+## 2. Choose a bounded outcome
 
-## 2. Start with Plan
-
-Open your coding harness in the project you want to work on, then describe the outcome:
-
-```text
-/work plan Add a searchable customer activity history
-```
-
-Plan first shows the bounded actions it wants to take. You can change that action set,
-clarify the outcome, reject optional work, or stop. The command does not begin Build on
-its own.
-
-## 3. Follow the lifecycle
-
-After approving an executable Epic plan, run each phase deliberately:
+Use a small, reversible outcome that can be accepted from repository evidence. For
+example:
 
 ```text
-/work build hrn-00001
-/work verify hrn-00001
-/work release hrn-00001
+Add a health endpoint with a focused automated check and usage documentation.
 ```
 
-Use `/work continue hrn-00001` to resume one interrupted step. Use `/work refresh` when
-you only want to reconcile repository context without entering the delivery lifecycle.
+Avoid credentials, production mutations, deployments, or broad cleanup in a first run.
+
+## 3. Run Plan
+
+Enter the outcome after the installed command:
+
+```text
+/work-plan Add a health endpoint with a focused automated check and usage documentation
+```
+
+Plan first presents a bounded action set classified as Required, Recommended, Optional,
+or Not needed. Review the proposed reads and local operations, narrow them if needed, and
+approve only that set. Declining optional work does not authorize a broader alternative.
+
+Plan then resolves one existing Epic or proposes the issue hierarchy needed for the
+outcome. Review objectives, scope, acceptance criteria, dependencies, estimates, risks,
+and non-goals. Issue, relationship, and document mutations require exact approval before
+they occur.
+
+## 4. Check the result
+
+A successful run stops with an approved executable plan. Its compact result identifies:
+
+- **Epic:** the authoritative Epic ID.
+- **Phase:** `Plan`.
+- **Done and Evidence:** what was confirmed and where the plan is recorded.
+- **Next:** normally the installed `/work-build` command for that Epic.
+- **Blockers:** unresolved authority, dependencies, or ambiguity, if any.
+- **Checkpoint:** whether compact confirmed progress was stored.
+
+No source implementation, formal verification, release, push, or deployment belongs to
+this first success.
+
+## Resume or recover
+
+If Plan stops on ambiguity, answer the stated blocker and run `/work-plan` again with the
+Epic ID or clarified outcome. If a known Plan step was interrupted after a checkpoint,
+use `/work-continue <epic-id>` and approve its newly bounded action set. Treat current
+issues, documents, source, Git state, and tests as authority when they disagree with a
+checkpoint.
+
+When you deliberately continue later, use the exact Epic ID with the separate
+`/work-build`, `/work-verify`, and `/work-release` commands. Each phase asks for its own
+bounded approval and stops at its own boundary.
 
 ## What stays under your control
 
-Harnessctl asks before reading or changing the bounded areas it identifies. Remote and
-destructive operations require fresh, action-specific consent. A plan, checkpoint, or
-provider response never overrides current repository authority or your decision.
+Remote and destructive operations require fresh, action-specific consent. Approval for
+Plan does not authorize Build, issue closure, remote work, or destructive work. A plan,
+checkpoint, memory record, or provider response never overrides current repository
+authority or your decision.
 
-Next, read the [SDLC guide](sdlc.md) for phase behavior or the
-[Configuration reference](configuration.md) to adapt harnessctl to your project.
+Read the [command reference](command-reference.md) for exact stopping points or the
+[SDLC guide](sdlc.md) for lifecycle behavior.
