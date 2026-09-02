@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from harnessctl.install import TARGETS
 from harnessctl.mcp import CVS_MCP_SERVER_IDS
 from harnessctl.templates import (
     SKILL_ID_MIGRATIONS,
@@ -605,7 +606,9 @@ def test_public_documentation_avoids_implementation_runtime_details() -> None:
         r"\buv run\b|(?:^|[/`])[^\s`/]+\.py(?:[)#`\s]|$)"
     )
     for path in DOCS.glob("*.md"):
-        match = prohibited.search(path.read_text(encoding="utf-8"))
+        content = path.read_text(encoding="utf-8")
+        visible_content = re.sub(r"\]\((?:<[^>]*>|[^)]*)\)", "]", content)
+        match = prohibited.search(visible_content)
         assert match is None, (
             f"{path.name} exposes implementation runtime detail: {match.group(0)!r}"
         )
@@ -635,14 +638,50 @@ def test_public_documentation_contains_no_literal_credentials() -> None:
 
 def test_harness_guide_states_current_support() -> None:
     guide = (DOCS / "harnesses.md").read_text(encoding="utf-8")
-    for harness, status in (
-        ("OpenCode", "working"),
-        ("Pi", "working"),
-        ("Claude", "not implemented"),
-        ("Codex", "not implemented"),
-    ):
-        assert re.search(rf"^\| {harness}\s+\| `{status}`", guide, re.MULTILINE)
+    normalized_guide = " ".join(guide.split())
+    matrix = guide.split("## Support matrix", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    rows = dict(re.findall(r"^\|\s*([^|]+?)\s*\|\s*`([^`]+)`\s*\|", matrix, re.MULTILINE))
+    harness_names = {"opencode": "OpenCode", "pi": "Pi"}
+    expected_statuses = {harness_names[harness]: "working" for harness in TARGETS}
+    expected_statuses.update({"Claude": "not implemented", "Codex": "not implemented"})
+
+    assert rows == expected_statuses
     assert "coding harness is the application in which you work with an LLM" in guide
+    for dimension in (
+        "Installation",
+        "Commands or prompts",
+        "Skills",
+        "Project tools",
+        "MCP projection",
+        "Configuration",
+        "Prerequisites",
+        "Current limitation",
+    ):
+        assert dimension in matrix
+    for state in ("Generated", "Installed", "Registered", "Configured", "Operational"):
+        assert f"**{state}**" in guide
+    for link in (
+        "installation.md",
+        "skills.md",
+        "node-modules.md",
+        "mcp-servers.md",
+        "configuration.md",
+        "command-reference.md",
+        "status-and-evidence.md",
+    ):
+        assert f"]({link}" in guide
+    for evidence_link in (
+        "../src/harnessctl/install.py#L41-L44",
+        "../tests/test_install.py",
+        "../tests/test_install.py#L1716-L1718",
+    ):
+        assert f"]({evidence_link})" in guide
+    assert re.search(r"\*\*Evidence review date:\*\* \d{4}-\d{2}-\d{2}", guide)
+    assert "source and automated-test evidence" in normalized_guide
+    assert "not the host product or a provider service" in normalized_guide
+    assert guide.count("makes no claim about") == 2
+    assert guide.count("has no Claude installation target") == 2
+    assert guide.count("has no Codex installation target") == 2
 
 
 def test_rendered_evidence_links_leave_docs_without_mutating_examples() -> None:

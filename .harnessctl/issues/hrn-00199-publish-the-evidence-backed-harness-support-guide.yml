@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-00199"
+"type": "story"
+"title": "Publish the evidence-backed harness support guide"
+"status": "done"
+"created_at": "2026-09-02T16:04:55.754Z"
+"updated_at": "2026-09-02T19:40:08.982Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00176"
+"metadata":
+  "estimate": "M"
+  "order": 1
+  "scope": "harness-guide"
+"body": "# Publish the evidence-backed harness support guide\n\n## User Outcome\n\nAs a harnessctl reader, I want one evidence-backed comparison of supported coding harnesses so that I can choose a host and understand exactly what harnessctl installs, configures, and does not prove.\n\n## Scope\n\n- Rewrite `docs/harnesses.md` for OpenCode, Pi, Claude, and Codex.\n- Define a coding harness in reader-facing terms.\n- Add a compact comparison covering installation, commands or prompts, skills, project tools, MCP projection, configuration, prerequisites, and limitations.\n- Give each host a detailed section with setup path, artifacts and capabilities, boundaries, adjacent source/test evidence, and one review date.\n- Link canonical Installation, Skills, MCP Servers, Node Modules, command, configuration, and status references.\n- Regenerate deterministic LLM indexes after the canonical page changes.\n\n## Acceptance Criteria\n\n- Exactly OpenCode, Pi, Claude, and Codex are represented, each with one explicit current status.\n- OpenCode and Pi claims are narrowed to current installer source and relevant automated-test evidence.\n- Claude and Codex are `not implemented` for harnessctl integration; no delivery promise or third-party product inference appears.\n- Required comparison dimensions are readable without duplicating adjacent reference contracts.\n- Generated, installed, registered, configured, and operational states remain distinct.\n- Pi package consent and MCP-adapter prerequisites are visible where applicable.\n- Evidence is adjacent, source-linked, test-qualified, and dated.\n- Canonical adjacent pages are linked and deterministic LLM indexes include the revised guide.\n\n## Non-Goals\n\nDo not change installer or host behavior, operate external software, add support, duplicate exhaustive reference content, or alter the documentation theme."
+"comments":
+  - "id": "hrn-00199-C0001"
+    "created_at": "2026-09-02T16:14:20.969Z"
+    "created_by": "OpenCode"
+    "body": "Build slice implemented in `docs/harnesses.md` on `docs/hrn-00176-harness-support`. Focused Prettier and `git diff --check` checks pass. Closure awaits explicit consent; `hrn-00200` remains dependency-blocked."

@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1HVXHGK7BFXE08V3CW90ZJ2
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176 Build
+summary: Build Task hrn-00200 implemented, checked, user-authorized closure complete.
+details: tests/test_docs.py enforces installer-derived host support contracts. docs/llms.txt and docs/llms-full.txt regenerated. 44 docs tests, strict docs build, focused Ruff and Prettier, and diff check passed. hrn-00200 status done. No Verify, Release, remote, or destructive work.
+source:
+  kind: user-confirmed
+  ref: hrn-00200
+  revision: null
+created_at: 2026-09-02T20:10:42.067Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes:
+  - 01M1HTBANJ42QP5GT95A9V4GGA
+tags:
+  - build
+  - done
+  - hrn-00176
+  - hrn-00200

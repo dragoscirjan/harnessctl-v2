@@ -1,0 +1,22 @@
+schema_version: 1
+id: 01M1HTBANJ42QP5GT95A9V4GGA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00176 Build
+summary: Build Task hrn-00200 implemented; bounded checks pass; closure not authorized.
+details: "Strengthened tests/test_docs.py harness contract using src/harnessctl/install.py TARGETS; exact statuses/dimensions/states/evidence/date/cross-links/boundaries enforced. Runtime-detail check ignores Markdown destinations but still checks visible prose. Regenerated docs/llms.txt and docs/llms-full.txt. Passed: 44 tests/test_docs.py tests; mise run docs-build strict; focused Ruff/Prettier; git diff --check. Initial whitespace assertion and mis-scoped Prettier .txt checks failed then corrected. Extra advisory GitNexus call failed because repo unindexed; no mutation, non-blocking, not required. No Verify/Release/remote/destructive work."
+source:
+  kind: artifact
+  ref: tests/test_docs.py
+  revision: null
+created_at: 2026-09-02T19:43:16.658Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - hrn-00176
+  - hrn-00200

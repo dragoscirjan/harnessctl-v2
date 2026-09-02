@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1HE0BK06B819FCFVQ76ZJP9
+memory_type: episodic
+record_type: decision
+organization_id: local
+project_id: project
+topic: hrn-00176
+summary: hrn-00176 | plan | executable Epic | Approved plan persisted; issue validation passed.
+details: "Epic body defines content, evidence, acceptance, risks, verification, release, rollback, boundaries. Children: hrn-00199 Story M/order 1; hrn-00200 Task S/order 2 depends on hrn-00199. No blocker. No Build/Verify/Release performed."
+source:
+  kind: artifact
+  ref: hrn-00176
+  revision: v1:c903fc669f3f7d2dbc8c40017b8204449a9ee8d0088ee4f5a8cbf0b2f752a7b0
+created_at: 2026-09-02T16:07:34.240Z
+created_by: OpenCode
+confidence: confirmed
+status: active
+supersedes: []
+tags:
+  - documentation
+  - harnesses
+  - plan
+  - sdlc
