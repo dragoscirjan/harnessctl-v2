@@ -2,9 +2,9 @@
 "id": "hrn-00209"
 "type": "epic"
 "title": "Git Epic Workspace Primitives"
-"status": "open"
+"status": "closed"
 "created_at": "2026-09-03T11:13:30.505Z"
-"updated_at": "2026-09-03T17:36:06.241Z"
+"updated_at": "2026-09-03T23:17:42.497Z"
 "created_by": "OpenCode"
 "parent": "hrn-00207"
 "depends_on":

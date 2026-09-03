@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1MJ6A1167MK3TEJS70CT9FZ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00208
+summary: hrn-00208 | release | authority closed | Epic and children closed after ready PR
+details: "Epic hrn-00208 and children hrn-00211, hrn-00212, hrn-00213 closed by explicit user request after successful Verify and ready GitHub PR #77 creation. All four authorities validate. Commit b327a1bc183e35aa9507868bb585467a06f2c15b remains pushed on origin/epic/hrn-00208-collision-safe-identities. PR #77 remains open. No merge, deployment, or destructive work."
+source:
+  kind: tool-observation
+  ref: hrn-00208
+  revision: v1:f2762d29658356dff056358758845e8677707ccbdc28afcdc6e8efff038e1e48
+created_at: 2026-09-03T21:18:26.849Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MHDDBGQ8CZ40EET5HSAMNF
+tags:
+  - closure
+  - pr
+  - release
+  - sdlc
+  - ulid

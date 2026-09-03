@@ -1,0 +1,28 @@
+schema_version: 1
+id: 01M1MR0D3N2231QKQRJZQ8JY6T
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00209
+summary: hrn-00209 | Build | all children | required Git regressions passed
+details: |-
+  Epic: hrn-00209
+  Phase: Build
+  Done: Added real-Git detached, wrong-branch, and bare-repository fail-closed regressions. Workspace suite 17/17; `mise run quality` passed; OpenCode SDK 9/9; Pi SDK 9/9; `git diff --check` passed.
+  Blockers: none
+  Artifacts: hrn-00214-C0007, hrn-00215-C0007, hrn-00216-C0007, hrn-00217-C0007.
+  Next: fresh Verify.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T23:00:04.853Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - sdlc
+  - workspace

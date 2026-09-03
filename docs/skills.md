@@ -259,8 +259,9 @@ host-installation contract suites.
 **Use when:** Work needs status or diff inspection, branching, commits, pushes, pull or merge
 requests, reviews, or another provider-backed version-control operation.
 
-**Expected result:** Local operations use the configured VCS; remote operations choose one
-verified CLI or MCP route before mutation; merge always requires fresh explicit consent.
+**Expected result:** Local operations use the configured VCS; opt-in Git Epic workspace
+operations use normalized safety-gated tools; remote operations choose one verified CLI or
+MCP route before mutation; merge always requires fresh explicit consent.
 
 **Availability:** Always generated for selected OpenCode and Pi hosts.
 
@@ -268,20 +269,23 @@ verified CLI or MCP route before mutation; merge always requires fresh explicit 
 [CVS configuration](cvs.md). Optional MCP context is compiled only when its configured
 declaration is available.
 
-**Prerequisites:** Valid local repository context. Remote operations require the configured
-provider, repository, authentication, and live capability evidence.
+**Prerequisites:** Valid local repository context. Epic workspaces additionally require
+`skills.cvs.workspaces: true`, local Git, a clean primary checkout, and committed canonical
+Epic authority. Remote operations require the configured provider, repository,
+authentication, and live capability evidence.
 
 **Limits:** The skill does not configure remotes, install or authenticate provider tools,
-expose credential values, infer commands, retry a mutation through another route, publish
-without request, or merge without fresh consent.
+expose credential values, infer commands, force-remove worktrees, delete retained workspace
+branches, retry a mutation through another route, publish without request, or merge without
+fresh consent.
 
 **Status:** `working` for configured OpenCode and Pi routes; remote provider operation
 remains separate evidence. Claude and Codex are `not implemented`.
 
 **Evidence:** Source: the canonical
 [`sdlc-cvs` template](../src/harnessctl/templates/skills/sdlc-cvs/SKILL.md.j2).
-Automated test: provider rendering, credential boundaries, remote routing, merge consent,
-and host-installation contract suites.
+Automated test: provider rendering, credential boundaries, workspace state-engine and adapter
+parity, remote routing, merge consent, and host-installation contract suites.
 
 ## Compatibility notes
 

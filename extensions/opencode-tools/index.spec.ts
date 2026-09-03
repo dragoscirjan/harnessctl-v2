@@ -41,6 +41,10 @@ describe('OpenCode adapter', () => {
       'issue_link_document',
       'issue_validate',
       'issue_archive',
+      'workspace_ensure',
+      'workspace_status',
+      'workspace_mark_cleanup_ready',
+      'workspace_cleanup',
     ]);
     expect(hooks.tool?.config_get?.args.path).toBeDefined();
     expect(hooks.tool?.['document_create']?.args.title).toBeDefined();
@@ -75,6 +79,8 @@ describe('OpenCode adapter', () => {
     expect(hooks.tool?.['issue_comment']?.args.body).toBeDefined();
     expect(hooks.tool?.['issue_relate']?.args.targetId).toBeDefined();
     expect(hooks.tool?.['issue_link_document']?.args.path).toBeDefined();
+    for (const name of ['workspace_ensure', 'workspace_status', 'workspace_mark_cleanup_ready', 'workspace_cleanup'])
+      expect(hooks.tool?.[name]?.args.epic_id).toBeDefined();
     const issueLinkPathSchema = hooks.tool?.['issue_link_document']?.args.path as { description?: string } | undefined;
     expect(issueLinkPathSchema?.description).toContain('fixed active .harnessctl/documents authority');
     expect(issueLinkPathSchema?.description).not.toMatch(/\.specs|\.ai\.tmp/u);
@@ -201,6 +207,7 @@ describe('OpenCode adapter', () => {
       const issueAfterArchiveRejection = await tools['issue_get']?.execute({ id: createdIssue.id }, context);
       const validation = await tools['issue_validate']?.execute({}, context);
       const archive = await tools['issue_archive']?.execute({ id: createdIssue.id }, context);
+      const workspaceStatus = await tools['workspace_status']?.execute({ epic_id: createdIssue.id }, context);
 
       expect(defaultTasksPath).toBe('".harnessctl/tasks"');
       expect(result).toBe('1');
@@ -239,6 +246,7 @@ describe('OpenCode adapter', () => {
       expect(linkedDocument).toContain(currentDocument.path);
       expect(blockedDocumentUpdate).toMatch(/linked by canonical issue/u);
       expect(blockedDocumentArchive).toMatch(/linked by canonical issue/u);
+      expect(workspaceStatus).toMatch(/^Workspace error:/u);
       expect(issueAfterArchiveRejection).toContain(currentDocument.path);
       expect(tools['issue_unlink_document']).toBeUndefined();
       expect(validation).toContain('"valid":true');

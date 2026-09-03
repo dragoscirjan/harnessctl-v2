@@ -2,9 +2,9 @@
 "id": "hrn-00211"
 "type": "story"
 "title": "Shared ULID and Dual-Format Issue Identities"
-"status": "in_progress"
+"status": "closed"
 "created_at": "2026-09-03T13:34:20.205Z"
-"updated_at": "2026-09-03T20:52:40.063Z"
+"updated_at": "2026-09-03T21:17:47.974Z"
 "created_by": "OpenCode"
 "parent": "hrn-00208"
 "metadata":

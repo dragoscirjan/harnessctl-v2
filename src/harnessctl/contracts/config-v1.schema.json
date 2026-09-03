@@ -47,7 +47,7 @@
       }
     }
   ],
-  "x-harnessctl-config-refinements": ["enabled-mcp-references-exist"],
+  "x-harnessctl-config-refinements": ["workspace-requires-enabled-git", "enabled-mcp-references-exist"],
   "type": "object",
   "properties": {
     "version": {
@@ -792,6 +792,9 @@
               "type": "string",
               "enum": ["git", "jj"]
             },
+            "workspaces": {
+              "type": "boolean"
+            },
             "provider": {
               "anyOf": [
                 {
@@ -934,7 +937,7 @@
               ]
             }
           },
-          "required": ["enabled", "local", "provider"],
+          "required": ["enabled", "local", "workspaces", "provider"],
           "additionalProperties": false
         },
         "caveman": {

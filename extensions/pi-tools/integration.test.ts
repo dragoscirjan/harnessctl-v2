@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -144,6 +145,31 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         expect(result.text).not.toContain('00001');
       } finally {
         rmSync(cwd, { recursive: true, force: true });
+      }
+    },
+    piIntegrationTimeout,
+  );
+
+  it(
+    'uses workspace_status in a real Git repository with spaces',
+    async () => {
+      const fixture = writeWorkspaceRepository('harnessctl pi workspace ');
+
+      try {
+        const result = await promptPi(
+          fixture.root,
+          'Use workspace_status exactly once for Epic hrn-00009. Return only the JSON from the tool.',
+          ['workspace_status'],
+        );
+
+        expect(result.toolNames).toEqual(['workspace_status']);
+        expect(parseJsonReply(result.text)).toMatchObject({
+          epic_id: 'hrn-00009',
+          primary_path: fixture.root,
+          state: 'absent',
+        });
+      } finally {
+        rmSync(fixture.container, { recursive: true, force: true });
       }
     },
     piIntegrationTimeout,
@@ -307,6 +333,13 @@ async function promptPi(
   }
 }
 
+function parseJsonReply(text: string): unknown {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end < start) throw new Error(`assistant response did not contain JSON: ${text}`);
+  return JSON.parse(text.slice(start, end + 1));
+}
+
 function registerTestProvider(modelRuntime: ModelRuntime): void {
   if (!piModel) return;
   if (!piTestBaseUrl) {
@@ -362,6 +395,24 @@ function writeIssueFixture(cwd: string, id: string, title: string, status: strin
     comments: [],
   };
   writeFileSync(resolve(issueRoot, canonicalIssueFilename(id, title)), encodeCanonicalIssue(issue));
+}
+
+function writeWorkspaceRepository(prefix: string): { container: string; root: string } {
+  const container = temporaryDirectory(prefix);
+  const root = resolve(container, 'primary repo');
+  mkdirSync(root);
+  execFileSync('git', ['init', '--initial-branch=main'], { cwd: root });
+  execFileSync('git', ['config', 'user.name', 'Harnessctl Test'], { cwd: root });
+  execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: root });
+  writeIssueFixture(root, 'hrn-00009', 'Workspace integration Epic', 'in_progress', 'epic');
+  writeFileSync(
+    resolve(root, '.harnessctl/config.yaml'),
+    'version: 1\nskills:\n  cvs:\n    workspaces: true\n  issues:\n    prefix: hrn-\n',
+    'utf8',
+  );
+  execFileSync('git', ['add', '.harnessctl'], { cwd: root });
+  execFileSync('git', ['commit', '-m', 'Add workspace fixture'], { cwd: root });
+  return { container, root };
 }
 
 function readIssueFixture(cwd: string, id: string): string {

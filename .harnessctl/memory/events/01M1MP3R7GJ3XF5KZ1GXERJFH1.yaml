@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M1MP3R7GJ3XF5KZ1GXERJFH1
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00209
+summary: hrn-00209 | Verify | all children | blocked by existing-ensure location defect
+details: |-
+  Epic: hrn-00209
+  Phase: Verify
+  Done: Fresh quality passed: generic 238, Python 725, OpenCode/Pi units 2+3, typecheck/build/lint/format/contracts/generated docs/MkDocs/dead-code/release artifacts passed; dupcheck 67 clones/2.35% passed. SDK integration passed OpenCode 9/9 and Pi 9/9. Cleanup interruption and concurrent ensure repairs verified.
+  Blockers: `ensureWorkspace` returns an existing healthy mapping from any repository location; approved doc-00019:40 permits only exact primary or exact Epic workspace and requires another location to report the required path. Missing forbidden-location test.
+  Artifacts: hrn-00214-C0004, hrn-00215-C0004, hrn-00216-C0004, hrn-00217-C0004.
+  Next: Build exact-location gate and regression test; rerun Verify.
+source:
+  kind: tool-observation
+  ref: hrn-00209
+  revision: null
+created_at: 2026-09-03T22:26:57.392Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MMSCA74T7JNZ9KWS0MSMTZ
+tags:
+  - blocked
+  - sdlc
+  - verify
+  - workspace

@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1MRQJ5ZPPZPV0DBHZXA24V3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | Verify | all children | acceptance and gates passed
+details: |-
+  Epic: hrn-00209
+  Phase: Verify
+  Item: hrn-00214..hrn-00217
+  Done: All approved Config, Git workspace engine, adapter parity, documentation, compatibility, and release-readiness acceptance mapped to fresh evidence; independent correctness, safety, maintainability, security, privacy, and compatibility review found no defect.
+  Verification: `mise run quality` passed generic 241, Python 725, adapter units 2+3, typecheck/build/lint/format/contracts/generated docs/MkDocs/dead-code/package/release gates; dupcheck 67 clones/2.34% passed. OpenCode SDK 9/9 and Pi SDK 9/9 passed. `git diff --check` passed.
+  Artifacts: hrn-00214-C0008, hrn-00215-C0008, hrn-00216-C0008, hrn-00217-C0008.
+  Blockers: none.
+  Next: work-release hrn-00209.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T23:12:43.711Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MQA233QT8MDQK5FWN8PRMP
+tags:
+  - release-ready
+  - sdlc
+  - verify
+  - workspace

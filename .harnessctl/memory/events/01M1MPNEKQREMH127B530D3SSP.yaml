@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1MPNEKQREMH127B530D3SSP
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | build | all children | exact ensure location repaired; gates passed
+details: |-
+  Epic: hrn-00209
+  Phase: Build
+  Item: hrn-00214..hrn-00217
+  Done: Existing workspace ensure now permits only exact primary checkout or exact Epic workspace before reconciliation mutation; other repository locations fail with both required paths.
+  Verification: real-Git workspace suite 15/15 repeated 3x; full `mise run quality` passed generic 239, Python 725, adapter units 2+3, typecheck/build/lint/format/contracts/docs/dead-code/package gates; duplicate gate 67 clones/2.34%. `PI_TEST_MODEL=lmstudio/qwen/qwen3.8-27b mise run integration` passed OpenCode 9/9 and Pi 9/9. `git diff --check` passed.
+  Artifacts: hrn-00214-C0005, hrn-00215-C0005, hrn-00216-C0005, hrn-00217-C0005.
+  Blockers: none repository-owned.
+  Next: work-verify hrn-00209.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T22:36:37.367Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MNH39GRXMVKNNAKQF2KEX8
+tags:
+  - build
+  - epic
+  - git
+  - workspace

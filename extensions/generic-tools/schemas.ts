@@ -287,7 +287,14 @@ export const configV1Schema = z
       .object({
         issues: issuesSchema,
         documents: documentsSchema,
-        cvs: z.object({ enabled: z.boolean(), local: cvsLocalSchema, provider: gitProviderConfigSchema }).strict(),
+        cvs: z
+          .object({
+            enabled: z.boolean(),
+            local: cvsLocalSchema,
+            workspaces: z.boolean(),
+            provider: gitProviderConfigSchema,
+          })
+          .strict(),
         caveman: cavemanSchema,
         tdd: z.object(genericSkillFields).strict(),
         codeIndex: z.object({ enabled: z.boolean(), mcpName: mcpNameSchema }).strict(),
@@ -303,6 +310,12 @@ export const configV1Schema = z
         code: 'custom',
         path: ['skills', 'caveman', 'enabled'],
         message: 'skills.memory.enabled requires skills.caveman.enabled to be true',
+      });
+    if (config.skills.cvs.workspaces && (!config.skills.cvs.enabled || config.skills.cvs.local !== 'git'))
+      context.addIssue({
+        code: 'custom',
+        path: ['skills', 'cvs', 'workspaces'],
+        message: 'requires skills.cvs.enabled to be true and skills.cvs.local to be git',
       });
     const references: Array<{ readonly enabled: boolean; readonly mcpName?: string; readonly path: string[] }> = [
       {
@@ -347,8 +360,12 @@ export const configV1Schema = z
   .meta({
     description: 'Capability-oriented harnessctl project configuration v1.',
     allOf: [memoryRequiresCavemanContract],
-    'x-harnessctl-zod-refinements': ['memory-requires-caveman', 'enabled-mcp-references-exist'],
-    'x-harnessctl-config-refinements': ['enabled-mcp-references-exist'],
+    'x-harnessctl-zod-refinements': [
+      'memory-requires-caveman',
+      'workspace-requires-enabled-git',
+      'enabled-mcp-references-exist',
+    ],
+    'x-harnessctl-config-refinements': ['workspace-requires-enabled-git', 'enabled-mcp-references-exist'],
   });
 
 export type ConfigV1 = z.infer<typeof configV1Schema>;
@@ -388,6 +405,7 @@ export const CONFIG_V1_DEFAULTS = {
     cvs: {
       enabled: true,
       local: 'git',
+      workspaces: false,
       provider: {
         type: 'github',
         tools: 'gh',

@@ -1370,6 +1370,31 @@ def test_skill_configuration_routes_match_config_v1_domains() -> None:
     assert set(domain_pages.values()).issubset(nav_pages)
 
 
+def test_cvs_docs_cover_opt_in_git_epic_workspace_contract() -> None:
+    page = (DOCS / "cvs.md").read_text(encoding="utf-8")
+
+    for tool_name in (
+        "workspace_ensure",
+        "workspace_status",
+        "workspace_mark_cleanup_ready",
+        "workspace_cleanup",
+    ):
+        assert f"`{tool_name}`" in page
+    for state in ("creating", "active", "cleanup_ready", "closed"):
+        assert f"`{state}`" in page
+    for contract in (
+        "workspaces: false",
+        "skills.cvs.workspaces: true",
+        "harnessctl/epic/hrn-12345",
+        "project--workspaces/hrn-12345",
+        "exact path returned for the Epic",
+        "never uses forced removal",
+        "deletes the retained branch",
+        "cannot be reopened",
+    ):
+        assert contract in page
+
+
 def test_skills_catalog_matches_registry_templates_and_entry_contract() -> None:
     catalog = (DOCS / "skills.md").read_text(encoding="utf-8")
     template_root = ROOT / "src" / "harnessctl" / "templates" / "skills"

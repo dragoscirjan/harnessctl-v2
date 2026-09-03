@@ -50,6 +50,7 @@
     "cvs": {
       "enabled": true,
       "local": "git",
+      "workspaces": false,
       "provider": {
         "type": "github",
         "tools": "gh",

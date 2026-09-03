@@ -17,6 +17,10 @@ import {
   updateIssue,
   validateIssues,
   issueMetadataText,
+  workspaceCleanup,
+  workspaceEnsure,
+  workspaceMarkCleanupReady,
+  workspaceStatus,
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
 import { registerDocumentTools } from './document-tools.js';
@@ -291,6 +295,47 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       return textResult(encodeIssueToolResult(validateIssues(context.cwd, params.id)));
     },
   });
+
+  for (const [name, label, description, operation] of [
+    [
+      'workspace_ensure',
+      'Workspace Ensure',
+      'Create or return the deterministic Git workspace for one canonical Epic.',
+      workspaceEnsure,
+    ],
+    [
+      'workspace_status',
+      'Workspace Status',
+      'Inspect the deterministic Git workspace for one canonical Epic without mutation.',
+      workspaceStatus,
+    ],
+    [
+      'workspace_mark_cleanup_ready',
+      'Workspace Mark Cleanup Ready',
+      'Mark the matching clean Epic workspace ready for cleanup.',
+      workspaceMarkCleanupReady,
+    ],
+    [
+      'workspace_cleanup',
+      'Workspace Cleanup',
+      'Remove the matching clean ready Epic workspace while retaining its branch.',
+      workspaceCleanup,
+    ],
+  ] as const) {
+    pi.registerTool({
+      name,
+      label,
+      description,
+      parameters: Type.Object({ epic_id: Type.String({ description: 'Canonical Epic issue ID' }) }),
+      async execute(_toolCallId, params, _signal, _onUpdate, context) {
+        try {
+          return textResult(JSON.stringify(operation(context.cwd, params.epic_id)));
+        } catch (error: unknown) {
+          return workspaceError(error);
+        }
+      },
+    });
+  }
 }
 
 function textResult(text: string): {
@@ -317,6 +362,14 @@ function issueError(error: unknown): {
 } {
   const message = error instanceof Error ? error.message : String(error);
   return textResult(`Issue error: ${message}`);
+}
+
+function workspaceError(error: unknown): {
+  content: [{ type: 'text'; text: string }];
+  details: Record<string, never>;
+} {
+  const message = error instanceof Error ? error.message : String(error);
+  return textResult(`Workspace error: ${message}`);
 }
 
 function parseJsonObject(value: string): Record<string, unknown> {

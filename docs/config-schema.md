@@ -129,11 +129,12 @@ Choose filesystem storage or a provider-owned remote route.
 
 Local version control and remote collaboration provider.
 
-| Property   | Required | Type    | Default            | Description                              | Constraint                     |
-| ---------- | -------- | ------- | ------------------ | ---------------------------------------- | ------------------------------ |
-| `enabled`  | Yes      | boolean | `true`             | Whether CVS guidance is active.          | See the selected object shape. |
-| `local`    | Yes      | enum    | `"git"`            | Local version-control executable family. | One of `git`, `jj`.            |
-| `provider` | Yes      | object  | Object shown below | Remote collaboration provider mapping.   | See the selected object shape. |
+| Property     | Required | Type    | Default            | Description                                              | Constraint                                    |
+| ------------ | -------- | ------- | ------------------ | -------------------------------------------------------- | --------------------------------------------- |
+| `enabled`    | Yes      | boolean | `true`             | Whether CVS guidance is active.                          | See the selected object shape.                |
+| `local`      | Yes      | enum    | `"git"`            | Local version-control executable family.                 | One of `git`, `jj`.                           |
+| `workspaces` | Yes      | boolean | `false`            | Whether normalized Git Epic workspace tools are enabled. | Requires CVS to be enabled with `local: git`. |
+| `provider`   | Yes      | object  | Object shown below | Remote collaboration provider mapping.                   | See the selected object shape.                |
 
 ### CVS provider
 

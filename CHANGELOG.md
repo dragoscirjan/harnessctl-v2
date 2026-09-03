@@ -21,6 +21,8 @@
   are preserved with a warning.
 - Add patch Changesets for all three runtime packages; package versions and dependency
   ranges remain unchanged until release versioning.
+- Add opt-in Git Epic workspaces with deterministic branches and sibling paths, explicit
+  readiness and cleanup transitions, fail-closed recovery, and equivalent OpenCode/Pi tools.
 
 ## 0.2.0
 

@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1MHDDBGQ8CZ40EET5HSAMNF
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00208
+summary: "hrn-00208 | release | ready PR | commit pushed and PR #77 open"
+details: "Epic hrn-00208. Commit b327a1bc183e35aa9507868bb585467a06f2c15b pushed to origin/epic/hrn-00208-collision-safe-identities; remote SHA verified exact. Ready GitHub PR #77 open, base main, head exact commit, 1 commit, 51 files. Verify gates passed: `mise run quality`; OpenCode SDK 8/8; Pi SDK 8/8 with advertised tool-capable model. Release evidence hrn-00208-C0004. No merge, deployment, closure, destructive work."
+source:
+  kind: tool-observation
+  ref: hrn-00208
+  revision: b327a1bc183e35aa9507868bb585467a06f2c15b
+created_at: 2026-09-03T21:04:51.056Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - pr
+  - release
+  - sdlc
+  - ulid
