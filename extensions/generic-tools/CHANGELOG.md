@@ -1,5 +1,11 @@
 # @harnessctl/generic-tools
 
+## 0.1.11
+
+### Patch Changes
+
+- [#77](https://github.com/dragoscirjan/harnessctl-v2/pull/77) [`b327a1b`](https://github.com/dragoscirjan/harnessctl-v2/commit/b327a1bc183e35aa9507868bb585467a06f2c15b) Thanks [@dragoscirjan](https://github.com/dragoscirjan)! - Generate collision-safe ULID identities for new filesystem Issues and Documents while preserving complete legacy numeric identity compatibility. Keep Pi tool schemas OpenAI-compatible and make local-model integration failures diagnostic.
+
 ## 0.1.10
 
 ### Patch Changes
