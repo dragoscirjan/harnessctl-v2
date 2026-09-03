@@ -14,7 +14,13 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createConfig } from './config.js';
 import { archiveDocument, createDocument, getDocument, updateDocument, versionDocument } from './documents.js';
-import { decodeIssueDocument, encodeCanonicalIssue, issueMetadataText } from './issues-contract.js';
+import {
+  canonicalIssueFilename,
+  decodeIssueDocument,
+  encodeCanonicalIssue,
+  issueMetadataText,
+  type CanonicalIssueDocument,
+} from './issues-contract.js';
 import {
   archiveIssueReport,
   commentIssue,
@@ -187,26 +193,77 @@ describe('issue public operations', () => {
     );
     const created = provider.create({ type: 'task', title: 'Stable issue' });
     expect(created).toMatchObject({
-      id: 'TASK-00001',
-      path: '.harnessctl/issues/TASK-00001-stable-issue.yml',
       location: 'active',
     });
+    expect(created.id).toMatch(/^TASK-[0-9A-HJKMNP-TV-Z]{26}$/u);
+    expect(created.path).toBe(`.harnessctl/issues/${created.id}-stable-issue.yml`);
     expect(provider.list()).toEqual([expect.objectContaining({ id: created.id, revision: created.revision })]);
     writeFileSync(join(root, '.harnessctl/config.yaml'), 'version: 1\nskills:\n  issues:\n    prefix: "TASK-"\n');
     expect(parseIssueIds('TASK-00001 and TASK-00002 and TASK-00001', root)).toEqual(['TASK-00001', 'TASK-00002']);
     expect(parseIssueId('see TASK-00001', root)).toBe('TASK-00001');
   });
 
+  it('rejects a generated identity collision before changing canonical authority', () => {
+    const root = repository('TASK-');
+    const provider = createFilesystemIssueProvider(root, {
+      generateUlid: () => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
+    const created = provider.create({ type: 'task', title: 'First collision candidate' });
+    const authorityRoot = join(root, '.harnessctl/issues');
+    const before = treeManifest(authorityRoot);
+
+    expect(() => provider.create({ type: 'task', title: 'Different slug' })).toThrow(/already exists/u);
+    expect(treeManifest(authorityRoot)).toEqual(before);
+    expect(provider.get(created.id).metadata.title).toBe('First collision candidate');
+  });
+
+  it('operates deterministically across one mixed legacy and ULID issue graph', () => {
+    const root = repository('hrn-');
+    const legacy: CanonicalIssueDocument = {
+      version: 1,
+      id: 'hrn-00002',
+      type: 'epic',
+      title: 'Legacy parent',
+      status: 'open',
+      created_at: '2026-08-27T00:00:00.000Z',
+      updated_at: '2026-08-27T00:00:00.000Z',
+      body: '',
+      comments: [],
+    };
+    mkdirSync(join(root, '.harnessctl/issues'), { recursive: true });
+    writeFileSync(
+      join(root, '.harnessctl/issues', canonicalIssueFilename(legacy.id, legacy.title)),
+      encodeCanonicalIssue(legacy),
+    );
+    const provider = createFilesystemIssueProvider(root, {
+      generateUlid: () => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
+    const child = provider.create({ type: 'task', title: 'ULID child', parent: legacy.id });
+
+    expect(provider.list().map(({ id }) => id)).toEqual([legacy.id, child.id]);
+    expect(provider.validate()).toEqual({ valid: true, findings: [] });
+    relateIssue(root, legacy.id, 'relates_to', child.id);
+    expect(getIssue(root, legacy.id).metadata).toMatchObject({
+      children: [child.id],
+      relates_to: [child.id],
+    });
+    expect(commentIssue(root, legacy.id, 'Legacy remains commentable', 'tester').id).toBe(`${legacy.id}-C0001`);
+
+    expect(archiveIssueReport(root, legacy.id).archived).toEqual([legacy.id, child.id]);
+    expect(getIssue(root, legacy.id).location).toBe('archived');
+    expect(getIssue(root, child.id).location).toBe('archived');
+  });
+
   it('derives hierarchy and dependency inverse views without persisting them', () => {
     const root = repository();
-    createIssueRecord(root, { type: 'epic', title: 'Parent' });
-    const child = createIssueRecord(root, { type: 'task', title: 'Child', parent: '00001' });
-    createIssueRecord(root, { type: 'task', title: 'Blocked' });
-    relateIssue(root, child.id, 'depends_on', '00003');
-    expect(getIssue(root, '00001').metadata.children).toEqual(['00002']);
-    expect(getIssue(root, '00002').metadata.blocked_by).toEqual(['00003']);
-    expect(getIssue(root, '00003').metadata.blocks).toEqual(['00002']);
-    const parentYaml = readFileSync(join(root, getIssue(root, '00001').path), 'utf8');
+    const parent = createIssueRecord(root, { type: 'epic', title: 'Parent' });
+    const child = createIssueRecord(root, { type: 'task', title: 'Child', parent: parent.id });
+    const blocker = createIssueRecord(root, { type: 'task', title: 'Blocked' });
+    relateIssue(root, child.id, 'depends_on', blocker.id);
+    expect(getIssue(root, parent.id).metadata.children).toEqual([child.id]);
+    expect(getIssue(root, child.id).metadata.blocked_by).toEqual([blocker.id]);
+    expect(getIssue(root, blocker.id).metadata.blocks).toEqual([child.id]);
+    const parentYaml = readFileSync(join(root, getIssue(root, parent.id).path), 'utf8');
     expect(parentYaml).not.toContain('children');
     expect(parentYaml).not.toContain('blocks');
     expect(parentYaml).not.toContain('blocked_by');
@@ -214,14 +271,14 @@ describe('issue public operations', () => {
 
   it('stores symmetric relationships once under the smaller ID and removes from either endpoint', () => {
     const root = repository();
-    createIssueRecord(root, { type: 'task', title: 'First' });
-    createIssueRecord(root, { type: 'task', title: 'Second' });
-    relateIssue(root, '00002', 'relates_to', '00001');
-    expect(getIssue(root, '00001').metadata.relates_to).toEqual(['00002']);
-    expect(getIssue(root, '00002').metadata.relates_to).toEqual(['00001']);
-    expect(readFileSync(join(root, getIssue(root, '00002').path), 'utf8')).not.toContain('relates_to');
-    unrelateIssue(root, '00002', 'relates_to', '00001');
-    expect(getIssue(root, '00001').metadata.relates_to).toBeUndefined();
+    const first = createIssueRecord(root, { type: 'task', title: 'First' });
+    const second = createIssueRecord(root, { type: 'task', title: 'Second' });
+    relateIssue(root, second.id, 'relates_to', first.id);
+    expect(getIssue(root, first.id).metadata.relates_to).toEqual([second.id]);
+    expect(getIssue(root, second.id).metadata.relates_to).toEqual([first.id]);
+    expect(readFileSync(join(root, getIssue(root, second.id).path), 'utf8')).not.toContain('relates_to');
+    unrelateIssue(root, second.id, 'relates_to', first.id);
+    expect(getIssue(root, first.id).metadata.relates_to).toBeUndefined();
   });
 
   it('uses standard JSON metadata and deterministic rewrites with optimistic revisions', () => {
@@ -253,7 +310,7 @@ describe('issue public operations', () => {
     const comment = commentIssue(root, created.id, 'Reviewed', 'tester');
     const linked = linkDocument(root, created.id, '.harnessctl/tasks/design.md', 'task');
     const transitioned = transitionIssue(root, created.id, 'done', linked.revision);
-    expect(comment.id).toBe('00001-C0001');
+    expect(comment.id).toBe(`${created.id}-C0001`);
     expect(transitioned.metadata.status).toBe('done');
     expect(listIssueSummaries(root, { status: 'DONE' })).toHaveLength(1);
   });
@@ -388,7 +445,7 @@ describe('issue public operations', () => {
 
     expect('unlinkDocument' in createFilesystemIssueProvider(root)).toBe(false);
     const created = createIssueRecord(root, { type: 'task', title: 'Mutation remains valid' });
-    expect(created.id).toBe('00002');
+    expect(created.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/u);
     const linked = linkDocument(root, created.id, document.path, 'document');
     expect(linked.metadata.documents).toEqual([document.path]);
     expect(
@@ -405,21 +462,21 @@ describe('issue public operations', () => {
     );
     mkdirSync(join(root, '.harnessctl/documents'), { recursive: true });
     writeFileSync(join(root, '.harnessctl/documents/doc-00001-dormant-v1.md'), '# Dormant\n');
-    expect(createIssueRecord(root, { type: 'task', title: 'Remote documents' })).toEqual(
-      expect.objectContaining({ id: 'hrn-00001' }),
+    expect(createIssueRecord(root, { type: 'task', title: 'Remote documents' }).id).toMatch(
+      /^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u,
     );
     expect(readFileSync(join(root, '.harnessctl/documents/doc-00001-dormant-v1.md'), 'utf8')).toBe('# Dormant\n');
   });
 
   it('archives derived descendants and retains the compatibility operation token', () => {
     const root = repository();
-    createIssueRecord(root, { type: 'epic', title: 'Root' });
-    createIssueRecord(root, { type: 'task', title: 'Child', parent: '00001' });
-    const report = archiveIssueReport(root, '00001');
-    expect(report).toMatchObject({ archived: ['00001', '00002'], skipped: [] });
+    const parent = createIssueRecord(root, { type: 'epic', title: 'Root' });
+    const child = createIssueRecord(root, { type: 'task', title: 'Child', parent: parent.id });
+    const report = archiveIssueReport(root, parent.id);
+    expect(report).toMatchObject({ archived: [parent.id, child.id], skipped: [] });
     expect(report.transactionId).toBeTruthy();
-    expect(getIssue(root, '00002').location).toBe('archived');
-    expect(archiveIssueReport(root, '00001')).toMatchObject({ archived: [], skipped: ['00001'] });
+    expect(getIssue(root, child.id).location).toBe('archived');
+    expect(archiveIssueReport(root, parent.id)).toMatchObject({ archived: [], skipped: [parent.id] });
   });
 
   it('returns bounded validation findings for malformed canonical state without rewriting it', () => {

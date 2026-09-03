@@ -39,6 +39,20 @@ The normalized tool set is exactly `document_id`, `document_create`, `document_l
 adapters. Canonical Markdown remains authoritative; the shared SQLite cache is disposable,
 advisory, and never a repair source.
 
+Every new Document ID is `doc-` followed by a 26-character uppercase Crockford ULID,
+for example `doc-01K4A7X9Z8B3N5Q6R2TVCW0YJM`. The ULID alphabet is `0-9` and
+`A-HJKMNP-TV-Z`; lowercase and the ambiguous letters `I`, `L`, `O`, and `U` are invalid.
+Legacy `doc-` IDs with at least five decimal digits remain permanently discoverable and
+usable across versions, links, validation, archive, and restore. No automatic migration
+rewrites them. Mixed lists place legacy IDs first in numeric order, then ULID IDs in
+lexicographic order.
+
+Creation publishes a collision-safe identity exclusively and fails closed rather than
+overwriting an existing canonical path. SQLite continues storing IDs as strings, so the
+dual-format authority needs no cache schema migration. Rollback remains compatible with
+all legacy numeric records; once ULID records exist, readers must retain this dual-format
+contract.
+
 ## Lifecycle
 
 The existing SDLC Plan reference owns design work. It selects a proportionate kind, checks

@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1MET2DHYA13MCWRBQTMVT0Z
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00208
+summary: hrn-00208 | verify | all children | quality passes; Pi SDK integration blocks parity evidence
+details: "Epic hrn-00208. Verify rerun. `mise run quality` passed: Python 722, generic 220, OpenCode unit 2, Pi unit 3, typecheck/build/packages/lint/format/contracts/docs/dead-code/release artifacts. `mise run integration`: OpenCode 8/8 passed; Pi 0/8, every result `toolNames=[]`, including config operations. Classification: Pi SDK model/session environment or dependency failure; acceptance-evidence blocker, not confirmed identity defect. Source review found no new identity defect. Evidence comments hrn-00211-C0004, hrn-00212-C0005, hrn-00213-C0004. No closure, repair, commit, Release, remote, destructive work."
+source:
+  kind: tool-observation
+  ref: hrn-00208
+  revision: v1:3a10dd7fa0f0be36ac0514bc6264a5520c6218d16b5ee2723aa6ed60bf559bf4
+created_at: 2026-09-03T20:19:20.113Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - pi-integration
+  - sdlc
+  - ulid
+  - verify

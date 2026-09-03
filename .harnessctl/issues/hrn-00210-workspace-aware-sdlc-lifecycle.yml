@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-00210"
+"type": "epic"
+"title": "Workspace-Aware SDLC Lifecycle"
+"status": "open"
+"created_at": "2026-09-03T11:14:02.520Z"
+"updated_at": "2026-09-03T17:51:01.806Z"
+"created_by": "OpenCode"
+"parent": "hrn-00207"
+"depends_on":
+  - "hrn-00208"
+  - "hrn-00209"
+"metadata":
+  "capability": "workspace-lifecycle"
+  "phase": "plan"
+  "sequence": 3
+"body": "# Workspace-Aware SDLC Lifecycle\n\n## Objective\n\nMake every Epic lifecycle command enforce and preserve the configured Epic workspace boundary.\n\n## Isolated Scope\n\n- Make Initiative-mode Plan create no Initiative workspace.\n- Make Epic Plan ensure the resolved Epic workspace and return its path for subsequent invocation.\n- Make Build, Verify, Release, and Continue validate that cwd is the resolved Epic workspace and fail closed with actionable routing when mismatched.\n- Record sufficient workspace identity and lifecycle evidence in checkpoints without treating memory as authority.\n- Make Release create the ready PR under existing consent rules, then mark the workspace cleanup-ready rather than deleting its active cwd.\n- Define safe later cleanup from the primary checkout.\n- Update canonical command/reference templates, generated projections, lifecycle documentation, and policy/integration tests.\n\n## Acceptance Direction\n\n- No workspace is created for an Initiative.\n- Every enabled Epic phase either operates in the authoritative Epic workspace or stops before mutation.\n- Multiple agents can run separate Epic lifecycles from one clone without checkout crossover.\n- Continue detects workspace drift alongside Issue, checkpoint, Document, source, Git, test, and provider evidence.\n- Release never implies that a PR is merged and never removes the active cwd.\n- Disabled workspace support retains current lifecycle behavior.\n\n## Dependencies\n\nBlocked by `hrn-00208` and `hrn-00209`.\n\n## Order\n\nDeliver after collision-safe identities and stable normalized workspace primitives.\n\n## Overlap Risk\n\nTouches all lifecycle command/reference templates and generated projections. It should consume, not redefine, the workspace tool contracts from `hrn-00209`.\n"
+"comments":
+  - "id": "hrn-00210-C0001"
+    "created_at": "2026-09-03T17:51:01.806Z"
+    "created_by": "OpenCode"
+    "body": "Plan blocked: approved `doc-00019` requires first `workspace_ensure` from a clean primary checkout with Epic authority already in primary `HEAD`, while Initiative/New-Epic Plan creates uncommitted authority, performs no commit, and cannot persistently switch host cwd. Lifecycle templates cannot satisfy `/work-plan <epic-id>` workspace creation without redefining `hrn-00209` primitives or requiring an external commit. Confirmed decision: stop `hrn-00210` planning and replan `hrn-00209` with an explicit safe bootstrap contract."

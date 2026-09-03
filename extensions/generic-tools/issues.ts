@@ -3,6 +3,7 @@ import { existsSync, lstatSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { ConfigError, getConfigValue, readConfig } from './config.js';
 import { DOCUMENT_LIMITS, canonicalDocumentFilename, decodeDocument } from './documents-contract.js';
+import { comparePrefixedIdentities, createUlid, prefixedIdentityPattern } from './identities.js';
 import {
   ISSUE_CONTRACT_VERSION,
   ISSUE_STATUSES,
@@ -135,6 +136,8 @@ export interface ArchiveReport {
 
 export interface FilesystemIssueProviderOptions {
   clock?: () => Date;
+  /** Deterministic test seam; production uses a timestamped cryptographic ULID. */
+  generateUlid?: (timestamp: number) => string;
   lockWaitMs?: number;
   transactionId?: () => string;
   /** Deterministic test seam for canonical document-link descriptor reads. */
@@ -198,6 +201,7 @@ function buildFilesystemIssueProvider(
 ): FilesystemIssueProvider {
   const { prefix, issueRoot } = getIssueStorageConfig(cwd);
   const clock = options.clock ?? (() => new Date());
+  const generateUlid = options.generateUlid ?? createUlid;
   const locked = <T>(name: string, operation: (lease: BarrierLease) => T, mutation = false): T => {
     assertLocalIssueProvider(cwd, name);
     return withIssueBarrier(
@@ -218,7 +222,11 @@ function buildFilesystemIssueProvider(
     parseIds: (prompt) => parseIdsWithPrefix(prompt, prefix),
     parseId: (prompt) => parseIdsWithPrefix(prompt, prefix)[0] ?? '',
     create: (input) =>
-      locked('createIssueRecord', (lease) => createUnlocked(cwd, prefix, issueRoot, clock, lease, input), true),
+      locked(
+        'createIssueRecord',
+        (lease) => createUnlocked(cwd, prefix, issueRoot, clock, generateUlid, lease, input),
+        true,
+      ),
     get: (id) => locked('getIssue', () => getUnlocked(cwd, prefix, issueRoot, id)),
     list: (input = {}) => locked('listIssueSummaries', () => listUnlocked(cwd, prefix, issueRoot, input)),
     update: (id, changes) =>
@@ -365,7 +373,7 @@ export function assertNoCanonicalIssueDocumentReferences(cwd: string, blockedPat
     throw new IssueError('domain_invariant', 'cannot mutate a document while the canonical issue graph is invalid');
   const blocked = new Set(blockedPaths);
   const references: Array<{ issue: string; path: string }> = [];
-  for (const entity of orderedEntities(globalEntityMap(discoverCanonical(cwd, prefix, issueRoot))))
+  for (const entity of orderedEntities(globalEntityMap(discoverCanonical(cwd, prefix, issueRoot)), prefix))
     for (const path of entity.issue.documents ?? [])
       if (blocked.has(path)) references.push({ issue: entity.issue.id, path });
   if (references.length)
@@ -389,6 +397,7 @@ function createUnlocked(
   prefix: string,
   issueRoot: string,
   clock: () => Date,
+  generateUlid: (timestamp: number) => string,
   lease: BarrierLease,
   options: CreateIssueOptions,
 ): Issue {
@@ -410,8 +419,12 @@ function createUnlocked(
   const entities = activeEntityMap(storage);
   for (const dependency of dependencies) requireActiveEntity(entities, dependency);
   if (parent) validateParentType(requireActiveEntity(entities, parent), type);
-  const id = allocateIssueId(storage, prefix);
-  const timestamp = canonicalTimestamp(clock());
+  const now = clock();
+  const id = `${prefix}${generateUlid(now.getTime())}`;
+  assertIssueId(id, prefix, 'generated issue');
+  if (storage.byId.has(id))
+    throw new IssueError('identity_ambiguity', `generated issue ID already exists: ${id}`, { issueIds: [id] });
+  const timestamp = canonicalTimestamp(now);
   const issue: CanonicalIssueDocument = {
     version: ISSUE_CONTRACT_VERSION,
     id,
@@ -448,7 +461,7 @@ function listUnlocked(cwd: string, prefix: string, issueRoot: string, options: L
     .active.map(entityFromCandidate)
     .filter((entity) => !status || entity.issue.status === status)
     .filter((entity) => !type || entity.issue.type === type)
-    .sort(compareEntities)
+    .sort((left, right) => compareEntities(left, right, prefix))
     .map((entity) => ({
       id: entity.issue.id,
       type: entity.issue.type,
@@ -698,7 +711,7 @@ function validateUnlocked(
         remedy: 'correct the canonical issue reference',
       });
   };
-  for (const owner of orderedEntities(entities)) {
+  for (const owner of orderedEntities(entities, prefix)) {
     if (owner.issue.parent) {
       const parent = entities.get(owner.issue.parent);
       if (!parent) add(owner, 'parent', `reference ${owner.issue.parent} in parent does not resolve`, 'schema');
@@ -721,8 +734,14 @@ function validateUnlocked(
       }
     }
   }
-  addCycleFindings(entities, 'parent', (entity) => (entity.issue.parent ? [entity.issue.parent] : []), findings);
-  addCycleFindings(entities, 'depends_on', (entity) => entity.issue.depends_on ?? [], findings);
+  addCycleFindings(
+    entities,
+    prefix,
+    'parent',
+    (entity) => (entity.issue.parent ? [entity.issue.parent] : []),
+    findings,
+  );
+  addCycleFindings(entities, prefix, 'depends_on', (entity) => entity.issue.depends_on ?? [], findings);
   let selected =
     id === undefined ? findings : findings.filter((finding) => finding.issue === undefined || finding.issue === id);
   selected.sort(compareValidationFindings);
@@ -892,6 +911,7 @@ function hasDependencyPath(
 
 function addCycleFindings(
   entities: Map<string, Entity>,
+  prefix: string,
   field: 'parent' | 'depends_on',
   edges: (entity: Entity) => readonly string[],
   findings: ValidationFinding[],
@@ -918,7 +938,7 @@ function addCycleFindings(
     for (const target of entity ? edges(entity) : []) if (entities.has(target)) visit(target);
     states.set(id, 'visited');
   };
-  for (const entity of orderedEntities(entities)) visit(entity.issue.id);
+  for (const entity of orderedEntities(entities, prefix)) visit(entity.issue.id);
 }
 
 function activePath(root: string, issue: CanonicalIssueDocument): string {
@@ -926,16 +946,6 @@ function activePath(root: string, issue: CanonicalIssueDocument): string {
 }
 function archivedPath(root: string, issue: CanonicalIssueDocument): string {
   return `${root}/archived/${canonicalIssueFilename(issue.id, issue.title)}`;
-}
-
-function allocateIssueId(storage: IssueStorageCatalog, prefix: string): string {
-  const expression = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, 'u');
-  let maximum = 0n;
-  for (const id of storage.reservedIds) {
-    const digits = expression.exec(id)?.[1];
-    if (digits && BigInt(digits) > maximum) maximum = BigInt(digits);
-  }
-  return `${prefix}${(maximum + 1n).toString().padStart(5, '0')}`;
 }
 
 function validateDocumentPath(
@@ -974,7 +984,8 @@ function validateDocumentPath(
     const suffix = normalized.slice(documentConfig.root.length + 1);
     if (suffix.startsWith('archive/') || suffix.includes('/'))
       throw new IssueError('path_safety', 'document links require an active canonical document, not an archive path');
-    const canonicalName = new RegExp(`^${escapeRegex(documentConfig.prefix)}\\d+-.+-v\\d+\\.md$`, 'u');
+    const identity = prefixedIdentityPattern(documentConfig.prefix, 5).source.slice(1, -1);
+    const canonicalName = new RegExp(`^${identity}-.+-v\\d+\\.md$`, 'u');
     if (!canonicalName.test(suffix))
       throw new IssueError('schema', 'document link is not a canonical document filename');
   }
@@ -1121,13 +1132,7 @@ function readIssuePrefix(cwd: string): string | undefined {
 }
 
 function parseIdsWithPrefix(prompt: string, prefix: string): string[] {
-  return [
-    ...new Set(
-      [...prompt.matchAll(new RegExp(`(?<![A-Za-z0-9_-])${escapeRegex(prefix)}\\d+(?![A-Za-z0-9_-])`, 'gu'))].map(
-        (match) => match[0],
-      ),
-    ),
-  ];
+  return [...new Set([...prompt.matchAll(issueIdSearchPattern(prefix))].map((match) => match[0]))];
 }
 function parseReferences(value: string | undefined, prefix: string, field: string): string[] {
   const result =
@@ -1144,8 +1149,11 @@ function normalizeIssueId(value: string | undefined, prefix: string, field: stri
   return result;
 }
 function assertIssueId(id: string, prefix: string, field: string): void {
-  if (!new RegExp(`^${escapeRegex(prefix)}\\d+$`, 'u').test(id))
-    throw new IssueError('schema', `invalid ${field} "${id}". It must match the configured issue prefix and a number.`);
+  if (!prefixedIdentityPattern(prefix).test(id))
+    throw new IssueError(
+      'schema',
+      `invalid ${field} "${id}". It must match the configured issue prefix and a numeric or ULID suffix.`,
+    );
 }
 function assertRelationship(value: string): asserts value is Relationship {
   if (!RELATIONSHIPS.includes(value as Relationship)) throw new IssueError('schema', `invalid relationship "${value}"`);
@@ -1177,20 +1185,15 @@ function revisionForBytes(bytes: Uint8Array): string {
 function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareCodePoints);
 }
-function orderedEntities(entities: ReadonlyMap<string, Entity>): Entity[] {
-  return [...entities.values()].sort(compareEntities);
+function orderedEntities(entities: ReadonlyMap<string, Entity>, prefix = ''): Entity[] {
+  return [...entities.values()].sort((left, right) => compareEntities(left, right, prefix));
 }
-function compareEntities(left: Entity, right: Entity): number {
-  return compareIssueIds(left.issue.id, right.issue.id);
+function compareEntities(left: Entity, right: Entity, prefix: string): number {
+  return comparePrefixedIdentities(left.issue.id, right.issue.id, prefix);
 }
-function compareIssueIds(left: string, right: string): number {
-  const leftDigits = /(\d+)$/u.exec(left)?.[1];
-  const rightDigits = /(\d+)$/u.exec(right)?.[1];
-  if (leftDigits && rightDigits) {
-    const difference = BigInt(leftDigits) - BigInt(rightDigits);
-    if (difference) return difference < 0 ? -1 : 1;
-  }
-  return compareCodePoints(left, right);
+function issueIdSearchPattern(prefix: string): RegExp {
+  const identity = prefixedIdentityPattern(prefix).source.slice(1, -1);
+  return new RegExp(`(?<![A-Za-z0-9_-])${identity}(?![A-Za-z0-9_-])`, 'gu');
 }
 function compareCodePoints(left: string, right: string): number {
   const a = Array.from(left, (character) => character.codePointAt(0) ?? 0);

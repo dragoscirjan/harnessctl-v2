@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M1KTRFGWMC8KD4VF36QX1JZ4
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00208 | plan | executable plan | approved, decomposed, validated
+details: |-
+  Epic: hrn-00208
+  Command/phase: work-plan / Plan
+  Done: Exact plan approved; Epic updated; doc-00018 approved and linked; Stories hrn-00211, hrn-00212, hrn-00213 created under Epic.
+  Decisions: New authority emits ULIDs; numeric IDs remain readable; no rewrite; mixed order legacy first; dual-read rollback permanent after adoption.
+  Dependencies: hrn-00212 depends_on hrn-00211; hrn-00213 depends_on hrn-00211 and hrn-00212.
+  Artifacts: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml; .harnessctl/documents/doc-00018-collision-safe-canonical-authority-identities-v1.md
+  Verification: issue_validate hrn-00208 valid; document_validate doc-00018 valid.
+  Next: work-build hrn-00208.
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml
+  revision: v1:3a10dd7fa0f0be36ac0514bc6264a5520c6218d16b5ee2723aa6ed60bf559bf4
+created_at: 2026-09-03T14:28:56.476Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1KFN4221V896YESJKKW2ZRB
+tags:
+  - decomposition
+  - design
+  - epic
+  - ulid
+  - work-plan

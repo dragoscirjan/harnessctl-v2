@@ -437,7 +437,9 @@ npm run test:integration --workspace @harnessctl/pi-tools
 
 `mise run integration` runs both OpenCode and Pi integration suites. Use it only
 when both the OpenCode model configuration and the Pi provider environment are
-available.
+available. `PI_TEST_MODEL` must name a tool-capable model advertised by the
+configured provider. Pi scenarios run serially with only their required tools
+to support bounded local-model contexts.
 
 ## Node package releases
 

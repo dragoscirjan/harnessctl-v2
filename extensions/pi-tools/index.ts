@@ -94,7 +94,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       type: Type.String({ description: 'Issue type: initiative, epic, story, task, or bug' }),
       title: Type.String({ description: 'Human-readable issue title' }),
       status: Type.Optional(Type.String({ description: 'Issue status: open, in_progress, done, closed' })),
-      parent: Type.Optional(Type.String({ description: 'Parent issue ID, such as 00001' })),
+      parent: Type.Optional(Type.String({ description: 'Parent issue ID, such as hrn-00001' })),
       depends: Type.Optional(Type.String({ description: 'Comma-separated blocking issue IDs' })),
       author: Type.Optional(Type.String({ description: 'Agent or user attribution' })),
       assignee: Type.Optional(Type.String({ description: 'Agent or user assignee' })),

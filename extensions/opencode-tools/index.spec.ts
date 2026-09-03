@@ -150,41 +150,44 @@ describe('OpenCode adapter', () => {
         { type: 'task', title: 'Example task', metadata: '{"huge":9007199254740993}' },
         context,
       );
-      await tools['issue_create']?.execute({ type: 'task', title: 'Related task' }, context);
+      const createdIssue = JSON.parse(String(issue)) as { id: string; metadata: { metadata: { huge: number } } };
+      const relatedIssue = JSON.parse(
+        String(await tools['issue_create']?.execute({ type: 'task', title: 'Related task' }, context)),
+      ) as { id: string };
       const issues = await tools['issue_list']?.execute({}, context);
-      const fetched = await tools['issue_get']?.execute({ id: 'hrn-00001' }, context);
+      const fetched = await tools['issue_get']?.execute({ id: createdIssue.id }, context);
       const fetchedIssue = JSON.parse(String(fetched)) as { revision: string };
       const updated = await tools['issue_update']?.execute(
-        { id: 'hrn-00001', title: 'Updated task', expectedRevision: fetchedIssue.revision },
+        { id: createdIssue.id, title: 'Updated task', expectedRevision: fetchedIssue.revision },
         context,
       );
       const updatedIssue = JSON.parse(String(updated)) as { revision: string };
       const transitioned = await tools['issue_transition']?.execute(
-        { id: 'hrn-00001', status: 'done', expectedRevision: updatedIssue.revision },
+        { id: createdIssue.id, status: 'done', expectedRevision: updatedIssue.revision },
         context,
       );
       const comment = await tools['issue_comment']?.execute(
-        { id: 'hrn-00001', body: 'Review this', author: 'tester' },
+        { id: createdIssue.id, body: 'Review this', author: 'tester' },
         context,
       );
       const related = await tools['issue_relate']?.execute(
-        { id: 'hrn-00001', relationship: 'relates_to', targetId: 'hrn-00002' },
+        { id: createdIssue.id, relationship: 'relates_to', targetId: relatedIssue.id },
         context,
       );
       const unrelated = await tools['issue_unrelate']?.execute(
-        { id: 'hrn-00001', relationship: 'relates_to', targetId: 'hrn-00002' },
+        { id: createdIssue.id, relationship: 'relates_to', targetId: relatedIssue.id },
         context,
       );
       const retiredSpecsLink = await tools['issue_link_document']?.execute(
-        { id: 'hrn-00001', path: '.specs/adapter.md', kind: 'design' },
+        { id: createdIssue.id, path: '.specs/adapter.md', kind: 'design' },
         context,
       );
       const retiredDraftLink = await tools['issue_link_document']?.execute(
-        { id: 'hrn-00001', path: '.ai.tmp/draft.md' },
+        { id: createdIssue.id, path: '.ai.tmp/draft.md' },
         context,
       );
       const linkedDocument = await tools['issue_link_document']?.execute(
-        { id: 'hrn-00001', path: currentDocument.path, kind: 'document' },
+        { id: createdIssue.id, path: currentDocument.path, kind: 'document' },
         context,
       );
       const blockedDocumentUpdate = await tools['document_update']?.execute(
@@ -195,14 +198,13 @@ describe('OpenCode adapter', () => {
         { id: currentDocument.id, expectedRevision: currentDocument.revision },
         context,
       );
-      const issueAfterArchiveRejection = await tools['issue_get']?.execute({ id: 'hrn-00001' }, context);
+      const issueAfterArchiveRejection = await tools['issue_get']?.execute({ id: createdIssue.id }, context);
       const validation = await tools['issue_validate']?.execute({}, context);
-      const archive = await tools['issue_archive']?.execute({ id: 'hrn-00001' }, context);
-      const createdIssue = JSON.parse(String(issue)) as { id: string; metadata: { metadata: { huge: number } } };
+      const archive = await tools['issue_archive']?.execute({ id: createdIssue.id }, context);
 
       expect(defaultTasksPath).toBe('".harnessctl/tasks"');
       expect(result).toBe('1');
-      expect(createdDocument.id).toBe('doc-00001');
+      expect(createdDocument.id).toMatch(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u);
       expect(emptyMetadataDocument.metadata.metadata).toBeUndefined();
       expect(versionedDocument).toContain('"version":2');
       expect(restoredDocument).toContain('"location":"active"');
@@ -223,14 +225,14 @@ describe('OpenCode adapter', () => {
       expect(issueId).toBe('["hrn-00042","hrn-00007"]');
       expect(createdIssue.metadata.metadata.huge).toBe(9_007_199_254_740_992);
       expect(Number.isFinite(createdIssue.metadata.metadata.huge)).toBe(true);
-      expect(createdIssue.id).toBe('hrn-00001');
+      expect(createdIssue.id).toMatch(/^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u);
       expect(JSON.parse(String(issues))).toHaveLength(2);
-      expect(JSON.parse(String(archive)).archived).toEqual(['hrn-00001']);
+      expect(JSON.parse(String(archive)).archived).toEqual([createdIssue.id]);
       expect(fetched).toContain('Example task');
       expect(updated).toContain('Updated task');
       expect(transitioned).toContain('"status":"done"');
-      expect(comment).toContain('hrn-00001-C0001');
-      expect(related).toContain('"relates_to":["hrn-00002"]');
+      expect(comment).toContain(`${createdIssue.id}-C0001`);
+      expect(related).toContain(`"relates_to":["${relatedIssue.id}"]`);
       expect(unrelated).not.toContain('"relates_to"');
       expect(retiredSpecsLink).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);
       expect(retiredDraftLink).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);

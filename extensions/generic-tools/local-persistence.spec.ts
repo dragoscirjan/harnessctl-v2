@@ -86,7 +86,7 @@ describe('local SQLite runtime selection', () => {
     }
   });
 
-  it('rebuilds a valid cache when a child issue sorts before its parent', () => {
+  it('rebuilds a valid cache from a mixed legacy and ULID authority graph', () => {
     const root = mkdtempSync(join(tmpdir(), 'harnessctl-local-persistence-'));
     try {
       createConfig(root);
@@ -103,17 +103,39 @@ describe('local SQLite runtime selection', () => {
       };
       const child: CanonicalIssueDocument = {
         ...base,
-        id: 'hrn-00001',
+        id: 'hrn-01ARZ3NDEKTSV4RRFFQ69G5FAV',
         title: 'Child',
         parent: 'hrn-00002',
       };
       const parent: CanonicalIssueDocument = { ...base, id: 'hrn-00002', title: 'Parent' };
       writeFileSync(join(directory, canonicalIssueFilename(child.id, child.title)), encodeCanonicalIssue(child));
       writeFileSync(join(directory, canonicalIssueFilename(parent.id, parent.title)), encodeCanonicalIssue(parent));
+      const documents = join(root, '.harnessctl/documents');
+      mkdirSync(documents, { recursive: true });
+      const legacyDocument: CanonicalDocumentMetadata = {
+        id: 'doc-00002',
+        title: 'Legacy document',
+        kind: 'hld',
+        status: 'draft',
+        version: 1,
+        created_at: '2026-08-27T00:00:00.000Z',
+        updated_at: '2026-08-27T00:00:00.000Z',
+      };
+      const ulidDocument = {
+        ...legacyDocument,
+        id: 'doc-01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        title: 'ULID document',
+      };
+      writeFileSync(
+        join(documents, canonicalDocumentFilename(legacyDocument)),
+        encodeCanonicalDocument(legacyDocument),
+      );
+      writeFileSync(join(documents, canonicalDocumentFilename(ulidDocument)), encodeCanonicalDocument(ulidDocument));
 
       const validation = withLocalBarrier(root, (lease) => {
         const snapshot = loadLocalSnapshot(lease);
-        expect(snapshot.issues.map(({ issue }) => issue.id)).toEqual(['hrn-00001', 'hrn-00002']);
+        expect(snapshot.issues.map(({ issue }) => issue.id)).toEqual([parent.id, child.id]);
+        expect(snapshot.documents.map(({ metadata }) => metadata.id)).toEqual([legacyDocument.id, ulidDocument.id]);
         return ensureLocalCache(lease, snapshot);
       });
 

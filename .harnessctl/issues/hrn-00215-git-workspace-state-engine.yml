@@ -1,0 +1,17 @@
+"version": 1
+"id": "hrn-00215"
+"type": "story"
+"title": "Git Workspace State Engine"
+"status": "open"
+"created_at": "2026-09-03T17:30:19.213Z"
+"updated_at": "2026-09-03T17:35:01.578Z"
+"created_by": "OpenCode"
+"parent": "hrn-00209"
+"depends_on":
+  - "hrn-00214"
+"metadata":
+  "capability": "workspace-engine"
+  "epic": "hrn-00209"
+  "sequence": 2
+"body": "# Git Workspace State Engine\n\n## Objective\n\nImplement the safe, deterministic, race-aware local engine behind one Git worktree per canonical Epic.\n\n## Scope\n\n- Add typed workspace results/errors and `workspace_ensure`, `workspace_status`, `workspace_mark_cleanup_ready`, and `workspace_cleanup` generic operations.\n- Discover non-bare Git topology from NUL-delimited porcelain output and canonicalize primary/current/linked paths.\n- Validate active canonical Epic authority and require committed authority plus clean primary state before first creation.\n- Derive branch `harnessctl/epic/<canonical-id>` and sibling workspace path from the primary checkout.\n- Persist schema-versioned `creating`, `active`, `cleanup_ready`, and `closed` records under the Git common directory.\n- Serialize mutations with a common-dir lock and atomic durable records.\n- Invoke Git using bounded argument-vector subprocesses without shell evaluation, force, reset, or blind retry.\n- Reconcile concurrent/interrupted creation only from mechanically exact ownership evidence; otherwise fail stale/closed/conflict states.\n- Enforce cwd, identity, registration, branch, cleanliness, and lifecycle preconditions for ready and cleanup.\n- Remove only the eligible worktree, retain its branch, and test with temporary real repositories including paths with spaces.\n\n## Acceptance\n\n- Different Epics produce distinct deterministic mappings; same-Epic concurrent/repeated ensure converges.\n- Dirty/uncommitted primary state, absent committed Epic authority, collisions, malformed metadata, bare repos, and ambiguous Git failures fail closed.\n- Status detects wrong cwd, wrong/detached branch, moved/deleted worktrees, stale records, and dirty targets without mutation.\n- Ready never removes cwd; cleanup runs only from primary, never removes current/dirty/mismatched state, retains the branch, and records closed.\n- Process execution has no shell interpolation and bounded diagnostics/time.\n\n## Dependencies And Order\n\nSecond Story. Depends on Workspace Configuration and Generated Contracts.\n\n## Artifact\n\nImplement against approved `.harnessctl/documents/doc-00019-git-epic-workspace-primitives-v1.md`.\n\n## Estimate\n\nL, high uncertainty from interruption recovery, concurrent process behavior, and cross-platform path semantics.\n\n## Non-Goals\n\nNo adapter registration, lifecycle prompt integration, remote PR/merge verification, branch deletion, workspace reopening, Jujutsu support, or silent external-state repair."
+"comments": []
