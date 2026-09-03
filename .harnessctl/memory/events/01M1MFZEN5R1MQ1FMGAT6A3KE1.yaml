@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1MFZEN5R1MQ1FMGAT6A3KE1
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00208 | build | hrn-00213 | Pi integration repaired; all local Build gates pass
+details: |-
+  Epic: hrn-00208
+  Command/phase: work-build / Build YOLO
+  Item: hrn-00213 Pi adapter parity
+  Done: Replaced non-object `memory_supersede` intersection schema with object-root schema; added all-tool schema contract; Pi integration captures provider errors, uses supported per-scenario active tools, serial lifecycle execution, and behavior assertions. README requires provider-advertised tool-capable model; generated docs refreshed.
+  Verification: generic 223, OpenCode unit 2, Pi unit 3, Pi SDK integration 8 passed against `lmstudio/qwen/qwen3.8-27b`; package builds, Pi typecheck, targeted lint/format, contracts, generated docs, strict MkDocs, diff check passed.
+  Blockers: none in repository-owned Build scope. Configured `lmstudio/google/gemma-4-31b` absent from provider model listing.
+  Artifacts: Pi adapter source/tests; README.md; docs/llms-full.txt; hrn-00213-C0005.
+  Delivery: local branch epic/hrn-00208-collision-safe-identities; no closure, commit, remote, Verify, Release, destructive work.
+source:
+  kind: tool-observation
+  ref: hrn-00213
+  revision: v1:bdf5b40d5e1603edf38a81047474c4016bded3c1a4f6d1c072133e7d89554718
+created_at: 2026-09-03T20:39:45.061Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1ME87JR39E43VZATNBXCPAB
+tags:
+  - epic
+  - pi-integration
+  - ulid
+  - work-build

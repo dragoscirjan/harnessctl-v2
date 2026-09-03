@@ -35,6 +35,19 @@ issue under `skills.issues.root`, default `.harnessctl/issues`; archived documen
 its `archived/` child. YAML is authoritative. The shared SQLite file is only a
 disposable cache, never an issue backend or repair source.
 
+Every new filesystem Issue ID is the configured prefix followed by a 26-character
+uppercase Crockford ULID, for example `hrn-01K4A7X9Z8B3N5Q6R2TVCW0YJM`. The ULID alphabet
+is `0-9` and `A-HJKMNP-TV-Z`; lowercase and the ambiguous letters `I`, `L`, `O`, and `U`
+are invalid. Existing prefix-plus-decimal IDs remain permanently readable and writable
+without automatic migration. Mixed lists place legacy IDs first in numeric order, then
+ULID IDs in lexicographic order. Comments remain `<issue-id>-C####` for both forms.
+
+Creation uses independent collision-safe identities rather than scanning for a shared
+numeric sequence. Canonical publication is exclusive and fails closed if an identity or
+path already exists; it never overwrites authority. Because canonical YAML remains the
+source of truth and SQLite stores IDs as strings, rollback to a reader supporting this
+dual-format contract requires neither an authority rewrite nor a cache schema migration.
+
 Issue types are initiative, epic, story, task, and bug. The supported hierarchy is
 initiative, Epic, Story, then Task or Bug; Tasks and Bugs may also use the narrower
 parents accepted by runtime validation. Tool-managed documents contain metadata,

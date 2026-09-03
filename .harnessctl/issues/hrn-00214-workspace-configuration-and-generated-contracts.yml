@@ -1,0 +1,15 @@
+"version": 1
+"id": "hrn-00214"
+"type": "story"
+"title": "Workspace Configuration and Generated Contracts"
+"status": "open"
+"created_at": "2026-09-03T17:29:56.560Z"
+"updated_at": "2026-09-03T17:30:08.889Z"
+"created_by": "OpenCode"
+"parent": "hrn-00209"
+"metadata":
+  "capability": "workspace-config"
+  "epic": "hrn-00209"
+  "sequence": 1
+"body": "# Workspace Configuration and Generated Contracts\n\n## Objective\n\nMake Git Epic workspaces an opt-in, strictly validated Config v1 capability projected consistently to both supported hosts.\n\n## Scope\n\n- Add required boolean `skills.cvs.workspaces`, default `false`, to the canonical Zod configuration.\n- Reject `workspaces: true` unless CVS is enabled and `local: git`, with equivalent exact-path TypeScript and Python validation.\n- Regenerate npm/Python schema, defaults, and fingerprints; update refinement declarations and contract checks.\n- Pass the workspace setting through installer rendering for OpenCode and Pi.\n- Compile enabled/disabled normalized workspace capability guidance into canonical `sdlc-cvs` templates.\n- Set this repository's `.harnessctl/config.yaml` to `workspaces: true` while preserving the distributable default `false`.\n- Add focused config, generation, installer, template, and projection tests.\n\n## Acceptance\n\n- Default and explicit disabled configurations preserve current behavior.\n- Git plus `workspaces: true` validates in both runtimes.\n- Jujutsu, disabled CVS, unknown keys, and malformed values fail at stable exact paths.\n- Generated contract copies and fingerprints match the canonical TypeScript source.\n- OpenCode and Pi receive identical rendered workspace capability state.\n\n## Dependencies And Order\n\nFirst Story. No child dependency. Stabilizes the configuration contract consumed by the state engine and adapters.\n\n## Artifact\n\nImplement against approved `.harnessctl/documents/doc-00019-git-epic-workspace-primitives-v1.md`.\n\n## Estimate\n\nM, moderate uncertainty from dual-runtime refinement and generated-artifact coverage.\n\n## Non-Goals\n\nNo Git worktree mutation engine, adapter tool registration, lifecycle command integration, Jujutsu workspace support, or automatic config migration."
+"comments": []

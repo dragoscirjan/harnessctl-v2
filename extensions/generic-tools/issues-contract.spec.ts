@@ -91,6 +91,18 @@ describe('canonical issue codec', () => {
       expect.objectContaining({ category: 'parse_safety' }),
     );
   });
+
+  it('accepts dual-format suffixes and rejects unsupported prefix-less IDs', () => {
+    const ulid = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
+    expect(() => encodeCanonicalIssue(issue({ id: `hrn-${ulid}`, comments: [] }))).not.toThrow();
+    expect(() => encodeCanonicalIssue(issue({ id: 'hrn-00007', comments: [] }))).not.toThrow();
+    expect(() => encodeCanonicalIssue(issue({ id: 'foo', comments: [] }))).toThrowError(
+      expect.objectContaining({ category: 'schema' }),
+    );
+    expect(() => encodeCanonicalIssue(issue({ id: `hrn-${ulid.toLowerCase()}`, comments: [] }))).toThrowError(
+      expect.objectContaining({ category: 'schema' }),
+    );
+  });
 });
 
 describe('standard JSON metadata', () => {

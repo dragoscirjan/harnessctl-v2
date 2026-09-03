@@ -16,6 +16,7 @@ import {
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parseDocument, stringify } from 'yaml';
 import { ConfigError, readConfig, type ConfigDocument } from './config.js';
+import { createUlid, ULID_PATTERN } from './identities.js';
 import { validateCanonicalIssueGraph } from './issues.js';
 import {
   LocalPersistenceError,
@@ -93,7 +94,6 @@ export class MemoryConflictError extends MemoryError {
   }
 }
 
-const ULID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/u;
 const FOLDERS: Record<RecordType, string> = {
   fact: 'facts',
   decision: 'decisions',
@@ -107,7 +107,6 @@ const SECRET_PATTERNS = [
   /\b(?:sk|rk)-(?:live|test)-[A-Za-z0-9_-]{16,}\b/u,
   /\b(?:password|passwd|secret|token|api[_-]?key)\s*[:=]\s*\S+/iu,
 ];
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const MAX_MEMORY_FILES = 10_000;
 const MAX_MEMORY_BYTES = 256 * 1024 * 1024;
@@ -701,22 +700,6 @@ function assertAcyclic(records: MemoryRecord[]): void {
     visited.add(id);
   };
   records.forEach((record) => visit(record.id));
-}
-
-function createUlid(now = Date.now()): string {
-  let timestamp = BigInt(now);
-  let encodedTime = '';
-  for (let index = 0; index < 10; index += 1) {
-    encodedTime = CROCKFORD[Number(timestamp & 31n)] + encodedTime;
-    timestamp >>= 5n;
-  }
-  let randomness = BigInt(`0x${randomBytes(10).toString('hex')}`);
-  let encodedRandom = '';
-  for (let index = 0; index < 16; index += 1) {
-    encodedRandom = CROCKFORD[Number(randomness & 31n)] + encodedRandom;
-    randomness >>= 5n;
-  }
-  return encodedTime + encodedRandom;
 }
 
 function yamlFiles(directory: string): string[] {

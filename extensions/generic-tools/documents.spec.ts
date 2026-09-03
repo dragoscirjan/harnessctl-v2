@@ -38,7 +38,7 @@ import {
   versionDocument,
 } from './documents.js';
 import { decodeIssueDocument, encodeCanonicalIssue, type CanonicalIssueDocument } from './issues-contract.js';
-import { createIssueRecord } from './issues.js';
+import { createIssueRecord, getIssue, linkDocument } from './issues.js';
 import { storeMemory } from './memory.js';
 
 const roots: string[] = [];
@@ -68,7 +68,7 @@ describe('filesystem documents', () => {
 
     const created = createDocument(root, { title: 'Custom authority', kind: 'hld' });
 
-    expect(created.path).toBe('project/documents/doc-00001-custom-authority-v1.md');
+    expect(created.path).toBe(`project/documents/${created.id}-custom-authority-v1.md`);
     expect(getDocument(root, created.id)).toEqual(expect.objectContaining({ revision: created.revision }));
     expect(listDocuments(root)).toEqual([expect.objectContaining({ id: created.id })]);
     expect(existsSync(join(root, created.path))).toBe(true);
@@ -160,12 +160,12 @@ describe('filesystem documents', () => {
       metadata: { issue: 'hrn-00137' },
     });
 
-    expect(created.id).toBe('doc-00001');
-    expect(created.path).toBe('.harnessctl/documents/doc-00001-architecture-decision-v1.md');
+    expect(created.id).toMatch(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u);
+    expect(created.path).toBe(`.harnessctl/documents/${created.id}-architecture-decision-v1.md`);
     expect(created.body).toBe('# Architecture decision\n\n## Context\n\nInitial.\n');
     expect(parseDocumentId('see doc-00001 now', root)).toBe('doc-00001');
     expect(listDocuments(root)).toEqual([
-      expect.objectContaining({ id: 'doc-00001', version: 1, superseded: false, archived: false }),
+      expect.objectContaining({ id: created.id, version: 1, superseded: false, archived: false }),
     ]);
 
     const updated = updateDocument(root, created.id, {
@@ -208,14 +208,54 @@ describe('filesystem documents', () => {
     expect(getDocument(root, created.id).revision).toBe(created.revision);
   });
 
-  it('allocates the lowest unused ID across active and archived lineages', () => {
+  it('creates collision-safe IDs without reusing legacy numeric gaps', () => {
     const root = repository();
     const first = createDocument(root, { title: 'First', kind: 'hld' });
     const second = createDocument(root, { title: 'Second', kind: 'lld' });
     archiveDocument(root, first.id, first.revision);
     rmSync(join(root, second.path));
 
-    expect(createDocument(root, { title: 'Reuse gap', kind: 'design-overview' }).id).toBe('doc-00002');
+    const created = createDocument(root, { title: 'Reuse gap', kind: 'design-overview' });
+    expect(created.id).toMatch(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u);
+    expect(created.id).not.toBe(second.id);
+  });
+
+  it('rejects a generated identity collision before changing canonical authority', () => {
+    const root = repository();
+    const provider = createFilesystemDocumentProvider(root, {
+      generateUlid: () => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
+    const created = provider.create({ title: 'First collision candidate', kind: 'hld' });
+    const authorityRoot = join(root, '.harnessctl/documents');
+    const before = authoritySnapshot(root);
+
+    expect(() => provider.create({ title: 'Different slug', kind: 'lld' })).toThrow(/duplicate/u);
+    expect(authoritySnapshot(root)).toEqual(before);
+    expect(provider.get(created.id).metadata.title).toBe('First collision candidate');
+    expect(existsSync(authorityRoot)).toBe(true);
+  });
+
+  it('operates deterministically across mixed legacy and ULID document lineages', () => {
+    const root = repository();
+    writeCanonical(root, metadata('doc-00002', 'Legacy lineage', 1), 'Legacy body.');
+    const provider = createFilesystemDocumentProvider(root, {
+      generateUlid: () => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    });
+    const ulid = provider.create({ title: 'ULID lineage', kind: 'lld' });
+
+    expect(provider.list().map(({ id }) => id)).toEqual(['doc-00002', ulid.id]);
+    const legacy = versionDocument(root, 'doc-00002', {
+      body: 'Legacy version two.',
+      expectedRevision: getDocument(root, 'doc-00002').revision,
+    });
+    const archived = archiveDocument(root, legacy.id, legacy.revision);
+    restoreDocument(root, legacy.id, archived.documents.at(-1)?.revision ?? '');
+
+    const issue = createIssueRecord(root, { type: 'task', title: 'Mixed document links' });
+    linkDocument(root, issue.id, legacy.path, 'document');
+    linkDocument(root, issue.id, ulid.path, 'document');
+    expect(getIssue(root, issue.id).metadata.documents).toEqual([legacy.path, ulid.path]);
+    expect(validateDocuments(root)).toEqual({ valid: true, findings: [] });
   });
 
   it('rejects proposed file and lineage limits without canonical, cache, journal, or temp mutation', () => {
@@ -286,12 +326,17 @@ describe('filesystem documents', () => {
     const root = repository();
     const first = createDocument(root, { title: 'Rollback', kind: 'hld' });
     const second = versionDocument(root, first.id, { body: 'Second.', expectedRevision: first.revision });
-    process.env.HARNESSCTL_TEST_PUBLICATION_FAILURE_PATH = '.harnessctl/documents/archive/doc-00001-rollback-v2.md';
+    process.env.HARNESSCTL_TEST_PUBLICATION_FAILURE_PATH = second.path.replace(
+      '.harnessctl/documents/',
+      '.harnessctl/documents/archive/',
+    );
 
     expect(() => archiveDocument(root, first.id, second.revision)).toThrow(/publication failure/u);
     delete process.env.HARNESSCTL_TEST_PUBLICATION_FAILURE_PATH;
     expect(getDocument(root, first.id).metadata.version).toBe(2);
-    expect(existsSync(join(root, '.harnessctl/documents/archive/doc-00001-rollback-v1.md'))).toBe(false);
+    expect(existsSync(join(root, first.path.replace('.harnessctl/documents/', '.harnessctl/documents/archive/')))).toBe(
+      false,
+    );
   });
 
   it('recovers an interrupted physical lineage move from the durable journal before discovery', () => {
@@ -348,9 +393,15 @@ describe('filesystem documents', () => {
 
   it('removes owned publisher temps after interrupted create and update publication', () => {
     const root = repository();
-    const createPath = '.harnessctl/documents/doc-00001-temp-create-v1.md';
+    const createId = 'doc-00000000000000000000000000';
+    const createPath = `.harnessctl/documents/${createId}-temp-create-v1.md`;
     process.env.HARNESSCTL_TEST_DOCUMENT_PRE_RENAME_INTERRUPT_PATH = createPath;
-    expect(() => createDocument(root, { title: 'Temp create', kind: 'hld' })).toThrow(/interruption/u);
+    expect(() =>
+      createFilesystemDocumentProvider(root, { generateUlid: () => createId.slice(4) }).create({
+        title: 'Temp create',
+        kind: 'hld',
+      }),
+    ).toThrow(/interruption/u);
     delete process.env.HARNESSCTL_TEST_DOCUMENT_PRE_RENAME_INTERRUPT_PATH;
     expect(listDocuments(root)).toEqual([]);
 
@@ -459,12 +510,12 @@ describe('filesystem documents', () => {
         }),
     );
     await expect(Promise.all(jobs)).resolves.toEqual([
-      expect.stringMatching(/^doc-\d+$/u),
-      expect.stringMatching(/^doc-\d+$/u),
-      expect.stringMatching(/^doc-\d+$/u),
-      expect.stringMatching(/^doc-\d+$/u),
-      expect.stringMatching(/^doc-\d+$/u),
-      expect.stringMatching(/^doc-\d+$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
+      expect.stringMatching(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u),
     ]);
     expect(new Set(listDocuments(root).map((document) => document.id)).size).toBe(6);
   });

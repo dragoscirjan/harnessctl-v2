@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,8 +9,13 @@ import {
   resolveCliModel,
   SessionManager,
 } from '@earendil-works/pi-coding-agent';
-import { createConfig, createIssueRecord, getIssue, readConfig } from '@harnessctl/generic-tools';
+import { createConfig, getIssue, readConfig } from '@harnessctl/generic-tools';
 import { describe, expect, it } from 'vitest';
+import {
+  canonicalIssueFilename,
+  encodeCanonicalIssue,
+  type CanonicalIssueDocument,
+} from '../generic-tools/issues-contract.js';
 
 const piModel = process.env.PI_TEST_MODEL;
 const pluginPath = fileURLToPath(new URL('./index.ts', import.meta.url));
@@ -34,6 +39,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         const result = await promptPi(
           cwd,
           'Using the issue_id tool, detect every issue ID in this message: TSK-12345 and TSK-67890. Return the JSON array from the tool.',
+          ['issue_id'],
         );
 
         expect(result.toolNames).toEqual(['issue_id']);
@@ -55,6 +61,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         const result = await promptPi(
           cwd,
           'Use the config_create tool to create the project configuration. After it succeeds, reply with only the word created.',
+          ['config_create'],
         );
 
         expect(result.toolNames).toEqual(['config_create']);
@@ -81,6 +88,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         const result = await promptPi(
           cwd,
           'Use the config_get tool with the path paths.tasks. Return only the exact value returned by the tool.',
+          ['config_get'],
         );
 
         expect(result.toolNames).toEqual(['config_get']);
@@ -102,11 +110,14 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         const result = await promptPi(
           cwd,
           'Use the issue_create tool to create a task titled "Document integration coverage". After it succeeds, reply with only the created issue ID.',
+          ['issue_create'],
         );
 
         expect(result.toolNames).toContain('issue_create');
-        expect(existsSync(join(cwd, '.harnessctl/issues/hrn-00001-document-integration-coverage.yml'))).toBe(true);
-        expect(result.text).toContain('00001');
+        const [filename] = readdirSync(join(cwd, '.harnessctl/issues'));
+        const id = filename?.match(/^(hrn-[0-9A-HJKMNP-TV-Z]{26})-/u)?.[1];
+        expect(id).toMatch(/^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u);
+        expect(result.text).toContain(id);
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }
@@ -125,6 +136,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
         const result = await promptPi(
           cwd,
           'Use the issue_list tool with the status filter "closed". Return only the matching issue ID.',
+          ['issue_list'],
         );
 
         expect(result.toolNames).toEqual(['issue_list']);
@@ -137,7 +149,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
     piIntegrationTimeout,
   );
 
-  describe.concurrent('issue lifecycle tools', () => {
+  describe('issue lifecycle tools', () => {
     it(
       'reads, updates, transitions, comments, and validates an issue',
       async () => {
@@ -149,6 +161,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
           const result = await promptPi(
             cwd,
             'Use these tools exactly once in order for issue hrn-00001: issue_get, then use its returned revision as expectedRevision for issue_update with title "Updated lifecycle task" and sections JSON {"Summary":"Updated"}, then use the updated revision for issue_transition to done, issue_comment with body "Reviewed" and author "integration", and issue_validate. After all tools succeed, reply with only done.',
+            ['issue_get', 'issue_update', 'issue_transition', 'issue_comment', 'issue_validate'],
           );
 
           expect(result.toolNames).toEqual([
@@ -159,13 +172,10 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
             'issue_validate',
           ]);
           expect(result.text.trim()).toMatch(/done/i);
-          const issue = readIssueFixture(cwd, 'hrn-00001');
-          expect(issue).toContain('title: Updated lifecycle task');
-          expect(issue).toContain('status: done');
-          expect(issue).toContain('## Summary');
-          expect(getIssue(cwd, 'hrn-00001').comments).toEqual([
-            expect.objectContaining({ body: 'Reviewed', created_by: 'integration' }),
-          ]);
+          const issue = getIssue(cwd, 'hrn-00001');
+          expect(issue.metadata).toMatchObject({ title: 'Updated lifecycle task', status: 'done' });
+          expect(issue.body).toContain('## Summary');
+          expect(issue.comments).toEqual([expect.objectContaining({ body: 'Reviewed', created_by: 'integration' })]);
         } finally {
           rmSync(cwd, { recursive: true, force: true });
         }
@@ -185,6 +195,7 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
           const result = await promptPi(
             cwd,
             'Use these tools exactly once in order: issue_relate with id hrn-00001, relationship blocks, targetId hrn-00002; issue_unrelate with the same arguments; issue_archive with id hrn-00001. After all tools succeed, reply with only archived.',
+            ['issue_relate', 'issue_unrelate', 'issue_archive'],
           );
 
           expect(result.toolNames).toEqual(['issue_relate', 'issue_unrelate', 'issue_archive']);
@@ -214,11 +225,12 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
           const result = await promptPi(
             cwd,
             'Use issue_link_document exactly once with id hrn-00001, path .harnessctl/tasks/00001/plan.md, and kind task. After it succeeds, reply with only linked.',
+            ['issue_link_document'],
           );
 
           expect(result.toolNames).toEqual(['issue_link_document']);
           expect(result.text.trim()).toMatch(/linked/i);
-          expect(readIssueFixture(cwd, '00001')).toContain('.harnessctl/tasks/00001/plan.md');
+          expect(readIssueFixture(cwd, 'hrn-00001')).toContain('.harnessctl/tasks/00001/plan.md');
         } finally {
           rmSync(cwd, { recursive: true, force: true });
         }
@@ -228,7 +240,11 @@ describe.skipIf(!piModel)('Pi SDK integration', () => {
   });
 });
 
-async function promptPi(cwd: string, prompt: string): Promise<{ text: string; toolNames: string[] }> {
+async function promptPi(
+  cwd: string,
+  prompt: string,
+  allowedToolNames: string[],
+): Promise<{ text: string; toolNames: string[] }> {
   if (!piModel) {
     throw new Error('PI_TEST_MODEL is required for Pi SDK integration tests.');
   }
@@ -252,6 +268,7 @@ async function promptPi(cwd: string, prompt: string): Promise<{ text: string; to
       cwd,
       agentDir,
       additionalExtensionPaths: [pluginPath],
+      systemPromptOverride: () => 'Use the requested tools exactly as instructed.',
     });
     await resourceLoader.reload();
 
@@ -265,16 +282,24 @@ async function promptPi(cwd: string, prompt: string): Promise<{ text: string; to
       noTools: 'builtin',
     });
     session = created.session;
+    session.setActiveToolsByName(allowedToolNames);
     const toolNames: string[] = [];
     const text: string[] = [];
+    let assistantError: string | undefined;
 
     session.subscribe((event) => {
       if (event.type === 'tool_execution_start') toolNames.push(event.toolName);
       if (event.type === 'message_update' && event.assistantMessageEvent.type === 'text_delta') {
         text.push(event.assistantMessageEvent.delta);
       }
+      if (event.type === 'message_end' && event.message.role === 'assistant') {
+        assistantError = event.message.errorMessage;
+      }
     });
     await session.prompt(prompt);
+    if (assistantError) {
+      throw new Error(`Pi model request failed after tools [${toolNames.join(', ')}]: ${assistantError}`);
+    }
     return { text: text.join(''), toolNames };
   } finally {
     session?.dispose();
@@ -320,8 +345,23 @@ function temporaryDirectory(prefix: string): string {
 }
 
 function writeIssueFixture(cwd: string, id: string, title: string, status: string, type = 'task'): void {
-  const created = createIssueRecord(cwd, { type, title, status, author: 'integration' });
-  expect(created.id).toBe(id);
+  createConfig(cwd);
+  const issueRoot = resolve(cwd, '.harnessctl/issues');
+  mkdirSync(issueRoot, { recursive: true });
+  const timestamp = '2026-01-01T00:00:00.000Z';
+  const issue: CanonicalIssueDocument = {
+    version: 1,
+    id,
+    type: type as CanonicalIssueDocument['type'],
+    title,
+    status: status as CanonicalIssueDocument['status'],
+    created_at: timestamp,
+    updated_at: timestamp,
+    created_by: 'integration',
+    body: `## Summary\n\n${title}\n`,
+    comments: [],
+  };
+  writeFileSync(resolve(issueRoot, canonicalIssueFilename(id, title)), encodeCanonicalIssue(issue));
 }
 
 function readIssueFixture(cwd: string, id: string): string {

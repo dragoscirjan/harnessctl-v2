@@ -57,6 +57,8 @@ export type {
   IssueMetadataValue,
 } from './issues-contract.js';
 export type { IssueStorageCatalog, IssueStorageCandidate, IssueStorageStatus } from './issues-storage.js';
+export { createUlid, isPrefixedIdentity, isUlid } from './identities.js';
+export type { UlidEntropy } from './identities.js';
 export {
   DOCUMENT_KINDS,
   DOCUMENT_STATUSES,

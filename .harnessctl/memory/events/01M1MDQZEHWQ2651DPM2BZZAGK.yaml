@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1MDQZEHWQ2651DPM2BZZAGK
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: project
+summary: hrn-00208 | verify | all children | failed; repair route needed
+details: "Epic hrn-00208. Verify failures: product defect `extensions/generic-tools/issues-contract.ts:563-584` accepts arbitrary path-safe prefix-less IDs after removing legacy digit-ending guard; mixed legacy+ULID Issue/Document catalog lifecycle acceptance lacks direct tests; `uv run python scripts/generate_llms.py --check` reports stale `docs/llms-full.txt`; `mise run integration` OpenCode 8/8 pass, Pi 0/8 with `toolNames=[]` environment/model evidence blocker. Passed: generic 220 unit tests, adapter units, typecheck, builds, contracts, diff check. Evidence comments hrn-00211-C0002, hrn-00212-C0003, hrn-00213-C0002. No repairs or closures in Verify."
+source:
+  kind: tool-observation
+  ref: hrn-00208
+  revision: null
+created_at: 2026-09-03T20:00:42.961Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hrn-00208
+  - sdlc
+  - ulid
+  - verify

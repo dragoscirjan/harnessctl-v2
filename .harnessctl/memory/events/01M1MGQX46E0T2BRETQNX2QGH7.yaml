@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1MGQX46E0T2BRETQNX2QGH7
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00208
+summary: hrn-00208 | verify | all children | acceptance and repository gates pass
+details: "Epic hrn-00208. Fresh `mise run quality` passed: generic 223, OpenCode unit 2, Pi unit 3, Python 722, release artifacts 5; typecheck, builds/inspection, lint, format, contracts, generated docs, strict MkDocs, dead-code and repository checks passed. `PI_TEST_MODEL=lmstudio/qwen/qwen3.8-27b mise run integration` passed: OpenCode 8/8, Pi 8/8. Independent correctness, maintainability, security, privacy, compatibility, migration, docs and release-readiness review found no defect. Evidence comments hrn-00211-C0005, hrn-00212-C0006, hrn-00213-C0006. No closure, code edit, commit, Release, remote or destructive work."
+source:
+  kind: tool-observation
+  ref: hrn-00208
+  revision: v1:3a10dd7fa0f0be36ac0514bc6264a5520c6218d16b5ee2723aa6ed60bf559bf4
+created_at: 2026-09-03T20:53:06.310Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MET2DHYA13MCWRBQTMVT0Z
+tags:
+  - pi-integration
+  - release-ready
+  - sdlc
+  - ulid
+  - verify

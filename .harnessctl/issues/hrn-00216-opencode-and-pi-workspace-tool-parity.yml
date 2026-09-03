@@ -1,0 +1,17 @@
+"version": 1
+"id": "hrn-00216"
+"type": "story"
+"title": "OpenCode and Pi Workspace Tool Parity"
+"status": "open"
+"created_at": "2026-09-03T17:31:47.786Z"
+"updated_at": "2026-09-03T17:35:11.844Z"
+"created_by": "OpenCode"
+"parent": "hrn-00209"
+"depends_on":
+  - "hrn-00214"
+  - "hrn-00215"
+"metadata":
+  "capability": "workspace-adapters"
+  "sequence": 3
+"body": "# OpenCode and Pi Workspace Tool Parity\n\n## Objective\n\nExpose the normalized Git Epic workspace operations through OpenCode and Pi with identical contracts, current-directory routing, safety behavior, and actionable errors.\n\n## Scope\n\n- Register `workspace_ensure`, `workspace_status`, `workspace_mark_cleanup_ready`, and `workspace_cleanup` in both adapters.\n- Route OpenCode `context.directory` and Pi `context.cwd` into the shared generic-tools implementation.\n- Keep adapter schemas, descriptions, result shapes, disabled-mode behavior, and failures equivalent.\n- Cover adapter unit and integration behavior, including paths containing spaces and wrong-workspace guidance.\n\n## Acceptance Criteria\n\n- Both adapters expose the same four workspace tools with equivalent inputs and normalized outputs.\n- Every call uses the host-provided current directory and delegates policy to generic-tools rather than duplicating Git logic.\n- Disabled configuration, unsupported CVS configuration, cwd mismatch, dirty state, stale metadata, and cleanup refusal produce equivalent actionable errors.\n- OpenCode and Pi unit/integration tests prove contract and behavior parity against real temporary Git repositories where required.\n- Existing non-workspace tools and disabled workspace installations remain compatible.\n\n## Dependencies And Order\n\nSequence 3. Starts after Workspace Configuration and Generated Contracts and Git Workspace State Engine are complete. Planned dependencies: `hrn-00214`, `hrn-00215`.\n\n## Artifacts\n\n- Approved LLD: `doc-00019`\n- OpenCode and Pi tool registrations, schemas, tests, and integration fixtures\n\n## Estimate\n\nM. Moderate uncertainty from adapter integration harness differences and real-repository fixture behavior.\n\n## Non-Goals\n\n- Reimplementing Git state logic in adapters\n- Persistent process cwd switching\n- SDLC lifecycle command integration owned by `hrn-00210`\n- Remote provider workspace orchestration\n"
+"comments": []

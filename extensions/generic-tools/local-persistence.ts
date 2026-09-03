@@ -27,6 +27,7 @@ import {
   decodeDocument,
   type CanonicalDocumentMetadata,
 } from './documents-contract.js';
+import { prefixedIdentityPattern } from './identities.js';
 import { decodeIssueDocument, type CanonicalIssueDocument } from './issues-contract.js';
 import {
   memoryRecordSchema,
@@ -311,7 +312,7 @@ function loadDocuments(
     if (aggregateBytes > DOCUMENT_LIMITS.aggregateBytes)
       throw new LocalPersistenceError('resource_limit', `aggregate canonical document byte limit exceeded at ${path}`);
     const decoded = decodeDocument(fileBytes);
-    if (!new RegExp(`^${escapeRegex(prefix)}\\d{5,}$`, 'u').test(decoded.metadata.id))
+    if (!prefixedIdentityPattern(prefix, 5).test(decoded.metadata.id))
       throw new LocalPersistenceError('path_safety', `document ID is not canonical for the configured prefix: ${path}`);
     if (canonicalDocumentFilename(decoded.metadata) !== path.slice(path.lastIndexOf('/') + 1))
       throw new LocalPersistenceError('path_safety', `document filename does not match metadata: ${path}`);
@@ -444,7 +445,8 @@ function loadIssues(
       if (projections.length >= MAX_ISSUES)
         throw new LocalPersistenceError('resource_limit', `issue file limit exceeded at ${path}`);
       const fileBytes = boundedRead(join(directory, entry.name), path);
-      const expectedId = new RegExp(`^(${escapeRegex(prefix)}\\d+)-`, 'u').exec(entry.name)?.[1];
+      const identity = prefixedIdentityPattern(prefix).source.slice(1, -1);
+      const expectedId = new RegExp(`^(${identity})-`, 'u').exec(entry.name)?.[1];
       if (!expectedId) throw new LocalPersistenceError('path_safety', `malformed canonical issue filename: ${path}`);
       const decoded = decodeIssueDocument(fileBytes, { expectedId, issuePrefix: prefix });
       projections.push({ issue: decoded.issue, path, location, revision: decoded.revision });
@@ -1322,10 +1324,6 @@ function portableRelative(root: string, path: string): string {
 
 function compare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function safeMessage(error: unknown): string {

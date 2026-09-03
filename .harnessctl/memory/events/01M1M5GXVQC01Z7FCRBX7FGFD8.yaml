@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1M5GXVQC01Z7FCRBX7FGFD8
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | plan | executable plan | approved, decomposed, validated
+details: |-
+  Epic: hrn-00209
+  Command/phase: work-plan / plan
+  Done: Exact plan approved; LLD doc-00019 approved and linked; Stories hrn-00214, hrn-00215, hrn-00216, hrn-00217 created with approved parent/dependency graph; issue and document valid.
+  Decisions: Opt-in default false; Git only; four normalized tools; deterministic branch/path; common-dir state/lock; deferred primary-checkout cleanup; branch retained.
+  Blockers: Build blocked by open hrn-00208.
+  Artifacts: doc-00019; hrn-00214..hrn-00217
+  Verification: issue_validate hrn-00209 valid; document_validate doc-00019 valid; issue_get verified child relationships.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T17:37:03.351Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1KFNN4Y6YV3SWRV3SDF16HC
+tags:
+  - epic
+  - git
+  - work-plan
+  - workspace

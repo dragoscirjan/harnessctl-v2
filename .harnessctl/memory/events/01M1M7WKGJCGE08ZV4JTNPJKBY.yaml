@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1M7WKGJCGE08ZV4JTNPJKBY
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00208 | build | all children | local implementation complete; focused gates passed
+details: |-
+  Epic: hrn-00208
+  Command/phase: work-build / Build YOLO
+  Item: hrn-00211, hrn-00212, hrn-00213
+  Done: Shared ULID utility; new Issue/Document ULID creation; permanent numeric readers; mixed ordering; collision rejection; cache, Memory, links, archive/restore compatibility; OpenCode/Pi adapter tests; public docs; patch Changeset.
+  Artifacts: extensions/generic-tools/identities.ts; docs/issues.md; docs/documents.md; .changeset/calm-otters-identify.md
+  Verification: focused generic 160 passed; adapter unit 2+3 passed; OpenCode integration 8 passed; targeted format/lint/typecheck/packages build passed; Epic and children issue validation valid.
+  Blockers: Pi SDK integration model returned zero tool calls for create/list; direct Pi adapter tests passed.
+  Delivery: local branch epic/hrn-00208-collision-safe-identities; no commit, remote, Release, or closure.
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml
+  revision: v1:3a10dd7fa0f0be36ac0514bc6264a5520c6218d16b5ee2723aa6ed60bf559bf4
+created_at: 2026-09-03T18:18:23.122Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - documents
+  - epic
+  - issues
+  - ulid
+  - work-build

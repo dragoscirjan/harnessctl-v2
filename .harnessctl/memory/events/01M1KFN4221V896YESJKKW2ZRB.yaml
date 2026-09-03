@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M1KFN4221V896YESJKKW2ZRB
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00208 | plan | Epic authority | created, attached, verified
+details: |-
+  Epic: hrn-00208
+  Command/phase: work-plan / Plan
+  Done: Confirmed Epic created under hrn-00207; scope covers ULID-only new Issue/Document IDs with legacy numeric read compatibility.
+  Decisions: No authority rewrite; blocks hrn-00209 and hrn-00210.
+  Artifacts: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml
+  Verification: issue_get confirmed parent and blocking relationships.
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml
+  revision: v1:b38cd45a206ce083010fd4f63a0e40798f04f43d8fc1217d520026a8ccdb3ac8
+created_at: 2026-09-03T11:14:52.098Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - ulid
+  - work-plan
+  - workspace

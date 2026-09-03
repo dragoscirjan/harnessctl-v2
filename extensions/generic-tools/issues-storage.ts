@@ -14,6 +14,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { comparePrefixedIdentities, prefixedIdentityPattern } from './identities.js';
 import {
   IssueError,
   canonicalIssueFilename,
@@ -172,12 +173,12 @@ export function discoverIssueStorage(
   const absoluteRoot = resolve(root, issueRoot);
   const unsafe = unsafeAncestor(root, issueRoot);
   if (unsafe)
-    return makeCatalog(root, issueRoot, 'invalid', candidates, [
+    return makeCatalog(root, issueRoot, prefix, 'invalid', candidates, [
       pathFinding(unsafe, 'managed issue root must use non-symlink directories'),
     ]);
-  if (!existsSync(absoluteRoot)) return makeCatalog(root, issueRoot, 'empty', candidates, findings);
+  if (!existsSync(absoluteRoot)) return makeCatalog(root, issueRoot, prefix, 'empty', candidates, findings);
   if (!isSafeDirectory(absoluteRoot)) {
-    return makeCatalog(root, issueRoot, 'invalid', candidates, [
+    return makeCatalog(root, issueRoot, prefix, 'invalid', candidates, [
       pathFinding(issueRoot, 'managed issue root must be a non-symlink directory'),
     ]);
   }
@@ -201,7 +202,7 @@ export function discoverIssueStorage(
         ? 'canonical'
         : 'empty';
   if (legacy) findings.push({ category: 'storage_classification', message: 'legacy issue storage is unsupported' });
-  return makeCatalog(root, issueRoot, status, candidates, findings);
+  return makeCatalog(root, issueRoot, prefix, status, candidates, findings);
 }
 
 export function resolveIssueCandidate(
@@ -331,11 +332,17 @@ function addIdentityFindings(candidates: readonly IssueStorageCandidate[], findi
 function makeCatalog(
   repositoryRoot: string,
   issueRoot: string,
+  prefix: string,
   status: IssueStorageStatus,
   candidates: IssueStorageCandidate[],
   findings: IssueStorageFinding[],
 ): IssueStorageCatalog {
-  const ordered = [...candidates].sort((left, right) => compareCodePoints(left.path, right.path));
+  const ordered = [...candidates].sort(
+    (left, right) =>
+      comparePrefixedIdentities(left.id, right.id, prefix) ||
+      compareCodePoints(left.location, right.location) ||
+      compareCodePoints(left.path, right.path),
+  );
   const byId = new Map<string, IssueStorageCandidate[]>();
   for (const candidate of ordered) append(byId, candidate.id, candidate);
   return {
@@ -503,7 +510,8 @@ function validateCandidateLimit(value: number): number {
 }
 
 function parseCandidateName(name: string, prefix: string): string | undefined {
-  return new RegExp(`^(${escapeRegex(prefix)}\\d+)-[a-z0-9]+(?:-[a-z0-9]+)*\\.yml$`, 'u').exec(name)?.[1];
+  const identity = prefixedIdentityPattern(prefix).source.slice(1, -1);
+  return new RegExp(`^(${identity})-[a-z0-9]+(?:-[a-z0-9]+)*\\.yml$`, 'u').exec(name)?.[1];
 }
 
 function asIssueError(error: unknown, path: string, id: string): IssueError {
@@ -599,8 +607,4 @@ function compareCodePoints(left: string, right: string): number {
     if (difference !== 0) return difference;
   }
   return leftPoints.length - rightPoints.length;
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

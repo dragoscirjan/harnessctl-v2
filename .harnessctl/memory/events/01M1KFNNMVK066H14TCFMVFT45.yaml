@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M1KFNNMVK066H14TCFMVFT45
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00210 | plan | Epic authority | created, attached, verified
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-plan / Plan
+  Done: Confirmed Epic created under hrn-00207; scope covers workspace enforcement across Plan, Build, Verify, Release, Continue.
+  Decisions: Initiative gets no workspace; Release marks cleanup-ready; blocked by hrn-00208 and hrn-00209.
+  Artifact: hrn-00210
+  Verification: issue_get confirmed parent and dependencies.
+source:
+  kind: artifact
+  ref: hrn-00210
+  revision: v1:c195c82964d97e10bde0d9b6e6a2ade5bdb8dd7f55a23cce2e450e2aef6e767f
+created_at: 2026-09-03T11:15:10.107Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - lifecycle
+  - work-plan
+  - workspace

@@ -1,0 +1,18 @@
+"version": 1
+"id": "hrn-00217"
+"type": "story"
+"title": "Documentation, Compatibility, and Release Gates"
+"status": "open"
+"created_at": "2026-09-03T17:32:08.528Z"
+"updated_at": "2026-09-03T17:35:26.410Z"
+"created_by": "OpenCode"
+"parent": "hrn-00209"
+"depends_on":
+  - "hrn-00214"
+  - "hrn-00215"
+  - "hrn-00216"
+"metadata":
+  "capability": "workspace-release-gates"
+  "sequence": 4
+"body": "# Documentation, Compatibility, and Release Gates\n\n## Objective\n\nDocument the opt-in Git Epic workspace capability and prove its backward compatibility, generated-artifact consistency, package readiness, and repository-wide release quality.\n\n## Scope\n\n- Update CVS, Config v1, skills, installer, and tool documentation with enablement, Git-only constraints, deterministic paths/branches, cwd behavior, deferred cleanup, and recovery guidance.\n- Verify canonical templates and installed OpenCode/Pi projections remain synchronized.\n- Add required Changesets or release notes for affected packages under the repository's existing policy.\n- Run focused package checks and complete repository quality, build, contract, packaging, and compatibility gates.\n- Confirm disabled mode and existing repositories remain unchanged except for recognizing the new optional configuration field.\n\n## Acceptance Criteria\n\n- Public documentation accurately describes all four tools, safety preconditions, lifecycle states, primary/workspace command locations, and limitations.\n- Config schema docs and generated artifacts match canonical TypeScript and Python contracts and fingerprints.\n- Installed OpenCode/Pi guidance and tool surfaces match canonical templates and package outputs.\n- Required Changesets identify all affected shipped packages with appropriate compatibility notes.\n- Focused tests plus repository quality, build, contract-check, and package/release-artifact gates pass.\n- No Issue, Document, cache, branch, or worktree migration occurs when support is disabled or upgraded.\n\n## Dependencies And Order\n\nSequence 4. Starts after configuration/contracts, state engine, and adapter parity are complete. Planned dependencies: `hrn-00214`, `hrn-00215`, `hrn-00216`.\n\n## Artifacts\n\n- Approved LLD: `doc-00019`\n- Updated public docs, canonical/generated projections, Changesets, and verification evidence\n\n## Estimate\n\nS-M. Low-to-moderate uncertainty from generated artifact breadth and release package policy.\n\n## Non-Goals\n\n- Implementing additional workspace behavior\n- Automatic migration or cleanup of existing Git worktrees\n- Branch deletion or reopening closed workspace records\n- SDLC lifecycle command integration owned by `hrn-00210`\n"
+"comments": []

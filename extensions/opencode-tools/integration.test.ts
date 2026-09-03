@@ -7,6 +7,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -14,9 +15,14 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createConfig, createIssueRecord, getIssue, readConfig } from '@harnessctl/generic-tools';
+import { createConfig, getIssue, readConfig } from '@harnessctl/generic-tools';
 import { createOpencodeClient } from '@opencode-ai/sdk';
 import { describe, expect, it } from 'vitest';
+import {
+  canonicalIssueFilename,
+  encodeCanonicalIssue,
+  type CanonicalIssueDocument,
+} from '../generic-tools/issues-contract.js';
 
 const opencodeModel = process.env.OPENCODE_TEST_MODEL ?? 'opencode/big-pickle';
 const { command: opencodeCommand, prefix: opencodeCommandPrefix } = resolveOpenCodeCommand();
@@ -99,8 +105,10 @@ describe('OpenCode SDK integration', () => {
       );
 
       expect(normalizeToolNames(result.toolNames)).toContain('issue_create');
-      expect(existsSync(resolve(cwd, '.harnessctl/issues/hrn-00001-document-integration-coverage.yml'))).toBe(true);
-      expect(extractIssueNumbers(result.text)).toEqual(['00001']);
+      const [filename] = readdirSync(resolve(cwd, '.harnessctl/issues'));
+      const id = filename?.match(/^(hrn-[0-9A-HJKMNP-TV-Z]{26})-/u)?.[1];
+      expect(id).toMatch(/^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u);
+      expect(result.text).toContain(id);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -212,8 +220,23 @@ function writeOpenCodeProjectConfig(cwd: string): void {
 }
 
 function writeIssueFixture(cwd: string, id: string, title: string, status: string, type = 'task'): void {
-  const created = createIssueRecord(cwd, { type, title, status, author: 'integration' });
-  expect(created.id).toBe(id);
+  createConfig(cwd);
+  const issueRoot = resolve(cwd, '.harnessctl/issues');
+  mkdirSync(issueRoot, { recursive: true });
+  const timestamp = '2026-01-01T00:00:00.000Z';
+  const issue: CanonicalIssueDocument = {
+    version: 1,
+    id,
+    type: type as CanonicalIssueDocument['type'],
+    title,
+    status: status as CanonicalIssueDocument['status'],
+    created_at: timestamp,
+    updated_at: timestamp,
+    created_by: 'integration',
+    body: `## Summary\n\n${title}\n`,
+    comments: [],
+  };
+  writeFileSync(resolve(issueRoot, canonicalIssueFilename(id, title)), encodeCanonicalIssue(issue));
 }
 
 function readIssueFixture(cwd: string, id: string): string {

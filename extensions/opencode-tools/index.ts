@@ -188,7 +188,7 @@ export const CustomToolsPlugin: Plugin = async () => ({
         type: tool.schema.string().describe('Issue type: initiative, epic, story, task, or bug'),
         title: tool.schema.string().describe('Human-readable issue title'),
         status: tool.schema.string().describe('Issue status: open, in_progress, done, closed').optional(),
-        parent: tool.schema.string().describe('Parent issue ID, such as 00001').optional(),
+        parent: tool.schema.string().describe('Parent issue ID, such as hrn-00001').optional(),
         depends: tool.schema.string().describe('Comma-separated blocking issue IDs').optional(),
         author: tool.schema.string().describe('Agent or user attribution').optional(),
         assignee: tool.schema.string().describe('Agent or user assignee').optional(),

@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M1KFNN4Y6YV3SWRV3SDF16HC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | plan | Epic authority | created, attached, verified
+details: |-
+  Epic: hrn-00209
+  Command/phase: work-plan / Plan
+  Done: Confirmed Epic created under hrn-00207; scope covers opt-in Git normalized workspace primitives and deferred cleanup.
+  Decisions: Default false; Git only; blocked by hrn-00208.
+  Artifact: hrn-00209
+  Verification: issue_get confirmed parent, dependency, and block relationships.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:a88f99067edef72a961b672b1a2efe795d1e762ce386f0fe0bcbc60da6d62342
+created_at: 2026-09-03T11:15:09.598Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - git
+  - work-plan
+  - workspace

@@ -16,6 +16,7 @@ import {
   type DocumentLocation,
   type DocumentStatus,
 } from './documents-contract.js';
+import { comparePrefixedIdentities, createUlid, prefixedIdentityPattern } from './identities.js';
 import { assertNoCanonicalIssueDocumentReferences, validateCanonicalIssueGraph } from './issues.js';
 import {
   applyCanonicalFileBatch,
@@ -84,6 +85,8 @@ export interface DocumentValidationReport {
 
 export interface FilesystemDocumentProviderOptions {
   clock?: () => Date;
+  /** Deterministic test seam; production uses a timestamped cryptographic ULID. */
+  generateUlid?: (timestamp: number) => string;
   lockWaitMs?: number;
 }
 
@@ -127,6 +130,7 @@ export function createFilesystemDocumentProvider(
 ): FilesystemDocumentProvider {
   const config = localDocumentConfig(cwd, 'createFilesystemDocumentProvider');
   const clock = options.clock ?? (() => new Date());
+  const generateUlid = options.generateUlid ?? createUlid;
   const locked = <T>(name: string, operation: (lease: BarrierLease) => T, mutation = false): T => {
     assertLocalDocumentCapability(cwd, name);
     return withLocalBarrier(
@@ -166,7 +170,8 @@ export function createFilesystemDocumentProvider(
       assertLocalDocumentCapability(cwd, 'parseDocumentId');
       return parseDocumentIdWithPrefix(text, config.prefix);
     },
-    create: (input) => locked('createDocument', (lease) => createUnlocked(cwd, config, clock, lease, input), true),
+    create: (input) =>
+      locked('createDocument', (lease) => createUnlocked(cwd, config, clock, generateUlid, lease, input), true),
     list: (input = {}) => {
       const normalized = normalizeListOptions(input);
       return locked('listDocuments', () => listUnlocked(cwd, config, normalized));
@@ -230,12 +235,15 @@ function createUnlocked(
   cwd: string,
   config: StorageConfig,
   clock: () => Date,
+  generateUlid: (timestamp: number) => string,
   lease: BarrierLease,
   input: CreateDocumentOptions,
 ): DocumentRecord {
   const catalog = discover(cwd, config);
-  const id = allocateId(catalog, config.prefix);
-  const timestamp = canonicalTimestamp(clock());
+  const now = clock();
+  const id = `${config.prefix}${generateUlid(now.getTime())}`;
+  assertId(id, config.prefix);
+  const timestamp = canonicalTimestamp(now);
   const metadata: CanonicalDocumentMetadata = {
     id,
     title: required(input.title, 'title'),
@@ -264,7 +272,7 @@ function listUnlocked(cwd: string, config: StorageConfig, input: ListDocumentOpt
       (entity) => !input.status || entity.decoded.metadata.status === choice(input.status, DOCUMENT_STATUSES, 'status'),
     )
     .filter((entity) => !input.location || entity.location === input.location)
-    .sort(compareEntity)
+    .sort((left, right) => compareEntity(left, right, config.prefix))
     .map((entity) => summary(entity, catalog.byId.get(entity.decoded.metadata.id) ?? []));
   return boundedSummaries(results, 'document list');
 }
@@ -452,10 +460,10 @@ function discover(cwd: string, config: StorageConfig): Catalog {
       entities.push({ decoded, path, absolutePath, location });
     }
   }
-  return catalogFromEntities(entities);
+  return catalogFromEntities(entities, config.prefix);
 }
 
-function catalogFromEntities(entities: Entity[]): Catalog {
+function catalogFromEntities(entities: Entity[], prefix: string): Catalog {
   if (entities.length > DOCUMENT_LIMITS.files)
     throw new DocumentError('resource_limit', 'document file limit exceeded');
   let aggregateBytes = 0;
@@ -469,7 +477,7 @@ function catalogFromEntities(entities: Entity[]): Catalog {
       throw new DocumentError('identity_ambiguity', 'document paths collide under portable comparison', [entity.path]);
     paths.add(pathKey);
   }
-  entities.sort(compareEntity);
+  entities.sort((left, right) => compareEntity(left, right, prefix));
   const byId = new Map<string, Entity[]>();
   for (const entity of entities) {
     const values = byId.get(entity.decoded.metadata.id) ?? [];
@@ -527,7 +535,7 @@ function proposeCatalog(
       location,
     });
   }
-  return catalogFromEntities([...byPath.values()]);
+  return catalogFromEntities([...byPath.values()], config.prefix);
 }
 
 function requireProposedEntity(catalog: Catalog, path: string): Entity {
@@ -957,21 +965,9 @@ function documentPath(root: string, location: DocumentLocation, metadata: Canoni
 function documentContent(entity: Entity): string {
   return entity.decoded.body.slice(`# ${entity.decoded.metadata.title}\n\n`.length).trimEnd();
 }
-function allocateId(catalog: Catalog, prefix: string): string {
-  const expression = new RegExp(`^${escapeRegex(prefix)}(\\d+)$`, 'u');
-  const used = new Set<bigint>();
-  for (const id of catalog.byId.keys()) {
-    const digits = expression.exec(id)?.[1];
-    if (digits) used.add(BigInt(digits));
-  }
-  let candidate = 1n;
-  while (used.has(candidate)) candidate += 1n;
-  return `${prefix}${candidate.toString().padStart(5, '0')}`;
-}
 function parseDocumentIdWithPrefix(text: string, prefix: string): string {
-  const matches = [
-    ...text.matchAll(new RegExp(`(?<![A-Za-z0-9_-])${escapeRegex(prefix)}\\d{5,}(?![A-Za-z0-9_-])`, 'gu')),
-  ];
+  const identity = prefixedIdentityPattern(prefix, 5).source.slice(1, -1);
+  const matches = [...text.matchAll(new RegExp(`(?<![A-Za-z0-9_-])${identity}(?![A-Za-z0-9_-])`, 'gu'))];
   const ids = new Set(matches.map((match) => match[0]));
   if (ids.size !== 1)
     throw new DocumentError(
@@ -981,8 +977,8 @@ function parseDocumentIdWithPrefix(text: string, prefix: string): string {
   return [...ids][0] ?? '';
 }
 function assertId(id: string, prefix: string): void {
-  if (!new RegExp(`^${escapeRegex(prefix)}\\d{5,}$`, 'u').test(id))
-    throw new DocumentError('schema', 'document ID must match the fixed prefix and at least five digits');
+  if (!prefixedIdentityPattern(prefix, 5).test(id))
+    throw new DocumentError('schema', 'document ID must match the fixed prefix and a legacy numeric or ULID suffix');
 }
 function choice<T extends readonly string[]>(value: string, values: T, field: string): T[number] {
   const normalized = value.trim().toLowerCase();
@@ -1031,17 +1027,14 @@ function portableRelative(root: string, path: string): string {
     throw new DocumentError('path_safety', 'document path escapes repository');
   return result.split(sep).join('/');
 }
-function compareEntity(left: Entity, right: Entity): number {
+function compareEntity(left: Entity, right: Entity, prefix: string): number {
   return (
-    compare(left.decoded.metadata.id, right.decoded.metadata.id) ||
+    comparePrefixedIdentities(left.decoded.metadata.id, right.decoded.metadata.id, prefix) ||
     left.decoded.metadata.version - right.decoded.metadata.version
   );
 }
 function compare(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
-}
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 function finding(error: unknown, id?: string): DocumentValidationReport['findings'][number] {
   return {

@@ -1,0 +1,13 @@
+"version": 1
+"id": "hrn-00207"
+"type": "initiative"
+"title": "Concurrent Epic Workspaces"
+"status": "open"
+"created_at": "2026-09-03T11:12:32.419Z"
+"updated_at": "2026-09-03T11:12:51.644Z"
+"created_by": "OpenCode"
+"metadata":
+  "capability": "epic-workspaces"
+  "phase": "plan"
+"body": "# Concurrent Epic Workspaces\n\n## Outcome\n\nMultiple agents can execute separate Epics from one clone through isolated Git worktrees without canonical Issue or Document identity collisions or lifecycle commands operating in the wrong checkout.\n\n## Boundary\n\n- Add opt-in `skills.cvs.workspaces`, defaulting to `false`; repositories may explicitly enable it.\n- Support Git worktrees only.\n- Associate one deterministic workspace and feature branch with each Epic.\n- Use normalized workspace operations in both OpenCode and Pi.\n- Validate the current checkout before every Epic lifecycle phase and fail closed with the expected workspace path.\n- Make new Issue and Document identities collision-resistant while preserving existing numeric authorities.\n- Treat Release closure as cleanup-ready after PR creation; perform physical cleanup later from the primary checkout.\n\n## Non-Goals\n\n- Initiative-level workspaces.\n- Jujutsu workspace support.\n- Persistent host shell directory switching.\n- Automatic rewriting of existing numeric IDs.\n- Automatic PR merge.\n- An external workspace daemon or launcher.\n\n## Why Multiple Epics\n\nSafe concurrency requires three independently verifiable outcomes: merge-safe canonical identities, reusable Git workspace primitives, and lifecycle policy integration. Enabling lifecycle routing before the first two are complete would expose users to ID collisions or unenforced checkout assumptions.\n\n## Acceptance Direction\n\n- Parallel Epic work can create canonical Issues and Documents without path collisions.\n- Workspace operations are deterministic, idempotent, race-aware, and refuse unsafe cleanup.\n- Plan, Build, Verify, Release, and Continue enforce Epic workspace ownership when enabled.\n- Existing repositories remain compatible when workspace support is disabled.\n- Generated artifacts, configuration documentation, and OpenCode/Pi behavior remain consistent.\n\n## Delivery Order\n\n1. Collision-Safe Issue and Document Identities.\n2. Git Epic Workspace Primitives.\n3. Workspace-Aware SDLC Lifecycle.\n\n## Overlap Risk\n\nThe identity and workspace Epics both touch generic local tooling and tests; sequence them rather than implementing concurrently. Lifecycle integration depends on both and should begin only after their contracts stabilize.\n"
+"comments": []

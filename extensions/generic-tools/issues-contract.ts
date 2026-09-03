@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { isAlias, isMap, isScalar, isSeq, parseAllDocuments, type Document, type Node, type Scalar } from 'yaml';
+import { isPrefixedIdentity, isUlid } from './identities.js';
 
 export const ISSUE_CONTRACT_VERSION = 1 as const;
 export const ISSUE_CONTRACT_LIMITS = Object.freeze({
@@ -560,16 +561,19 @@ function requireString(value: unknown, field: string, limits: IssueContractLimit
 }
 
 function validateIssueId(id: string, prefix?: string): void {
-  if (!isSafeIssueId(id)) throw schemaError('issue ID is invalid');
-  if (prefix !== undefined && !new RegExp(`^${escapeRegex(prefix)}\\d+$`).test(id)) {
+  if (prefix === undefined ? !isSafeIssueId(id) : !isPrefixedIdentity(id, prefix)) {
     throw schemaError('issue ID does not use the configured prefix');
   }
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function isSafeIssueId(id: string): boolean {
   return (
     id.length > 0 &&
-    /\d$/u.test(id) &&
+    (/\d$/u.test(id) || (id.length >= 26 && isUlid(id.slice(-26)))) &&
     !/[\s/\\]/u.test(id) &&
     !Array.from(id).some((character) => {
       const code = character.codePointAt(0) ?? 0;
@@ -737,10 +741,6 @@ function schemaError(message: string): IssueError {
 
 function limitError(limit: keyof IssueContractLimits): IssueError {
   return new IssueError('resource_limit', `issue contract resource limit exceeded: ${limit}`, { limit });
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function encodeToolJson(value: unknown, ancestors: Set<object>): string {

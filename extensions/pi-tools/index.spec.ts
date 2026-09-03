@@ -71,6 +71,7 @@ describe('Pi adapter', () => {
       'issue_link_document',
       'issue_validate',
     ]);
+    expect(tools.every((tool) => (tool.parameters as { type?: string }).type === 'object')).toBe(true);
     expect(toolNamed(tools, 'config_get').parameters).toBeDefined();
     const kindValues = ['design-overview', 'gdd', 'hld', 'lld'];
     const statusValues = ['approved', 'draft', 'review'];
@@ -181,21 +182,30 @@ describe('Pi adapter', () => {
         undefined,
         { cwd },
       );
-      await toolNamed(tools, 'issue_create').execute(
+      const createdIssue = JSON.parse(issue.content[0]?.text ?? '') as {
+        id: string;
+        metadata: { metadata: { huge: number } };
+      };
+      const relatedIssueResult = await toolNamed(tools, 'issue_create').execute(
         'call-3b',
         { type: 'task', title: 'Related task' },
         undefined,
         undefined,
         { cwd },
       );
+      const relatedIssue = JSON.parse(relatedIssueResult.content[0]?.text ?? '') as { id: string };
       const issues = await toolNamed(tools, 'issue_list').execute('call-4', {}, undefined, undefined, { cwd });
-      const fetched = await toolNamed(tools, 'issue_get').execute('call-7', { id: 'hrn-00001' }, undefined, undefined, {
-        cwd,
-      });
+      const fetched = await toolNamed(tools, 'issue_get').execute(
+        'call-7',
+        { id: createdIssue.id },
+        undefined,
+        undefined,
+        { cwd },
+      );
       const fetchedIssue = JSON.parse(fetched?.content[0]?.text ?? '') as { revision: string };
       const updated = await toolNamed(tools, 'issue_update').execute(
         'call-7b',
-        { id: 'hrn-00001', title: 'Updated task', expectedRevision: fetchedIssue.revision },
+        { id: createdIssue.id, title: 'Updated task', expectedRevision: fetchedIssue.revision },
         undefined,
         undefined,
         { cwd },
@@ -203,42 +213,42 @@ describe('Pi adapter', () => {
       const updatedIssue = JSON.parse(updated.content[0]?.text ?? '') as { revision: string };
       const transitioned = await toolNamed(tools, 'issue_transition').execute(
         'call-8',
-        { id: 'hrn-00001', status: 'done', expectedRevision: updatedIssue.revision },
+        { id: createdIssue.id, status: 'done', expectedRevision: updatedIssue.revision },
         undefined,
         undefined,
         { cwd },
       );
       const related = await toolNamed(tools, 'issue_relate').execute(
         'call-9b',
-        { id: 'hrn-00001', relationship: 'relates_to', targetId: 'hrn-00002' },
+        { id: createdIssue.id, relationship: 'relates_to', targetId: relatedIssue.id },
         undefined,
         undefined,
         { cwd },
       );
       const unrelated = await toolNamed(tools, 'issue_unrelate').execute(
         'call-9c',
-        { id: 'hrn-00001', relationship: 'relates_to', targetId: 'hrn-00002' },
+        { id: createdIssue.id, relationship: 'relates_to', targetId: relatedIssue.id },
         undefined,
         undefined,
         { cwd },
       );
       const retiredSpecsLink = await toolNamed(tools, 'issue_link_document').execute(
         'call-9d',
-        { id: 'hrn-00001', path: '.specs/adapter.md', kind: 'design' },
+        { id: createdIssue.id, path: '.specs/adapter.md', kind: 'design' },
         undefined,
         undefined,
         { cwd },
       );
       const retiredDraftLink = await toolNamed(tools, 'issue_link_document').execute(
         'call-9d-draft',
-        { id: 'hrn-00001', path: '.ai.tmp/draft.md' },
+        { id: createdIssue.id, path: '.ai.tmp/draft.md' },
         undefined,
         undefined,
         { cwd },
       );
       const linkedDocument = await toolNamed(tools, 'issue_link_document').execute(
         'call-9e',
-        { id: 'hrn-00001', path: currentDocument.path, kind: 'document' },
+        { id: createdIssue.id, path: currentDocument.path, kind: 'document' },
         undefined,
         undefined,
         { cwd },
@@ -259,14 +269,14 @@ describe('Pi adapter', () => {
       );
       const issueAfterArchiveRejection = await toolNamed(tools, 'issue_get').execute(
         'call-9g',
-        { id: 'hrn-00001' },
+        { id: createdIssue.id },
         undefined,
         undefined,
         { cwd },
       );
       const comment = await toolNamed(tools, 'issue_comment').execute(
         'call-9',
-        { id: 'hrn-00001', body: 'Review this', author: 'tester' },
+        { id: createdIssue.id, body: 'Review this', author: 'tester' },
         undefined,
         undefined,
         { cwd },
@@ -274,22 +284,17 @@ describe('Pi adapter', () => {
       const validation = await toolNamed(tools, 'issue_validate').execute('call-10', {}, undefined, undefined, { cwd });
       const archive = await toolNamed(tools, 'issue_archive').execute(
         'call-6',
-        { id: 'hrn-00001' },
+        { id: createdIssue.id },
         undefined,
         undefined,
         {
           cwd,
         },
       );
-      const createdIssue = JSON.parse(issue.content[0]?.text ?? '') as {
-        id: string;
-        metadata: { metadata: { huge: number } };
-      };
-
       expect(defaultTasksPath?.content[0]?.text).toBe('".harnessctl/tasks"');
       expect(result?.content[0]?.text).toBe('1');
       expect(emptyMetadataRecord.metadata.metadata).toBeUndefined();
-      expect(createdDocument.id).toBe('doc-00001');
+      expect(createdDocument.id).toMatch(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u);
       expect(documentVersion.content[0]?.text).toContain('"version":2');
       expect(restoredDocument?.content[0]?.text).toContain('"location":"active"');
       for (const result of invalidDocumentLocations)
@@ -299,9 +304,9 @@ describe('Pi adapter', () => {
       expect(issueId?.content[0]?.text).toBe('["hrn-00042","hrn-00007"]');
       expect(createdIssue.metadata.metadata.huge).toBe(9_007_199_254_740_992);
       expect(Number.isFinite(createdIssue.metadata.metadata.huge)).toBe(true);
-      expect(createdIssue.id).toBe('hrn-00001');
+      expect(createdIssue.id).toMatch(/^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u);
       expect(JSON.parse(issues?.content[0]?.text ?? '')).toHaveLength(2);
-      expect(JSON.parse(archive?.content[0]?.text ?? '').archived).toEqual(['hrn-00001']);
+      expect(JSON.parse(archive?.content[0]?.text ?? '').archived).toEqual([createdIssue.id]);
       expect(blockedDocumentUpdate?.content[0]?.text).toMatch(/linked by canonical issue/u);
       expect(blockedDocumentArchive?.content[0]?.text).toMatch(/linked by canonical issue/u);
       expect(issueAfterArchiveRejection?.content[0]?.text).toContain(currentDocument.path);
@@ -309,8 +314,8 @@ describe('Pi adapter', () => {
       expect(fetched?.content[0]?.text).toContain('Example task');
       expect(updated.content[0]?.text).toContain('Updated task');
       expect(transitioned?.content[0]?.text).toContain('"status":"done"');
-      expect(comment?.content[0]?.text).toContain('hrn-00001-C0001');
-      expect(related.content[0]?.text).toContain('"relates_to":["hrn-00002"]');
+      expect(comment?.content[0]?.text).toContain(`${createdIssue.id}-C0001`);
+      expect(related.content[0]?.text).toContain(`"relates_to":["${relatedIssue.id}"]`);
       expect(unrelated.content[0]?.text).not.toContain('"relates_to"');
       expect(retiredSpecsLink.content[0]?.text).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);
       expect(retiredDraftLink.content[0]?.text).toMatch(/structured \.specs and \.ai\.tmp links are retired/u);

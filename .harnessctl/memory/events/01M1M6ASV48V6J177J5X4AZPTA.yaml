@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1M6ASV48V6J177J5X4AZPTA
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00210 | plan | bootstrap contract | blocked, replan hrn-00209
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-plan / plan
+  Done: Authority and lifecycle templates inspected; bootstrap contradiction confirmed and recorded in hrn-00210-C0001.
+  Decision: Stop hrn-00210 planning; replan hrn-00209 for explicit safe creation of a first workspace containing newly created Epic authority.
+  Blockers: doc-00019 requires clean primary plus Epic in primary HEAD; New-Epic/Initiative Plan produces uncommitted authority and no commit/cwd switch.
+  Next: work-plan hrn-00209
+  Verification: issue_get hrn-00210; document_get doc-00019; canonical Plan/Build/Verify/Release/Continue templates.
+source:
+  kind: artifact
+  ref: hrn-00210
+  revision: v1:52ebf9fb72156e3376236a4c041173ad6522795d8fab1c5e146a84d1b782901f
+created_at: 2026-09-03T17:51:11.204Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1KFNNMVK066H14TCFMVFT45
+tags:
+  - blocker
+  - epic
+  - lifecycle
+  - work-plan
+  - workspace

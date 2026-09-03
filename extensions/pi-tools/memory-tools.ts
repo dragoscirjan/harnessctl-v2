@@ -57,10 +57,10 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     name: 'memory_supersede',
     label: 'Memory Supersede',
     description: 'Create a validated replacement for one active memory record.',
-    parameters: Type.Intersect([
-      Type.Object({ target_id: Type.String({ description: 'Active record ULID' }) }),
-      memoryWriteParameters(),
-    ]),
+    parameters: Type.Object({
+      target_id: Type.String({ description: 'Active record ULID' }),
+      ...memoryWriteProperties(),
+    }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       return memoryResult(() => supersedeMemory(context.cwd, params.target_id, normalizedWrite(params)));
     },
@@ -135,7 +135,11 @@ function memorySearchParameters(includeQuery: boolean) {
 }
 
 function memoryWriteParameters() {
-  return Type.Object({
+  return Type.Object(memoryWriteProperties());
+}
+
+function memoryWriteProperties() {
+  return {
     memory_type: Type.String({ description: 'semantic, episodic, or procedural' }),
     record_type: Type.String({ description: 'fact, decision, event, or lesson' }),
     topic: Type.Optional(Type.String({ description: 'Memory topic; defaults to project setting' })),
@@ -147,7 +151,7 @@ function memoryWriteParameters() {
     created_by: Type.String({ description: 'Developer or agent identifier' }),
     confidence: Type.String({ description: 'confirmed or verified' }),
     tags: Type.Optional(Type.String({ description: 'Optional comma-separated tags' })),
-  });
+  };
 }
 
 function normalizedWrite(args: Record<string, unknown>) {

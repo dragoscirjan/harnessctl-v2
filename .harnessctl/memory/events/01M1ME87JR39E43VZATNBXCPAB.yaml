@@ -1,0 +1,33 @@
+schema_version: 1
+id: 01M1ME87JR39E43VZATNBXCPAB
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00208 | build | all children | Verify defects repaired; local Build gates passed
+details: |-
+  Epic: hrn-00208
+  Command/phase: work-build / Build YOLO
+  Item: hrn-00211, hrn-00212, hrn-00213
+  Done: Prefix-less Issue contract now accepts only safe legacy digit-ending or strict uppercase Crockford ULID suffixes; mixed Issue/Document lifecycle and cache tests added; docs/llms-full.txt regenerated.
+  Verification: focused generic 163 passed; OpenCode/Pi adapter units 2+3 passed; OpenCode integration 8 passed; packages build, generic typecheck, targeted lint/format, strict docs build, contracts check, diff check passed.
+  Blockers: Pi SDK integration 0/8; configured model emitted zero tool execution events across unrelated config/Issue scenarios; direct Pi adapter tests passed, no repository-owned repair identified.
+  Artifacts: extensions/generic-tools/issues-contract.ts; mixed tests; docs/llms-full.txt; child comments hrn-00211-C0003, hrn-00212-C0004, hrn-00213-C0003.
+  Delivery: local branch epic/hrn-00208-collision-safe-identities; no closure, commit, remote, Verify, or Release.
+source:
+  kind: artifact
+  ref: .harnessctl/issues/hrn-00208-collision-safe-issue-and-document-identities.yml
+  revision: v1:3a10dd7fa0f0be36ac0514bc6264a5520c6218d16b5ee2723aa6ed60bf559bf4
+created_at: 2026-09-03T20:09:35.576Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1M7WKGJCGE08ZV4JTNPJKBY
+tags:
+  - documents
+  - epic
+  - issues
+  - ulid
+  - work-build
