@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1MNH39GRXMVKNNAKQF2KEX8
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | build | all children | cleanup recovery repaired; gates passed
+details: |-
+  Epic: hrn-00209
+  Phase: Build
+  Item: hrn-00214..hrn-00217
+  Done: Cleanup intent persists before unlock; ambiguous unlock/remove outcomes reconcile read-only and resume only on later explicit cleanup. Ensure refreshes topology inside common lock.
+  Verification: real-Git workspace suite 14/14 repeated 3x; concurrent same-Epic converges; distinct-Epic mappings remain separate; unlock/remove interruption recovery passes. `mise run quality` passed generic 238, Python 725, adapter units 2+3, typecheck/build/lint/format/contracts/docs/dead-code/package gates; duplicate gate 67 clones/2.35%. `PI_TEST_MODEL=lmstudio/qwen/qwen3.8-27b mise run integration` passed OpenCode 9/9 and Pi 9/9. `git diff --check` passed.
+  Artifacts: hrn-00214-C0003, hrn-00215-C0003, hrn-00216-C0003, hrn-00217-C0003.
+  Blockers: none repository-owned.
+  Next: work-verify hrn-00209.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T22:16:46.128Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MM5HYBVCQRQXCKPAZSSG4Z
+tags:
+  - build
+  - epic
+  - git
+  - workspace

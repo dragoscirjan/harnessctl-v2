@@ -58,6 +58,7 @@ describe('Config v1 contract authority', () => {
     });
     expect(CONFIG_V1_DEFAULTS.workflow).toEqual({ default_task_type: 'bug' });
     expect(CONFIG_V1_DEFAULTS.skills.tdd).toEqual({ enabled: false });
+    expect(CONFIG_V1_DEFAULTS.skills.cvs.workspaces).toBe(false);
     expect(CONFIG_V1_DEFAULTS.skills.webRetrieval).toEqual({
       enabled: false,
       mcpName: 'sdlc_web_crawl',
@@ -237,6 +238,26 @@ describe('Config v1 contract authority', () => {
     expect(configContractValidator()(invalid)).toBe(false);
   });
 
+  it('allows workspaces only for enabled Git CVS', () => {
+    const enabled = {
+      ...CONFIG_V1_DEFAULTS,
+      skills: {
+        ...CONFIG_V1_DEFAULTS.skills,
+        cvs: { ...CONFIG_V1_DEFAULTS.skills.cvs, workspaces: true },
+      },
+    };
+    expect(configV1Schema.safeParse(enabled).success).toBe(true);
+
+    for (const cvs of [
+      { ...enabled.skills.cvs, enabled: false },
+      { ...enabled.skills.cvs, local: 'jj' as const },
+    ]) {
+      const invalid = { ...enabled, skills: { ...enabled.skills, cvs } };
+      expect(configV1Schema.safeParse(invalid).success).toBe(false);
+      expect(validationPaths(invalid)).toEqual(['skills.cvs.workspaces']);
+    }
+  });
+
   it('treats Bitbucket MCP names as references to generic declarations', () => {
     const provider = {
       type: 'bitbucket',
@@ -316,6 +337,7 @@ describe('Config v1 contract authority', () => {
 
   it('preserves runtime cross-field refinements in the generated schema', () => {
     expect(toPortableJsonSchema(configV1Schema)['x-harnessctl-config-refinements']).toEqual([
+      'workspace-requires-enabled-git',
       'enabled-mcp-references-exist',
     ]);
   });

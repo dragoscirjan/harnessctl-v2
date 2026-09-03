@@ -105,6 +105,20 @@ def test_plain_bitbucket_provider_remains_valid_without_mcp_name(tmp_path: Path)
     assert load_config(tmp_path)["skills"]["cvs"]["provider"] == provider
 
 
+def test_workspaces_require_enabled_git_cvs(tmp_path: Path) -> None:
+    _write_config(tmp_path, {"version": 1, "skills": {"cvs": {"workspaces": True}}})
+    assert load_config(tmp_path)["skills"]["cvs"]["workspaces"] is True
+
+    for cvs in (
+        {"enabled": False, "workspaces": True},
+        {"local": "jj", "workspaces": True},
+    ):
+        _write_config(tmp_path, {"version": 1, "skills": {"cvs": cvs}})
+        with pytest.raises(ConfigError) as caught:
+            load_config(tmp_path)
+        assert caught.value.validation_paths == ("skills.cvs.workspaces",)
+
+
 def test_bitbucket_mcp_name_references_explicit_generic_declaration(tmp_path: Path) -> None:
     provider = {
         "type": "bitbucket",

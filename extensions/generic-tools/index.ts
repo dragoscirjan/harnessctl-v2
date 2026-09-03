@@ -98,6 +98,23 @@ export {
 export { ConfigError, createConfig, getConfigValue, parseConfig, readConfig, validateConfig };
 export type { ConfigDocument };
 export {
+  WorkspaceError,
+  createGitWorkspaceProvider,
+  workspaceCleanup,
+  workspaceEnsure,
+  workspaceMarkCleanupReady,
+  workspaceStatus,
+} from './workspaces.js';
+export type {
+  GitWorkspaceProvider,
+  WorkspaceBlocker,
+  WorkspaceErrorCategory,
+  WorkspaceLifecycle,
+  WorkspaceProviderOptions,
+  WorkspaceResult,
+  WorkspaceStatusState,
+} from './workspaces.js';
+export {
   CONFIG_V1_DEFAULTS,
   FILESYSTEM_DOCUMENT_TOOLS,
   configV1Schema,

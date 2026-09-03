@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1MM5HYBVCQRQXCKPAZSSG4Z
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | build | all children | local implementation complete; gates passed
+details: |-
+  Epic: hrn-00209
+  Command/phase: work-build / build
+  Item: hrn-00214..hrn-00217
+  Done: Config opt-in/default/refinement parity; deterministic safety-gated Git workspace engine; OpenCode/Pi four-tool parity; docs/generated contracts/Changeset complete.
+  Artifacts: extensions/generic-tools/workspaces.ts; extensions/generic-tools/workspaces.spec.ts; .changeset/sharp-apes-work.md
+  Verification: mise run quality passed generic 234, Python 725, adapter units 2+3, typecheck/build/lint/format/contracts/docs/dead-code/package gates; PI_TEST_MODEL=lmstudio/qwen/qwen3.8-27b mise run integration passed OpenCode 9/9 and Pi 9/9; git diff --check passed.
+  Blockers: none repository-owned.
+  Next: work-verify hrn-00209
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T21:52:59.339Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - epic
+  - git
+  - workspace

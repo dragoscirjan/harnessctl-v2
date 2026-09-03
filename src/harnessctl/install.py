@@ -236,6 +236,7 @@ def install(
                 render_skill(
                     "sdlc-cvs",
                     local=cvs["local"],
+                    workspaces=cvs["workspaces"],
                     provider=cvs_remote["type"],
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],
@@ -321,6 +322,7 @@ def install(
                 render_skill(
                     "sdlc-cvs",
                     local=cvs["local"],
+                    workspaces=cvs["workspaces"],
                     provider=cvs_remote["type"],
                     tools=cvs_remote["tools"],
                     remote_url=cvs_remote["url"],

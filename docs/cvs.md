@@ -4,7 +4,7 @@
 
 Configuration version 1 independently selects a local version-control system and a
 remote collaboration provider. Local operations use `git` or `jj` directly and never
-use MCP. Remote operations use one configured provider and always enumerate its valid CLI
+use MCP. Optional Git Epic workspace tools are disabled by default. Remote operations use one configured provider and always enumerate its valid CLI
 capabilities. MCP capabilities are enumerated only when optional `mcpName` is configured
 and its service is available; omitting `mcpName` produces CLI-only guidance and no managed
 MCP projection. The generated OpenCode CVS skill applies per-operation selection, context,
@@ -46,6 +46,7 @@ skills:
   cvs:
     enabled: true
     local: git
+    workspaces: false
     provider:
       type: github
       tools: gh
@@ -65,6 +66,7 @@ skills:
   cvs:
     enabled: true
     local: jj
+    workspaces: false
     provider:
       type: github
       tools: gh
@@ -75,6 +77,39 @@ mcp:
   output_limit_mode: bounded-guidance
 mcpServers: {}
 ```
+
+## Git Epic workspaces
+
+Set `skills.cvs.workspaces: true` to enable four local tools when CVS is enabled and
+`skills.cvs.local` is `git`:
+
+| Tool                           | Exact invocation location  | Behavior                                                                         |
+| ------------------------------ | -------------------------- | -------------------------------------------------------------------------------- |
+| `workspace_ensure`             | Primary checkout root      | Creates or returns the deterministic workspace for one committed canonical Epic. |
+| `workspace_status`             | Anywhere in the repository | Reports state and blockers without repair or mutation.                           |
+| `workspace_mark_cleanup_ready` | Epic workspace root        | Marks an exact, clean, active workspace ready for later cleanup.                 |
+| `workspace_cleanup`            | Primary checkout root      | Removes the exact clean ready worktree without force and retains its branch.     |
+
+For Epic `hrn-12345`, the branch is `harnessctl/epic/hrn-12345`. If the primary checkout
+is `/work/project`, the sibling workspace is `/work/project--workspaces/hrn-12345`.
+Creation requires a clean primary checkout and an active canonical Epic already committed
+in primary `HEAD`. Harnessctl records `creating`, `active`, `cleanup_ready`, and `closed`
+state under the repository Git common directory and places an ownership lock on the
+worktree. Repeating `workspace_ensure` reconciles an exact interrupted creation or returns
+the existing active mapping; it never silently repairs a conflicting mapping.
+
+Lifecycle work must run from the exact path returned for the Epic. The tools do not and
+cannot persistently change the host process working directory. Dirty, missing, prunable,
+unlocked, moved, branch-mismatched, malformed, or conflicting state fails closed with
+actionable blockers. Cleanup refuses the current worktree, nested current directories,
+dirty worktrees, and mismatched metadata. It never uses forced removal, resets content,
+deletes the retained branch, migrates existing worktrees, or changes repositories when the
+capability is disabled.
+
+If creation is interrupted, run `workspace_status` from the same repository and retry
+`workspace_ensure` only for the same Epic. For any reported conflict, inspect the exact
+paths, branch, lock, and common-directory state; do not delete or rewrite state blindly.
+Closed workspace records cannot be reopened.
 
 Every remote provider exposes its valid CLI capability. Its MCP capability is optional:
 set `mcpName` to the host key to project, or omit it to generate CLI-only guidance and no
@@ -114,6 +149,7 @@ skills:
   cvs:
     enabled: true
     local: git
+    workspaces: false
     provider:
       type: github
       tools: gh
@@ -133,6 +169,7 @@ skills:
   cvs:
     enabled: true
     local: git
+    workspaces: false
     provider:
       type: gitlab
       tools: glab

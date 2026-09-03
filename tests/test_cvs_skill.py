@@ -17,11 +17,18 @@ PROVIDERS = {
 }
 
 
-def _render(local: str, provider: str, *, mcp_available: bool = True) -> str:
+def _render(
+    local: str,
+    provider: str,
+    *,
+    mcp_available: bool = True,
+    workspaces: bool = False,
+) -> str:
     tools, remote_url, token_env = PROVIDERS[provider]
     return render_skill(
         "sdlc-cvs",
         local=local,
+        workspaces=workspaces,
         provider=provider,
         tools=tools,
         remote_url=remote_url,
@@ -92,6 +99,23 @@ def test_cvs_skill_omits_unavailable_local_mcp() -> None:
     assert "sdlc_cvs_forgejo" not in rendered
 
 
+def test_cvs_skill_compiles_workspace_capability() -> None:
+    disabled = _render("git", "github")
+    enabled = _render("git", "github", workspaces=True)
+
+    assert "Epic workspaces are disabled" in disabled
+    assert "workspace_ensure" not in disabled
+    for tool in (
+        "workspace_ensure",
+        "workspace_status",
+        "workspace_mark_cleanup_ready",
+        "workspace_cleanup",
+    ):
+        assert tool in enabled
+    assert "cannot persistently change the host process cwd" in enabled
+    assert "Never force-remove a worktree" in enabled
+
+
 def test_install_registers_cvs_skill_with_narrow_config_context(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -99,6 +123,7 @@ def test_install_registers_cvs_skill_with_narrow_config_context(
     config["skills"]["cvs"] = {
         "enabled": True,
         "local": "jj",
+        "workspaces": False,
         "provider": {
             "type": "forgejo",
             "tools": "forgejo-cli",

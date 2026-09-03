@@ -2,7 +2,7 @@
   "version": 1,
   "algorithm": "sha256",
   "artifacts": {
-    "config-v1.schema.json": "a5a87170fc8710a0725c7f93a73ee556fdf08f5e7995a2c1cb53695c5e12e5b2",
-    "config-v1.defaults.json": "7d00907f2598d9b2462bd54cd76afa959a10f36d71b40e9aaf90b18adf3cedd0"
+    "config-v1.schema.json": "e7d02b12614fc92dcfe514e03f11c89b6e2af46e0dceccd21e24985528018525",
+    "config-v1.defaults.json": "add4aac06cfb97f7eaf50a5fd022b3186a0f4fef4943e5a49a5018f7b672d090"
   }
 }

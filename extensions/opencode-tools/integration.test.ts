@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import {
   accessSync,
@@ -133,6 +133,27 @@ describe('OpenCode SDK integration', () => {
     }
   }, 120_000);
 
+  it('uses workspace_status in a real Git repository with spaces', async () => {
+    const fixture = writeWorkspaceRepository('harnessctl opencode workspace ');
+
+    try {
+      writeOpenCodeProjectConfig(fixture.root);
+      const result = await promptOpenCode(
+        fixture.root,
+        'Use workspace_status exactly once for Epic hrn-00009. Return only the JSON from the tool.',
+      );
+
+      expect(normalizeToolNames(result.toolNames)).toEqual(['workspace_status']);
+      expect(parseJsonReply(result.text)).toMatchObject({
+        epic_id: 'hrn-00009',
+        primary_path: fixture.root,
+        state: 'absent',
+      });
+    } finally {
+      rmSync(fixture.container, { recursive: true, force: true });
+    }
+  }, 120_000);
+
   describe.concurrent('issue lifecycle tools', () => {
     it('reads, updates, transitions, comments, and validates an issue', async () => {
       const cwd = mkdtempSync(resolve(tmpdir(), 'harnessctl-opencode-lifecycle-'));
@@ -239,6 +260,24 @@ function writeIssueFixture(cwd: string, id: string, title: string, status: strin
   writeFileSync(resolve(issueRoot, canonicalIssueFilename(id, title)), encodeCanonicalIssue(issue));
 }
 
+function writeWorkspaceRepository(prefix: string): { container: string; root: string } {
+  const container = mkdtempSync(resolve(tmpdir(), prefix));
+  const root = resolve(container, 'primary repo');
+  mkdirSync(root);
+  execFileSync('git', ['init', '--initial-branch=main'], { cwd: root });
+  execFileSync('git', ['config', 'user.name', 'Harnessctl Test'], { cwd: root });
+  execFileSync('git', ['config', 'user.email', 'test@example.invalid'], { cwd: root });
+  writeIssueFixture(root, 'hrn-00009', 'Workspace integration Epic', 'in_progress', 'epic');
+  writeFileSync(
+    resolve(root, '.harnessctl/config.yaml'),
+    'version: 1\nskills:\n  cvs:\n    workspaces: true\n  issues:\n    prefix: hrn-\n',
+    'utf8',
+  );
+  execFileSync('git', ['add', '.harnessctl'], { cwd: root });
+  execFileSync('git', ['commit', '-m', 'Add workspace fixture'], { cwd: root });
+  return { container, root };
+}
+
 function readIssueFixture(cwd: string, id: string): string {
   return readFileSync(resolve(cwd, getIssue(cwd, id).path), 'utf8');
 }
@@ -282,6 +321,13 @@ function extractIssueNumbers(output: string): string[] {
 
 function normalizeToolNames(toolNames: string[]): string[] {
   return toolNames.map((name) => name.replaceAll('-', '_'));
+}
+
+function parseJsonReply(text: string): unknown {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end < start) throw new Error(`assistant response did not contain JSON: ${text}`);
+  return JSON.parse(text.slice(start, end + 1));
 }
 
 function extractResponseText(parts: unknown): string {

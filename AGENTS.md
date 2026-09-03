@@ -4,6 +4,6 @@
 
 - stop using sub-agents -> the ones available are configured for particular flows and are very slow
 
-- when working on the docs website is is futile to perform visual tests - the website's theme was not created yet. My interest for now is content only.
-
 - when working on an epic, make sure you update the documentation if needed
+
+- when writing code, make sure the code is documented - if the documentation becomes too large for a specific item, that means that the code is bad and it needs to be re-designed.

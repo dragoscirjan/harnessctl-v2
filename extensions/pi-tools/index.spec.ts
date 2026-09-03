@@ -70,6 +70,10 @@ describe('Pi adapter', () => {
       'issue_unrelate',
       'issue_link_document',
       'issue_validate',
+      'workspace_ensure',
+      'workspace_status',
+      'workspace_mark_cleanup_ready',
+      'workspace_cleanup',
     ]);
     expect(tools.every((tool) => (tool.parameters as { type?: string }).type === 'object')).toBe(true);
     expect(toolNamed(tools, 'config_get').parameters).toBeDefined();
@@ -87,6 +91,8 @@ describe('Pi adapter', () => {
     const issueLinkSchema = JSON.stringify(toolNamed(tools, 'issue_link_document').parameters);
     expect(issueLinkSchema).toContain('fixed active .harnessctl/documents authority');
     expect(issueLinkSchema).not.toMatch(/\.specs|\.ai\.tmp/u);
+    for (const name of ['workspace_ensure', 'workspace_status', 'workspace_mark_cleanup_ready', 'workspace_cleanup'])
+      expect(JSON.stringify(toolNamed(tools, name).parameters)).toContain('epic_id');
   });
 
   it('delegates execution to the generic configuration tools', async () => {
@@ -291,6 +297,13 @@ describe('Pi adapter', () => {
           cwd,
         },
       );
+      const workspaceStatus = await toolNamed(tools, 'workspace_status').execute(
+        'workspace-status',
+        { epic_id: createdIssue.id },
+        undefined,
+        undefined,
+        { cwd },
+      );
       expect(defaultTasksPath?.content[0]?.text).toBe('".harnessctl/tasks"');
       expect(result?.content[0]?.text).toBe('1');
       expect(emptyMetadataRecord.metadata.metadata).toBeUndefined();
@@ -309,6 +322,7 @@ describe('Pi adapter', () => {
       expect(JSON.parse(archive?.content[0]?.text ?? '').archived).toEqual([createdIssue.id]);
       expect(blockedDocumentUpdate?.content[0]?.text).toMatch(/linked by canonical issue/u);
       expect(blockedDocumentArchive?.content[0]?.text).toMatch(/linked by canonical issue/u);
+      expect(workspaceStatus.content[0]?.text).toMatch(/^Workspace error:/u);
       expect(issueAfterArchiveRejection?.content[0]?.text).toContain(currentDocument.path);
       expect(tools.some((tool) => tool.name === 'issue_unlink_document')).toBe(false);
       expect(fetched?.content[0]?.text).toContain('Example task');

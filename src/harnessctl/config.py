@@ -24,7 +24,10 @@ CONFIG_V1_REWRITE_GUIDANCE = (
 _SCHEMA_NAME = "config-v1.schema.json"
 _DEFAULTS_NAME = "config-v1.defaults.json"
 _FINGERPRINTS_NAME = "config-v1.fingerprints.json"
-_SUPPORTED_CONFIG_REFINEMENTS = ("enabled-mcp-references-exist",)
+_SUPPORTED_CONFIG_REFINEMENTS = (
+    "workspace-requires-enabled-git",
+    "enabled-mcp-references-exist",
+)
 
 
 class ConfigError(ValueError):
@@ -139,6 +142,14 @@ def load_config(cwd: Path) -> dict[str, Any]:
 def _validate_config_refinements(config: dict[str, Any]) -> None:
     """Apply cross-key refinements declared by the generated Config v1 contract."""
     skills = config["skills"]
+    cvs = skills["cvs"]
+    if cvs["workspaces"] and (not cvs["enabled"] or cvs["local"] != "git"):
+        path = "skills.cvs.workspaces"
+        raise ConfigError(
+            "Invalid Config v1:\n"
+            f"- {path}: requires skills.cvs.enabled to be true and skills.cvs.local to be git",
+            (path,),
+        )
     references = (
         (
             skills["cvs"]["enabled"],

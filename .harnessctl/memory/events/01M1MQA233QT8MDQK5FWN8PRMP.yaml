@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M1MQA233QT8MDQK5FWN8PRMP
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00209
+summary: hrn-00209 | Verify | all children | blocked by required regression gaps
+details: |-
+  Epic: hrn-00209
+  Phase: Verify
+  Done: Fresh `mise run quality` passed generic 239, Python 725, adapter units 2+3, typecheck/build/lint/format/contracts/generated docs/MkDocs/dead-code/package/release gates; dupcheck 67 clones/2.34% passed. `PI_TEST_MODEL=lmstudio/qwen/qwen3.8-27b mise run integration` passed OpenCode 9/9 and Pi 9/9. `git diff --check` passed. Source review confirms exact ensure-location and cleanup interruption repairs.
+  Blockers: Approved `doc-00019` and `hrn-00215` require tested detached/wrong-branch and bare-repository fail-closed behavior; `workspaces.spec.ts` lacks those regressions. Evidence gap blocks Release.
+  Artifacts: hrn-00214-C0006, hrn-00215-C0006, hrn-00216-C0006, hrn-00217-C0006.
+  Next: Build durable real-Git regressions, then rerun Verify.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T22:47:52.675Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MP3R7GJ3XF5KZ1GXERJFH1
+tags:
+  - blocked
+  - sdlc
+  - verify
+  - workspace

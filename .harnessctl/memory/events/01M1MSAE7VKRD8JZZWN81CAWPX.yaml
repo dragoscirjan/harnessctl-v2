@@ -1,0 +1,30 @@
+schema_version: 1
+id: 01M1MSAE7VKRD8JZZWN81CAWPX
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: "hrn-00209 | Release | ready PR | committed, pushed, PR #80 open"
+details: |-
+  Epic: hrn-00209
+  Phase: Release
+  Item: all children and confirmed worktree files
+  Done: Closed hrn-00214..hrn-00217 then hrn-00209 by explicit user request after successful Verify; committed all changed/new files as c506e3c77e4f547b5adf970ee0450e3d273a252a; pushed exact SHA to origin/epic/hrn-00209-git-workspace-primitives; opened ready PR #80 to main.
+  Delivery: GitHub PR #80; open, non-draft, unmerged, one commit, 59 files, +2265/-68; CI queued/in progress.
+  Verification: mise run quality passed during push; local and remote SHA matched; authority validated before commit.
+  Blockers: none at ready-PR stop.
+  Next: human review; merge requires fresh explicit consent. No deployment requested.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:3eee096a79c1c0d3c5d494d399642460af348468f1436490d2b66897cc2f8742
+created_at: 2026-09-03T23:23:02.267Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - ready-pr
+  - release
+  - workspace

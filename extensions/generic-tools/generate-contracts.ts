@@ -29,7 +29,7 @@ interface GenerateContractsOptions {
 const packageRoot = dirname(fileURLToPath(import.meta.url));
 const defaultNpmRoot = join(packageRoot, 'contracts');
 const defaultPythonRoot = resolve(packageRoot, '../../src/harnessctl/contracts');
-const configRuntimeRefinements = ['enabled-mcp-references-exist'] as const;
+const configRuntimeRefinements = ['workspace-requires-enabled-git', 'enabled-mcp-references-exist'] as const;
 
 const schemaContracts = [
   {

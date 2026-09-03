@@ -47,6 +47,7 @@
           "cvs": {
             "enabled": true,
             "local": "git",
+            "workspaces": false,
             "provider": {
               "type": "github",
               "tools": "gh",
@@ -127,6 +128,7 @@
           "cvs": {
             "enabled": true,
             "local": "git",
+            "workspaces": false,
             "provider": {
               "type": "github",
               "tools": "gh",
@@ -215,6 +217,7 @@
           "cvs": {
             "enabled": false,
             "local": "git",
+            "workspaces": false,
             "provider": {
               "type": "github",
               "tools": "gh",

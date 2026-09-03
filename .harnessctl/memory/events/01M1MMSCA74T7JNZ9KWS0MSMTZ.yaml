@@ -1,0 +1,29 @@
+schema_version: 1
+id: 01M1MMSCA74T7JNZ9KWS0MSMTZ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00209
+summary: hrn-00209 | Verify | all children | blocked by cleanup interruption defect and coverage gaps
+details: |-
+  Epic: hrn-00209
+  Phase: Verify
+  Done: Fresh quality passed; generic 234, Python 725, OpenCode/Pi units 2+3, SDK integrations 9/9 each, typecheck/build/lint/format/contracts/docs/dead-code/release artifacts passed.
+  Blockers: hrn-00215 cleanup unlock precedes remove; failed/timed-out remove strands cleanup_ready record with ownership_lock_mismatch. Approved doc-00019 timeout reconciliation and concurrent same/different-Epic ensure cases absent.
+  Artifacts: hrn-00214-C0002, hrn-00215-C0002, hrn-00216-C0002, hrn-00217-C0002.
+  Next: Build repair and focused tests; rerun Verify.
+source:
+  kind: tool-observation
+  ref: hrn-00209
+  revision: null
+created_at: 2026-09-03T22:03:48.935Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - blocked
+  - sdlc
+  - verify
+  - workspace

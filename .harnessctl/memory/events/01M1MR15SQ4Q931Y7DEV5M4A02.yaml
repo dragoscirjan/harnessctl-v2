@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1MR15SQ4Q931Y7DEV5M4A02
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-00209 | build | all children | required Git regressions passed
+details: |-
+  Epic: hrn-00209
+  Phase: Build
+  Item: hrn-00214..hrn-00217
+  Done: Added real-Git regressions proving detached and wrong Epic workspace branches fail with `branch_mismatch` without metadata mutation; bare repositories fail before Harnessctl state creation.
+  Verification: workspace suite 17/17; `mise run quality` passed; OpenCode SDK 9/9; Pi SDK 9/9; `git diff --check` passed.
+  Artifacts: hrn-00214-C0007, hrn-00215-C0007, hrn-00216-C0007, hrn-00217-C0007.
+  Blockers: none.
+  Next: work-verify hrn-00209.
+source:
+  kind: artifact
+  ref: hrn-00209
+  revision: v1:f5efebe2316e8bfc32cbd3d2790fbbc4ff409bb04517d7936e4a2a8614ac6f1e
+created_at: 2026-09-03T23:00:30.135Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MPNEKQREMH127B530D3SSP
+tags:
+  - build
+  - epic
+  - git
+  - workspace

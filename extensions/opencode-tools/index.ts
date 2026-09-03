@@ -25,6 +25,10 @@ import {
   updateIssue,
   validateIssues,
   issueMetadataText,
+  workspaceCleanup,
+  workspaceEnsure,
+  workspaceMarkCleanupReady,
+  workspaceStatus,
 } from '@harnessctl/generic-tools';
 import { tool, type Plugin } from '@opencode-ai/plugin';
 import { openCodeDocumentTools } from './document-tools.js';
@@ -362,8 +366,41 @@ export const CustomToolsPlugin: Plugin = async () => ({
         }
       },
     }),
+    workspace_ensure: workspaceTool(
+      'Create or return the deterministic Git workspace for one canonical Epic.',
+      workspaceEnsure,
+    ),
+    workspace_status: workspaceTool(
+      'Inspect the deterministic Git workspace for one canonical Epic without mutation.',
+      workspaceStatus,
+    ),
+    workspace_mark_cleanup_ready: workspaceTool(
+      'Mark the matching clean Epic workspace ready for cleanup.',
+      workspaceMarkCleanupReady,
+    ),
+    workspace_cleanup: workspaceTool(
+      'Remove the matching clean ready Epic workspace while retaining its branch.',
+      workspaceCleanup,
+    ),
   },
 });
+
+function workspaceTool(
+  description: string,
+  operation: (cwd: string, epicId: string) => unknown,
+): ReturnType<typeof tool> {
+  return tool({
+    description,
+    args: { epic_id: tool.schema.string().describe('Canonical Epic issue ID') },
+    async execute(args, context) {
+      try {
+        return JSON.stringify(operation(context.directory, args.epic_id));
+      } catch (error: unknown) {
+        return formatWorkspaceError(error);
+      }
+    },
+  });
+}
 
 function formatError(error: unknown): string {
   return error instanceof Error ? `Configuration error: ${error.message}` : `Configuration error: ${String(error)}`;
@@ -375,6 +412,10 @@ function formatIssueError(error: unknown): string {
 
 function formatMemoryError(error: unknown): string {
   return error instanceof Error ? `Memory error: ${error.message}` : `Memory error: ${String(error)}`;
+}
+
+function formatWorkspaceError(error: unknown): string {
+  return error instanceof Error ? `Workspace error: ${error.message}` : `Workspace error: ${String(error)}`;
 }
 
 function memoryWriteArguments() {

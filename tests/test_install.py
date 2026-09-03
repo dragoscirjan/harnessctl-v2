@@ -2194,6 +2194,7 @@ def test_config_accepts_every_cvs_provider_combination(
     assert load_config(tmp_path)["skills"]["cvs"] == {
         "enabled": True,
         "local": local,
+        "workspaces": False,
         "provider": {
             "type": provider,
             "tools": tool,
