@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-01M1MV6GC3D07ZRGZR6J1VTJEV"
+"type": "story"
+"title": "Workspace-aware checkpoints and Continue"
+"status": "open"
+"created_at": "2026-09-03T23:55:50.531Z"
+"updated_at": "2026-09-03T23:56:34.966Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00210"
+"depends_on":
+  - "hrn-01M1MV650AKH2ZH6Z5HQSGGMV5"
+"metadata":
+  "capability": "workspace-resumption"
+  "epic": "hrn-00210"
+  "estimate": "S-M"
+  "sequence": 3
+  "uncertainty": "medium"
+"body": "# Workspace-Aware Checkpoints And Continue\n\n## Objective\n\nRecord sufficient advisory workspace evidence and make Continue detect workspace drift before resuming one lifecycle step.\n\n## Scope\n\n- Extend checkpoint guidance with verified Epic, repository, primary path, workspace path, branch, lifecycle, and current-cwd-match evidence.\n- Keep memory advisory; never let a checkpoint prove current workspace state.\n- Require Continue to reconcile checkpoint workspace claims against fresh authoritative workspace status before phase work.\n- Reject missing, stale, mismatched, cross-Epic, wrong-cwd, wrong-branch, or non-active workspace evidence.\n- Preserve disabled-mode checkpoint and Continue behavior.\n\n## Acceptance\n\n- Enabled checkpoints contain only confirmed workspace identity/status pointers, not copied local metadata.\n- Continue rechecks current workspace authority and reports every material drift conflict.\n- A matching checkpoint cannot authorize a mismatched current workspace.\n- Continue resumes no phase step until exact active workspace status is established.\n- Disabled OpenCode and Pi projections invoke no workspace operation and retain existing reconciliation rules.\n\n## Dependencies And Order\n\nDepends on `hrn-01M1MV650AKH2ZH6Z5HQSGGMV5`. May proceed alongside Build/Verify enforcement after Plan routing.\n\n## Artifacts\n\nCanonical checkpoint and Continue reference templates, generated OpenCode/Pi projections, focused reconciliation tests.\n\n## Estimate\n\nS-M, medium uncertainty around concise checkpoint shape and prompt budgets.\n\n## Non-Goals\n\nChanging memory storage, treating memory as authority, workspace metadata migration, or resuming more than one phase step.\n"
+"comments": []

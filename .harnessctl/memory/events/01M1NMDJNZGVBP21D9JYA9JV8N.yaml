@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1NMDJNZGVBP21D9JYA9JV8N
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00210
+summary: hrn-00210 | plan | workspace bootstrap | external commit required
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-plan / Plan
+  Done: Existing approved executable plan preserved; authority and workspace status reconciled.
+  Decisions: No replan or issue mutation needed.
+  Blockers: workspace absent; cwd exact primary; primary dirty with revised Epic, 5 child issues, and checkpoints. Plan cannot commit; workspace_ensure requires clean primary and committed authority.
+  Next: Commit approved authority from primary outside Plan; rerun work-plan hrn-00210. If clean, ensure workspace, return exact path, stop for reinvocation there.
+  Verification: No workspace mutation, issue mutation, Build, Verify, Release, remote, or destructive action ran.
+source:
+  kind: tool-observation
+  ref: workspace_status hrn-00210
+  revision: null
+created_at: 2026-09-04T07:16:36.672Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MVNFNTVXV5N4R30NSBMP5B
+tags:
+  - blocked
+  - plan
+  - sdlc
+  - workspace
