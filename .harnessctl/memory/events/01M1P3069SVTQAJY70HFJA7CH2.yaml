@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1P3069SVTQAJY70HFJA7CH2
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00210
+summary: hrn-00210 | plan | workspace bootstrap | active workspace created
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-plan / Plan
+  Done: Approved plan preserved; committed authority confirmed; deterministic workspace created and status reverified active/clean.
+  Workspace: primary /home/dragosc/Workspace/gh--harnessctl/harnessctl-v2; workspace /home/dragosc/Workspace/gh--harnessctl/harnessctl-v2--workspaces/hrn-00210; branch harnessctl/epic/hrn-00210; lifecycle active; current cwd primary; cwd match false.
+  Next: Reinvoke work-plan hrn-00210 from exact workspace path; then recommend Build.
+  Blockers: none for reinvocation.
+  Verification: No Build, Verify, Release, remote, cleanup, or destructive action ran.
+source:
+  kind: tool-observation
+  ref: workspace_status hrn-00210
+  revision: null
+created_at: 2026-09-04T11:31:26.649Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1NMDJNZGVBP21D9JYA9JV8N
+tags:
+  - active
+  - plan
+  - sdlc
+  - workspace

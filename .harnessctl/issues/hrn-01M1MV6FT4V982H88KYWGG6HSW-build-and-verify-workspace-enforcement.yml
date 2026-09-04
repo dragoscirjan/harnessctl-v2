@@ -1,0 +1,20 @@
+"version": 1
+"id": "hrn-01M1MV6FT4V982H88KYWGG6HSW"
+"type": "story"
+"title": "Build and Verify workspace enforcement"
+"status": "open"
+"created_at": "2026-09-03T23:55:49.956Z"
+"updated_at": "2026-09-03T23:56:34.396Z"
+"created_by": "OpenCode"
+"assigned_to": "OpenCode"
+"parent": "hrn-00210"
+"depends_on":
+  - "hrn-01M1MV650AKH2ZH6Z5HQSGGMV5"
+"metadata":
+  "capability": "phase-workspace-enforcement"
+  "epic": "hrn-00210"
+  "estimate": "S"
+  "sequence": 2
+  "uncertainty": "low"
+"body": "# Build And Verify Workspace Enforcement\n\n## Objective\n\nPrevent implementation and verification outside the resolved active Epic workspace when workspace support is enabled.\n\n## Scope\n\n- Add enabled-mode workspace validation to Build and Verify phase references.\n- Require authoritative status for the resolved Epic before phase mutation or verification checks.\n- Validate exact workspace path, branch, mapping, cwd match, and active lifecycle state.\n- Stop with actionable expected-path evidence on unavailable, stale, mismatched, ambiguous, or wrong-cwd status.\n- Preserve compiled disabled-mode behavior without workspace operations.\n\n## Acceptance\n\n- Build performs no implementation or issue transition before exact active-workspace validation.\n- Verify performs no verification checks or issue transition before exact active-workspace validation.\n- Wrong workspace, primary cwd, detached/wrong branch, stale mapping, cleanup-ready state, or unavailable tools fail closed with the expected route.\n- Distinct Epic mappings cannot cross-authorize a phase.\n- Disabled OpenCode and Pi projections retain current Build/Verify behavior.\n\n## Dependencies And Order\n\nDepends on `hrn-01M1MV650AKH2ZH6Z5HQSGGMV5`. Execute after Plan routing.\n\n## Artifacts\n\nCanonical Build and Verify reference templates, generated OpenCode/Pi projections, focused policy tests. Reuse `doc-00019` status contract.\n\n## Estimate\n\nS, low uncertainty.\n\n## Non-Goals\n\nCheckpoint reconciliation, Release cleanup readiness, workspace primitive changes, or implementation of host-level cwd switching.\n"
+"comments": []

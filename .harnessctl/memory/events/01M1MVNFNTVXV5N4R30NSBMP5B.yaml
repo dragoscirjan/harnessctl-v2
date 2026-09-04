@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1MVNFNTVXV5N4R30NSBMP5B
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00210
+summary: hrn-00210 | build | workspace bootstrap | blocked before implementation
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-build / Build YOLO
+  Item: sequence 1 not started
+  Done: Reconciled approved plan, 5 children, doc-00019, Git, workspace status.
+  Blockers: workspace absent; cwd primary; primary dirty with approved authority; first ensure requires committed authority plus clean primary. Confirmed Build set excludes commit. Issue comment failed: undefined is not an object evaluating value.trim; no retry.
+  Next: Commit approved authority from primary outside this Build; rerun work-plan hrn-00210 to ensure workspace; invoke Build from returned path.
+  Verification: No source edit, child transition, test, workspace mutation, Verify, Release, remote, or destructive action ran.
+source:
+  kind: tool-observation
+  ref: workspace_status hrn-00210
+  revision: null
+created_at: 2026-09-04T00:04:01.338Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1MVC41FKZ8CGFST1FR0CV0D
+tags:
+  - blocked
+  - build
+  - sdlc
+  - workspace
