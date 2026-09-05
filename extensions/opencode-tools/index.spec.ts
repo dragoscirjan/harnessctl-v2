@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -283,6 +283,30 @@ describe('OpenCode adapter', () => {
     await expect(CustomToolsPlugin({} as never)).rejects.toThrow(/PluginInput\.directory is required/u);
   });
 
+  it('preserves native tool arguments when workspace routing is disabled', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'harnessctl-opencode-disabled-'));
+    try {
+      git(root, 'init', '--initial-branch=main');
+      mkdirSync(join(root, '.harnessctl'));
+      writeFileSync(join(root, '.harnessctl', 'config.yaml'), 'version: 1\nskills:\n  cvs:\n    workspaces: false\n');
+      const hooks = await CustomToolsPlugin({ directory: root } as never);
+      const before = hooks['tool.execute.before'];
+      const patch = { args: { patchText: '*** Begin Patch\n*** Add File: relative.txt\n+content\n*** End Patch' } };
+      const bash = { args: { command: 'pwd' } };
+      const read = { args: { filePath: 'relative.txt' } };
+
+      await before?.({ tool: 'apply_patch', sessionID: 'disabled', callID: 'patch' }, patch);
+      await before?.({ tool: 'bash', sessionID: 'disabled', callID: 'bash' }, bash);
+      await before?.({ tool: 'read', sessionID: 'disabled', callID: 'read' }, read);
+
+      expect(patch.args.patchText).toContain('*** Add File: relative.txt');
+      expect(bash.args).toEqual({ command: 'pwd' });
+      expect(read.args).toEqual({ filePath: 'relative.txt' });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('routes bound project tools while the host remains in primary', async () => {
     const container = mkdtempSync(join(tmpdir(), 'harnessctl-opencode-routing-'));
     const primary = join(container, 'primary');
@@ -347,6 +371,96 @@ describe('OpenCode adapter', () => {
       const globOutput = { args: {} };
       await before?.({ tool: 'glob', sessionID, callID: 'glob-call' }, globOutput);
       expect(globOutput.args).toEqual({ path: bound.execution_root });
+      const grepOutput = { args: { path: 'src', pattern: 'example' } };
+      await before?.({ tool: 'grep', sessionID, callID: 'grep-call' }, grepOutput);
+      expect(grepOutput.args.path).toBe(join(bound.execution_root, 'src'));
+      const readOutput = { args: { filePath: 'README.md' } };
+      await before?.({ tool: 'read', sessionID, callID: 'relative-read-call' }, readOutput);
+      expect(readOutput.args.filePath).toBe(join(bound.execution_root, 'README.md'));
+
+      for (const toolName of [
+        'compress',
+        'detect-language',
+        'list-subagents',
+        'question',
+        'skill',
+        'todoread',
+        'todowrite',
+      ]) {
+        const sessionOutput = { args: { value: toolName } };
+        await before?.({ tool: toolName, sessionID, callID: `${toolName}-call` }, sessionOutput);
+        expect(sessionOutput.args).toEqual({ value: toolName });
+      }
+
+      const patchOutput = {
+        args: {
+          patchText: [
+            '*** Begin Patch',
+            '*** Add File: added.txt',
+            '+added',
+            '*** Update File: source.txt',
+            '*** Move to: moved.txt',
+            '@@',
+            '-before',
+            '+after',
+            '*** Delete File: deleted.txt',
+            '*** End Patch',
+          ].join('\n'),
+        },
+      };
+      await before?.({ tool: 'apply_patch', sessionID, callID: 'patch-call' }, patchOutput);
+      expect(patchOutput.args.patchText).toContain(`*** Add File: ${join(bound.execution_root, 'added.txt')}`);
+      expect(patchOutput.args.patchText).toContain(`*** Update File: ${join(bound.execution_root, 'source.txt')}`);
+      expect(patchOutput.args.patchText).toContain(`*** Move to: ${join(bound.execution_root, 'moved.txt')}`);
+      expect(patchOutput.args.patchText).toContain(`*** Delete File: ${join(bound.execution_root, 'deleted.txt')}`);
+
+      const absolutePatch = {
+        args: {
+          patchText: `*** Begin Patch\n*** Update File: ${join(bound.execution_root, 'safe.txt')}\n@@\n*** End Patch`,
+        },
+      };
+      await before?.({ tool: 'apply_patch', sessionID, callID: 'absolute-patch-call' }, absolutePatch);
+      expect(absolutePatch.args.patchText).toContain(`*** Update File: ${join(bound.execution_root, 'safe.txt')}`);
+
+      const other = JSON.parse(
+        String(
+          await hooks.tool?.['workspace_session_allocate']?.execute({}, {
+            directory: primary,
+            sessionID: 'other-session',
+          } as never),
+        ),
+      ) as { execution_root: string };
+      const outside = join(container, 'outside');
+      mkdirSync(outside);
+      symlinkSync(outside, join(bound.execution_root, 'escape'));
+      const unsafePatchTargets: ReadonlyArray<readonly [string, string]> = [
+        ['primary-patch', join(primary, 'README.md')],
+        ['cross-workspace-patch', join(other.execution_root, 'other.txt')],
+        ['traversal-patch', '../outside.txt'],
+        ['symlink-patch', 'escape/outside.txt'],
+      ];
+      for (const [callID, target] of unsafePatchTargets) {
+        await expect(
+          before?.(
+            { tool: 'apply_patch', sessionID, callID },
+            { args: { patchText: `*** Begin Patch\n*** Add File: ${target}\n+unsafe\n*** End Patch` } },
+          ),
+        ).rejects.toThrow(/apply_patch path|escapes the execution root/u);
+      }
+
+      for (const args of [
+        null,
+        {},
+        { patchText: 42 },
+        { patchText: '*** Begin Patch\n*** End Patch' },
+        { patchText: '*** Begin Patch\n*** Move to: moved.txt\n*** End Patch' },
+        { patchText: '*** Begin Patch\n*** Update File: source.txt\n*** Move to:\n*** End Patch' },
+        { patchText: '*** Begin Patch\n*** Add File: safe.txt\n*** End Patch', unexpected: true },
+      ]) {
+        await expect(before?.({ tool: 'apply_patch', sessionID, callID: 'malformed-patch' }, { args })).rejects.toThrow(
+          /invalid apply_patch arguments|malformed apply_patch/u,
+        );
+      }
       await expect(
         before?.({ tool: 'read', sessionID, callID: 'read-call' }, { args: { filePath: join(primary, 'README.md') } }),
       ).rejects.toThrow(/escapes the execution root/u);
@@ -356,6 +470,9 @@ describe('OpenCode adapter', () => {
       await expect(
         before?.({ tool: 'external_tool', sessionID, callID: 'external-call' }, { args: {} }),
       ).rejects.toThrow(/unsupported tool: external_tool/u);
+      await expect(
+        before?.({ tool: 'env-create', sessionID, callID: 'env-create-call' }, { args: {} }),
+      ).rejects.toThrow(/unsupported tool: env-create/u);
       await expect(
         before?.({ tool: 'issue_get', sessionID, callID: 'custom-call' }, { args: { id: issue.id } }),
       ).resolves.toBeUndefined();
