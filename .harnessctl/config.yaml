@@ -47,7 +47,7 @@ skills:
   cvs:
     enabled: true
     local: git
-    workspaces: false
+    workspaces: true
     provider:
       type: github
       tools: gh
