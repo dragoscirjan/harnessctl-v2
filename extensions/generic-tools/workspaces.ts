@@ -679,9 +679,9 @@ function ensureStateDirectory(commonDir: string): string {
   let current = commonDir;
   for (const component of STATE_DIRECTORY.split(sep)) {
     current = join(current, component);
-    if (existsSync(current)) assertDirectory(current, 'workspace state directory');
-    else {
-      mkdirSync(current, { mode: 0o700 });
+    const created = mkdirSync(current, { mode: 0o700, recursive: true });
+    assertDirectory(current, 'workspace state directory');
+    if (created !== undefined) {
       syncDirectory(dirname(current));
     }
   }
@@ -690,9 +690,9 @@ function ensureStateDirectory(commonDir: string): string {
 
 function withWorkspaceLock<T>(commonDir: string, waitMs: number, operation: () => T): T {
   const harnessctlDirectory = join(commonDir, 'harnessctl');
-  if (existsSync(harnessctlDirectory)) assertDirectory(harnessctlDirectory, 'workspace state root');
-  else {
-    mkdirSync(harnessctlDirectory, { mode: 0o700 });
+  const created = mkdirSync(harnessctlDirectory, { mode: 0o700, recursive: true });
+  assertDirectory(harnessctlDirectory, 'workspace state root');
+  if (created !== undefined) {
     syncDirectory(commonDir);
   }
   const lock = join(commonDir, LOCK_DIRECTORY);
