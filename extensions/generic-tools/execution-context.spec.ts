@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -37,7 +38,7 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function repository(workspaces = true): RepositoryFixture {
-  const container = mkdtempSync(join(tmpdir(), 'harnessctl execution context '));
+  const container = realpathSync(mkdtempSync(join(tmpdir(), 'harnessctl execution context ')));
   roots.push(container);
   const root = join(container, 'primary repo');
   mkdirSync(root);

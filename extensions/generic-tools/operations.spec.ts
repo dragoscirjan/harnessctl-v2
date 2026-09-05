@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,7 +15,7 @@ import {
 import { CONFIG_V1_DEFAULTS } from './schemas.js';
 
 function fixture(runner: 'auto' | 'mise' = 'mise'): string {
-  const root = mkdtempSync(join(tmpdir(), 'harnessctl-operations-'));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'harnessctl-operations-')));
   mkdirSync(join(root, '.harnessctl'), { recursive: true });
   writeFileSync(
     join(root, '.harnessctl', 'config.yaml'),

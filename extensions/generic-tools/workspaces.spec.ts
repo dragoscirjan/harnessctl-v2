@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -26,7 +26,7 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function repository(options: { workspaces?: boolean; commitEpic?: boolean } = {}): RepositoryFixture {
-  const container = mkdtempSync(join(tmpdir(), 'harnessctl workspace '));
+  const container = realpathSync(mkdtempSync(join(tmpdir(), 'harnessctl workspace ')));
   roots.push(container);
   const root = join(container, 'primary repo');
   mkdirSync(root);
