@@ -14,6 +14,9 @@
 
 - Register the nine normalized repository-local Documents tools and expanded issue-link
   contract without a Documents skill or remote route.
+- Route `apply_patch` file and move targets through bound workspace containment, allow only
+  verified session-only environment tools unchanged, and continue rejecting shell, unknown,
+  and project-local tools such as `env-create` that have no safely routable path argument.
 
 ## 0.1.9
 

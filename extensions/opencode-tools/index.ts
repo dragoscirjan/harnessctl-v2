@@ -90,6 +90,20 @@ const CUSTOM_TOOL_NAMES = new Set([
   'operation_execute_command',
 ]);
 
+const SESSION_ONLY_TOOL_NAMES = new Set([
+  'compress',
+  'detect_language',
+  'list_subagents',
+  'question',
+  'skill',
+  'todoread',
+  'todowrite',
+]);
+
+const ROUTED_PATH_TOOL_NAMES = new Set(['glob', 'grep', 'read']);
+const PATCH_FILE_HEADERS = ['Add File', 'Update File', 'Delete File', 'Move to'] as const;
+type PatchFileHeader = (typeof PATCH_FILE_HEADERS)[number];
+
 export const CustomToolsPlugin: Plugin = async (input) => {
   if (!input || typeof input.directory !== 'string' || input.directory.length === 0)
     throw new Error('OpenCode compatibility error: PluginInput.directory is required for workspace routing');
@@ -642,7 +656,12 @@ function createToolRoutingHook(controlRoot: string) {
     }
     if (!resolution.enabled) return;
     if (!resolution.context) throw new Error('OpenCode workspace routing failed: execution context is unavailable');
-    if (input.tool !== 'read' && input.tool !== 'glob' && input.tool !== 'grep') {
+    if (isSessionOnlyTool(input.tool)) return;
+    if (input.tool === 'apply_patch') {
+      routeApplyPatch(output, resolution.context);
+      return;
+    }
+    if (!ROUTED_PATH_TOOL_NAMES.has(input.tool)) {
       throw new Error(`OpenCode workspace routing rejected unsupported tool: ${input.tool}`);
     }
     if (output.args === null || typeof output.args !== 'object' || Array.isArray(output.args)) {
@@ -660,6 +679,89 @@ function createToolRoutingHook(controlRoot: string) {
 
 function isCustomTool(name: string): boolean {
   return CUSTOM_TOOL_NAMES.has(name.replaceAll('-', '_'));
+}
+
+function isSessionOnlyTool(name: string): boolean {
+  return SESSION_ONLY_TOOL_NAMES.has(name.replaceAll('-', '_'));
+}
+
+function routeApplyPatch(output: { args: unknown }, context: Parameters<typeof resolveContextPath>[0]): void {
+  if (output.args === null || typeof output.args !== 'object' || Array.isArray(output.args)) {
+    throw new Error('OpenCode workspace routing rejected invalid apply_patch arguments');
+  }
+  const args = output.args as Record<string, unknown>;
+  if (Object.keys(args).length !== 1 || typeof args.patchText !== 'string') {
+    throw new Error('OpenCode workspace routing rejected invalid apply_patch arguments');
+  }
+  args.patchText = routePatchText(args.patchText, context);
+}
+
+function routePatchText(patchText: string, context: Parameters<typeof resolveContextPath>[0]): string {
+  const lines = patchText.split('\n');
+  const lastLine = lines.at(-1) === '' ? lines.length - 2 : lines.length - 1;
+  if (stripCarriageReturn(lines[0]) !== '*** Begin Patch' || stripCarriageReturn(lines[lastLine]) !== '*** End Patch') {
+    throw new Error('OpenCode workspace routing rejected malformed apply_patch.patchText');
+  }
+
+  let currentOperation: PatchFileHeader | undefined;
+  let hasFileHeader = false;
+  let hasMoveTarget = false;
+  for (let index = 1; index < lastLine; index += 1) {
+    const rawLine = lines[index] ?? '';
+    const line = stripCarriageReturn(rawLine);
+    const header = parsePatchFileHeader(line);
+    if (!header) {
+      if (line.startsWith('*** ')) {
+        throw new Error('OpenCode workspace routing rejected malformed apply_patch.patchText');
+      }
+      continue;
+    }
+
+    const [kind, requestedPath] = header;
+    if (kind === 'Move to') {
+      if (currentOperation !== 'Update File' || hasMoveTarget) {
+        throw new Error('OpenCode workspace routing rejected malformed apply_patch move target');
+      }
+      hasMoveTarget = true;
+    } else {
+      currentOperation = kind;
+      hasMoveTarget = false;
+      hasFileHeader = true;
+    }
+    lines[index] = preserveCarriageReturn(rawLine, `*** ${kind}: ${routePatchPath(requestedPath, context)}`);
+  }
+  if (!hasFileHeader) throw new Error('OpenCode workspace routing rejected malformed apply_patch.patchText');
+  return lines.join('\n');
+}
+
+function parsePatchFileHeader(line: string): readonly [PatchFileHeader, string] | undefined {
+  for (const header of PATCH_FILE_HEADERS) {
+    const prefix = `*** ${header}: `;
+    if (line.startsWith(prefix)) return [header, line.slice(prefix.length)];
+    if (line.startsWith(`*** ${header}`)) {
+      throw new Error(`OpenCode workspace routing rejected malformed apply_patch ${header.toLowerCase()}`);
+    }
+  }
+  return undefined;
+}
+
+function routePatchPath(requestedPath: string, context: Parameters<typeof resolveContextPath>[0]): string {
+  if (
+    requestedPath.length === 0 ||
+    requestedPath.trim() !== requestedPath ||
+    requestedPath.split(/[\\/]/u).includes('..')
+  ) {
+    throw new Error('OpenCode workspace routing rejected unsafe apply_patch path');
+  }
+  return resolveContextPath(context, requestedPath);
+}
+
+function stripCarriageReturn(line: string | undefined): string {
+  return (line ?? '').endsWith('\r') ? (line ?? '').slice(0, -1) : (line ?? '');
+}
+
+function preserveCarriageReturn(original: string, replacement: string): string {
+  return original.endsWith('\r') ? `${replacement}\r` : replacement;
 }
 
 function workspaceTool(
