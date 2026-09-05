@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1QEZ1RN0VJ91N7EZN1JAYNC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: project
+summary: "hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Release | ready PR | descendants and Epic closed; all files committed; branch pushed; PR #84 opened"
+details: |-
+  Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  Command/phase: Release
+  Item: session-bound workspace execution routing
+  Done: closed 12 descendants bottom-up and Epic; committed all changed/new files in 6e18ed7; fixed pre-push workspace initialization race in follow-up b1def35; pushed epic/hrn-01M1PX20Z7J3A6RX95P7DGXF33-session-bound-workspace-routing; opened ready PR #84 to main.
+  Delivery: GitHub PR #84
+  Verification: pre-push passed Python 725 and Node 290 tests; focused concurrent workspace test 17/17; clean tracked branch.
+  Next: review PR; merge requires fresh explicit user consent.
+  Blockers: none.
+source:
+  kind: artifact
+  ref: "PR #84"
+  revision: b1def35
+created_at: 2026-09-05T00:19:46.581Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - pr
+  - release
+  - workspace-routing
