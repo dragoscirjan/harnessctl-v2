@@ -108,6 +108,29 @@
       "required": ["default_task_type"],
       "additionalProperties": false
     },
+    "automation": {
+      "type": "object",
+      "properties": {
+        "runner": {
+          "type": "string",
+          "enum": ["auto", "mise", "task", "just", "make", "npm", "pnpm", "yarn", "bun"]
+        },
+        "tasks": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*(?:\\.[a-z][a-z0-9_-]*)+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        }
+      },
+      "required": ["runner", "tasks"],
+      "additionalProperties": false
+    },
     "mcp": {
       "type": "object",
       "properties": {
@@ -1065,7 +1088,7 @@
       "additionalProperties": false
     }
   },
-  "required": ["version", "paths", "workflow", "mcp", "mcpServers", "skills"],
+  "required": ["version", "paths", "workflow", "automation", "mcp", "mcpServers", "skills"],
   "additionalProperties": false,
   "$defs": {
     "__schema0": {

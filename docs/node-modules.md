@@ -100,8 +100,9 @@ operations to `@harnessctl/generic-tools`, and returns host-compatible tool resu
 configuration described by [Installation](installation.md) and
 [Harnesses](harnesses.md#opencode).
 
-**Prerequisites:** Node `^22.13.0 || >=24.0.0`, the OpenCode plugin dependency, and a
-supported OpenCode project installation.
+**Prerequisites:** Node `^22.13.0 || >=24.0.0`, the latest OpenCode plugin, a supported OpenCode
+project installation, and the required runtime capabilities. Major host releases require
+deliberate integration review; patch releases need no version-specific harnessctl policy.
 
 **Limitations:** Registration does not prove that OpenCode loaded the plugin or that an
 external MCP provider authenticated or operated successfully. The package does not add
@@ -136,9 +137,10 @@ operations to `@harnessctl/generic-tools`, and returns Pi-compatible text result
 Harnessctl manages the pinned package setting through the consent-aware process in
 [Installation](installation.md) and [Harnesses](harnesses.md#pi).
 
-**Prerequisites:** Node `^22.13.0 || >=24.0.0`,
-`@earendil-works/pi-coding-agent >=0.80.7`, a supported Pi project installation, and
-explicit consent before harnessctl installs managed Pi packages.
+**Prerequisites:** Node `^22.13.0 || >=24.0.0`, the latest Pi coding agent, a supported Pi project
+installation, the required runtime capabilities, and explicit consent before harnessctl installs
+managed Pi packages. Major host releases require deliberate integration review; patch releases
+need no version-specific harnessctl policy.
 
 **Limitations:** Package declaration or installation does not prove that Pi loaded the
 extension or that an external MCP provider authenticated or operated successfully. The

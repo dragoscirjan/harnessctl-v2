@@ -1,6 +1,25 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import {
+  VERSION as PI_VERSION,
+  createBashToolDefinition,
+  createEditToolDefinition,
+  createFindToolDefinition,
+  createGrepToolDefinition,
+  createLsToolDefinition,
+  createReadToolDefinition,
+  createWriteToolDefinition,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type ToolCallEvent,
+  type ToolDefinition,
+} from '@earendil-works/pi-coding-agent';
 import {
   ConfigError,
+  ExecutionContextError,
+  buildExceptionalCommand,
+  buildTaskOperation,
+  createExecutionContextProvider,
+  executeRegisteredExceptionalCommand,
+  executeRegisteredTaskOperation,
   archiveIssueReport,
   commentIssue,
   createConfig,
@@ -11,6 +30,8 @@ import {
   linkDocument,
   listIssueSummaries,
   parseIssueIds,
+  resolveContextPath,
+  resolveProjectRoot,
   relateIssue,
   transitionIssue,
   unrelateIssue,
@@ -21,12 +42,17 @@ import {
   workspaceEnsure,
   workspaceMarkCleanupReady,
   workspaceStatus,
+  type SemanticTaskOperationId,
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
 import { registerDocumentTools } from './document-tools.js';
 import { registerMemoryTools } from './memory-tools.js';
 
 export default function harnessctlTools(pi: ExtensionAPI): void {
+  assertPiCapabilities(pi);
+  const projectRoot = (context: ExtensionContext): string =>
+    resolveProjectRoot(context.cwd, 'pi', context.sessionManager?.getSessionId()).root;
+
   pi.registerTool({
     name: 'config_create',
     label: 'Config Create',
@@ -38,7 +64,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
           content: [
             {
               type: 'text',
-              text: `Configuration ready: ${createConfig(context.cwd)}`,
+              text: `Configuration ready: ${createConfig(projectRoot(context))}`,
             },
           ],
           details: {},
@@ -57,7 +83,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       path: Type.String({ description: 'Dotted path, such as paths.tasks' }),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      const value = getConfigValue(context.cwd, params.path);
+      const value = getConfigValue(projectRoot(context), params.path);
       return value instanceof ConfigError
         ? configurationError(value)
         : {
@@ -67,8 +93,8 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     },
   });
 
-  registerMemoryTools(pi);
-  registerDocumentTools(pi);
+  registerMemoryTools(pi, projectRoot);
+  registerDocumentTools(pi, projectRoot);
 
   pi.registerTool({
     name: 'issue_id',
@@ -82,7 +108,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
         content: [
           {
             type: 'text',
-            text: encodeIssueToolResult(parseIssueIds(params.prompt, context.cwd)),
+            text: encodeIssueToolResult(parseIssueIds(params.prompt, projectRoot(context))),
           },
         ],
         details: {},
@@ -109,7 +135,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
         const { metadata, ...fields } = params;
         return textResult(
           encodeIssueToolResult(
-            createIssueRecord(context.cwd, {
+            createIssueRecord(projectRoot(context), {
               ...fields,
               ...(metadata === undefined ? {} : { metadataText: issueMetadataText(metadata) }),
             }),
@@ -131,7 +157,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(encodeIssueToolResult(listIssueSummaries(context.cwd, params)));
+        return textResult(encodeIssueToolResult(listIssueSummaries(projectRoot(context), params)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -147,7 +173,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(encodeIssueToolResult(archiveIssueReport(context.cwd, params.id)));
+        return textResult(encodeIssueToolResult(archiveIssueReport(projectRoot(context), params.id)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -161,7 +187,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     parameters: Type.Object({ id: Type.String({ description: 'Issue ID' }) }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(encodeIssueToolResult(getIssue(context.cwd, params.id)));
+        return textResult(encodeIssueToolResult(getIssue(projectRoot(context), params.id)));
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -189,7 +215,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
         const { id, sections, ...changes } = params;
         return textResult(
           encodeIssueToolResult(
-            updateIssue(context.cwd, id, {
+            updateIssue(projectRoot(context), id, {
               ...changes,
               sections: sections ? (parseJsonObject(sections) as Record<string, string>) : undefined,
             }),
@@ -213,7 +239,9 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
         return textResult(
-          encodeIssueToolResult(transitionIssue(context.cwd, params.id, params.status, params.expectedRevision)),
+          encodeIssueToolResult(
+            transitionIssue(projectRoot(context), params.id, params.status, params.expectedRevision),
+          ),
         );
       } catch (error: unknown) {
         return issueError(error);
@@ -232,7 +260,9 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(encodeIssueToolResult(commentIssue(context.cwd, params.id, params.body, params.author)));
+        return textResult(
+          encodeIssueToolResult(commentIssue(projectRoot(context), params.id, params.body, params.author)),
+        );
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -255,7 +285,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
       async execute(_toolCallId, params, _signal, _onUpdate, context) {
         try {
           return textResult(
-            encodeIssueToolResult(operation(context.cwd, params.id, params.relationship, params.targetId)),
+            encodeIssueToolResult(operation(projectRoot(context), params.id, params.relationship, params.targetId)),
           );
         } catch (error: unknown) {
           return issueError(error);
@@ -279,7 +309,9 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       try {
-        return textResult(encodeIssueToolResult(linkDocument(context.cwd, params.id, params.path, params.kind)));
+        return textResult(
+          encodeIssueToolResult(linkDocument(projectRoot(context), params.id, params.path, params.kind)),
+        );
       } catch (error: unknown) {
         return issueError(error);
       }
@@ -292,7 +324,7 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
     description: 'Validate one issue or all active local issues without mutating them.',
     parameters: Type.Object({ id: Type.Optional(Type.String({ description: 'Optional issue ID' })) }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return textResult(encodeIssueToolResult(validateIssues(context.cwd, params.id)));
+      return textResult(encodeIssueToolResult(validateIssues(projectRoot(context), params.id)));
     },
   });
 
@@ -335,6 +367,431 @@ export default function harnessctlTools(pi: ExtensionAPI): void {
         }
       },
     });
+  }
+
+  registerExecutionControlTools(pi);
+  registerSessionRouting(pi);
+}
+
+const HARNESSCTL_TOOL_NAMES = new Set([
+  'config_create',
+  'config_get',
+  'memory_search',
+  'memory_list',
+  'memory_get',
+  'memory_store',
+  'memory_supersede',
+  'memory_delete',
+  'memory_validate',
+  'memory_export',
+  'memory_import',
+  'document_id',
+  'document_create',
+  'document_list',
+  'document_get',
+  'document_update',
+  'document_version',
+  'document_validate',
+  'document_archive',
+  'document_restore',
+  'issue_id',
+  'issue_create',
+  'issue_list',
+  'issue_archive',
+  'issue_get',
+  'issue_update',
+  'issue_transition',
+  'issue_comment',
+  'issue_relate',
+  'issue_unrelate',
+  'issue_link_document',
+  'issue_validate',
+  'workspace_ensure',
+  'workspace_status',
+  'workspace_mark_cleanup_ready',
+  'workspace_cleanup',
+  'workspace_session_allocate',
+  'workspace_session_attach_epic',
+  'workspace_session_adopt',
+  'workspace_session_bind',
+  'workspace_session_status',
+  'workspace_session_release',
+  'operation_prepare',
+  'operation_execute',
+  'operation_prepare_command',
+  'operation_execute_command',
+]);
+
+const ROUTED_FILE_TOOL_NAMES = new Set(['read', 'write', 'edit', 'grep', 'find', 'ls']);
+
+function registerExecutionControlTools(pi: ExtensionAPI): void {
+  pi.registerTool({
+    name: 'workspace_session_allocate',
+    label: 'Workspace Session Allocate',
+    description: 'Allocate and bind a provisional execution workspace for this Pi session.',
+    parameters: Type.Object({}),
+    async execute(_toolCallId, _params, _signal, _onUpdate, context) {
+      return executionControlResult(() => {
+        const result = createExecutionContextProvider(context.cwd).allocateProvisional(
+          'pi',
+          requirePiSessionId(context),
+        );
+        appendBindingEntry(pi, result);
+        return result;
+      });
+    },
+  });
+  pi.registerTool({
+    name: 'workspace_session_attach_epic',
+    label: 'Workspace Session Attach Epic',
+    description: 'Attach the bound provisional workspace to a canonical Epic without renaming it.',
+    parameters: Type.Object({
+      epic_id: Type.String({ description: 'Canonical Epic issue ID' }),
+      expected_binding_generation: Type.Number({ description: 'Exact current binding generation' }),
+      expected_workspace_generation: Type.Number({ description: 'Exact current workspace generation' }),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() => {
+        const result = createExecutionContextProvider(context.cwd).attachEpic(
+          'pi',
+          requirePiSessionId(context),
+          params.epic_id,
+          params.expected_binding_generation,
+          params.expected_workspace_generation,
+        );
+        appendBindingEntry(pi, result);
+        return result;
+      });
+    },
+  });
+  pi.registerTool({
+    name: 'workspace_session_adopt',
+    label: 'Workspace Session Adopt',
+    description: 'Adopt an exact legacy Epic workspace into this Pi session without rewriting it.',
+    parameters: Type.Object({ epic_id: Type.String({ description: 'Canonical Epic issue ID' }) }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() => {
+        const result = createExecutionContextProvider(context.cwd).adoptV1(
+          'pi',
+          requirePiSessionId(context),
+          params.epic_id,
+        );
+        appendBindingEntry(pi, result);
+        return result;
+      });
+    },
+  });
+  pi.registerTool({
+    name: 'workspace_session_bind',
+    label: 'Workspace Session Bind',
+    description: 'Bind this Pi session to an existing execution workspace.',
+    parameters: Type.Object({
+      workspace_id: Type.String({ description: 'Execution workspace ID' }),
+      expected_binding_generation: Type.Optional(
+        Type.Number({ description: 'Exact current generation when rebinding' }),
+      ),
+      expected_workspace_generation: Type.Number({ description: 'Exact target workspace generation' }),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() => {
+        const result = createExecutionContextProvider(context.cwd).bind(
+          'pi',
+          requirePiSessionId(context),
+          params.workspace_id,
+          params.expected_binding_generation,
+          params.expected_workspace_generation,
+        );
+        appendBindingEntry(pi, result);
+        return result;
+      });
+    },
+  });
+  pi.registerTool({
+    name: 'workspace_session_status',
+    label: 'Workspace Session Status',
+    description: 'Resolve and validate this Pi session execution workspace.',
+    parameters: Type.Object({
+      expected_binding_generation: Type.Optional(Type.Number({ description: 'Optional exact binding generation' })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() =>
+        createExecutionContextProvider(context.cwd).resolve(
+          'pi',
+          requirePiSessionId(context),
+          params.expected_binding_generation,
+        ),
+      );
+    },
+  });
+  pi.registerTool({
+    name: 'workspace_session_release',
+    label: 'Workspace Session Release',
+    description: 'Release this Pi session binding without deleting its workspace.',
+    parameters: Type.Object({
+      expected_binding_generation: Type.Number({ description: 'Exact current binding generation' }),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() => {
+        const sessionId = requirePiSessionId(context);
+        const provider = createExecutionContextProvider(context.cwd);
+        const current = provider.resolve('pi', sessionId, params.expected_binding_generation);
+        provider.release('pi', sessionId, params.expected_binding_generation);
+        pi.appendEntry('harnessctl.workspace-binding', {
+          schema_version: 1,
+          status: 'released',
+          repository_id: current.repository_id,
+          workspace_id: current.workspace_id,
+          epic_id: current.epic_id,
+          generation: current.binding_generation + 1,
+        });
+        return { released: true };
+      });
+    },
+  });
+  pi.registerTool({
+    name: 'operation_prepare',
+    label: 'Operation Prepare',
+    description: 'Prepare an immutable registered task operation for review and consent.',
+    parameters: Type.Object({
+      operation_id: Type.String({ description: 'Registered semantic operation ID' }),
+      expected_binding_generation: Type.Optional(Type.Number({ description: 'Optional exact binding generation' })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() =>
+        buildTaskOperation(
+          context.cwd,
+          'pi',
+          requirePiSessionId(context),
+          params.operation_id as SemanticTaskOperationId,
+          params.expected_binding_generation,
+        ),
+      );
+    },
+  });
+  pi.registerTool({
+    name: 'operation_execute',
+    label: 'Operation Execute',
+    description: 'Execute a freshly rebuilt registered task operation with descriptor-bound consent.',
+    parameters: Type.Object({
+      operation_id: Type.String({ description: 'Registered semantic operation ID' }),
+      consent_digest: Type.String({ description: 'Digest from the reviewed prepared descriptor' }),
+      expected_binding_generation: Type.Optional(Type.Number({ description: 'Optional exact binding generation' })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() =>
+        executeRegisteredTaskOperation(
+          context.cwd,
+          'pi',
+          requirePiSessionId(context),
+          params.operation_id as SemanticTaskOperationId,
+          params.consent_digest,
+          params.expected_binding_generation,
+        ),
+      );
+    },
+  });
+  pi.registerTool({
+    name: 'operation_prepare_command',
+    label: 'Operation Prepare Command',
+    description: 'Prepare an immutable exceptional command for separate immediate consent.',
+    parameters: Type.Object({
+      executable: Type.String({ description: 'Executable name or path, without shell syntax' }),
+      argv: Type.Array(Type.String(), { description: 'Exact argument vector' }),
+      expected_binding_generation: Type.Optional(Type.Number({ description: 'Optional exact binding generation' })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() =>
+        buildExceptionalCommand(
+          context.cwd,
+          'pi',
+          requirePiSessionId(context),
+          params.executable,
+          params.argv,
+          params.expected_binding_generation,
+        ),
+      );
+    },
+  });
+  pi.registerTool({
+    name: 'operation_execute_command',
+    label: 'Operation Execute Command',
+    description: 'Execute a freshly rebuilt exceptional command with descriptor-bound immediate consent.',
+    parameters: Type.Object({
+      executable: Type.String({ description: 'Executable from the reviewed descriptor' }),
+      argv: Type.Array(Type.String(), { description: 'Exact argument vector from the reviewed descriptor' }),
+      consent_digest: Type.String({ description: 'Digest from the reviewed exceptional command descriptor' }),
+      expected_binding_generation: Type.Optional(Type.Number({ description: 'Optional exact binding generation' })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, context) {
+      return executionControlResult(() =>
+        executeRegisteredExceptionalCommand(
+          context.cwd,
+          'pi',
+          requirePiSessionId(context),
+          params.executable,
+          params.argv,
+          params.consent_digest,
+          params.expected_binding_generation,
+        ),
+      );
+    },
+  });
+}
+
+function registerSessionRouting(pi: ExtensionAPI): void {
+  registerRoutedFileTools(pi);
+  pi.on('session_start', (_event, context) => recordSessionRecovery(pi, context));
+  pi.on('session_compact', (_event, context) => recordSessionRecovery(pi, context));
+
+  pi.on('tool_call', (event, context) => routePiToolCall(event, context));
+}
+
+function recordSessionRecovery(pi: ExtensionAPI, context: ExtensionContext): void {
+  assertPiSessionCapabilities(pi, context);
+  let resolution: ReturnType<typeof piProjectResolution>;
+  try {
+    resolution = piProjectResolution(context);
+  } catch (error: unknown) {
+    if (isMissingSessionBinding(error)) {
+      pi.appendEntry('harnessctl.workspace-binding', {
+        schema_version: 1,
+        status: 'unbound',
+        reason: error.message,
+      });
+      return;
+    }
+    throw error;
+  }
+  if (!resolution.enabled) return;
+  appendBindingEntry(pi, resolution.context!);
+}
+
+function appendBindingEntry(
+  pi: ExtensionAPI,
+  context: {
+    repository_id: string;
+    workspace_id: string;
+    epic_id: string | null;
+    binding_generation: number;
+  },
+): void {
+  if (typeof pi.appendEntry !== 'function')
+    throw new ExecutionContextError(
+      'unsupported',
+      `Pi ${PI_VERSION} is missing required recovery capability: appendEntry`,
+    );
+  pi.appendEntry('harnessctl.workspace-binding', {
+    schema_version: 1,
+    repository_id: context.repository_id,
+    workspace_id: context.workspace_id,
+    epic_id: context.epic_id,
+    generation: context.binding_generation,
+  });
+}
+
+function routePiToolCall(
+  event: ToolCallEvent,
+  context: ExtensionContext,
+): { block: boolean; reason: string } | undefined {
+  if (HARNESSCTL_TOOL_NAMES.has(event.toolName)) return undefined;
+  let resolution: ReturnType<typeof piProjectResolution>;
+  try {
+    resolution = piProjectResolution(context);
+  } catch (error: unknown) {
+    return { block: true, reason: routingMessage(error) };
+  }
+  if (!resolution.enabled) return undefined;
+  if (event.toolName === 'bash') {
+    return {
+      block: true,
+      reason: 'Bound sessions require registered semantic operations; model-authored bash is not routable.',
+    };
+  }
+  if (!ROUTED_FILE_TOOL_NAMES.has(event.toolName)) {
+    return { block: true, reason: `Tool ${event.toolName} is not supported in a bound Harnessctl session.` };
+  }
+
+  try {
+    const input: Record<string, unknown> = event.input;
+    const path = typeof input.path === 'string' ? input.path : '.';
+    const routedPath = resolveContextPath(resolution.context!, path);
+    if ('path' in input || ['grep', 'find', 'ls'].includes(event.toolName)) input.path = routedPath;
+  } catch (error: unknown) {
+    return { block: true, reason: routingMessage(error) };
+  }
+  return undefined;
+}
+
+function registerRoutedFileTools(pi: ExtensionAPI): void {
+  for (const factory of [
+    createReadToolDefinition,
+    createWriteToolDefinition,
+    createEditToolDefinition,
+    createGrepToolDefinition,
+    createFindToolDefinition,
+    createLsToolDefinition,
+    createBashToolDefinition,
+  ]) {
+    const initial = factory(process.cwd()) as ToolDefinition;
+    pi.registerTool({
+      ...initial,
+      async execute(toolCallId, params, signal, onUpdate, context) {
+        const root = piProjectResolution(context).root;
+        const current = factory(root) as ToolDefinition;
+        return current.execute(toolCallId, params, signal, onUpdate, context);
+      },
+    });
+  }
+}
+
+function assertPiCapabilities(pi: ExtensionAPI): void {
+  if (typeof pi.registerTool !== 'function' || typeof pi.on !== 'function')
+    throw new ExecutionContextError(
+      'unsupported',
+      `Pi ${PI_VERSION} is missing required extension capabilities: registerTool and on`,
+    );
+}
+
+function assertPiSessionCapabilities(pi: ExtensionAPI, context: ExtensionContext): void {
+  if (typeof context.sessionManager?.getSessionId !== 'function')
+    throw new ExecutionContextError(
+      'unsupported',
+      `Pi ${PI_VERSION} is missing required session capability: sessionManager.getSessionId`,
+    );
+  if (typeof pi.appendEntry !== 'function')
+    throw new ExecutionContextError(
+      'unsupported',
+      `Pi ${PI_VERSION} is missing required recovery capability: appendEntry`,
+    );
+}
+
+function piProjectResolution(context: ExtensionContext) {
+  return resolveProjectRoot(context.cwd, 'pi', context.sessionManager?.getSessionId());
+}
+
+function routingMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isMissingSessionBinding(error: unknown): error is ExecutionContextError {
+  return (
+    error instanceof ExecutionContextError &&
+    error.category === 'unsafe_state' &&
+    error.message === 'host session has no execution workspace binding'
+  );
+}
+
+function requirePiSessionId(context: ExtensionContext): string {
+  const sessionId = context.sessionManager?.getSessionId();
+  if (!sessionId) throw new ExecutionContextError('unsafe_state', 'Pi session identity is unavailable');
+  return sessionId;
+}
+
+function executionControlResult(operation: () => unknown): ReturnType<typeof textResult> {
+  try {
+    return textResult(JSON.stringify(operation()));
+  } catch (error: unknown) {
+    return workspaceError(error);
   }
 }
 

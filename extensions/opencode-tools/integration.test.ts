@@ -26,7 +26,7 @@ import {
 
 const opencodeModel = process.env.OPENCODE_TEST_MODEL ?? 'opencode/big-pickle';
 const { command: opencodeCommand, prefix: opencodeCommandPrefix } = resolveOpenCodeCommand();
-const pluginPath = fileURLToPath(new URL('./index.ts', import.meta.url));
+const pluginPath = fileURLToPath(new URL('./dist/index.js', import.meta.url));
 
 describe('OpenCode SDK integration', () => {
   it('uses the issue_id tool to identify the configured issue ID', async () => {
@@ -143,7 +143,7 @@ describe('OpenCode SDK integration', () => {
         'Use workspace_status exactly once for Epic hrn-00009. Return only the JSON from the tool.',
       );
 
-      expect(normalizeToolNames(result.toolNames)).toEqual(['workspace_status']);
+      expect(result.toolNames).toEqual(['workspace_status']);
       expect(parseJsonReply(result.text)).toMatchObject({
         epic_id: 'hrn-00009',
         primary_path: fixture.root,

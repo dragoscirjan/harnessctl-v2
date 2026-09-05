@@ -40,6 +40,7 @@ describe('Config v1 contract authority', () => {
     ]);
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('paths');
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('workflow');
+    expect(CONFIG_V1_DEFAULTS.automation).toEqual({ runner: 'auto', tasks: {} });
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('mcp');
     expect(CONFIG_V1_DEFAULTS).toHaveProperty('mcpServers');
     expect(CONFIG_V1_DEFAULTS.mcpServers).toEqual({
@@ -66,6 +67,28 @@ describe('Config v1 contract authority', () => {
     expect(
       configV1Schema.safeParse({ ...CONFIG_V1_DEFAULTS, workflow: { default_task_type: 'bug', tdd: {} } }).success,
     ).toBe(false);
+  });
+
+  it('accepts semantic task mappings and rejects command fragments', () => {
+    const valid = {
+      ...CONFIG_V1_DEFAULTS,
+      automation: {
+        runner: 'mise' as const,
+        tasks: { 'repository.test': 'test', 'bootstrap.install': 'install-prompts' },
+      },
+    };
+    expect(configV1Schema.safeParse(valid).success).toBe(true);
+    expect(configContractValidator()(valid)).toBe(true);
+
+    for (const tasks of [
+      { 'Repository Test': 'test' },
+      { 'repository.test': 'test && deploy' },
+      { 'repository.test': '../test' },
+    ]) {
+      const invalid = { ...CONFIG_V1_DEFAULTS, automation: { runner: 'mise' as const, tasks } };
+      expect(configV1Schema.safeParse(invalid).success).toBe(false);
+      expect(configContractValidator()(invalid)).toBe(false);
+    }
   });
 
   it('uses discriminator-free URL and command MCP declarations', () => {

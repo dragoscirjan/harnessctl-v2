@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1QBSDH663TE1NWD1RJFSAYC
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Verify | compatibility range conformance | failed
+details: |-
+  Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  Command/phase: Work Verify
+  Item: approved LLD doc-01M1PZMXJ99DRRW65A1E22G7TH compatibility acceptance
+  Done: focused OpenCode/Pi typechecks and tests pass; git diff --check passes
+  Blockers: hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9 remains open; exact OPENCODE_COMPATIBILITY/PI_COMPATIBILITY declarations, exact Pi peer metadata, and exact-version docs contradict required capability-gated supported ranges; installed-artifact tests prove only OpenCode 1.18.2 and Pi 0.81.0
+  Artifacts: issue comments hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9-C0006, hrn-01M1PX20Z7J3A6RX95P7DGXF33-C0004
+  Next: return Build; restore approved range model and real boundary fixtures; no closure or Release
+source:
+  kind: tool-observation
+  ref: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  revision: null
+created_at: 2026-09-04T23:24:16.294Z
+created_by: OpenCode Verify
+confidence: verified
+status: active
+supersedes:
+  - 01M1QAXGYQ5VNFYDKEJT25554R
+tags:
+  - compatibility
+  - failed
+  - range
+  - verify

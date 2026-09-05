@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1QC9H4X4CQ6Z03020K0WGA1
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Build | compatibility range conformance | complete
+details: |-
+  Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  Command/phase: Work Build
+  Item: hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9 compatibility range and boundary fixtures
+  Done: OpenCode peer/support >=1.18.2 <1.19.0; Pi peer/support >=0.81.0 <0.82.0; capability probes remain admission authority; OpenCode locked artifacts 1.18.2 minimum and 1.18.23 known-compatible both imported by executable fixture; Pi locked 0.81.0 boundary fixture; docs and lock metadata aligned
+  Verification: packages/typecheck/format/lint pass; Node 290; Python 725; Ruff, shellcheck, vulture, release artifacts, docs, contracts, Mermaid, actionlint pass; dupcheck 3.14%; Node+Bun smoke and git diff --check pass
+  Artifacts: hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9-C0007; hrn-01M1PX20Z7J3A6RX95P7DGXF33-C0005
+  Next: independent Work Verify
+  Blockers: none
+source:
+  kind: tool-observation
+  ref: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  revision: null
+created_at: 2026-09-04T23:33:04.285Z
+created_by: OpenCode Build
+confidence: verified
+status: active
+supersedes:
+  - 01M1QBSDH663TE1NWD1RJFSAYC
+tags:
+  - build
+  - compatibility
+  - range
+  - verified

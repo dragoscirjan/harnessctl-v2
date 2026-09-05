@@ -1,0 +1,22 @@
+"version": 1
+"id": "hrn-01M1PZW59JFNBYRC4FXZVNM2RA"
+"type": "story"
+"title": "Execution-root containment and recovery"
+"status": "closed"
+"created_at": "2026-09-04T19:56:03.250Z"
+"updated_at": "2026-09-05T00:13:56.967Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+"metadata":
+  "capability": "execution-root-routing"
+  "estimate": "M"
+  "sequence": 2
+  "uncertainty": "medium"
+"body": "# Execution-root containment and recovery\n\n## Objective\n\nResolve one immutable project execution context per host session and route project-facing generic operations to it without changing the host process cwd.\n\n## Scope\n\n- Implement control-root repository discovery and fresh binding/workspace/Git validation before each project operation.\n- Return explicit primary and execution roots plus repository, workspace, Epic, lifecycle, and generation evidence.\n- Canonicalize existing paths and nearest existing ancestors for new paths; reject traversal, symlink escape, absolute primary access, and cross-workspace access.\n- Route generic config, filesystem Issues, Documents, repository Memory, comments, links, checkpoints, artifacts, and caches through explicit execution roots.\n- Define exact recovery from host evidence and common-directory authority; reject ambiguity, missing worktrees, branch drift, Epic mismatch, illegal lifecycle, or stale generations.\n- Preserve separately registered control-plane/integration access to primary without treating arbitrary absolute paths as authorization.\n\n## Acceptance\n\n- Two sessions launched from one primary resolve and mutate only their independently bound workspace authorities and files.\n- No downstream generic operation re-infers project root from process cwd after resolution.\n- Existing and new targets cannot traverse or symlink outside the execution root.\n- Absolute primary and other-workspace paths fail before reads or mutations unless a registered control/integration operation owns them.\n- Restart recovery accepts one exact current record and rejects stale or ambiguous evidence.\n- Missing worktree, repository mismatch, branch drift, Epic mismatch, closed lifecycle, and stale generation return stable typed failures.\n- Workspace-disabled mode preserves existing adapter roots and creates no binding lookup side effects.\n\n## Artifacts\n\n- Execution-context resolver and containment helpers under `extensions/generic-tools`.\n- Root-aware adapter seams for generic config, issue, document, memory, and artifact operations.\n- Focused isolation, canonicalization, symlink, topology, recovery, and disabled-parity tests.\n\n## Dependencies And Order\n\nSequence 2. Depends on `hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36`. Blocks the operation coordinator and host adapters.\n\n## Estimate\n\nM, medium uncertainty around cross-platform realpath behavior and complete generic-operation coverage.\n\n## Non-Goals\n\n- No host-specific interception, free-form external-tool proxy, lifecycle-template policy, automatic reconciliation, primary mutation, or workspace enablement."
+"comments":
+  - "id": "hrn-01M1PZW59JFNBYRC4FXZVNM2RA-C0001"
+    "created_at": "2026-09-04T22:19:33.222Z"
+    "created_by": "OpenCode"
+    "body": "Build implemented immutable fresh execution contexts, locked recovery, prospective-path/symlink containment, topology/branch drift rejection, two-session isolation, and fail-closed disabled routing for still-bound sessions. Evidence: `extensions/generic-tools/execution-routing.ts`, routing/context specs, fresh-process OpenCode fixture; full Node tests 277 passed. Ready for independent Verify; issue remains open."

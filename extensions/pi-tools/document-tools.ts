@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import {
   archiveDocument,
   createDocument,
@@ -27,9 +27,17 @@ const changeProperties = () => ({
   expectedRevision: Type.String(),
 });
 
-export function registerDocumentTools(pi: ExtensionAPI): void {
-  register(pi, 'document_id', 'Document ID', Type.Object({ text: Type.String() }), (params, cwd) =>
-    parseDocumentId(String(params.text), cwd),
+export function registerDocumentTools(
+  pi: ExtensionAPI,
+  resolveRoot: (context: ExtensionContext) => string = (context) => context.cwd,
+): void {
+  register(
+    pi,
+    'document_id',
+    'Document ID',
+    Type.Object({ text: Type.String() }),
+    (params, cwd) => parseDocumentId(String(params.text), cwd),
+    resolveRoot,
   );
   register(
     pi,
@@ -54,6 +62,7 @@ export function registerDocumentTools(pi: ExtensionAPI): void {
         ...(typeof metadata === 'string' && metadata ? { metadata: parseObject(metadata) } : {}),
       });
     },
+    resolveRoot,
   );
   register(
     pi,
@@ -65,6 +74,7 @@ export function registerDocumentTools(pi: ExtensionAPI): void {
       location: Type.Optional(Type.Union([Type.Literal('active'), Type.Literal('archive')])),
     }),
     (params, cwd) => listDocuments(cwd, params as never),
+    resolveRoot,
   );
   register(
     pi,
@@ -72,33 +82,51 @@ export function registerDocumentTools(pi: ExtensionAPI): void {
     'Document Get',
     Type.Object({ id: Type.String(), version: Type.Optional(Type.Number()) }),
     (params, cwd) => getDocument(cwd, String(params.id), params.version as number | undefined),
+    resolveRoot,
   );
   for (const [name, label, operation] of [
     ['document_update', 'Document Update', updateDocument],
     ['document_version', 'Document Version', versionDocument],
   ] as const) {
-    register(pi, name, label, Type.Object({ id: Type.String(), ...changeProperties() }), (params, cwd) => {
-      const { id, metadata, ...changes } = params;
-      return operation(cwd, String(id), {
-        title: changes.title as string | undefined,
-        kind: changes.kind as string | undefined,
-        status: changes.status as string | undefined,
-        author: changes.author as string | undefined,
-        body: changes.body as string | undefined,
-        expectedRevision: String(changes.expectedRevision),
-        ...(metadata === undefined ? {} : { metadata: metadata === 'null' ? null : parseObject(String(metadata)) }),
-      });
-    });
+    register(
+      pi,
+      name,
+      label,
+      Type.Object({ id: Type.String(), ...changeProperties() }),
+      (params, cwd) => {
+        const { id, metadata, ...changes } = params;
+        return operation(cwd, String(id), {
+          title: changes.title as string | undefined,
+          kind: changes.kind as string | undefined,
+          status: changes.status as string | undefined,
+          author: changes.author as string | undefined,
+          body: changes.body as string | undefined,
+          expectedRevision: String(changes.expectedRevision),
+          ...(metadata === undefined ? {} : { metadata: metadata === 'null' ? null : parseObject(String(metadata)) }),
+        });
+      },
+      resolveRoot,
+    );
   }
-  register(pi, 'document_validate', 'Document Validate', Type.Object({ id: OptionalString() }), (params, cwd) =>
-    validateDocuments(cwd, params.id as string | undefined),
+  register(
+    pi,
+    'document_validate',
+    'Document Validate',
+    Type.Object({ id: OptionalString() }),
+    (params, cwd) => validateDocuments(cwd, params.id as string | undefined),
+    resolveRoot,
   );
   for (const [name, label, operation] of [
     ['document_archive', 'Document Archive', archiveDocument],
     ['document_restore', 'Document Restore', restoreDocument],
   ] as const)
-    register(pi, name, label, Type.Object({ id: Type.String(), expectedRevision: Type.String() }), (params, cwd) =>
-      operation(cwd, String(params.id), String(params.expectedRevision)),
+    register(
+      pi,
+      name,
+      label,
+      Type.Object({ id: Type.String(), expectedRevision: Type.String() }),
+      (params, cwd) => operation(cwd, String(params.id), String(params.expectedRevision)),
+      resolveRoot,
     );
 }
 
@@ -108,6 +136,7 @@ function register(
   label: string,
   parameters: ReturnType<typeof Type.Object>,
   operation: (params: Record<string, unknown>, cwd: string) => unknown,
+  resolveRoot: (context: ExtensionContext) => string,
 ): void {
   pi.registerTool({
     name,
@@ -116,7 +145,7 @@ function register(
     parameters,
     async execute(_id, params, _signal, _update, context) {
       try {
-        return text(JSON.stringify(operation(params as Record<string, unknown>, context.cwd)));
+        return text(JSON.stringify(operation(params as Record<string, unknown>, resolveRoot(context))));
       } catch (error: unknown) {
         return text(`Document error: ${error instanceof Error ? error.message : String(error)}`);
       }

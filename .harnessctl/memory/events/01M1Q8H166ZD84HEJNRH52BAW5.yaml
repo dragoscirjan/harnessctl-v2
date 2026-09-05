@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1Q8H166ZD84HEJNRH52BAW5
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Verify | acceptance | failed; return Build
+details: "Verified approved doc-01M1PZMXJ99DRRW65A1E22G7TH. Current focused evidence: generic 24/24, OpenCode 5/5, Pi 6/6, git diff check pass. Failures: release generation hrn-01M1Q8DTZEKRS3WZBY02SQ74B1; crash-atomic publication hrn-01M1Q8DVK2JNMJA1HJ9T2AD5M4; stale-lock recovery hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD; Pi same-session late routing hrn-01M1Q8DWRW1D19HB5Z8TKGYJFG; two-host/compat fixtures hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9; actionlint unavailable hrn-01M1Q8DXZKBQD7EDTGNPPSMJMM. Issues validate. No repair, closure, commit, remote, or destructive action."
+source:
+  kind: artifact
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: null
+created_at: 2026-09-04T22:27:15.782Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - failed
+  - opencode
+  - pi
+  - verify
+  - workspace-routing

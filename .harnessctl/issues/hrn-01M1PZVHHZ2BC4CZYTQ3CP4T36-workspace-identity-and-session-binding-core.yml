@@ -1,0 +1,27 @@
+"version": 1
+"id": "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+"type": "story"
+"title": "Workspace identity and session binding core"
+"status": "closed"
+"created_at": "2026-09-04T19:55:43.039Z"
+"updated_at": "2026-09-05T00:13:56.357Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-00208"
+  - "hrn-00209"
+"metadata":
+  "capability": "workspace-binding-core"
+  "estimate": "M"
+  "sequence": 1
+  "uncertainty": "medium"
+"body": "# Workspace identity and session binding core\n\n## Objective\n\nProvide stable workspace identity and concurrency-safe host-session binding state independent of process cwd and optional Epic authority.\n\n## Scope\n\n- Add strict v2 workspace records keyed by collision-safe `ws-<ULID>` identity under Git common-directory control state.\n- Add strict v1 session binding records keyed by host and SHA-256 of opaque session ID; never expose raw session IDs.\n- Implement provisional allocation, binding, Epic attachment without branch/path rename, explicit v1 adoption, release, and exact recovery.\n- Preserve `doc-00019` v1 records; reject ambiguous or mismatched adoption without rewriting legacy state.\n- Use one repository-scoped lock, expected generations, exclusive temporary writes, bounded stale-lock handling, and atomic replacement.\n- Derive repository identity from canonical Git common-directory identity rather than display path alone.\n\n## Acceptance\n\n- Provisional workspaces allocate deterministic `harnessctl/workspace/<workspace-id>` branches and sibling paths without requiring Epic authority.\n- Attaching an Epic changes authority metadata and generations only; branch/path/commits remain unchanged.\n- Concurrent binding or attachment attempts serialize and stale generations fail before mutation.\n- Partial, malformed, unknown-schema, repository-mismatched, or future-generation records fail closed.\n- Exact v1 adoption creates v2 state while leaving the source v1 record, path, branch, and commits untouched.\n- Opaque session IDs do not appear in files, logs, errors, memory, or model-visible output.\n- Disabled workspace mode creates and consults no v2 workspace or binding records.\n\n## Artifacts\n\n- Generic workspace/session-binding state modules and exports under `extensions/generic-tools`.\n- Focused schema, locking, generation, allocation, attachment, adoption, concurrency, and recovery tests.\n- Typed error contracts needed by later routing and adapters.\n\n## Dependencies And Order\n\nSequence 1. Depends on closed `hrn-00208` and `hrn-00209`. Blocks all later children in this Epic.\n\n## Estimate\n\nM, medium uncertainty around cross-platform canonical repository identity and atomic durability.\n\n## Non-Goals\n\n- No host adapters, execution-root file routing, operation coordinator, lifecycle-template integration, workspace cleanup, legacy record deletion, or workspaces enablement."
+"comments":
+  - "id": "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36-C0001"
+    "created_at": "2026-09-04T22:19:32.550Z"
+    "created_by": "OpenCode"
+    "body": "Build implemented strict v2 workspace records and hashed host-session bindings, exact generation checks, common-dir locking, provisional allocation/attachment/bind/release, exact non-destructive v1 adoption, and ambiguous `git worktree add` recovery. Evidence: `extensions/generic-tools/execution-context.ts`, `execution-context.spec.ts`; full Node tests 277 passed; Python tests 725 passed. Ready for independent Verify; issue remains open."
+  - "id": "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36-C0002"
+    "created_at": "2026-09-04T22:26:48.236Z"
+    "created_by": "opencode"
+    "body": "Verify found three unresolved state-safety requirements: monotonic released binding generation (`hrn-01M1Q8DTZEKRS3WZBY02SQ74B1`), crash-atomic workspace/binding publication (`hrn-01M1Q8DVK2JNMJA1HJ9T2AD5M4`), and safe stale-lock recovery (`hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD`). Focused generic tests passed 24/24 but do not satisfy these approved acceptance points."

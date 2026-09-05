@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import {
   deleteMemory,
   exportMemory,
@@ -12,14 +12,17 @@ import {
 } from '@harnessctl/generic-tools';
 import { Type } from 'typebox';
 
-export function registerMemoryTools(pi: ExtensionAPI): void {
+export function registerMemoryTools(
+  pi: ExtensionAPI,
+  resolveRoot: (context: ExtensionContext) => string = (context) => context.cwd,
+): void {
   pi.registerTool({
     name: 'memory_search',
     label: 'Memory Search',
     description: 'Search bounded active project memory using the repository-backed cache.',
     parameters: memorySearchParameters(true),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => searchMemory(context.cwd, normalizedSearch(params)));
+      return memoryResult(() => searchMemory(resolveRoot(context), normalizedSearch(params)));
     },
   });
 
@@ -29,7 +32,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     description: 'List bounded project memory records with optional filters.',
     parameters: memorySearchParameters(false),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => listMemory(context.cwd, normalizedSearch(params)));
+      return memoryResult(() => listMemory(resolveRoot(context), normalizedSearch(params)));
     },
   });
 
@@ -39,7 +42,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     description: 'Read one project memory record or tombstone by ULID.',
     parameters: Type.Object({ id: Type.String({ description: 'Memory record ULID' }) }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => getMemory(context.cwd, params.id));
+      return memoryResult(() => getMemory(resolveRoot(context), params.id));
     },
   });
 
@@ -49,7 +52,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     description: 'Create one immutable, validated, secret-screened memory record.',
     parameters: memoryWriteParameters(),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => storeMemory(context.cwd, normalizedWrite(params)));
+      return memoryResult(() => storeMemory(resolveRoot(context), normalizedWrite(params)));
     },
   });
 
@@ -62,7 +65,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
       ...memoryWriteProperties(),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => supersedeMemory(context.cwd, params.target_id, normalizedWrite(params)));
+      return memoryResult(() => supersedeMemory(resolveRoot(context), params.target_id, normalizedWrite(params)));
     },
   });
 
@@ -80,7 +83,13 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
       return memoryResult(() =>
-        deleteMemory(context.cwd, params.target_id, params.reason, normalizedSource(params), params.created_by),
+        deleteMemory(
+          resolveRoot(context),
+          params.target_id,
+          params.reason,
+          normalizedSource(params),
+          params.created_by,
+        ),
       );
     },
   });
@@ -91,7 +100,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     description: 'Validate repository memory and report evidence-backed local cache status.',
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, context) {
-      return memoryResult(() => validateMemory(context.cwd));
+      return memoryResult(() => validateMemory(resolveRoot(context)));
     },
   });
 
@@ -102,7 +111,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, context) {
       try {
-        return textResult(exportMemory(context.cwd));
+        return textResult(exportMemory(resolveRoot(context)));
       } catch (error: unknown) {
         return memoryError(error);
       }
@@ -118,7 +127,7 @@ export function registerMemoryTools(pi: ExtensionAPI): void {
       preview: Type.Optional(Type.Boolean({ description: 'Validate without mutation' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, context) {
-      return memoryResult(() => importMemory(context.cwd, params.content, params.preview ?? false));
+      return memoryResult(() => importMemory(resolveRoot(context), params.content, params.preview ?? false));
     },
   });
 }

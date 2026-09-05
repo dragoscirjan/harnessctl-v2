@@ -1,0 +1,15 @@
+"version": 1
+"id": "hrn-01M1Q8DWRW1D19HB5Z8TKGYJFG"
+"type": "bug"
+"title": "Activate Pi routed factories after same-session binding"
+"status": "closed"
+"created_at": "2026-09-04T22:25:32.956Z"
+"updated_at": "2026-09-05T00:13:29.697Z"
+"created_by": "opencode"
+"parent": "hrn-01M1PZXR698GNEG58FZQCDVN5X"
+"body": "# Activate Pi routed factories after same-session binding\n\n## Summary\n\nVerify found that an enabled Pi session starting unbound does not install rooted built-in factories after it binds later in the same host session.\n\n## Evidence\n\n`extensions/pi-tools/index.ts:619-649` registers routed factories only during a successfully bound `session_start`; the missing-binding branch records `unbound` and returns. Binding tools do not install factories or append successful recovery evidence. Argument mutation in `tool_call` is not the approved trust boundary.\n\n## Impact\n\nSame-session Plan/bootstrap continuation can execute through primary-root factory instances or lack the required recovery record after binding.\n\n## Acceptance Criteria\n\n- Routed built-in factories are active before any bound-session built-in execution, including binding after an unbound start.\n- Every successful bind/rebind/adopt/attach transition appends current `{repository_id, workspace_id, epic_id, generation}` recovery evidence.\n- Routine bash and unsupported tools remain fail-closed.\n- Tests cover unbound start, same-session bind, immediate built-in use, rebind, restart, and lifecycle events.\n"
+"comments":
+  - "id": "hrn-01M1Q8DWRW1D19HB5Z8TKGYJFG-C0001"
+    "created_at": "2026-09-04T22:44:50.343Z"
+    "created_by": "OpenCode"
+    "body": "Build fix implemented: Pi rooted built-in factories register at extension initialization; same-session unbound-to-bound transitions route immediately and append exact recovery evidence without another session_start. Routine bash remains blocked. Pi 8/8 and full suites pass. Issue remains open pending Verify."

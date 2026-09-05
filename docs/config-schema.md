@@ -19,6 +19,7 @@ The project configuration root.
 | `version`    | Yes      | literal `1` | `1`                | Config contract version. Config v1 is the only accepted value. | Exactly `1`.                     |
 | `paths`      | Yes      | object      | Object shown below | Shared repository paths used by Harnessctl.                    | Unknown properties are rejected. |
 | `workflow`   | Yes      | object      | Object shown below | Defaults for SDLC work creation.                               | Unknown properties are rejected. |
+| `automation` | Yes      | object      | Object shown below | Deterministic repository task-runner configuration.            | Unknown properties are rejected. |
 | `mcp`        | Yes      | object      | Object shown below | Shared MCP response behavior.                                  | Unknown properties are rejected. |
 | `mcpServers` | Yes      | object      | Object shown below | Complete registry of portable MCP connection declarations.     | See the selected object shape.   |
 | `skills`     | Yes      | object      | Object shown below | Capability-specific configuration.                             | Unknown properties are rejected. |
@@ -40,6 +41,15 @@ Defaults used when creating SDLC work.
 | Property            | Required | Type | Default | Description                                                    | Constraint                                           |
 | ------------------- | -------- | ---- | ------- | -------------------------------------------------------------- | ---------------------------------------------------- |
 | `default_task_type` | Yes      | enum | `"bug"` | Issue type used when a command needs a default work item type. | One of `initiative`, `epic`, `story`, `task`, `bug`. |
+
+## Automation
+
+Reviewed semantic operations mapped to repository task-runner targets.
+
+| Property | Required | Type   | Default            | Description                                                      | Constraint                                                                        |
+| -------- | -------- | ------ | ------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `runner` | Yes      | enum   | `"auto"`           | Task-runner family used for registered semantic operations.      | One of `auto`, `mise`, `task`, `just`, `make`, `npm`, `pnpm`, `yarn`, `bun`.      |
+| `tasks`  | Yes      | object | Object shown below | Maps semantic operation IDs to reviewed task target identifiers. | Keys are dotted semantic IDs; values are target identifiers, not shell fragments. |
 
 ## MCP output
 

@@ -4,7 +4,7 @@
 "title": "Projection documentation and lifecycle compatibility gates"
 "status": "open"
 "created_at": "2026-09-03T23:56:35.808Z"
-"updated_at": "2026-09-03T23:57:43.537Z"
+"updated_at": "2026-09-04T19:09:59.476Z"
 "created_by": "OpenCode"
 "assigned_to": "OpenCode"
 "parent": "hrn-00210"
@@ -20,4 +20,8 @@
   "sequence": 5
   "uncertainty": "medium"
 "body": "## Objective\n\nKeep canonical and generated SDLC resources, user documentation, and compatibility tests aligned with workspace-aware lifecycle behavior.\n\n## Scope\n\n- Update canonical OpenCode/Pi SDLC templates and regenerate or verify their projections.\n- Document workspace-enabled Plan, Build, Verify, Release, Continue, checkpoint, and later cleanup behavior in `docs/sdlc.md` and `FLOWS.md`.\n- Add policy and integration coverage for both `skills.cvs.workspaces: true` and disabled configurations.\n- Verify Initiative Plan exclusion, committed-authority handoff, exact-workspace enforcement, checkpoint drift handling, Release cleanup-ready handoff, and retained disabled behavior.\n- Run focused template, installer, documentation, release-artifact, generated-output, and repository quality/build checks during Build/Verify.\n\n## Dependencies And Order\n\nSequence: 5. Starts after `hrn-01M1MV650AKH2ZH6Z5HQSGGMV5`, `hrn-01M1MV6FT4V982H88KYWGG6HSW`, `hrn-01M1MV6GC3D07ZRGZR6J1VTJEV`, and `hrn-01M1MV73WV3K0NB0XM8XQMAD94` define the final lifecycle policies.\n\n## Artifacts\n\n- Canonical templates under `src/harnessctl/templates/skills/sdlc/references/`.\n- Generated projections under `.opencode/skills/sdlc/` and `.pi/skills/sdlc/`.\n- `docs/sdlc.md` and `FLOWS.md`.\n- Template, installer, documentation, generated-output, and release-artifact tests.\n\n## Acceptance Criteria\n\n- Canonical and generated resources express identical workspace behavior for every affected lifecycle command.\n- Enabled-policy tests cover exact workspace routing, isolation, drift rejection, and cleanup-ready handoff.\n- Disabled-policy tests prove existing lifecycle behavior remains unchanged.\n- Documentation states that Release neither merges nor deletes the active working directory and that cleanup is a later explicit primary-checkout action.\n- Focused and repository-standard checks pass without modifying workspace primitives.\n\n## Estimate\n\nS-M, medium uncertainty because token/byte budgets and generated projections may require concise policy wording.\n\n## Non-Goals\n\n- No workspace primitive changes.\n- No automatic commit, cwd switch, merge, deploy, cleanup, or branch deletion.\n- No migration or alternate provider support."
-"comments": []
+"comments":
+  - "id": "hrn-01M1MV7WK0AJRAE2V45WGHTW5A-C0001"
+    "created_at": "2026-09-04T19:09:59.476Z"
+    "created_by": "OpenCode"
+    "body": "Replan required. The parent Epic's cwd-based execution model was superseded by Initiative hrn-00207's session-bound execution-root architecture. Do not Build this Task until hrn-01M1PX20Z7J3A6RX95P7DGXF33 is delivered and hrn-00210 receives a new approved executable plan."

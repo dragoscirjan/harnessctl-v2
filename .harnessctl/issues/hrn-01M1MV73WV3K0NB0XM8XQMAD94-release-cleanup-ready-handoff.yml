@@ -4,7 +4,7 @@
 "title": "Release cleanup-ready handoff"
 "status": "open"
 "created_at": "2026-09-03T23:56:10.523Z"
-"updated_at": "2026-09-03T23:56:51.154Z"
+"updated_at": "2026-09-04T19:09:58.884Z"
 "created_by": "OpenCode"
 "assigned_to": "OpenCode"
 "parent": "hrn-00210"
@@ -18,4 +18,8 @@
   "sequence": 4
   "uncertainty": "medium"
 "body": "# Release Cleanup-Ready Handoff\n\n## Objective\n\nComplete ready-PR delivery without implying merge or deleting the active Epic workspace.\n\n## Scope\n\n- Require exact active Epic workspace status before Release delivery actions.\n- Preserve existing branch, commit, push, pull-request, and fresh-consent gates.\n- After a ready PR is authoritatively verified, obtain the normal local mutation confirmation and call `workspace_mark_cleanup_ready` only from the matching clean workspace.\n- Verify cleanup-ready status and stop without merge, workspace removal, or cwd claims.\n- Report that later physical cleanup is an explicit `workspace_cleanup` operation from exact primary under `doc-00019` safeguards.\n- Preserve disabled-mode Release behavior.\n\n## Acceptance\n\n- Release stops before delivery mutation outside the exact active Epic workspace.\n- Ready PR never implies merged, deployed, or completed state.\n- Cleanup-ready transition occurs only after verified ready PR and fresh clean matching workspace status.\n- Release never invokes `workspace_cleanup` and never removes active cwd.\n- Later cleanup guidance requires exact primary, matching clean cleanup-ready mapping, branch retention, and explicit invocation.\n- Disabled OpenCode and Pi projections retain current Release behavior.\n\n## Dependencies And Order\n\nDepends on `hrn-01M1MV650AKH2ZH6Z5HQSGGMV5` and `hrn-01M1MV6FT4V982H88KYWGG6HSW`. Execute after routing and phase enforcement.\n\n## Artifacts\n\nCanonical Release reference template, generated OpenCode/Pi projections, lifecycle and consent-boundary tests.\n\n## Estimate\n\nS-M, medium uncertainty around preserving concise Release stopping semantics.\n\n## Non-Goals\n\nAutomatic merge, deployment, issue closure, physical workspace cleanup, branch deletion, workspace reopening, or primitive changes.\n"
-"comments": []
+"comments":
+  - "id": "hrn-01M1MV73WV3K0NB0XM8XQMAD94-C0001"
+    "created_at": "2026-09-04T19:09:58.884Z"
+    "created_by": "OpenCode"
+    "body": "Replan required. The parent Epic's cwd-based execution model was superseded by Initiative hrn-00207's session-bound execution-root architecture. Do not Build this Story until hrn-01M1PX20Z7J3A6RX95P7DGXF33 is delivered and hrn-00210 receives a new approved executable plan."

@@ -1,0 +1,30 @@
+"version": 1
+"id": "hrn-01M1PZYZ30RXGSAA2D953H1PN2"
+"type": "task"
+"title": "Compatibility, projections, documentation, and integration gates"
+"status": "closed"
+"created_at": "2026-09-04T19:57:35.200Z"
+"updated_at": "2026-09-05T00:13:59.473Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+  - "hrn-01M1PZW59JFNBYRC4FXZVNM2RA"
+  - "hrn-01M1PZWVCG54SEYZ57F23EJHF7"
+  - "hrn-01M1PZXQMD9YJ5R042WPBVW2GT"
+  - "hrn-01M1PZXR698GNEG58FZQCDVN5X"
+"metadata":
+  "capability": "routing-integration-gates"
+  "estimate": "M"
+  "sequence": 6
+  "uncertainty": "medium"
+"body": "# Compatibility, projections, documentation, and integration gates\n\n## Objective\n\nProve end-to-end session isolation, compatibility, generated-artifact parity, operational documentation, and safe activation before handing off to lifecycle integration.\n\n## Scope\n\n- Complete disabled-mode parity and explicit v1 workspace adoption coverage without legacy rewrites.\n- Verify Config v1 automation schema/defaults/fingerprints across TypeScript, Python generation, installer output, and `.harnessctl/config.yaml` defaults.\n- Update canonical and generated OpenCode/Pi skills, command references, architecture/SDLC docs, flows, migration, rollback, host capability ranges, operation registry, exceptional commands, and self-development activation guidance.\n- Maintain exact package fixtures in lockfiles/CI while documenting capability-based minimum and supported host ranges.\n- Run focused package tests, formatting, lint, contracts, builds, quality, docs, and integration through checked-in repository tasks.\n- Add fresh-process integration launching hosts from primary, binding two sessions to isolated workspaces, exercising workspace-local authorities/files/tasks/bootstrap, restarting/recovering, and proving no primary or cross-workspace leakage.\n- Record the required post-merge rebuild/install/reload handoff before `hrn-00210` replan.\n\n## Acceptance\n\n- Generated OpenCode/Pi projections match canonical templates and describe control root versus execution root consistently.\n- Neutral defaults and `skills.cvs.workspaces: false` preserve current behavior and create no routing state.\n- Exact v1 adoption succeeds only for a unique topology match; ambiguous and future-schema state remains untouched.\n- Minimum and known-compatible OpenCode/Pi fixtures pass capability probes and unsupported capabilities fail with deterministic diagnostics.\n- Fresh-process two-session integration proves isolated source, issue, document, memory, checkpoint, artifact, task, and bootstrap roots while host processes remain in primary.\n- Model text cannot alter registered operation mechanics in integration tests.\n- Repository format, lint, tests, contracts, package builds, quality, docs, and generated checks pass through declared targets.\n- Documentation states no hot-load and requires merge plus intentional rebuild/install/reload before `hrn-00210` replan.\n\n## Artifacts\n\n- Canonical/generated skill and command projections, config artifacts, installer defaults, architecture/SDLC documentation, and flow documentation.\n- Host compatibility fixtures and fresh-process integration harness.\n- Verification evidence mapped to every Epic and child acceptance criterion.\n\n## Dependencies And Order\n\nSequence 6. Depends on `hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36`, `hrn-01M1PZW59JFNBYRC4FXZVNM2RA`, `hrn-01M1PZWVCG54SEYZ57F23EJHF7`, `hrn-01M1PZXQMD9YJ5R042WPBVW2GT`, and `hrn-01M1PZXR698GNEG58FZQCDVN5X`. Final gate before Verify and later lifecycle handoff.\n\n## Estimate\n\nM, medium uncertainty around fresh-host integration stability and generated artifact breadth.\n\n## Non-Goals\n\n- No enabling workspaces, lifecycle integration in `hrn-00210`, merge, deployment, cleanup, hot-loading, or automatic activation."
+"comments":
+  - "id": "hrn-01M1PZYZ30RXGSAA2D953H1PN2-C0001"
+    "created_at": "2026-09-04T22:19:35.693Z"
+    "created_by": "OpenCode"
+    "body": "Build synchronized config/default/schema/Python projections, generated reference/LLM docs, compatibility ranges and fail-closed diagnostics, migration/rollback and no-hot-load handoff docs, plus fresh-process isolation evidence. Passed packages, strict typecheck, 277 Node tests, 725 Python tests, release artifacts, format/lint/shellcheck/vulture, docs strict build, contracts, Mermaid, duplicate threshold, runtime smoke, and `git diff --check`. `actionlint` alone unavailable in environment (`command not found`); aggregate `mise quality` also hit concurrent stdout EAGAIN despite standalone gates passing. Ready for independent Verify with these blockers noted; issue remains open."
+  - "id": "hrn-01M1PZYZ30RXGSAA2D953H1PN2-C0002"
+    "created_at": "2026-09-04T22:26:49.502Z"
+    "created_by": "opencode"
+    "body": "Verify found integration/compatibility coverage partial (`hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9`) and `actionlint` unavailable with exit 127 (`hrn-01M1Q8DXZKBQD7EDTGNPPSMJMM`). Current OpenCode fresh-process test covers direct adapter issue/status isolation only; full two-host authority/file/task/bootstrap and compatibility matrix remain required."

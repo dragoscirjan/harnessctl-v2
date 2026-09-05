@@ -1,0 +1,23 @@
+schema_version: 1
+id: 01M1PYBS7A1D5CZJNP3YCKNDB6
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00207
+summary: hrn-00207 | Plan | workspace architecture | HLD approved
+details: "Epic: Initiative hrn-00207. Command/phase: Plan. Done: corrected four-Epic decomposition; created routing Epic hrn-01M1PX20Z7J3A6RX95P7DGXF33; made hrn-00210 depend on it; marked five cwd-based 00210 children replan-required. Decisions: persistent-primary harness uses session-bound execution root; all project operations route to workspace; typed deterministic operation registry/coordinators own routine mechanics; host adapters use capability detection and supported ranges, exact versions only lockfiles/CI fixtures. Artifacts: approved HLD doc-01M1PX3FGJKTHDVZJFQ7S9J8YX. Verification: document_validate and issue_validate passed. Blocker: routing Epic lacks approved executable plan/LLD; hrn-00210 remains blocked."
+source:
+  kind: artifact
+  ref: doc-01M1PX3FGJKTHDVZJFQ7S9J8YX
+  revision: v1:ab733ab74e671c141b2718f899f1677cc1d505491dce475fe108e3532f8f0863
+created_at: 2026-09-04T19:29:38.026Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - hld
+  - plan
+  - sdlc
+  - workspace-routing

@@ -36,12 +36,15 @@
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --config ../../vitest.config.ts --exclude integration.test.ts --passWithNoTests",
+    "pretest:integration": "npm run build",
     "test:integration": "vitest run --config ../../vitest.config.ts integration.test.ts --retry=1",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@harnessctl/generic-tools": "0.1.10",
-    "@opencode-ai/plugin": "1.18.2"
+    "@harnessctl/generic-tools": "0.1.10"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
   },
   "devDependencies": {
     "@opencode-ai/plugin": "^1.18.2",

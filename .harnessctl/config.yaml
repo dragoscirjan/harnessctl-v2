@@ -5,6 +5,16 @@ paths:
   reports: .harnessctl/reports
 workflow:
   default_task_type: bug
+automation:
+  runner: mise
+  tasks:
+    bootstrap.install: install-prompts
+    repository.build: build
+    repository.format: format
+    repository.integration: integration
+    repository.lint: lint
+    repository.quality: quality
+    repository.test: test
 mcp:
   output_limit_mode: bounded-guidance
 mcpServers:
@@ -18,7 +28,7 @@ mcpServers:
     args: [mcp, start]
   sdlc_web_crawl:
     command: npx
-    args: [-y, '@dragoscirjan/mcp-searchable@latest']
+    args: [-y, "@dragoscirjan/mcp-searchable@latest"]
 skills:
   issues:
     enabled: true
@@ -37,7 +47,7 @@ skills:
   cvs:
     enabled: true
     local: git
-    workspaces: true
+    workspaces: false
     provider:
       type: github
       tools: gh

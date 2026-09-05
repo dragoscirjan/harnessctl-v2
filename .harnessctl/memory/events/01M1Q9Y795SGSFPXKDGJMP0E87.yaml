@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1Q9Y795SGSFPXKDGJMP0E87
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl-v2
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Verify | acceptance matrix | failed; return Build
+details: |-
+  Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  Command/phase: work-verify
+  Item: post-repair acceptance verification
+  Done: standalone gates passed: Node 283, Python 725, strict types, format/lint, docs, dupcheck, mise actionlint, contracts, Ruff, shellcheck, release artifacts, Mermaid, sequential Node/Bun smoke. Core repaired behaviors pass focused tests.
+  Next: Build complete crash-boundary fault matrix, concurrent stale-lock recovery test, and two-host lifecycle/root/executable minimum-version fixtures.
+  Blockers: partial evidence on hrn-01M1Q8DVK2JNMJA1HJ9T2AD5M4, hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD, hrn-01M1Q8DXC9TEFTGS35RKJ0ZDH9. Aggregate mise quality stdout EAGAIN; standalone constituents pass.
+  Artifacts: doc-01M1PZMXJ99DRRW65A1E22G7TH; existing Bug comments C0002.
+  Delivery: no closure, source edits, commit, remote, release, deploy, or destructive action.
+source:
+  kind: tool-observation
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: null
+created_at: 2026-09-04T22:51:56.581Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - epic
+  - failed
+  - verify
+  - workspace-routing
