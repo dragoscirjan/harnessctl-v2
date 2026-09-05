@@ -473,6 +473,7 @@ def test_config_schema_reference_is_generated_with_exact_property_coverage() -> 
     assert "Start with the change you need" not in rendered
     assert "[Config File guide](configuration.md)" in rendered
     assert "## Config\n" in rendered
+    assert "## Automation\n" in rendered
     assert "## MCP servers\n" in rendered
     assert "## Skills\n" in rendered
     for skill in (
@@ -1372,6 +1373,7 @@ def test_skill_configuration_routes_match_config_v1_domains() -> None:
 
 def test_cvs_docs_cover_opt_in_git_epic_workspace_contract() -> None:
     page = (DOCS / "cvs.md").read_text(encoding="utf-8")
+    normalized = " ".join(page.split())
 
     for tool_name in (
         "workspace_ensure",
@@ -1387,12 +1389,15 @@ def test_cvs_docs_cover_opt_in_git_epic_workspace_contract() -> None:
         "skills.cvs.workspaces: true",
         "harnessctl/epic/hrn-12345",
         "project--workspaces/hrn-12345",
-        "exact path returned for the Epic",
+        "The host stays in the primary checkout",
+        "never silently falls back to primary",
+        "workspace_session_allocate",
+        "operation_prepare",
         "never uses forced removal",
         "deletes the retained branch",
         "cannot be reopened",
     ):
-        assert contract in page
+        assert contract in normalized
 
 
 def test_skills_catalog_matches_registry_templates_and_entry_contract() -> None:

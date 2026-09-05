@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1Q9JK1KP5B638BRP6X1AYXY
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Build | Verify defects | fixed; handoff Verify
+details: "Fixed six Verify Bugs: durable released binding generations; crash-recovery journal; safe stale-lock ownership recovery; Pi same-session routing/evidence; OpenCode+Pi fresh-process two-session authority/file/task/bootstrap isolation and compatibility fixtures; reproducible mise actionlint. Evidence: Node 283 tests, Python 725 tests, package builds, strict types, format/lint/Ruff/shellcheck/vulture/actionlint, release artifacts, docs/contracts/Mermaid/dupcheck, Node+Bun smoke, git diff check pass. Bugs remain open pending Verify. No closure, commit, remote, release, deploy, or destructive action."
+source:
+  kind: artifact
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: null
+created_at: 2026-09-04T22:45:35.411Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1Q83HKFSYB322EZSCSD6PXN
+tags:
+  - build
+  - opencode
+  - pi
+  - verify-handoff
+  - workspace-routing

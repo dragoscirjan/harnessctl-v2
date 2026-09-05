@@ -1,12 +1,21 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { CustomToolsPlugin } from './index.js';
 
 describe('OpenCode adapter', () => {
+  it('supports the installed host capability contract', async () => {
+    const hooks = await CustomToolsPlugin({ directory: process.cwd() } as never);
+    expect(hooks.tool?.config_get).toBeDefined();
+    expect(hooks['tool.execute.before']).toBeTypeOf('function');
+  });
+
   it('registers the configuration tools', async () => {
-    const hooks = await CustomToolsPlugin({} as never);
+    const hooks = await CustomToolsPlugin({ directory: process.cwd() } as never);
 
     expect(Object.keys(hooks.tool ?? {})).toEqual([
       'config_create',
@@ -45,6 +54,16 @@ describe('OpenCode adapter', () => {
       'workspace_status',
       'workspace_mark_cleanup_ready',
       'workspace_cleanup',
+      'workspace_session_allocate',
+      'workspace_session_attach_epic',
+      'workspace_session_adopt',
+      'workspace_session_bind',
+      'workspace_session_status',
+      'workspace_session_release',
+      'operation_prepare',
+      'operation_execute',
+      'operation_prepare_command',
+      'operation_execute_command',
     ]);
     expect(hooks.tool?.config_get?.args.path).toBeDefined();
     expect(hooks.tool?.['document_create']?.args.title).toBeDefined();
@@ -81,16 +100,19 @@ describe('OpenCode adapter', () => {
     expect(hooks.tool?.['issue_link_document']?.args.path).toBeDefined();
     for (const name of ['workspace_ensure', 'workspace_status', 'workspace_mark_cleanup_ready', 'workspace_cleanup'])
       expect(hooks.tool?.[name]?.args.epic_id).toBeDefined();
+    expect(hooks.tool?.['workspace_session_status']?.args.expected_binding_generation).toBeDefined();
+    expect(hooks.tool?.['operation_prepare']?.args.operation_id).toBeDefined();
+    expect(hooks.tool?.['operation_prepare_command']?.args.argv).toBeDefined();
     const issueLinkPathSchema = hooks.tool?.['issue_link_document']?.args.path as { description?: string } | undefined;
     expect(issueLinkPathSchema?.description).toContain('fixed active .harnessctl/documents authority');
     expect(issueLinkPathSchema?.description).not.toMatch(/\.specs|\.ai\.tmp/u);
   });
 
   it('delegates execution to the generic configuration tools', async () => {
-    const hooks = await CustomToolsPlugin({} as never);
-    const tools = hooks.tool ?? {};
     const cwd = mkdtempSync(join(tmpdir(), 'harnessctl-opencode-'));
     try {
+      const hooks = await CustomToolsPlugin({ directory: cwd } as never);
+      const tools = hooks.tool ?? {};
       const context = { directory: cwd } as never;
 
       const defaultTasksPath = await tools.config_get?.execute({ path: 'paths.tasks' }, context);
@@ -256,4 +278,241 @@ describe('OpenCode adapter', () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
+
+  it('fails closed without the OpenCode control-root capability', async () => {
+    await expect(CustomToolsPlugin({} as never)).rejects.toThrow(/PluginInput\.directory is required/u);
+  });
+
+  it('routes bound project tools while the host remains in primary', async () => {
+    const container = mkdtempSync(join(tmpdir(), 'harnessctl-opencode-routing-'));
+    const primary = join(container, 'primary');
+    mkdirSync(primary);
+    try {
+      git(primary, 'init', '--initial-branch=main');
+      git(primary, 'config', 'user.name', 'Harnessctl Test');
+      git(primary, 'config', 'user.email', 'test@example.invalid');
+      mkdirSync(join(primary, '.harnessctl'), { recursive: true });
+      writeFileSync(
+        join(primary, '.harnessctl', 'config.yaml'),
+        'version: 1\nskills:\n  cvs:\n    workspaces: true\n  memory:\n    enabled: true\n',
+      );
+      git(primary, 'add', '.harnessctl/config.yaml');
+      git(primary, 'commit', '-m', 'Configure routing');
+      const sessionID = 'opencode-session';
+      const hooks = await CustomToolsPlugin({ directory: primary } as never);
+      const context = { directory: primary, sessionID } as never;
+      await expect(
+        hooks['tool.execute.before']?.(
+          { tool: 'workspace-status', sessionID, callID: 'unbound-control-call' },
+          { args: { epic_id: 'hrn-00009' } },
+        ),
+      ).resolves.toBeUndefined();
+      const bound = JSON.parse(String(await hooks.tool?.['workspace_session_allocate']?.execute({}, context))) as {
+        workspace_id: string;
+        execution_root: string;
+        binding_generation: number;
+      };
+      mkdirSync(join(bound.execution_root, '.harnessctl', 'issues'), { recursive: true });
+      const issue = JSON.parse(
+        String(await hooks.tool?.['issue_create']?.execute({ type: 'task', title: 'Workspace-local issue' }, context)),
+      ) as { id: string };
+      const document = JSON.parse(
+        String(
+          await hooks.tool?.['document_create']?.execute({ title: 'Workspace-local document', kind: 'hld' }, context),
+        ),
+      ) as { id: string };
+      const memory = await hooks.tool?.['memory_store']?.execute(
+        {
+          memory_type: 'semantic',
+          record_type: 'fact',
+          summary: 'Workspace-local memory.',
+          source_kind: 'tool-observation',
+          created_by: 'test',
+          confidence: 'verified',
+        },
+        context,
+      );
+
+      expect(existsSync(join(bound.execution_root, '.harnessctl', 'issues'))).toBe(true);
+      expect(existsSync(join(primary, '.harnessctl', 'issues'))).toBe(false);
+      expect(await hooks.tool?.['issue_get']?.execute({ id: issue.id }, context)).toContain('Workspace-local issue');
+      expect(await hooks.tool?.['document_get']?.execute({ id: document.id }, context)).toContain(
+        'Workspace-local document',
+      );
+      expect(memory).toContain('Workspace-local memory');
+      expect(await hooks.tool?.config_get?.execute({ path: 'skills.cvs.workspaces' }, context)).toBe('true');
+      expect(await hooks.tool?.['workspace_session_status']?.execute({}, context)).toContain(bound.workspace_id);
+
+      const before = hooks['tool.execute.before'];
+      const globOutput = { args: {} };
+      await before?.({ tool: 'glob', sessionID, callID: 'glob-call' }, globOutput);
+      expect(globOutput.args).toEqual({ path: bound.execution_root });
+      await expect(
+        before?.({ tool: 'read', sessionID, callID: 'read-call' }, { args: { filePath: join(primary, 'README.md') } }),
+      ).rejects.toThrow(/escapes the execution root/u);
+      await expect(
+        before?.({ tool: 'bash', sessionID, callID: 'bash-call' }, { args: { command: 'pwd' } }),
+      ).rejects.toThrow(/unsupported tool: bash/u);
+      await expect(
+        before?.({ tool: 'external_tool', sessionID, callID: 'external-call' }, { args: {} }),
+      ).rejects.toThrow(/unsupported tool: external_tool/u);
+      await expect(
+        before?.({ tool: 'issue_get', sessionID, callID: 'custom-call' }, { args: { id: issue.id } }),
+      ).resolves.toBeUndefined();
+    } finally {
+      rmSync(container, { recursive: true, force: true });
+    }
+  });
+
+  it('recovers two isolated sessions with authorities, files, and tasks in a fresh host process', async () => {
+    const container = mkdtempSync(join(tmpdir(), 'harnessctl-opencode-restart-'));
+    const primary = join(container, 'primary');
+    mkdirSync(primary);
+    try {
+      git(primary, 'init', '--initial-branch=main');
+      git(primary, 'config', 'user.name', 'Harnessctl Test');
+      git(primary, 'config', 'user.email', 'test@example.invalid');
+      mkdirSync(join(primary, '.harnessctl'), { recursive: true });
+      writeFileSync(
+        join(primary, '.harnessctl', 'config.yaml'),
+        'version: 1\nskills:\n  cvs:\n    workspaces: true\n  memory:\n    enabled: true\nautomation:\n  runner: npm\n  tasks:\n    repository.test: workspace-test\n    bootstrap.install: workspace-bootstrap\n',
+      );
+      writeFileSync(
+        join(primary, 'package.json'),
+        `${JSON.stringify({
+          scripts: {
+            'workspace-test': "node -e \"require('node:fs').writeFileSync('task-marker.txt', process.cwd())\"",
+            'workspace-bootstrap':
+              "node -e \"require('node:fs').writeFileSync('bootstrap-marker.txt', process.cwd())\"",
+          },
+        })}\n`,
+      );
+      git(primary, 'add', '.harnessctl/config.yaml', 'package.json');
+      git(primary, 'commit', '-m', 'Configure routing');
+
+      const sessions = ['restart-session-a', 'restart-session-b'];
+      const hooks = await CustomToolsPlugin({ directory: primary } as never);
+      const allocated = [];
+      for (const sessionID of sessions) {
+        allocated.push(
+          JSON.parse(
+            String(
+              await hooks.tool?.['workspace_session_allocate']?.execute({}, { directory: primary, sessionID } as never),
+            ),
+          ) as { execution_root: string; workspace_id: string },
+        );
+      }
+
+      const adapterUrl = pathToFileURL(join(dirname(fileURLToPath(import.meta.url)), 'index.ts')).href;
+      const tsxLoader = createRequire(import.meta.url).resolve('tsx');
+      const output = execFileSync(
+        process.execPath,
+        [
+          '--import',
+          tsxLoader,
+          '--input-type=module',
+          '--eval',
+          FRESH_PROCESS_SCRIPT,
+          primary,
+          adapterUrl,
+          ...sessions,
+        ],
+        { cwd: primary, encoding: 'utf8' },
+      );
+      const recovered = JSON.parse(output) as Array<{
+        workspace_id: string;
+        issue_id: string;
+        document_id: string;
+        task_outcome: string;
+        bootstrap_outcome: string;
+        routed_root: string;
+        source_path: string;
+        checkpoint_root: string;
+        artifact_root: string;
+      }>;
+
+      expect(recovered).toHaveLength(2);
+      for (const [index, result] of recovered.entries()) {
+        expect(result.workspace_id).toBe(allocated[index]?.workspace_id);
+        expect(result.routed_root).toBe(allocated[index]?.execution_root);
+        expect(existsSync(join(allocated[index]?.execution_root ?? '', '.harnessctl', 'issues'))).toBe(true);
+        expect(result.issue_id).toMatch(/^hrn-[0-9A-HJKMNP-TV-Z]{26}$/u);
+        expect(result.document_id).toMatch(/^doc-[0-9A-HJKMNP-TV-Z]{26}$/u);
+        expect(result.task_outcome).toBe('succeeded');
+        expect(result.bootstrap_outcome).toBe('succeeded');
+        expect(result.source_path).toBe(join(allocated[index]?.execution_root ?? '', 'package.json'));
+        expect(result.checkpoint_root).toBe(join(allocated[index]?.execution_root ?? '', '.harnessctl', 'checkpoints'));
+        expect(result.artifact_root).toBe(join(allocated[index]?.execution_root ?? '', '.harnessctl', 'artifacts'));
+        expect(existsSync(join(allocated[index]?.execution_root ?? '', 'task-marker.txt'))).toBe(true);
+        expect(existsSync(join(allocated[index]?.execution_root ?? '', 'bootstrap-marker.txt'))).toBe(true);
+      }
+      expect(existsSync(join(primary, '.harnessctl', 'issues'))).toBe(false);
+      expect(existsSync(join(primary, '.harnessctl', 'documents'))).toBe(false);
+      expect(existsSync(join(primary, '.harnessctl', 'memory'))).toBe(false);
+      expect(existsSync(join(primary, 'task-marker.txt'))).toBe(false);
+      expect(existsSync(join(primary, 'bootstrap-marker.txt'))).toBe(false);
+      expect(git(primary, 'status', '--porcelain')).toBe('');
+    } finally {
+      rmSync(container, { recursive: true, force: true });
+    }
+  });
 });
+
+const FRESH_PROCESS_SCRIPT = `
+const [primary, adapterUrl, ...sessions] = process.argv.slice(1);
+const { CustomToolsPlugin } = await import(adapterUrl);
+const hooks = await CustomToolsPlugin({ directory: primary });
+const results = [];
+for (const [index, sessionID] of sessions.entries()) {
+  const context = { directory: primary, sessionID };
+  const issue = JSON.parse(await hooks.tool.issue_create.execute(
+    { type: 'task', title: \`Recovered session \${index + 1}\` },
+    context,
+  ));
+  const document = JSON.parse(await hooks.tool.document_create.execute(
+    { title: \`Recovered document \${index + 1}\`, kind: 'lld' },
+    context,
+  ));
+  await hooks.tool.memory_store.execute({
+    memory_type: 'episodic', record_type: 'event', summary: \`Recovered memory \${index + 1}\`,
+    source_kind: 'artifact', created_by: 'test', confidence: 'verified'
+  }, context);
+  const taskDescriptor = JSON.parse(await hooks.tool.operation_prepare.execute(
+    { operation_id: 'repository.test' }, context,
+  ));
+  const taskEvidence = JSON.parse(await hooks.tool.operation_execute.execute(
+    { operation_id: 'repository.test', consent_digest: taskDescriptor.digest }, context,
+  ));
+  const bootstrapDescriptor = JSON.parse(await hooks.tool.operation_prepare.execute(
+    { operation_id: 'bootstrap.install' }, context,
+  ));
+  const bootstrapEvidence = JSON.parse(await hooks.tool.operation_execute.execute(
+    { operation_id: 'bootstrap.install', consent_digest: bootstrapDescriptor.digest }, context,
+  ));
+  const status = JSON.parse(await hooks.tool.workspace_session_status.execute({}, context));
+  const routed = { args: {} };
+  await hooks['tool.execute.before']({ tool: 'glob', sessionID, callID: \`glob-\${index}\` }, routed);
+  const source = { args: { filePath: 'package.json' } };
+  await hooks['tool.execute.before']({ tool: 'read', sessionID, callID: \`source-\${index}\` }, source);
+  const checkpoint = { args: { path: '.harnessctl/checkpoints' } };
+  await hooks['tool.execute.before']({ tool: 'glob', sessionID, callID: \`checkpoint-\${index}\` }, checkpoint);
+  const artifact = { args: { path: '.harnessctl/artifacts' } };
+  await hooks['tool.execute.before']({ tool: 'glob', sessionID, callID: \`artifact-\${index}\` }, artifact);
+  results.push({
+    workspace_id: status.workspace_id,
+    issue_id: issue.id,
+    document_id: document.id,
+    task_outcome: taskEvidence.outcome,
+    bootstrap_outcome: bootstrapEvidence.outcome,
+    routed_root: routed.args.path,
+    source_path: source.args.filePath,
+    checkpoint_root: checkpoint.args.path,
+    artifact_root: artifact.args.path,
+  });
+}
+process.stdout.write(JSON.stringify(results));
+`;
+
+function git(cwd: string, ...args: string[]): string {
+  return execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+}

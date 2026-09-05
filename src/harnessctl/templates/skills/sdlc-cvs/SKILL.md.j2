@@ -20,8 +20,10 @@ description: Use configured CVS tools safely.
 
 - Use `{{ local }}` for local VCS. Git/Jujutsu config defines remotes.
 {% if workspaces -%}
-- Epic workspaces are enabled. Use normalized `workspace_ensure`, `workspace_status`, `workspace_mark_cleanup_ready`, and `workspace_cleanup` tools; inspect their live schemas before use.
-- Run Epic lifecycle work only from the exact workspace reported for that Epic. A tool cannot persistently change the host process cwd; stop and report the expected path when cwd is wrong.
+- Epic workspaces are enabled. Keep the host process in the primary checkout; bind each host session to one execution workspace with normalized `workspace_session_*` tools.
+- Route project authority, files, and registered tasks through the fresh session execution root. Reject missing or stale bindings, topology drift, path escape, and unsupported tools; never fall back to primary.
+- Use `operation_prepare` and `operation_execute` for reviewed deterministic task targets. Never compose routine shell pipelines or change a prepared operation after consent.
+- Legacy `workspace_ensure`, `workspace_status`, `workspace_mark_cleanup_ready`, and `workspace_cleanup` remain explicit control-plane tools; inspect live schemas before use.
 - Workspace cleanup is explicit, local, and safety-gated. Never force-remove a worktree or delete its retained branch.
 {% else -%}
 - Epic workspaces are disabled. Do not invoke workspace tools or infer workspace isolation.

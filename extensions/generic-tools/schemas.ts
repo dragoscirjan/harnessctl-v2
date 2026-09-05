@@ -30,6 +30,14 @@ const httpsInstanceUrl = z
 export const cvsLocalSchema = z.enum(['git', 'jj']);
 export const remoteProviderSchema = z.enum(['github', 'gitlab', 'gitea', 'forgejo', 'bitbucket']);
 export const mcpOutputLimitModeSchema = z.enum(['bounded-guidance', 'hard']);
+export const automationRunnerSchema = z.enum(['auto', 'mise', 'task', 'just', 'make', 'npm', 'pnpm', 'yarn', 'bun']);
+const semanticOperationIdSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)+$/, 'must be a dotted lowercase semantic operation ID');
+const automationTaskTargetSchema = z
+  .string()
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/, 'must be one task target identifier, not a command');
 const mcpNamePattern = /^(?=.{1,64}$)[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/;
 const mcpNameSchema = z
   .string()
@@ -281,6 +289,12 @@ export const configV1Schema = z
         default_task_type: z.enum(['initiative', 'epic', 'story', 'task', 'bug']),
       })
       .strict(),
+    automation: z
+      .object({
+        runner: automationRunnerSchema,
+        tasks: z.record(semanticOperationIdSchema, automationTaskTargetSchema),
+      })
+      .strict(),
     mcp: z.object({ output_limit_mode: mcpOutputLimitModeSchema }).strict(),
     mcpServers: mcpServersSchema,
     skills: z
@@ -374,6 +388,7 @@ export const CONFIG_V1_DEFAULTS = {
   version: 1,
   paths: { root: '.harnessctl', tasks: '.harnessctl/tasks', reports: '.harnessctl/reports' },
   workflow: { default_task_type: 'bug' },
+  automation: { runner: 'auto', tasks: {} },
   mcp: { output_limit_mode: 'bounded-guidance' },
   mcpServers: {
     sdlc_cvs_github: {
@@ -431,6 +446,7 @@ export type CvsLocal = z.infer<typeof cvsLocalSchema>;
 export type RemoteProvider = z.infer<typeof remoteProviderSchema>;
 export type RemoteService = z.infer<typeof remoteServiceSchema>;
 export type McpOutputLimitMode = z.infer<typeof mcpOutputLimitModeSchema>;
+export type AutomationRunner = z.infer<typeof automationRunnerSchema>;
 
 export const memoryTypeSchema = z.enum(['semantic', 'episodic', 'procedural']);
 export const recordTypeSchema = z.enum(['fact', 'decision', 'event', 'lesson']);

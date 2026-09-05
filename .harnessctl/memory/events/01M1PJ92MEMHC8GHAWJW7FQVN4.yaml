@@ -1,0 +1,31 @@
+schema_version: 1
+id: 01M1PJ92MEMHC8GHAWJW7FQVN4
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-00210
+summary: hrn-00210 | plan | workspace routing | invocation remains primary
+details: |-
+  Epic: hrn-00210
+  Command/phase: work-plan / Plan
+  Done: Approved plan and active clean workspace reverified.
+  Workspace: expected /home/dragosc/Workspace/gh--harnessctl/harnessctl-v2--workspaces/hrn-00210; branch harnessctl/epic/hrn-00210; actual cwd /home/dragosc/Workspace/gh--harnessctl/harnessctl-v2; status current_cwd primary, current_cwd_match false.
+  Blockers: Current invocation remains primary; Plan cannot cross workspace boundary or claim completion.
+  Next: Start a new invocation whose actual process cwd is the exact workspace path, then run work-plan hrn-00210.
+  Verification: No issue/workspace mutation, Build, Verify, Release, remote, cleanup, or destructive action ran.
+source:
+  kind: tool-observation
+  ref: workspace_status hrn-00210
+  revision: null
+created_at: 2026-09-04T15:58:26.446Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1P3069SVTQAJY70HFJA7CH2
+tags:
+  - blocked
+  - plan
+  - sdlc
+  - workspace

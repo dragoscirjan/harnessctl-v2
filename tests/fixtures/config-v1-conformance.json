@@ -10,6 +10,7 @@
         "version": 1,
         "paths": { "root": ".harnessctl", "tasks": ".harnessctl/tasks", "reports": ".harnessctl/reports" },
         "workflow": { "default_task_type": "bug" },
+        "automation": { "runner": "auto", "tasks": {} },
         "mcp": { "output_limit_mode": "bounded-guidance" },
         "mcpServers": {
           "sdlc_cvs_github": {
@@ -95,6 +96,7 @@
         "version": 1,
         "paths": { "root": ".harnessctl", "tasks": ".harnessctl/tasks", "reports": ".harnessctl/reports" },
         "workflow": { "default_task_type": "bug" },
+        "automation": { "runner": "auto", "tasks": {} },
         "mcp": { "output_limit_mode": "bounded-guidance" },
         "mcpServers": {
           "sdlc_cvs_github": {
@@ -178,6 +180,7 @@
         "version": 1,
         "paths": { "root": ".harnessctl", "tasks": ".harnessctl/tasks", "reports": ".harnessctl/reports" },
         "workflow": { "default_task_type": "bug" },
+        "automation": { "runner": "auto", "tasks": {} },
         "mcp": { "output_limit_mode": "bounded-guidance" },
         "mcpServers": {
           "remote_docs": {

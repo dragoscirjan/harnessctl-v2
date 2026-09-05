@@ -1,0 +1,12 @@
+schema_version: 1
+id: 01M1QDHNMCESQD3DMTYWTKWSFG
+organization_id: local
+project_id: project
+target_id: 01M1Q8H166ZD84HEJNRH52BAW5
+reason: Superseded historical Verify duplicate for Epic; current failure checkpoint records latest authority.
+source:
+  kind: user-confirmed
+  ref: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  revision: null
+created_at: 2026-09-04T23:54:59.596Z
+created_by: OpenCode Verify

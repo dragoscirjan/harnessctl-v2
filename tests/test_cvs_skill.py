@@ -110,9 +110,14 @@ def test_cvs_skill_compiles_workspace_capability() -> None:
         "workspace_status",
         "workspace_mark_cleanup_ready",
         "workspace_cleanup",
+        "workspace_session_*",
+        "operation_prepare",
+        "operation_execute",
     ):
         assert tool in enabled
-    assert "cannot persistently change the host process cwd" in enabled
+    assert "Keep the host process in the primary checkout" in enabled
+    assert "never fall back to primary" in enabled
+    assert "reviewed deterministic task targets" in enabled
     assert "Never force-remove a worktree" in enabled
 
 

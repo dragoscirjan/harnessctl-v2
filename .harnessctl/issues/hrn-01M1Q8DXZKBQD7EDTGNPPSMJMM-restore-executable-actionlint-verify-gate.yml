@@ -1,0 +1,15 @@
+"version": 1
+"id": "hrn-01M1Q8DXZKBQD7EDTGNPPSMJMM"
+"type": "bug"
+"title": "Restore executable actionlint Verify gate"
+"status": "closed"
+"created_at": "2026-09-04T22:25:34.195Z"
+"updated_at": "2026-09-05T00:13:30.956Z"
+"created_by": "opencode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"body": "# Restore executable actionlint Verify gate\n\n## Summary\n\nVerify could not execute the required GitHub Actions validation gate because `actionlint` is unavailable in the current toolchain.\n\n## Evidence\n\nIndependent invocation returned `actionlint: command not found` with exit 127. The aggregate quality task therefore cannot provide complete current acceptance evidence.\n\n## Impact\n\nWorkflow syntax and semantics are not independently verified, and the Epic cannot pass the approved all-gates criterion.\n\n## Acceptance Criteria\n\n- The repository-supported environment provides a pinned or otherwise reproducible `actionlint` executable.\n- The configured `actions-lint`/quality task runs without manual PATH setup.\n- `actionlint` passes against all workflow files in a clean verification environment.\n- Tool prerequisites are documented consistently with CI and local quality instructions.\n"
+"comments":
+  - "id": "hrn-01M1Q8DXZKBQD7EDTGNPPSMJMM-C0001"
+    "created_at": "2026-09-04T22:44:51.579Z"
+    "created_by": "OpenCode"
+    "body": "Build evidence: checked-in mise pin already provides actionlint 1.7.12; authoritative `mise run actions-lint` succeeds with no findings. Prior direct-PATH failure was an invocation/environment mismatch. Issue remains open pending Verify."

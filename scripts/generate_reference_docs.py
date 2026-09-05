@@ -27,6 +27,11 @@ SECTIONS = (
     Section("", "Config", "The project configuration root."),
     Section("paths", "Paths", "Repository-local authority and report locations."),
     Section("workflow", "Workflow", "Defaults used when creating SDLC work."),
+    Section(
+        "automation",
+        "Automation",
+        "Reviewed semantic operations mapped to repository task-runner targets.",
+    ),
     Section("mcp", "MCP output", "Shared behavior for MCP responses."),
     Section(
         "mcpServers",
@@ -70,6 +75,7 @@ DESCRIPTIONS = {
     "version": "Config contract version. Config v1 is the only accepted value.",
     "paths": "Shared repository paths used by Harnessctl.",
     "workflow": "Defaults for SDLC work creation.",
+    "automation": "Deterministic repository task-runner configuration.",
     "mcp": "Shared MCP response behavior.",
     "mcpServers": "Complete registry of portable MCP connection declarations.",
     "skills": "Capability-specific configuration.",
@@ -77,6 +83,8 @@ DESCRIPTIONS = {
     "paths.tasks": "Directory for task artifacts.",
     "paths.reports": "Directory for generated reports.",
     "workflow.default_task_type": "Issue type used when a command needs a default work item type.",
+    "automation.runner": "Task-runner family used for registered semantic operations.",
+    "automation.tasks": "Maps semantic operation IDs to reviewed task target identifiers.",
     "mcp.output_limit_mode": "How MCP output limits are communicated to agents.",
     "mcpServers.<name>.url": "HTTPS endpoint for a remote MCP server.",
     "mcpServers.<name>.headers": "HTTP headers; values may contain `{env:NAME}` placeholders.",
@@ -148,6 +156,9 @@ CONSTRAINT_NOTES = {
     "paths.root": "Safe, non-empty project-relative path.",
     "paths.tasks": "Safe, non-empty project-relative path.",
     "paths.reports": "Safe, non-empty project-relative path.",
+    "automation.tasks": (
+        "Keys are dotted semantic IDs; values are target identifiers, not shell fragments."
+    ),
     "mcpServers.<name>.url": "Safe HTTPS URL without embedded credentials.",
     "mcpServers.<name>.headers": (
         "Valid header names; literal text or `{env:UPPER_CASE_NAME}` placeholders."

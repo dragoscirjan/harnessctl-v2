@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1QAFFPJ5Z5272N6KH9RWHE3
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Build | Verify evidence gaps | fixed; handoff Verify
+details: "Added allocation/adoption publication-boundary restart matrix, interrupted attachment/rebind recovery, concurrent two-process stale-lock recovery, complete OpenCode/Pi fresh-process root+lifecycle isolation, executable minimum/known host contracts. Evidence: Node 290 tests; Python 725; package checks; strict types; format/lint/Ruff/shellcheck/vulture/actionlint; release artifacts; docs/contracts/Mermaid/dupcheck; Node+Bun smoke; git diff check all pass. Existing Bugs remain open pending Verify. No closure, commit, remote, release, deploy, or destructive action."
+source:
+  kind: artifact
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: null
+created_at: 2026-09-04T23:01:22.258Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1Q9JK1KP5B638BRP6X1AYXY
+tags:
+  - build
+  - opencode
+  - pi
+  - verify-handoff
+  - workspace-routing

@@ -1,0 +1,24 @@
+"version": 1
+"id": "hrn-01M1PZXQMD9YJ5R042WPBVW2GT"
+"type": "story"
+"title": "OpenCode session routing adapter"
+"status": "closed"
+"created_at": "2026-09-04T19:56:54.797Z"
+"updated_at": "2026-09-05T00:13:58.230Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+  - "hrn-01M1PZW59JFNBYRC4FXZVNM2RA"
+  - "hrn-01M1PZWVCG54SEYZ57F23EJHF7"
+"metadata":
+  "capability": "opencode-session-routing"
+  "estimate": "M"
+  "sequence": 4
+  "uncertainty": "high"
+"body": "# OpenCode session routing adapter\n\n## Objective\n\nBind OpenCode project operations to the current session's execution root while OpenCode remains launched from primary.\n\n## Scope\n\n- Use `ToolContext.sessionID` as opaque binding identity and `directory`/`worktree` only for control-root discovery.\n- Resolve fresh execution context for every harnessctl config, issue, document, memory, workspace, and operation tool call.\n- Inventory path/cwd-sensitive built-ins and use `tool.execute.before` only for a capability-tested allowlist with proven argument mutation and rejection semantics.\n- Rewrite only validated known path arguments; reject unsupported, external, stale, escaped, or semantically unrouteable tools while bound.\n- Route shell, Git, bootstrap, checks, and installs through typed semantic operations instead of model-composed cwd rewriting.\n- Enforce the separately approved exceptional-command descriptor for direct user shell requests.\n- Add runtime capability detection with documented minimum/supported ranges and actionable fail-closed diagnostics.\n\n## Acceptance\n\n- Two OpenCode sessions launched from primary independently use their bound roots for all supported project tools.\n- Custom authority and memory tools never receive host launch cwd while a valid binding is active.\n- Every allowlisted built-in has a fixture proving hook order, argument transformation, containment, execution root, and rejection.\n- Unknown or external path/process tools cannot silently execute against primary or another workspace.\n- Missing `sessionID`, required hook behavior, or rejection capability prevents routing startup with a stable diagnostic.\n- Free-form model text cannot select shell cwd or construct routine Git/bootstrap/check pipelines.\n- Disabled workspace mode preserves current OpenCode behavior.\n\n## Artifacts\n\n- OpenCode session binding/routing integration and capability probe.\n- Reviewed built-in allowlist with minimum and known-compatible version fixtures.\n- Custom-tool, built-in, exceptional-command, rejection, concurrent-session, and disabled-parity tests.\n\n## Dependencies And Order\n\nSequence 4. Depends on `hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36`, `hrn-01M1PZW59JFNBYRC4FXZVNM2RA`, and `hrn-01M1PZWVCG54SEYZ57F23EJHF7`. May proceed in parallel with the Pi adapter after shared core completion.\n\n## Estimate\n\nM, high uncertainty because complete built-in interception and rejection semantics require capability proof.\n\n## Non-Goals\n\n- No unverified universal tool proxy, host process cwd change, hot-loading, exact-version architecture binding, `hrn-00210` lifecycle policy, or workspaces enablement."
+"comments":
+  - "id": "hrn-01M1PZXQMD9YJ5R042WPBVW2GT-C0001"
+    "created_at": "2026-09-04T22:19:34.468Z"
+    "created_by": "OpenCode"
+    "body": "Build implemented OpenCode `ToolContext.sessionID` routing, fresh project-root resolution, contained read/glob/grep allowlist, fail-closed process/external tools, session controls, task/exceptional operation tools, and capability diagnostics. Fresh-process two-session restart fixture proves isolated authorities and unchanged primary. OpenCode suite 5/5 passed. Ready for independent Verify; issue remains open."

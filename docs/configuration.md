@@ -12,6 +12,7 @@ with `version: 1`.
 | I want to...                             | Configure                    | Details                            |
 | ---------------------------------------- | ---------------------------- | ---------------------------------- |
 | Change the default work item type        | `workflow.default_task_type` | This page                          |
+| Map deterministic repository tasks       | `automation`                 | This page                          |
 | Enable test-driven development           | `skills.tdd`                 | [TDD](tdd.md)                      |
 | Enable shared project memory             | `skills.memory`              | [Memory](memory.md)                |
 | Enable relationship-aware code retrieval | `skills.codeIndex`           | [Code Index](code-intelligence.md) |
@@ -39,6 +40,25 @@ workflow:
 ```
 
 Valid values are `initiative`, `epic`, `story`, `task`, and `bug`.
+
+### Map deterministic repository tasks
+
+Map semantic operation IDs to reviewed targets declared by the repository task runner:
+
+```yaml
+version: 1
+automation:
+  runner: mise
+  tasks:
+    bootstrap.install: install-prompts
+    repository.build: build
+    repository.test: test
+```
+
+Valid runners are `auto`, `mise`, `task`, `just`, `make`, `npm`, `pnpm`, `yarn`, and
+`bun`. `auto` requires exactly one supported task manifest. Task values are target
+identifiers, never commands, paths, arguments, or shell fragments. The default empty
+mapping executes nothing.
 
 ### Enable TDD
 

@@ -105,6 +105,47 @@ export {
   workspaceMarkCleanupReady,
   workspaceStatus,
 } from './workspaces.js';
+export { ExecutionContextError, createExecutionContextProvider } from './execution-context.js';
+export type {
+  ExecutionContext,
+  ExecutionContextErrorCategory,
+  ExecutionContextProvider,
+  ExecutionContextProviderOptions,
+  ExecutionHost,
+  ExecutionWorkspaceLifecycle,
+  ExecutionWorkspaceRecord,
+  SessionBindingRecord,
+} from './execution-context.js';
+export { resolveContextPath, resolveProjectRoot } from './execution-routing.js';
+export type { ExecutionOperationClass, ProjectRootResolution } from './execution-routing.js';
+export {
+  OperationError,
+  OPERATION_REGISTRY_VERSION,
+  SEMANTIC_OPERATION_REGISTRY,
+  buildExceptionalCommand,
+  buildTaskOperation,
+  deriveNextBootstrapOperation,
+  executeRegisteredExceptionalCommand,
+  executeRegisteredTaskOperation,
+  executeTaskOperation,
+  nextBootstrapOperation,
+} from './operations.js';
+export type {
+  BootstrapOperationId,
+  BootstrapCoordinatorInput,
+  BootstrapState,
+  ExceptionalCommandDescriptor,
+  OperationApproval,
+  OperationClass,
+  OperationErrorCategory,
+  OperationEvidence,
+  OperationIdempotencyPolicy,
+  OperationWorkspaceState,
+  RegisteredProcessDescriptor,
+  RegisteredProcessOperationId,
+  SemanticTaskOperationId,
+  TaskOperationDescriptor,
+} from './operations.js';
 export type {
   GitWorkspaceProvider,
   WorkspaceBlocker,
@@ -122,7 +163,14 @@ export {
   memoryRecordSchema,
   memoryTombstoneSchema,
 } from './schemas.js';
-export type { ConfigV1, CvsLocal, McpOutputLimitMode, RemoteProvider, RemoteService } from './schemas.js';
+export type {
+  AutomationRunner,
+  ConfigV1,
+  CvsLocal,
+  McpOutputLimitMode,
+  RemoteProvider,
+  RemoteService,
+} from './schemas.js';
 export {
   MemoryConflictError,
   MemoryError,

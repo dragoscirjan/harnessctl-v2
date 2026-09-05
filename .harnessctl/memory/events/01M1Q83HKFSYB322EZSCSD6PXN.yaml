@@ -1,0 +1,24 @@
+schema_version: 1
+id: 01M1Q83HKFSYB322EZSCSD6PXN
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: harnessctl
+summary: Epic hrn-01M1PX20Z7J3A6RX95P7DGXF33 Build complete; handoff to Verify.
+details: "Implemented approved doc-01M1PZMXJ99DRRW65A1E22G7TH across all 6 children: strict session/workspace authority, locked topology/recovery/containment, typed operation registry + authority-derived bootstrap + exceptional consent, OpenCode/Pi routing/capability probes, config/docs/integration projections. Evidence: 277 Node tests, 725 Python tests, packages/typecheck/format/lint/shellcheck/vulture/release artifacts/docs/contracts/Mermaid/dupcheck/runtime smoke/diff-check pass. `actionlint` unavailable (`command not found`); aggregate `mise quality` hit concurrent stdout EAGAIN although standalone gates passed. Children remain open; no Verify/closure/commit/remote/destructive action."
+source:
+  kind: artifact
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: null
+created_at: 2026-09-04T22:19:53.839Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes: []
+tags:
+  - build
+  - opencode
+  - pi
+  - verify-handoff
+  - workspace-routing

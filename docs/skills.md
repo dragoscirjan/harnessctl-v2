@@ -259,9 +259,11 @@ host-installation contract suites.
 **Use when:** Work needs status or diff inspection, branching, commits, pushes, pull or merge
 requests, reviews, or another provider-backed version-control operation.
 
-**Expected result:** Local operations use the configured VCS; opt-in Git Epic workspace
-operations use normalized safety-gated tools; remote operations choose one verified CLI or
-MCP route before mutation; merge always requires fresh explicit consent.
+**Expected result:** Local operations use the configured VCS; an opt-in Git workspace keeps
+the host in primary while each session routes project operations through one validated
+execution root; registered tasks use immutable deterministic operation descriptors; remote
+operations choose one verified CLI or MCP route before mutation; merge always requires
+fresh explicit consent.
 
 **Availability:** Always generated for selected OpenCode and Pi hosts.
 
@@ -269,23 +271,38 @@ MCP route before mutation; merge always requires fresh explicit consent.
 [CVS configuration](cvs.md). Optional MCP context is compiled only when its configured
 declaration is available.
 
-**Prerequisites:** Valid local repository context. Epic workspaces additionally require
-`skills.cvs.workspaces: true`, local Git, a clean primary checkout, and committed canonical
-Epic authority. Remote operations require the configured provider, repository,
-authentication, and live capability evidence.
+**Prerequisites:** Valid local repository context. Session workspaces additionally require
+`skills.cvs.workspaces: true`, local Git, supported host routing capabilities, and a valid
+session binding. Legacy Epic workspace creation still requires a clean primary checkout and
+committed canonical Epic authority. Remote operations require the configured provider,
+repository, authentication, and live capability evidence.
+
+Use the latest OpenCode and Pi harness releases. Runtime capability probes fail closed when
+required interception, session identity, recovery, or built-in override APIs are absent. Major
+host releases require deliberate integration review; patch releases need no version-specific
+harnessctl policy.
+Routine process work must use registered task operations. Exceptional commands require a
+separately prepared immutable executable and argument vector plus immediate digest-bound
+consent and never serve as registry fallback.
 
 **Limits:** The skill does not configure remotes, install or authenticate provider tools,
-expose credential values, infer commands, force-remove worktrees, delete retained workspace
-branches, retry a mutation through another route, publish without request, or merge without
-fresh consent.
+expose credential values, infer routine command pipelines, fall back from a bound workspace
+to primary, force-remove worktrees, delete retained workspace branches, retry a mutation
+through another route, publish without request, or merge without fresh consent.
+
+Harness self-development does not hot-load adapter changes. After merge, rebuild packages,
+reinstall generated prompts and extensions, and intentionally reload each host. Disabling
+routing preserves workspace and binding state; a previously bound session fails closed until
+explicit recovery or release.
 
 **Status:** `working` for configured OpenCode and Pi routes; remote provider operation
 remains separate evidence. Claude and Codex are `not implemented`.
 
 **Evidence:** Source: the canonical
 [`sdlc-cvs` template](../src/harnessctl/templates/skills/sdlc-cvs/SKILL.md.j2).
-Automated test: provider rendering, credential boundaries, workspace state-engine and adapter
-parity, remote routing, merge consent, and host-installation contract suites.
+Automated test: provider rendering, credential boundaries, workspace state and session
+routing, deterministic operations, host-adapter parity, remote routing, merge consent, and
+host-installation contract suites.
 
 ## Compatibility notes
 

@@ -1,0 +1,32 @@
+schema_version: 1
+id: 01M1QDHMC1W7P38VCMN08BHYDM
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Verify | concurrent stale-lock recovery | failed
+details: |-
+  Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+  Command/phase: Work Verify
+  Item: hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD
+  Done: format, lint, package build/check, strict types passed before Node test failure; failure reproduced in required two-process dead-lock recovery test
+  Blocker: transient lock disappearance after another contender quarantines stale lock becomes non-retryable `execution context lock owner is missing`; `recoverStaleLock`/`readLockOwner` must retry acquisition on ENOENT
+  Artifacts: hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD-C0004; hrn-01M1PX20Z7J3A6RX95P7DGXF33-C0006
+  Next: Work Build; no repair, closure, commit, remote, Release, deploy, or destructive action in Verify
+source:
+  kind: tool-observation
+  ref: extensions/generic-tools/execution-context.spec.ts
+  revision: null
+created_at: 2026-09-04T23:54:58.305Z
+created_by: OpenCode Verify
+confidence: verified
+status: active
+supersedes:
+  - 01M1QC9H4X4CQ6Z03020K0WGA1
+tags:
+  - concurrency
+  - failed
+  - stale-lock
+  - verify
+  - workspace-routing

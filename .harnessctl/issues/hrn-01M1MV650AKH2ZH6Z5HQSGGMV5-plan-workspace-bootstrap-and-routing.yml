@@ -4,7 +4,7 @@
 "title": "Plan workspace bootstrap and routing"
 "status": "open"
 "created_at": "2026-09-03T23:55:38.890Z"
-"updated_at": "2026-09-03T23:56:09.421Z"
+"updated_at": "2026-09-04T19:09:57.147Z"
 "created_by": "OpenCode"
 "assigned_to": "OpenCode"
 "parent": "hrn-00210"
@@ -18,4 +18,8 @@
   "sequence": 1
   "uncertainty": "medium"
 "body": "# Plan Workspace Bootstrap And Routing\n\n## Objective\n\nMake Plan establish the workspace boundary for committed Epics while giving newly created or otherwise uncommitted Epic authority an explicit safe handoff.\n\n## Scope\n\n- Compile `skills.cvs.workspaces` into SDLC resource rendering for OpenCode and Pi.\n- Keep Initiative-mode Plan workspace-free.\n- When Epic authority is absent from primary `HEAD`, stop and name the authority file, clean primary-checkout requirement, and later `work-plan <epic-id>` reinvocation. Do not commit, push, or claim cwd changed.\n- For committed authority, use `workspace_ensure`: create/return the deterministic mapping from exact primary, stop with the workspace path for reinvocation, or allow planning to continue from the exact existing Epic workspace.\n- Fail closed on unavailable tools, stale/mismatched state, wrong location, or ambiguous results.\n\n## Acceptance\n\n- Initiative Plan never invokes a workspace tool.\n- Uncommitted Epic authority causes a prerequisite stop, not an implicit CVS action.\n- Committed Epic Plan ensures or validates exactly one deterministic mapping and reports its path.\n- Plan never claims it can persistently switch the host process cwd.\n- Disabled workspace support preserves current Plan behavior and omits workspace operations.\n- OpenCode and Pi render equivalent policy.\n\n## Dependencies And Order\n\nDepends on closed `hrn-00208` and `hrn-00209`. Execute first.\n\n## Artifacts\n\n`src/harnessctl/install.py`, canonical Plan reference template, generated OpenCode/Pi projections, focused template and installer tests. Reuse approved `doc-00019`; no new design artifact.\n\n## Estimate\n\nS-M, medium uncertainty around cross-harness prompt-policy coverage.\n\n## Non-Goals\n\nWorkspace primitive changes, automatic commits, pushes, persistent cwd switching, Initiative workspaces, or Jujutsu support.\n"
-"comments": []
+"comments":
+  - "id": "hrn-01M1MV650AKH2ZH6Z5HQSGGMV5-C0001"
+    "created_at": "2026-09-04T19:09:57.147Z"
+    "created_by": "OpenCode"
+    "body": "Replan required. The parent Epic's cwd-based execution model was superseded by Initiative hrn-00207's session-bound execution-root architecture. Do not Build this Story until hrn-01M1PX20Z7J3A6RX95P7DGXF33 is delivered and hrn-00210 receives a new approved executable plan."

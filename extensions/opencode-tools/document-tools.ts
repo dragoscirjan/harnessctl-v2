@@ -11,7 +11,7 @@ import {
   validateDocuments,
   versionDocument,
 } from '@harnessctl/generic-tools';
-import { tool } from '@opencode-ai/plugin';
+import { tool, type ToolContext } from '@opencode-ai/plugin';
 
 const schema = tool.schema;
 const documentKind = schema.enum(DOCUMENT_KINDS);
@@ -26,7 +26,7 @@ const changes = {
   expectedRevision: schema.string().describe('Exact revision from document_get'),
 };
 
-export function openCodeDocumentTools() {
+export function openCodeDocumentTools(resolveRoot: (context: ToolContext) => string = (context) => context.directory) {
   const execute = (operation: () => unknown): string => {
     try {
       return JSON.stringify(operation());
@@ -39,7 +39,7 @@ export function openCodeDocumentTools() {
       description: 'Extract one configured document ID from text.',
       args: { text: schema.string().describe('Text containing a document ID') },
       async execute(args, context) {
-        return execute(() => parseDocumentId(args.text, context.directory));
+        return execute(() => parseDocumentId(args.text, resolveRoot(context)));
       },
     }),
     document_create: tool({
@@ -55,7 +55,7 @@ export function openCodeDocumentTools() {
       async execute(args, context) {
         return execute(() => {
           const { metadata, ...input } = args;
-          return createDocument(context.directory, {
+          return createDocument(resolveRoot(context), {
             ...input,
             ...(metadata ? { metadata: parseObject(metadata) } : {}),
           });
@@ -70,14 +70,14 @@ export function openCodeDocumentTools() {
         location: schema.enum(['active', 'archive']).describe('Canonical location').optional(),
       },
       async execute(args, context) {
-        return execute(() => listDocuments(context.directory, args as never));
+        return execute(() => listDocuments(resolveRoot(context), args as never));
       },
     }),
     document_get: tool({
       description: 'Read one canonical document version.',
       args: { id: schema.string(), version: schema.number().optional() },
       async execute(args, context) {
-        return execute(() => getDocument(context.directory, args.id, args.version));
+        return execute(() => getDocument(resolveRoot(context), args.id, args.version));
       },
     }),
     document_update: tool({
@@ -86,7 +86,7 @@ export function openCodeDocumentTools() {
       async execute(args, context) {
         return execute(() => {
           const { id, metadata, ...input } = args;
-          return updateDocument(context.directory, id, {
+          return updateDocument(resolveRoot(context), id, {
             ...input,
             ...(metadata === undefined ? {} : { metadata: metadata === 'null' ? null : parseObject(metadata) }),
           });
@@ -99,7 +99,7 @@ export function openCodeDocumentTools() {
       async execute(args, context) {
         return execute(() => {
           const { id, metadata, ...input } = args;
-          return versionDocument(context.directory, id, {
+          return versionDocument(resolveRoot(context), id, {
             ...input,
             ...(metadata === undefined ? {} : { metadata: metadata === 'null' ? null : parseObject(metadata) }),
           });
@@ -110,21 +110,21 @@ export function openCodeDocumentTools() {
       description: 'Validate one document lineage or all canonical documents.',
       args: { id: schema.string().optional() },
       async execute(args, context) {
-        return JSON.stringify(validateDocuments(context.directory, args.id));
+        return execute(() => validateDocuments(resolveRoot(context), args.id));
       },
     }),
     document_archive: tool({
       description: 'Journal and archive a complete document lineage with deterministic recovery.',
       args: { id: schema.string(), expectedRevision: schema.string() },
       async execute(args, context) {
-        return execute(() => archiveDocument(context.directory, args.id, args.expectedRevision));
+        return execute(() => archiveDocument(resolveRoot(context), args.id, args.expectedRevision));
       },
     }),
     document_restore: tool({
       description: 'Journal and restore a complete archived document lineage with deterministic recovery.',
       args: { id: schema.string(), expectedRevision: schema.string() },
       async execute(args, context) {
-        return execute(() => restoreDocument(context.directory, args.id, args.expectedRevision));
+        return execute(() => restoreDocument(resolveRoot(context), args.id, args.expectedRevision));
       },
     }),
   };

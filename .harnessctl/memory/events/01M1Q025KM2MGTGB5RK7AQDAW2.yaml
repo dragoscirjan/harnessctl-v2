@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1Q025KM2MGTGB5RK7AQDAW2
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: hrn-01M1PX20Z7J3A6RX95P7DGXF33
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Plan | executable plan | approved
+details: "Epic: hrn-01M1PX20Z7J3A6RX95P7DGXF33. Phase: Plan. Done: approved session-bound routing plan; approved+linked LLD doc-01M1PZMXJ99DRRW65A1E22G7TH; created ordered children hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36, hrn-01M1PZW59JFNBYRC4FXZVNM2RA, hrn-01M1PZWVCG54SEYZ57F23EJHF7, hrn-01M1PZXQMD9YJ5R042WPBVW2GT, hrn-01M1PZXR698GNEG58FZQCDVN5X, hrn-01M1PZYZ30RXGSAA2D953H1PN2. Decisions: persistent-primary host; session execution roots; provisional ws-ULID; strict binding generations/containment; typed deterministic operations; capability-range host adapters; workspaces remain disabled during bootstrap. Verification: document_validate and issue_validate valid, no findings. Next: Build child 1 only under approved boundaries. Blockers: none for Plan; hrn-00210 remains blocked until this Epic merges, rebuild/install/reload completes, then replan."
+source:
+  kind: artifact
+  ref: doc-01M1PZMXJ99DRRW65A1E22G7TH
+  revision: v1:bba35666283d13cc25e1b826aeac1ae09e5d5370eb796102e8cb306a3c849b76
+created_at: 2026-09-04T19:59:20.180Z
+created_by: OpenCode
+confidence: verified
+status: active
+supersedes:
+  - 01M1PYBS7A1D5CZJNP3YCKNDB6
+tags:
+  - deterministic-operations
+  - execution-context
+  - plan
+  - sdlc
+  - workspace-routing

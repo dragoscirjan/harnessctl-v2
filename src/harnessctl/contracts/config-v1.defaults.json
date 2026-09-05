@@ -8,6 +8,10 @@
   "workflow": {
     "default_task_type": "bug"
   },
+  "automation": {
+    "runner": "auto",
+    "tasks": {}
+  },
   "mcp": {
     "output_limit_mode": "bounded-guidance"
   },

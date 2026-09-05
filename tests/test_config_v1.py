@@ -50,6 +50,7 @@ def _write_config(project: Path, value: Any) -> None:
 
 def test_missing_file_returns_generated_defaults(tmp_path: Path) -> None:
     assert load_config(tmp_path) == DEFAULT_CONFIG
+    assert DEFAULT_CONFIG["automation"] == {"runner": "auto", "tasks": {}}
 
 
 @pytest.mark.parametrize("case", FIXTURE["cases"], ids=lambda case: case["id"])

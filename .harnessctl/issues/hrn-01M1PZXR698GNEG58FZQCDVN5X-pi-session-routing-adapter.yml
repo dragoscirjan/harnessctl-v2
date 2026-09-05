@@ -1,0 +1,28 @@
+"version": 1
+"id": "hrn-01M1PZXR698GNEG58FZQCDVN5X"
+"type": "story"
+"title": "Pi session routing adapter"
+"status": "closed"
+"created_at": "2026-09-04T19:56:55.369Z"
+"updated_at": "2026-09-05T00:13:58.846Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+  - "hrn-01M1PZW59JFNBYRC4FXZVNM2RA"
+  - "hrn-01M1PZWVCG54SEYZ57F23EJHF7"
+"metadata":
+  "capability": "pi-session-routing"
+  "estimate": "M"
+  "sequence": 5
+  "uncertainty": "medium"
+"body": "# Pi session routing adapter\n\n## Objective\n\nBind Pi project operations and supported built-ins to the current session's execution root while Pi remains launched from primary.\n\n## Scope\n\n- Use `sessionManager.getSessionId()` as opaque binding identity and host cwd only for control-root discovery.\n- Append non-authoritative custom recovery entries containing repository/workspace/Epic/generation evidence after successful binding transitions.\n- Resolve fresh binding state per call and override supported built-ins using Pi's exported read/write/edit/grep/find/ls/bash definition factories bound to the execution root.\n- Use `tool_call` to reject unsupported, external, stale, escaped, or semantically unrouteable calls; do not trust argument mutation without revalidation.\n- Route custom config, issue, document, memory, workspace, and operation tools through the generic resolver.\n- Apply the immutable exceptional-command consent boundary to direct user shell and keep routine Git/bootstrap/checks in the semantic registry.\n- Add capability detection with documented minimum/supported ranges and fail-closed diagnostics.\n\n## Acceptance\n\n- Two Pi sessions launched from primary independently use their bound roots for custom and supported built-in project tools.\n- Session start, switch, fork, resume, compaction, and reload preserve or recover one unambiguous binding and reject stale evidence.\n- Overridden built-ins receive a freshly resolved root and retain schema validation and containment.\n- Unsupported or external tools cannot silently access primary or another workspace while bound.\n- Missing session, custom-entry, override-factory, or rejection capabilities prevent routing startup with a stable diagnostic.\n- Model input cannot change routine command mechanics, cwd, consent, transitions, or evidence.\n- Disabled workspace mode preserves current Pi behavior.\n\n## Artifacts\n\n- Pi session binding/recovery integration, built-in overrides, and capability probe.\n- Minimum and known-compatible version fixtures.\n- Lifecycle, recovery, fork, override, exceptional-command, rejection, concurrent-session, and disabled-parity tests.\n\n## Dependencies And Order\n\nSequence 5. Depends on `hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36`, `hrn-01M1PZW59JFNBYRC4FXZVNM2RA`, and `hrn-01M1PZWVCG54SEYZ57F23EJHF7`. May proceed in parallel with the OpenCode adapter after shared core completion.\n\n## Estimate\n\nM, medium uncertainty because exported override factories are proven locally but lifecycle recovery still needs range fixtures.\n\n## Non-Goals\n\n- No generic external-tool proxy, host cwd change, hot-loading, exact-version architecture binding, `hrn-00210` lifecycle policy, or workspaces enablement."
+"comments":
+  - "id": "hrn-01M1PZXR698GNEG58FZQCDVN5X-C0001"
+    "created_at": "2026-09-04T22:19:35.083Z"
+    "created_by": "OpenCode"
+    "body": "Build implemented Pi session routing via `sessionManager.getSessionId()`, startup capability probes, required recovery evidence `{repository_id, workspace_id, epic_id, generation}`, fresh built-in factory overrides including bash, routine bash/external rejection, contained file tools, and semantic operation controls. Pi suite 6/6 passed. Ready for independent Verify; issue remains open."
+  - "id": "hrn-01M1PZXR698GNEG58FZQCDVN5X-C0002"
+    "created_at": "2026-09-04T22:26:48.873Z"
+    "created_by": "opencode"
+    "body": "Verify found same-session late binding does not activate Pi rooted factories or append successful recovery evidence after an initially unbound `session_start`. Tracked by `hrn-01M1Q8DWRW1D19HB5Z8TKGYJFG`. Pi typecheck and current unit tests passed 6/6; missing lifecycle case remains acceptance-blocking."

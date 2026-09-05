@@ -1,0 +1,25 @@
+schema_version: 1
+id: 01M1QEAS1CS94RY36QYWKWARNZ
+memory_type: episodic
+record_type: event
+organization_id: local
+project_id: project
+topic: sdlc-checkpoint
+summary: hrn-01M1PX20Z7J3A6RX95P7DGXF33 | Verify | acceptance | passed
+details: "Epic hrn-01M1PX20Z7J3A6RX95P7DGXF33. Phase Verify. Approved LLD v2 acceptance passed. Verification: Node 290; Python 725; packages, strict types, format/lint, Ruff, shellcheck, vulture, release artifacts, generated docs, strict MkDocs, contracts, Mermaid, actionlint, dupcheck 3.15%, Node/Bun smoke, git diff check passed. Concurrent stale-lock regression passed in full suite; crash recovery, session isolation, capability routing, typed operations, disabled parity covered. Evidence comments: Epic C0008; Bug hrn-01M1Q8DW5YTTTXPBYW9GCJWSWD C0006. No issue closure or Release action. Next: Release after separate closure/release consent."
+source:
+  kind: artifact
+  ref: extensions/generic-tools/execution-context.spec.ts
+  revision: null
+created_at: 2026-09-05T00:08:42.284Z
+created_by: OpenCode Verify
+confidence: verified
+status: active
+supersedes:
+  - 01M1QDZJ2KBA939ET6512YM6PX
+tags:
+  - checkpoint
+  - sdlc
+  - stale-lock
+  - verify
+  - workspace-routing

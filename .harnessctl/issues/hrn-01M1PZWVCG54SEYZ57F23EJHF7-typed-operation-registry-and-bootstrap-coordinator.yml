@@ -1,0 +1,23 @@
+"version": 1
+"id": "hrn-01M1PZWVCG54SEYZ57F23EJHF7"
+"type": "story"
+"title": "Typed operation registry and bootstrap coordinator"
+"status": "closed"
+"created_at": "2026-09-04T19:56:25.872Z"
+"updated_at": "2026-09-05T00:13:57.602Z"
+"created_by": "OpenCode"
+"parent": "hrn-01M1PX20Z7J3A6RX95P7DGXF33"
+"depends_on":
+  - "hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36"
+  - "hrn-01M1PZW59JFNBYRC4FXZVNM2RA"
+"metadata":
+  "capability": "deterministic-operations"
+  "estimate": "M-L"
+  "sequence": 3
+  "uncertainty": "high"
+"body": "# Typed operation registry and bootstrap coordinator\n\n## Objective\n\nMake routine workspace, Plan, bootstrap, task, and evidence mechanics deterministic program behavior rather than model-composed commands.\n\n## Scope\n\n- Add a versioned compile-time operation registry with strict inputs, legal states, approval class, executable or task key, argv builder, cwd policy, environment allowlist, timeout/output bounds, idempotency, transition, and evidence schema.\n- Implement deterministic operations for provisional allocation, session binding, Epic attachment, v1 adoption, recovery, declared repository tasks, bootstrap installation, and binding release.\n- Add a Plan/bootstrap coordinator deriving legal next operations from fresh authority, binding generations, Git topology, configuration, and evidence.\n- Reject stale, repeated, reordered, skipped, descriptor-mutated, undeclared, or cross-workspace operations before process execution.\n- Execute argv arrays with `shell: false`, explicit execution-root cwd, bounded environment/time/output, redaction, and structured results.\n- Add optional Config v1 `automation.runner` and `automation.tasks` with neutral defaults and single-target identifiers; keep TypeScript/Python schema, defaults, fingerprints, generated config, and sample config synchronized.\n- Map this repository's semantic task keys to reviewed `mise.toml` targets.\n- Enforce invocation-specific immutable consent for exceptional commands and prohibit using them as fallback for missing registry entries.\n\n## Acceptance\n\n- Identical trusted state and validated input produce the same descriptor and digest.\n- Model-controlled values cannot change executable, argv construction, cwd, approval, legal transition, or evidence schema.\n- Consent binds one immutable descriptor; any descriptor change invalidates consent.\n- Undeclared runner targets and shell fragments in configuration fail validation.\n- Illegal order, stale generation, duplicate non-idempotent execution, cross-workspace context, timeout, and output overflow fail with typed evidence.\n- Bootstrap and repository tasks run only in the resolved workspace and only through declared mappings.\n- Exceptional commands require fresh verbatim-user or separately previewed descriptor approval and create no hidden trusted default.\n- Neutral defaults and workspaces-disabled mode execute nothing new.\n\n## Artifacts\n\n- Generic operation registry, executor, evidence types, and Plan/bootstrap coordinator.\n- Config v1 TypeScript schema/default/contract updates and generated Python/default/fingerprint parity.\n- Repository automation mappings and focused determinism, consent, process-bound, state-machine, config, and task-runner tests.\n\n## Dependencies And Order\n\nSequence 3. Depends on `hrn-01M1PZVHHZ2BC4CZYTQ3CP4T36` and `hrn-01M1PZW59JFNBYRC4FXZVNM2RA`. Blocks both host adapters and final integration gates.\n\n## Estimate\n\nM-L, high uncertainty around operation inventory and safe task-runner abstraction.\n\n## Non-Goals\n\n- No model-authored routine shell pipeline, arbitrary executable registry, hidden consent, deployment, merge, workspace cleanup, `hrn-00210` lifecycle policy, or workspaces enablement."
+"comments":
+  - "id": "hrn-01M1PZWVCG54SEYZ57F23EJHF7-C0001"
+    "created_at": "2026-09-04T22:19:33.851Z"
+    "created_by": "OpenCode"
+    "body": "Build implemented versioned semantic operation registry, immutable task and exceptional-command descriptors, consent digests, bounded shell-free execution, evidence generations/hashes, and authority-derived bootstrap coordination rejecting stale/reordered/cross-workspace evidence. Evidence: `extensions/generic-tools/operations.ts`, `operations.spec.ts`; contracts/package/typecheck/test gates passed. Ready for independent Verify; issue remains open."

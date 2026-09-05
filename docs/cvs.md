@@ -80,8 +80,8 @@ mcpServers: {}
 
 ## Git Epic workspaces
 
-Set `skills.cvs.workspaces: true` to enable four local tools when CVS is enabled and
-`skills.cvs.local` is `git`:
+Set `skills.cvs.workspaces: true` when CVS is enabled and `skills.cvs.local` is `git`.
+The four legacy workspace tools remain explicit control-plane operations:
 
 | Tool                           | Exact invocation location  | Behavior                                                                         |
 | ------------------------------ | -------------------------- | -------------------------------------------------------------------------------- |
@@ -98,18 +98,54 @@ state under the repository Git common directory and places an ownership lock on 
 worktree. Repeating `workspace_ensure` reconciles an exact interrupted creation or returns
 the existing active mapping; it never silently repairs a conflicting mapping.
 
-Lifecycle work must run from the exact path returned for the Epic. The tools do not and
-cannot persistently change the host process working directory. Dirty, missing, prunable,
+The legacy tools retain their exact invocation-location checks. Dirty, missing, prunable,
 unlocked, moved, branch-mismatched, malformed, or conflicting state fails closed with
 actionable blockers. Cleanup refuses the current worktree, nested current directories,
 dirty worktrees, and mismatched metadata. It never uses forced removal, resets content,
-deletes the retained branch, migrates existing worktrees, or changes repositories when the
-capability is disabled.
+deletes the retained branch, or migrates existing worktrees.
 
 If creation is interrupted, run `workspace_status` from the same repository and retry
 `workspace_ensure` only for the same Epic. For any reported conflict, inspect the exact
 paths, branch, lock, and common-directory state; do not delete or rewrite state blindly.
 Closed workspace records cannot be reopened.
+
+The session routing layer does not move the long-lived OpenCode or Pi process. The host
+stays in the primary checkout while each host session is bound to one workspace execution
+root. Harnessctl resolves that binding before every project operation and routes project
+authority, documents, memory, source files, artifacts, and registered tasks through the
+bound root. A missing or stale binding, topology drift, path escape, cross-workspace access,
+or unsupported tool fails closed; Harnessctl never silently falls back to primary.
+
+New-Epic planning can allocate a provisional `ws-<ULID>` workspace before Epic authority
+exists, then attach the Epic without renaming its branch or path. Existing v1 Epic workspace
+records are adopted only through an explicit exact-match operation; adoption does not
+rewrite or delete the v1 record, worktree, branch, or commits. Use the typed
+`workspace_session_allocate`, `workspace_session_attach_epic`, `workspace_session_adopt`,
+`workspace_session_bind`, `workspace_session_status`, and `workspace_session_release` tools
+for session state.
+
+Routine bootstrap, build, test, and quality work uses `operation_prepare` followed by
+`operation_execute`. The prepared descriptor selects only a reviewed task target from
+`automation.tasks`, binds its executable, arguments, execution root, limits, and evidence,
+and requires consent for that exact descriptor. Task mappings are identifiers from a
+checked-in task manifest, never shell fragments. A command outside the registry requires
+`operation_prepare_command` followed by `operation_execute_command`; the executable and exact
+argument vector are displayed and digest-bound to separate immediate consent, execute with
+`shell: false`, and are never an automatic fallback for an absent task mapping.
+
+Use the latest OpenCode and Pi harness releases. Startup probes the host APIs needed for
+interception, session identity, recovery entries, and built-in tool overrides and fails with a
+compatibility diagnostic when a capability is missing. Major host releases require deliberate
+integration review; patch releases need no version-specific harnessctl policy. When workspace support is
+disabled, an unbound session preserves primary-root behavior and creates no state. A
+previously bound session instead fails closed until explicitly recovered or released; it
+never silently resumes against primary.
+
+For harnessctl self-development, merged routing changes are not hot-loaded. Rebuild the npm
+packages, reinstall the generated prompts and extensions, and deliberately restart or reload
+OpenCode and Pi before relying on the new routing behavior. Disabling routing is the rollback:
+it preserves worktrees, branches, v1/v2 records, and binding records for diagnosis and later
+recovery.
 
 Every remote provider exposes its valid CLI capability. Its MCP capability is optional:
 set `mcpName` to the host key to project, or omit it to generate CLI-only guidance and no
